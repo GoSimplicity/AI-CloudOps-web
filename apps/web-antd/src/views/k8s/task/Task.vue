@@ -1,3 +1,266 @@
+<script lang="ts" setup>
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { onMounted } from 'vue';
+import { useTaskPage } from './Task';
+import { formatDateTime, getRelativeTime } from '../shared/utils';
+import {
+  DatabaseOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  EyeOutlined,
+  FileTextOutlined,
+  FilterOutlined,
+  PlayCircleOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+} from '@ant-design/icons-vue';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
+const {
+  // state
+
+  templates,
+  clusters,
+  loading,
+  loadError,
+  clustersError,
+  templatesError,
+  clustersLoading,
+  templatesLoading,
+  searchText,
+  filterClusterId,
+  filterTemplateId,
+  filterStatus,
+  selectedRows,
+  currentPage,
+  pageSize,
+  total,
+  clustersTotal,
+  templatesTotal,
+
+  // modal state
+  isCreateModalVisible,
+  isEditModalVisible,
+  isDetailModalVisible,
+  isExecuteModalVisible,
+  submitLoading,
+  executeLoading,
+
+  // operation targets
+  currentOperationTask,
+  currentTaskDetail,
+
+  // form models
+  createFormModel,
+  editFormModel,
+  executeFormModel,
+
+  // form refs
+  formRef,
+  editFormRef,
+
+  // form rules
+  createFormRules,
+  editFormRules,
+
+  // computed
+  filteredTasks,
+  rowSelection,
+
+  // helpers
+  getEnvText,
+  getStatusText,
+  getStatusColor,
+  formatK8sTime,
+  getTemplateName,
+
+  // operations
+  fetchClusters,
+  fetchTemplates,
+  fetchTasks,
+  clearTasks,
+  clearTemplates,
+  loadMoreClusters,
+  loadMoreTemplates,
+
+  // detail operations
+  showTaskDetail,
+  closeDetailModal,
+
+  // create operations
+  openCreateModal,
+  closeCreateModal,
+  submitCreateForm,
+
+  // edit operations
+  openEditModal,
+  closeEditModal,
+  submitEditForm,
+
+  // execute operations
+  openExecuteModal,
+  closeExecuteModal,
+  submitExecuteForm,
+
+  // task operations
+  deleteTask,
+
+  // batch operations
+  batchOperation,
+
+  // pagination operations
+  handlePageChange,
+
+  // form field operations
+  addVariableField,
+  removeVariableField,
+  addEditVariableField,
+  removeEditVariableField,
+
+  // constants
+  TaskStatus,
+} = useTaskPage();
+
+const onSearch = () => {
+  currentPage.value = 1;
+  fetchTasks();
+};
+
+const handleFilterChange = () => {
+  currentPage.value = 1;
+  fetchTasks();
+};
+
+const handleClusterChange = () => {
+  currentPage.value = 1;
+  clearTemplates();
+  clearTasks();
+
+  if (filterClusterId.value) {
+    fetchTemplates(true); // 重置模板分页
+    fetchTasks();
+  }
+};
+
+const handleTableChange = (pagination: {
+  current?: number;
+  pageSize?: number;
+}) => {
+  if (pagination) {
+    handlePageChange(
+      pagination.current || currentPage.value,
+      pagination.pageSize,
+    );
+  }
+};
+
+// 处理集群下拉选择的滚动事件
+const handleClusterDropdownScroll = (e: Event) => {
+  const { target } = e;
+  if (
+    target &&
+    'scrollTop' in target &&
+    'scrollHeight' in target &&
+    'clientHeight' in target
+  ) {
+    const scrollTarget = target as HTMLElement;
+    if (
+      scrollTarget.scrollTop + scrollTarget.clientHeight >=
+      scrollTarget.scrollHeight - 5
+    ) {
+      loadMoreClusters();
+    }
+  }
+};
+
+// 处理模板下拉选择的滚动事件
+const handleTemplateDropdownScroll = (e: Event) => {
+  const { target } = e;
+  if (
+    target &&
+    'scrollTop' in target &&
+    'scrollHeight' in target &&
+    'clientHeight' in target
+  ) {
+    const scrollTarget = target as HTMLElement;
+    if (
+      scrollTarget.scrollTop + scrollTarget.clientHeight >=
+      scrollTarget.scrollHeight - 5
+    ) {
+      loadMoreTemplates();
+    }
+  }
+};
+
+// 获取执行结果预览内容
+const getResultPreview = (result: string) => {
+  if (!result) return '暂无结果';
+  const lines = result.split('\n');
+  if (lines.length <= 2) return result;
+  return lines.slice(0, 2).join('\n') + '\n...';
+};
+
+const columns = [
+  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
+  {
+    title: '名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 150,
+    ellipsis: true,
+    fixed: 'left',
+  },
+  {
+    title: '状态',
+    dataIndex: 'status',
+    key: 'status',
+    width: 90,
+    align: 'center',
+  },
+  {
+    title: '使用模板',
+    dataIndex: 'template_id',
+    key: 'template_id',
+    width: 150,
+  },
+  { title: '变量', dataIndex: 'variables', key: 'variables', width: 150 },
+  {
+    title: '执行结果',
+    dataIndex: 'apply_result',
+    key: 'apply_result',
+    width: 200,
+  },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
+  { title: '更新时间', dataIndex: 'updated_at', key: 'updated_at', width: 160 },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 200,
+    fixed: 'right',
+    align: 'center',
+  },
+];
+
+// 重置所有筛选条件
+const resetFilters = () => {
+  filterStatus.value = undefined;
+  filterTemplateId.value = undefined;
+  searchText.value = '';
+  filterClusterId.value = undefined;
+  currentPage.value = 1;
+  clearTasks();
+  clearTemplates();
+};
+
+onMounted(async () => {
+  await fetchClusters();
+});
+</script>
+
 <template>
   <OpsPage
     description="基于模板创建和执行 Kubernetes YAML 部署任务"
@@ -785,269 +1048,6 @@
     </a-modal>
   </OpsPage>
 </template>
-
-<script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { onMounted } from 'vue';
-import { useTaskPage } from './Task';
-import { formatDateTime, getRelativeTime } from '../shared/utils';
-import {
-  DatabaseOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  EyeOutlined,
-  FileTextOutlined,
-  FilterOutlined,
-  PlayCircleOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-} from '@ant-design/icons-vue';
-
-import { usePermission } from '#/utils/permission';
-
-const { can } = usePermission();
-
-const {
-  // state
-
-  templates,
-  clusters,
-  loading,
-  loadError,
-  clustersError,
-  templatesError,
-  clustersLoading,
-  templatesLoading,
-  searchText,
-  filterClusterId,
-  filterTemplateId,
-  filterStatus,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
-  clustersTotal,
-  templatesTotal,
-
-  // modal state
-  isCreateModalVisible,
-  isEditModalVisible,
-  isDetailModalVisible,
-  isExecuteModalVisible,
-  submitLoading,
-  executeLoading,
-
-  // operation targets
-  currentOperationTask,
-  currentTaskDetail,
-
-  // form models
-  createFormModel,
-  editFormModel,
-  executeFormModel,
-
-  // form refs
-  formRef,
-  editFormRef,
-
-  // form rules
-  createFormRules,
-  editFormRules,
-
-  // computed
-  filteredTasks,
-  rowSelection,
-
-  // helpers
-  getEnvText,
-  getStatusText,
-  getStatusColor,
-  formatK8sTime,
-  getTemplateName,
-
-  // operations
-  fetchClusters,
-  fetchTemplates,
-  fetchTasks,
-  clearTasks,
-  clearTemplates,
-  loadMoreClusters,
-  loadMoreTemplates,
-
-  // detail operations
-  showTaskDetail,
-  closeDetailModal,
-
-  // create operations
-  openCreateModal,
-  closeCreateModal,
-  submitCreateForm,
-
-  // edit operations
-  openEditModal,
-  closeEditModal,
-  submitEditForm,
-
-  // execute operations
-  openExecuteModal,
-  closeExecuteModal,
-  submitExecuteForm,
-
-  // task operations
-  deleteTask,
-
-  // batch operations
-  batchOperation,
-
-  // pagination operations
-  handlePageChange,
-
-  // form field operations
-  addVariableField,
-  removeVariableField,
-  addEditVariableField,
-  removeEditVariableField,
-
-  // constants
-  TaskStatus,
-} = useTaskPage();
-
-const onSearch = () => {
-  currentPage.value = 1;
-  fetchTasks();
-};
-
-const handleFilterChange = () => {
-  currentPage.value = 1;
-  fetchTasks();
-};
-
-const handleClusterChange = () => {
-  currentPage.value = 1;
-  clearTemplates();
-  clearTasks();
-
-  if (filterClusterId.value) {
-    fetchTemplates(true); // 重置模板分页
-    fetchTasks();
-  }
-};
-
-const handleTableChange = (pagination: {
-  current?: number;
-  pageSize?: number;
-}) => {
-  if (pagination) {
-    handlePageChange(
-      pagination.current || currentPage.value,
-      pagination.pageSize,
-    );
-  }
-};
-
-// 处理集群下拉选择的滚动事件
-const handleClusterDropdownScroll = (e: Event) => {
-  const { target } = e;
-  if (
-    target &&
-    'scrollTop' in target &&
-    'scrollHeight' in target &&
-    'clientHeight' in target
-  ) {
-    const scrollTarget = target as HTMLElement;
-    if (
-      scrollTarget.scrollTop + scrollTarget.clientHeight >=
-      scrollTarget.scrollHeight - 5
-    ) {
-      loadMoreClusters();
-    }
-  }
-};
-
-// 处理模板下拉选择的滚动事件
-const handleTemplateDropdownScroll = (e: Event) => {
-  const { target } = e;
-  if (
-    target &&
-    'scrollTop' in target &&
-    'scrollHeight' in target &&
-    'clientHeight' in target
-  ) {
-    const scrollTarget = target as HTMLElement;
-    if (
-      scrollTarget.scrollTop + scrollTarget.clientHeight >=
-      scrollTarget.scrollHeight - 5
-    ) {
-      loadMoreTemplates();
-    }
-  }
-};
-
-// 获取执行结果预览内容
-const getResultPreview = (result: string) => {
-  if (!result) return '暂无结果';
-  const lines = result.split('\n');
-  if (lines.length <= 2) return result;
-  return lines.slice(0, 2).join('\n') + '\n...';
-};
-
-const columns = [
-  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
-  {
-    title: '名称',
-    dataIndex: 'name',
-    key: 'name',
-    width: 150,
-    ellipsis: true,
-    fixed: 'left',
-  },
-  {
-    title: '状态',
-    dataIndex: 'status',
-    key: 'status',
-    width: 90,
-    align: 'center',
-  },
-  {
-    title: '使用模板',
-    dataIndex: 'template_id',
-    key: 'template_id',
-    width: 150,
-  },
-  { title: '变量', dataIndex: 'variables', key: 'variables', width: 150 },
-  {
-    title: '执行结果',
-    dataIndex: 'apply_result',
-    key: 'apply_result',
-    width: 200,
-  },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
-  { title: '更新时间', dataIndex: 'updated_at', key: 'updated_at', width: 160 },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 200,
-    fixed: 'right',
-    align: 'center',
-  },
-];
-
-// 重置所有筛选条件
-const resetFilters = () => {
-  filterStatus.value = undefined;
-  filterTemplateId.value = undefined;
-  searchText.value = '';
-  filterClusterId.value = undefined;
-  currentPage.value = 1;
-  clearTasks();
-  clearTemplates();
-};
-
-onMounted(async () => {
-  await fetchClusters();
-});
-</script>
 
 <style scoped>
 @import '../shared/k8s-common.css';

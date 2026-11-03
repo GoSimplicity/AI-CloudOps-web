@@ -1,3 +1,243 @@
+<script setup lang="ts">
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { clusterResourceKey } from '../shared/utils';
+import { onMounted } from 'vue';
+import {
+  CheckCircleOutlined,
+  ClearOutlined,
+  DatabaseOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  EyeOutlined,
+  FileAddOutlined,
+  FileTextOutlined,
+  FormatPainterOutlined,
+  KeyOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  UndoOutlined,
+} from '@ant-design/icons-vue';
+import { usePVPage } from './PV';
+import { formatDateTime, getRelativeTime } from '../shared/utils';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
+const {
+  // state
+  clusters,
+  loading,
+  loadError,
+  clustersError,
+  clustersLoading,
+  searchText,
+  filterClusterId,
+  filterAccessMode,
+  selectedRows,
+  currentPage,
+  pageSize,
+  total,
+  clustersTotal,
+
+  // form refs
+  formRef,
+  yamlFormRef,
+  createYamlFormRef,
+
+  // modal state
+  isCreateModalVisible,
+  isCreateYamlModalVisible,
+  isEditModalVisible,
+  isDetailModalVisible,
+  isYamlModalVisible,
+  submitLoading,
+  detailLoading,
+
+  // current operation
+  currentOperationPV,
+  currentPVDetail,
+
+  // form models
+  createFormModel,
+  editFormModel,
+  yamlFormModel,
+  createYamlFormModel,
+
+  // form rules
+  createFormRules,
+  yamlFormRules,
+  createYamlFormRules,
+
+  // computed
+  filteredPVs,
+  rowSelection,
+
+  // helpers
+  getEnvText,
+  getPVStatusText,
+  getPVStatusColor,
+  getAccessModeText,
+
+  // api calls
+  fetchClusters,
+  fetchPVs,
+  createPV,
+  createPVByYaml,
+  updatePV,
+  updatePVByYaml,
+  deletePV,
+  reclaimPV,
+  deleteBatchPVs,
+
+  // modal handlers
+  openCreateModal,
+  openCreateYamlModal,
+  openEditModal,
+  openDetailModal,
+  openYamlModal,
+
+  // form helpers
+  resetCreateForm,
+  resetEditForm,
+  resetYamlForm,
+  resetCreateYamlForm,
+  handleVolumeTypeChange,
+  isRequiredField,
+
+  // filter handlers
+  handleClusterChange,
+  handleFilterChange,
+  handleClusterDropdownScroll,
+
+  // label/annotation helpers
+  newLabelKey,
+  newAnnotationKey,
+  addNewLabel,
+  removeLabelField,
+  addNewAnnotation,
+  removeAnnotationField,
+  newEditLabelKey,
+  newEditAnnotationKey,
+  addNewEditLabel,
+  removeEditLabelField,
+  addNewEditAnnotation,
+  removeEditAnnotationField,
+
+  // volume source helpers
+  newVolumeSourceKey,
+  newVolumeSourceValue,
+  addNewVolumeSource,
+  removeVolumeSourceField,
+  newEditVolumeSourceKey,
+  newEditVolumeSourceValue,
+  addNewEditVolumeSource,
+  removeEditVolumeSourceField,
+
+  // yaml operations
+  insertYamlTemplate,
+  formatYaml,
+  validateYaml,
+  clearYaml,
+  formatEditYaml,
+  validateEditYaml,
+
+  // constants
+  K8sPVStatus,
+} = usePVPage();
+
+const columns = [
+  {
+    title: 'PV名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 150,
+    ellipsis: true,
+    fixed: 'left',
+  },
+  {
+    title: '状态',
+    dataIndex: 'status',
+    key: 'status',
+    width: 90,
+    align: 'center',
+  },
+  {
+    title: '容量',
+    dataIndex: 'capacity',
+    key: 'capacity',
+    width: 100,
+    align: 'center',
+  },
+  {
+    title: '访问模式',
+    dataIndex: 'access_modes',
+    key: 'access_modes',
+    width: 140,
+  },
+  {
+    title: '回收策略',
+    dataIndex: 'reclaim_policy',
+    key: 'reclaim_policy',
+    width: 100,
+    align: 'center',
+  },
+  {
+    title: '绑定PVC',
+    dataIndex: 'claim_ref',
+    key: 'claim_ref',
+    width: 150,
+    ellipsis: true,
+  },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 200,
+    fixed: 'right',
+    align: 'center',
+  },
+];
+
+// 搜索功能
+const onSearch = () => {
+  currentPage.value = 1;
+  fetchPVs();
+};
+
+// 重置所有筛选条件
+const resetFilters = () => {
+  filterAccessMode.value = undefined;
+  searchText.value = '';
+  filterClusterId.value = undefined;
+  currentPage.value = 1;
+  fetchPVs();
+};
+
+// 表格变化处理
+const handleTableChange = (pagination: {
+  current?: number;
+  pageSize?: number;
+}) => {
+  if (pagination) {
+    currentPage.value = pagination.current || currentPage.value;
+    if (pagination.pageSize) {
+      pageSize.value = pagination.pageSize;
+    }
+    fetchPVs();
+  }
+};
+
+// 页面初始化
+onMounted(async () => {
+  await fetchClusters();
+});
+</script>
+
 <template>
   <OpsPage
     description="管理和监控集群中的所有 Kubernetes PersistentVolume 持久化存储卷"
@@ -1300,246 +1540,6 @@
     </a-modal>
   </OpsPage>
 </template>
-
-<script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { clusterResourceKey } from '../shared/utils';
-import { onMounted } from 'vue';
-import {
-  CheckCircleOutlined,
-  ClearOutlined,
-  DatabaseOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  EyeOutlined,
-  FileAddOutlined,
-  FileTextOutlined,
-  FormatPainterOutlined,
-  KeyOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-  UndoOutlined,
-} from '@ant-design/icons-vue';
-import { usePVPage } from './PV';
-import { formatDateTime, getRelativeTime } from '../shared/utils';
-
-import { usePermission } from '#/utils/permission';
-
-const { can } = usePermission();
-
-const {
-  // state
-  clusters,
-  loading,
-  loadError,
-  clustersError,
-  clustersLoading,
-  searchText,
-  filterClusterId,
-  filterAccessMode,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
-  clustersTotal,
-
-  // form refs
-  formRef,
-  yamlFormRef,
-  createYamlFormRef,
-
-  // modal state
-  isCreateModalVisible,
-  isCreateYamlModalVisible,
-  isEditModalVisible,
-  isDetailModalVisible,
-  isYamlModalVisible,
-  submitLoading,
-  detailLoading,
-
-  // current operation
-  currentOperationPV,
-  currentPVDetail,
-
-  // form models
-  createFormModel,
-  editFormModel,
-  yamlFormModel,
-  createYamlFormModel,
-
-  // form rules
-  createFormRules,
-  yamlFormRules,
-  createYamlFormRules,
-
-  // computed
-  filteredPVs,
-  rowSelection,
-
-  // helpers
-  getEnvText,
-  getPVStatusText,
-  getPVStatusColor,
-  getAccessModeText,
-
-  // api calls
-  fetchClusters,
-  fetchPVs,
-  createPV,
-  createPVByYaml,
-  updatePV,
-  updatePVByYaml,
-  deletePV,
-  reclaimPV,
-  deleteBatchPVs,
-
-  // modal handlers
-  openCreateModal,
-  openCreateYamlModal,
-  openEditModal,
-  openDetailModal,
-  openYamlModal,
-
-  // form helpers
-  resetCreateForm,
-  resetEditForm,
-  resetYamlForm,
-  resetCreateYamlForm,
-  handleVolumeTypeChange,
-  isRequiredField,
-
-  // filter handlers
-  handleClusterChange,
-  handleFilterChange,
-  handleClusterDropdownScroll,
-
-  // label/annotation helpers
-  newLabelKey,
-  newAnnotationKey,
-  addNewLabel,
-  removeLabelField,
-  addNewAnnotation,
-  removeAnnotationField,
-  newEditLabelKey,
-  newEditAnnotationKey,
-  addNewEditLabel,
-  removeEditLabelField,
-  addNewEditAnnotation,
-  removeEditAnnotationField,
-
-  // volume source helpers
-  newVolumeSourceKey,
-  newVolumeSourceValue,
-  addNewVolumeSource,
-  removeVolumeSourceField,
-  newEditVolumeSourceKey,
-  newEditVolumeSourceValue,
-  addNewEditVolumeSource,
-  removeEditVolumeSourceField,
-
-  // yaml operations
-  insertYamlTemplate,
-  formatYaml,
-  validateYaml,
-  clearYaml,
-  formatEditYaml,
-  validateEditYaml,
-
-  // constants
-  K8sPVStatus,
-} = usePVPage();
-
-const columns = [
-  {
-    title: 'PV名称',
-    dataIndex: 'name',
-    key: 'name',
-    width: 150,
-    ellipsis: true,
-    fixed: 'left',
-  },
-  {
-    title: '状态',
-    dataIndex: 'status',
-    key: 'status',
-    width: 90,
-    align: 'center',
-  },
-  {
-    title: '容量',
-    dataIndex: 'capacity',
-    key: 'capacity',
-    width: 100,
-    align: 'center',
-  },
-  {
-    title: '访问模式',
-    dataIndex: 'access_modes',
-    key: 'access_modes',
-    width: 140,
-  },
-  {
-    title: '回收策略',
-    dataIndex: 'reclaim_policy',
-    key: 'reclaim_policy',
-    width: 100,
-    align: 'center',
-  },
-  {
-    title: '绑定PVC',
-    dataIndex: 'claim_ref',
-    key: 'claim_ref',
-    width: 150,
-    ellipsis: true,
-  },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
-  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
-  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 200,
-    fixed: 'right',
-    align: 'center',
-  },
-];
-
-// 搜索功能
-const onSearch = () => {
-  currentPage.value = 1;
-  fetchPVs();
-};
-
-// 重置所有筛选条件
-const resetFilters = () => {
-  filterAccessMode.value = undefined;
-  searchText.value = '';
-  filterClusterId.value = undefined;
-  currentPage.value = 1;
-  fetchPVs();
-};
-
-// 表格变化处理
-const handleTableChange = (pagination: {
-  current?: number;
-  pageSize?: number;
-}) => {
-  if (pagination) {
-    currentPage.value = pagination.current || currentPage.value;
-    if (pagination.pageSize) {
-      pageSize.value = pagination.pageSize;
-    }
-    fetchPVs();
-  }
-};
-
-// 页面初始化
-onMounted(async () => {
-  await fetchClusters();
-});
-</script>
 
 <style scoped>
 @import '../shared/k8s-common.css';

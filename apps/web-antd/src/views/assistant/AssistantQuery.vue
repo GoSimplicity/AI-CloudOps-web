@@ -1,332 +1,3 @@
-<template>
-  <OpsPage
-    class="query-container"
-    description="明确发送问题后调用模型；会话按当前账户隔离"
-    title="智能问答"
-  >
-    <!-- 页面头部 -->
-    <template #actions>
-      <a-space wrap>
-        <a-button type="default" @click="clearSession">
-          <Icon class="muted-icon" icon="lucide:trash-2" size="16" />
-          清空会话
-        </a-button>
-        <a-button type="default" @click="exportSession">
-          <Icon class="muted-icon" icon="lucide:download" size="16" />
-          导出会话
-        </a-button>
-        <a-button type="primary" @click="goToSessionManage">
-          <Icon icon="lucide:users" size="16" />
-          会话管理
-        </a-button>
-      </a-space>
-    </template>
-
-    <!-- 主要内容区域 -->
-    <div class="page-content">
-      <a-row :gutter="[16, 16]">
-        <!-- 聊天区域 -->
-        <a-col :xl="18" :xs="24">
-          <div class="content-card">
-            <div class="card-header">
-              <div class="header-title">
-                <Icon
-                  class="accent-icon"
-                  icon="lucide:message-circle"
-                  size="18"
-                />
-                对话
-              </div>
-            </div>
-
-            <div class="card-content">
-              <!-- 聊天历史 -->
-              <div ref="chatHistoryRef" class="chat-history">
-                <div v-if="chatHistory.length === 0" class="empty-state">
-                  <Icon
-                    class="muted-icon"
-                    icon="lucide:message-circle"
-                    size="48"
-                  />
-                  <p>开始您的第一次对话吧！</p>
-                </div>
-
-                <div
-                  v-for="(chatMessage, index) in chatHistory"
-                  :key="index"
-                  class="message-item"
-                >
-                  <!-- 用户消息 -->
-                  <div v-if="chatMessage.role === 'user'" class="user-message">
-                    <div class="message-content">
-                      <div class="message-text">{{ chatMessage.content }}</div>
-                      <div class="message-time">
-                        {{ formatTime(chatMessage.timestamp) }}
-                      </div>
-                    </div>
-                    <a-avatar
-                      class="message-avatar"
-                      style="background-color: var(--ops-accent)"
-                    >
-                      <Icon icon="lucide:user" size="16" />
-                    </a-avatar>
-                  </div>
-
-                  <!-- 助手消息 -->
-                  <div v-else class="assistant-message">
-                    <a-avatar
-                      class="message-avatar"
-                      style="background-color: var(--ops-accent)"
-                    >
-                      <Icon icon="lucide:bot" size="16" />
-                    </a-avatar>
-                    <div class="message-content">
-                      <div
-                        class="message-text"
-                        v-html="formatMarkdown(chatMessage.content)"
-                      ></div>
-                      <div class="message-time">
-                        {{ formatTime(chatMessage.timestamp) }}
-                      </div>
-
-                      <!-- 来源文档 -->
-                      <div
-                        v-if="
-                          chatMessage.sourceDocuments &&
-                          chatMessage.sourceDocuments.length > 0
-                        "
-                        class="source-documents"
-                      >
-                        <a-divider style="margin: 12px 0 8px 0" />
-                        <div class="source-title">
-                          <Icon
-                            class="muted-icon"
-                            icon="lucide:file-text"
-                            size="14"
-                          />
-                          参考文档
-                        </div>
-                        <div class="source-list">
-                          <a-tag
-                            v-for="(
-                              doc, idx
-                            ) in chatMessage.sourceDocuments.slice(0, 3)"
-                            :key="idx"
-                            color="blue"
-                            class="source-tag"
-                            @click="showDocumentDetail(doc)"
-                          >
-                            {{ doc.title || `文档${idx + 1}` }}
-                          </a-tag>
-                        </div>
-                      </div>
-
-                      <!-- 推荐问题 -->
-                      <div
-                        v-if="
-                          chatMessage.followUpQuestions &&
-                          chatMessage.followUpQuestions.length > 0
-                        "
-                        class="follow-up-questions"
-                      >
-                        <a-divider style="margin: 12px 0 8px 0" />
-                        <div class="follow-up-title">
-                          <Icon
-                            class="muted-icon"
-                            icon="lucide:lightbulb"
-                            size="14"
-                          />
-                          相关问题
-                        </div>
-                        <div class="question-list">
-                          <a-button
-                            v-for="(
-                              question, idx
-                            ) in chatMessage.followUpQuestions.slice(0, 3)"
-                            :key="idx"
-                            type="link"
-                            size="small"
-                            @click="askFollowUpQuestion(question)"
-                            class="follow-up-btn"
-                          >
-                            {{ question }}
-                          </a-button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 加载中状态 -->
-                <div v-if="isLoading" class="loading-message">
-                  <a-avatar
-                    class="message-avatar"
-                    style="background-color: var(--ops-accent)"
-                  >
-                    <Icon icon="lucide:bot" size="16" />
-                  </a-avatar>
-                  <div class="message-content">
-                    <a-spin size="small" />
-                    <span class="loading-text">正在思考中...</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 输入区域 -->
-              <div class="chat-input">
-                <a-alert
-                  v-if="sessionNotice && !pendingTurn"
-                  :message="sessionNotice"
-                  show-icon
-                  type="warning"
-                >
-                  <template #action>
-                    <a-button
-                      :loading="isLoading"
-                      size="small"
-                      @click="restoreSession"
-                    >
-                      重新查询
-                    </a-button>
-                  </template>
-                </a-alert>
-                <a-alert
-                  v-if="pendingTurn"
-                  message="本次回复尚未确认，请先查询并恢复已完成的回复，或清空会话。"
-                  show-icon
-                  type="warning"
-                >
-                  <template #description>
-                    待核对问题：{{ pendingTurn.question }}
-                  </template>
-                  <template #action>
-                    <a-button
-                      :loading="isLoading"
-                      size="small"
-                      @click="recoverTurn"
-                    >
-                      查询并恢复
-                    </a-button>
-                  </template>
-                </a-alert>
-                <a-input-search
-                  v-model:value="questionInput"
-                  :disabled="isLoading || !!pendingTurn || !!sessionNotice"
-                  :loading="isLoading"
-                  enter-button="发送"
-                  placeholder="请输入您的问题..."
-                  size="large"
-                  @keydown.enter.prevent="sendMessage"
-                  @search="sendMessage"
-                />
-              </div>
-            </div>
-          </div>
-        </a-col>
-
-        <!-- 侧边栏 -->
-        <a-col :xl="6" :xs="24">
-          <!-- 会话信息 -->
-          <div class="content-card sidebar-card">
-            <div class="card-header">
-              <div class="header-title">
-                <Icon class="accent-icon" icon="lucide:info" size="18" />
-                会话信息
-              </div>
-            </div>
-
-            <div class="card-content">
-              <div class="info-item">
-                <label class="form-label">会话ID</label>
-                <div class="form-value">{{ currentSessionId || '新会话' }}</div>
-              </div>
-
-              <div class="info-item">
-                <label class="form-label">助手模式</label>
-                <a-select
-                  v-model:value="assistantMode"
-                  :disabled="isLoading || !!pendingTurn"
-                  class="form-control"
-                  @change="onModeChange"
-                >
-                  <a-select-option :value="1">RAG模式</a-select-option>
-                  <a-select-option :value="2">MCP模式</a-select-option>
-                </a-select>
-              </div>
-
-              <div class="info-item">
-                <label class="form-label">消息数量</label>
-                <div class="form-value">{{ chatHistory.length }}</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 快捷问题 -->
-          <div class="content-card sidebar-card">
-            <div class="card-header">
-              <div class="header-title">
-                <Icon class="accent-icon" icon="lucide:zap" size="18" />
-                快捷问题
-              </div>
-            </div>
-
-            <div class="card-content">
-              <div class="quick-questions">
-                <a-button
-                  v-for="(question, index) in quickQuestions"
-                  :key="index"
-                  block
-                  class="quick-question-btn"
-                  type="default"
-                  @click="askQuickQuestion(question)"
-                >
-                  {{ question }}
-                </a-button>
-              </div>
-            </div>
-          </div>
-        </a-col>
-      </a-row>
-    </div>
-
-    <!-- 文档详情弹窗 -->
-    <a-modal
-      v-model:open="documentModalVisible"
-      :footer="null"
-      title="文档详情"
-      width="800px"
-    >
-      <div v-if="selectedDocument">
-        <a-descriptions :column="1" bordered size="small">
-          <a-descriptions-item label="标题">
-            {{ selectedDocument.title }}
-          </a-descriptions-item>
-          <a-descriptions-item label="来源">
-            {{ selectedDocument.source }}
-          </a-descriptions-item>
-          <a-descriptions-item label="相关度">
-            <a-progress
-              :percent="Math.round((selectedDocument.score || 0) * 100)"
-              size="small"
-            />
-          </a-descriptions-item>
-        </a-descriptions>
-        <a-divider />
-        <div class="document-content">
-          <h4>内容摘要：</h4>
-          <div
-            v-html="
-              formatMarkdown(
-                selectedDocument.content || selectedDocument.page_content,
-              )
-            "
-          ></div>
-        </div>
-      </div>
-    </a-modal>
-  </OpsPage>
-</template>
-
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
@@ -737,6 +408,335 @@ onBeforeUnmount(() => {
   abortController?.abort();
 });
 </script>
+
+<template>
+  <OpsPage
+    class="query-container"
+    description="明确发送问题后调用模型；会话按当前账户隔离"
+    title="智能问答"
+  >
+    <!-- 页面头部 -->
+    <template #actions>
+      <a-space wrap>
+        <a-button type="default" @click="clearSession">
+          <Icon class="muted-icon" icon="lucide:trash-2" size="16" />
+          清空会话
+        </a-button>
+        <a-button type="default" @click="exportSession">
+          <Icon class="muted-icon" icon="lucide:download" size="16" />
+          导出会话
+        </a-button>
+        <a-button type="primary" @click="goToSessionManage">
+          <Icon icon="lucide:users" size="16" />
+          会话管理
+        </a-button>
+      </a-space>
+    </template>
+
+    <!-- 主要内容区域 -->
+    <div class="page-content">
+      <a-row :gutter="[16, 16]">
+        <!-- 聊天区域 -->
+        <a-col :xl="18" :xs="24">
+          <div class="content-card">
+            <div class="card-header">
+              <div class="header-title">
+                <Icon
+                  class="accent-icon"
+                  icon="lucide:message-circle"
+                  size="18"
+                />
+                对话
+              </div>
+            </div>
+
+            <div class="card-content">
+              <!-- 聊天历史 -->
+              <div ref="chatHistoryRef" class="chat-history">
+                <div v-if="chatHistory.length === 0" class="empty-state">
+                  <Icon
+                    class="muted-icon"
+                    icon="lucide:message-circle"
+                    size="48"
+                  />
+                  <p>开始您的第一次对话吧！</p>
+                </div>
+
+                <div
+                  v-for="(chatMessage, index) in chatHistory"
+                  :key="index"
+                  class="message-item"
+                >
+                  <!-- 用户消息 -->
+                  <div v-if="chatMessage.role === 'user'" class="user-message">
+                    <div class="message-content">
+                      <div class="message-text">{{ chatMessage.content }}</div>
+                      <div class="message-time">
+                        {{ formatTime(chatMessage.timestamp) }}
+                      </div>
+                    </div>
+                    <a-avatar
+                      class="message-avatar"
+                      style="background-color: var(--ops-accent)"
+                    >
+                      <Icon icon="lucide:user" size="16" />
+                    </a-avatar>
+                  </div>
+
+                  <!-- 助手消息 -->
+                  <div v-else class="assistant-message">
+                    <a-avatar
+                      class="message-avatar"
+                      style="background-color: var(--ops-accent)"
+                    >
+                      <Icon icon="lucide:bot" size="16" />
+                    </a-avatar>
+                    <div class="message-content">
+                      <div
+                        class="message-text"
+                        v-html="formatMarkdown(chatMessage.content)"
+                      ></div>
+                      <div class="message-time">
+                        {{ formatTime(chatMessage.timestamp) }}
+                      </div>
+
+                      <!-- 来源文档 -->
+                      <div
+                        v-if="
+                          chatMessage.sourceDocuments &&
+                          chatMessage.sourceDocuments.length > 0
+                        "
+                        class="source-documents"
+                      >
+                        <a-divider style="margin: 12px 0 8px 0" />
+                        <div class="source-title">
+                          <Icon
+                            class="muted-icon"
+                            icon="lucide:file-text"
+                            size="14"
+                          />
+                          参考文档
+                        </div>
+                        <div class="source-list">
+                          <a-tag
+                            v-for="(
+                              doc, idx
+                            ) in chatMessage.sourceDocuments.slice(0, 3)"
+                            :key="idx"
+                            color="blue"
+                            class="source-tag"
+                            @click="showDocumentDetail(doc)"
+                          >
+                            {{ doc.title || `文档${idx + 1}` }}
+                          </a-tag>
+                        </div>
+                      </div>
+
+                      <!-- 推荐问题 -->
+                      <div
+                        v-if="
+                          chatMessage.followUpQuestions &&
+                          chatMessage.followUpQuestions.length > 0
+                        "
+                        class="follow-up-questions"
+                      >
+                        <a-divider style="margin: 12px 0 8px 0" />
+                        <div class="follow-up-title">
+                          <Icon
+                            class="muted-icon"
+                            icon="lucide:lightbulb"
+                            size="14"
+                          />
+                          相关问题
+                        </div>
+                        <div class="question-list">
+                          <a-button
+                            v-for="(
+                              question, idx
+                            ) in chatMessage.followUpQuestions.slice(0, 3)"
+                            :key="idx"
+                            type="link"
+                            size="small"
+                            @click="askFollowUpQuestion(question)"
+                            class="follow-up-btn"
+                          >
+                            {{ question }}
+                          </a-button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 加载中状态 -->
+                <div v-if="isLoading" class="loading-message">
+                  <a-avatar
+                    class="message-avatar"
+                    style="background-color: var(--ops-accent)"
+                  >
+                    <Icon icon="lucide:bot" size="16" />
+                  </a-avatar>
+                  <div class="message-content">
+                    <a-spin size="small" />
+                    <span class="loading-text">正在思考中...</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 输入区域 -->
+              <div class="chat-input">
+                <a-alert
+                  v-if="sessionNotice && !pendingTurn"
+                  :message="sessionNotice"
+                  show-icon
+                  type="warning"
+                >
+                  <template #action>
+                    <a-button
+                      :loading="isLoading"
+                      size="small"
+                      @click="restoreSession"
+                    >
+                      重新查询
+                    </a-button>
+                  </template>
+                </a-alert>
+                <a-alert
+                  v-if="pendingTurn"
+                  message="本次回复尚未确认，请先查询并恢复已完成的回复，或清空会话。"
+                  show-icon
+                  type="warning"
+                >
+                  <template #description>
+                    待核对问题：{{ pendingTurn.question }}
+                  </template>
+                  <template #action>
+                    <a-button
+                      :loading="isLoading"
+                      size="small"
+                      @click="recoverTurn"
+                    >
+                      查询并恢复
+                    </a-button>
+                  </template>
+                </a-alert>
+                <a-input-search
+                  v-model:value="questionInput"
+                  :disabled="isLoading || !!pendingTurn || !!sessionNotice"
+                  :loading="isLoading"
+                  enter-button="发送"
+                  placeholder="请输入您的问题..."
+                  size="large"
+                  @keydown.enter.prevent="sendMessage"
+                  @search="sendMessage"
+                />
+              </div>
+            </div>
+          </div>
+        </a-col>
+
+        <!-- 侧边栏 -->
+        <a-col :xl="6" :xs="24">
+          <!-- 会话信息 -->
+          <div class="content-card sidebar-card">
+            <div class="card-header">
+              <div class="header-title">
+                <Icon class="accent-icon" icon="lucide:info" size="18" />
+                会话信息
+              </div>
+            </div>
+
+            <div class="card-content">
+              <div class="info-item">
+                <label class="form-label">会话ID</label>
+                <div class="form-value">{{ currentSessionId || '新会话' }}</div>
+              </div>
+
+              <div class="info-item">
+                <label class="form-label">助手模式</label>
+                <a-select
+                  v-model:value="assistantMode"
+                  :disabled="isLoading || !!pendingTurn"
+                  class="form-control"
+                  @change="onModeChange"
+                >
+                  <a-select-option :value="1">RAG模式</a-select-option>
+                  <a-select-option :value="2">MCP模式</a-select-option>
+                </a-select>
+              </div>
+
+              <div class="info-item">
+                <label class="form-label">消息数量</label>
+                <div class="form-value">{{ chatHistory.length }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 快捷问题 -->
+          <div class="content-card sidebar-card">
+            <div class="card-header">
+              <div class="header-title">
+                <Icon class="accent-icon" icon="lucide:zap" size="18" />
+                快捷问题
+              </div>
+            </div>
+
+            <div class="card-content">
+              <div class="quick-questions">
+                <a-button
+                  v-for="(question, index) in quickQuestions"
+                  :key="index"
+                  block
+                  class="quick-question-btn"
+                  type="default"
+                  @click="askQuickQuestion(question)"
+                >
+                  {{ question }}
+                </a-button>
+              </div>
+            </div>
+          </div>
+        </a-col>
+      </a-row>
+    </div>
+
+    <!-- 文档详情弹窗 -->
+    <a-modal
+      v-model:open="documentModalVisible"
+      :footer="null"
+      title="文档详情"
+      width="800px"
+    >
+      <div v-if="selectedDocument">
+        <a-descriptions :column="1" bordered size="small">
+          <a-descriptions-item label="标题">
+            {{ selectedDocument.title }}
+          </a-descriptions-item>
+          <a-descriptions-item label="来源">
+            {{ selectedDocument.source }}
+          </a-descriptions-item>
+          <a-descriptions-item label="相关度">
+            <a-progress
+              :percent="Math.round((selectedDocument.score || 0) * 100)"
+              size="small"
+            />
+          </a-descriptions-item>
+        </a-descriptions>
+        <a-divider />
+        <div class="document-content">
+          <h4>内容摘要：</h4>
+          <div
+            v-html="
+              formatMarkdown(
+                selectedDocument.content || selectedDocument.page_content,
+              )
+            "
+          ></div>
+        </div>
+      </div>
+    </a-modal>
+  </OpsPage>
+</template>
 
 <style scoped>
 /* 页面头部 */

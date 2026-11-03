@@ -1,3 +1,18 @@
+<script setup lang="ts">
+import { computed } from 'vue';
+import type { PredictionResponse } from '#/api/core/aiops/predict';
+
+const props = defineProps<{
+  result: PredictionResponse;
+  aiRequested: boolean;
+}>();
+const methodLabel = computed(() => {
+  if (props.result.method === 'rule_based') return '规则降级';
+  if (props.result.method?.startsWith('model:')) return '模型预测';
+  return '未知';
+});
+</script>
+
 <template>
   <section aria-label="预测来源和降级状态" class="prediction-provenance">
     <div>
@@ -24,21 +39,6 @@
     </div>
   </section>
 </template>
-
-<script setup lang="ts">
-import { computed } from 'vue';
-import type { PredictionResponse } from '#/api/core/aiops/predict';
-
-const props = defineProps<{
-  result: PredictionResponse;
-  aiRequested: boolean;
-}>();
-const methodLabel = computed(() => {
-  if (props.result.method === 'rule_based') return '规则降级';
-  if (props.result.method?.startsWith('model:')) return '模型预测';
-  return '未知';
-});
-</script>
 
 <style scoped>
 .prediction-provenance {

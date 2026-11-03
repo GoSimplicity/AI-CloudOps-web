@@ -1,286 +1,3 @@
-<template>
-  <OpsPage title="工单分类">
-    <!-- 页面头部操作区 -->
-    <template #actions>
-      <a-button class="create-btn" type="primary" @click="handleCreate">
-        <template #icon>
-          <PlusOutlined />
-        </template>
-        创建分类
-      </a-button>
-    </template>
-    <template #filters>
-      <div class="search-filters">
-        <a-input-search
-          v-model:value="searchQuery"
-          allow-clear
-          class="search-input"
-          placeholder="搜索分类名称..."
-          @search="handleSearch"
-        />
-        <a-select
-          v-model:value="statusFilter"
-          allow-clear
-          class="status-filter"
-          placeholder="状态筛选"
-          @change="handleStatusChange"
-        >
-          <a-select-option :value="CategoryStatus.Enabled">
-            启用
-          </a-select-option>
-          <a-select-option :value="CategoryStatus.Disabled">
-            禁用
-          </a-select-option>
-        </a-select>
-      </div>
-    </template>
-
-    <!-- 统计卡片 -->
-    <template #summary>
-      <div class="stats-grid">
-        <a-card class="stats-card">
-          <a-statistic
-            :value="statistics.total"
-            :value-style="{ color: '#1890ff' }"
-            title="总分类数"
-          >
-            <template #prefix>
-              <FolderOutlined />
-            </template>
-          </a-statistic>
-        </a-card>
-
-        <a-card class="stats-card">
-          <a-statistic
-            :value="statistics.enabled"
-            :value-style="{ color: '#52c41a' }"
-            title="启用分类"
-          >
-            <template #prefix>
-              <CheckCircleOutlined />
-            </template>
-          </a-statistic>
-        </a-card>
-
-        <a-card class="stats-card">
-          <a-statistic
-            :value="statistics.disabled"
-            :value-style="{ color: '#ff4d4f' }"
-            title="禁用分类"
-          >
-            <template #prefix>
-              <StopOutlined />
-            </template>
-          </a-statistic>
-        </a-card>
-      </div>
-    </template>
-
-    <!-- 数据表格 -->
-    <div class="table-container">
-      <a-card>
-        <a-table
-          :columns="tableColumns"
-          :data-source="categoryList"
-          :loading="loading"
-          :pagination="paginationConfig"
-          :scroll="{ x: 'max-content' }"
-          bordered
-          row-key="id"
-          @change="handleTableChange"
-        >
-          <template #bodyCell="{ column, record }">
-            <template v-if="column.key === 'name'">
-              <div class="name-cell">
-                <span class="category-name">{{ record.name }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'status'">
-              <a-tag
-                :color="
-                  record.status === CategoryStatus.Enabled ? 'green' : 'default'
-                "
-              >
-                {{ record.status === CategoryStatus.Enabled ? '启用' : '禁用' }}
-              </a-tag>
-            </template>
-
-            <template v-if="column.key === 'operator'">
-              <div class="operator-info">
-                <a-avatar
-                  size="small"
-                  :style="{
-                    backgroundColor: getAvatarColor(record.operator_name),
-                  }"
-                >
-                  {{ getInitials(record.operator_name) }}
-                </a-avatar>
-                <span class="operator-name">{{ record.operator_name }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'created_at'">
-              <div class="date-info">
-                <div class="date">{{ formatDate(record.created_at) }}</div>
-                <div class="time">{{ formatTime(record.created_at) }}</div>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'action'">
-              <div class="action-buttons">
-                <a-button
-                  size="small"
-                  type="primary"
-                  @click="handleView(record)"
-                >
-                  查看
-                </a-button>
-                <a-button
-                  size="small"
-                  type="default"
-                  @click="handleEdit(record)"
-                >
-                  编辑
-                </a-button>
-                <a-dropdown>
-                  <template #overlay>
-                    <a-menu
-                      @click="({ key }: any) => handleMenuAction(key, record)"
-                    >
-                      <a-menu-item key="toggleStatus">
-                        <template
-                          v-if="record.status === CategoryStatus.Enabled"
-                        >
-                          <StopOutlined />
-                          禁用
-                        </template>
-                        <template v-else>
-                          <CheckCircleOutlined />
-                          启用
-                        </template>
-                      </a-menu-item>
-                      <a-menu-divider v-if="can('workorder.category.delete')" />
-                      <a-menu-item
-                        v-if="can('workorder.category.delete')"
-                        key="delete"
-                        danger
-                      >
-                        <DeleteOutlined />
-                        删除
-                      </a-menu-item>
-                    </a-menu>
-                  </template>
-                  <a-button size="small">
-                    更多
-                    <DownOutlined />
-                  </a-button>
-                </a-dropdown>
-              </div>
-            </template>
-          </template>
-        </a-table>
-      </a-card>
-    </div>
-
-    <!-- 创建/编辑对话框 -->
-    <a-modal
-      :confirm-loading="submitLoading"
-      :open="formDialog.visible"
-      :title="formDialog.isEdit ? '编辑分类' : '创建分类'"
-      :width="dialogWidth"
-      destroy-on-close
-      @cancel="closeFormDialog"
-      @ok="handleSubmit"
-    >
-      <a-form
-        ref="formRef"
-        :model="formDialog.data"
-        :rules="formRules"
-        layout="vertical"
-      >
-        <a-form-item label="分类名称" name="name">
-          <a-input
-            v-model:value="formDialog.data.name"
-            maxlength="100"
-            placeholder="请输入分类名称"
-          />
-        </a-form-item>
-
-        <a-form-item label="分类描述" name="description">
-          <a-textarea
-            v-model:value="formDialog.data.description"
-            :rows="3"
-            maxlength="500"
-            placeholder="请输入分类描述（可选）"
-          />
-        </a-form-item>
-
-        <a-form-item label="状态" name="status">
-          <a-radio-group v-model:value="formDialog.data.status">
-            <a-radio :value="CategoryStatus.Enabled">启用</a-radio>
-            <a-radio :value="CategoryStatus.Disabled">禁用</a-radio>
-          </a-radio-group>
-        </a-form-item>
-      </a-form>
-    </a-modal>
-
-    <!-- 详情对话框 -->
-    <a-modal
-      :footer="null"
-      :open="detailDialog.visible"
-      :width="dialogWidth"
-      title="分类详情"
-      @cancel="closeDetailDialog"
-    >
-      <div v-if="detailDialog.data" class="detail-content">
-        <a-descriptions :column="1" bordered>
-          <a-descriptions-item label="分类ID">
-            {{ detailDialog.data.id }}
-          </a-descriptions-item>
-          <a-descriptions-item label="分类名称">
-            {{ detailDialog.data.name }}
-          </a-descriptions-item>
-          <a-descriptions-item label="分类描述">
-            {{ detailDialog.data.description || '无描述' }}
-          </a-descriptions-item>
-          <a-descriptions-item label="状态">
-            <a-tag
-              :color="
-                detailDialog.data.status === CategoryStatus.Enabled
-                  ? 'green'
-                  : 'default'
-              "
-            >
-              {{
-                detailDialog.data.status === CategoryStatus.Enabled
-                  ? '启用'
-                  : '禁用'
-              }}
-            </a-tag>
-          </a-descriptions-item>
-          <a-descriptions-item label="操作人">
-            {{ detailDialog.data.operator_name }}
-          </a-descriptions-item>
-          <a-descriptions-item label="创建时间">
-            {{ formatFullDateTime(detailDialog.data.created_at) }}
-          </a-descriptions-item>
-          <a-descriptions-item label="更新时间">
-            {{ formatFullDateTime(detailDialog.data.updated_at) }}
-          </a-descriptions-item>
-        </a-descriptions>
-
-        <div class="detail-footer">
-          <a-button @click="closeDetailDialog">关闭</a-button>
-          <a-button type="primary" @click="handleEdit(detailDialog.data)">
-            编辑
-          </a-button>
-        </div>
-      </div>
-    </a-modal>
-  </OpsPage>
-</template>
-
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 
@@ -784,6 +501,289 @@ onMounted(() => {
   loadCategoryList();
 });
 </script>
+
+<template>
+  <OpsPage title="工单分类">
+    <!-- 页面头部操作区 -->
+    <template #actions>
+      <a-button class="create-btn" type="primary" @click="handleCreate">
+        <template #icon>
+          <PlusOutlined />
+        </template>
+        创建分类
+      </a-button>
+    </template>
+    <template #filters>
+      <div class="search-filters">
+        <a-input-search
+          v-model:value="searchQuery"
+          allow-clear
+          class="search-input"
+          placeholder="搜索分类名称..."
+          @search="handleSearch"
+        />
+        <a-select
+          v-model:value="statusFilter"
+          allow-clear
+          class="status-filter"
+          placeholder="状态筛选"
+          @change="handleStatusChange"
+        >
+          <a-select-option :value="CategoryStatus.Enabled">
+            启用
+          </a-select-option>
+          <a-select-option :value="CategoryStatus.Disabled">
+            禁用
+          </a-select-option>
+        </a-select>
+      </div>
+    </template>
+
+    <!-- 统计卡片 -->
+    <template #summary>
+      <div class="stats-grid">
+        <a-card class="stats-card">
+          <a-statistic
+            :value="statistics.total"
+            :value-style="{ color: '#1890ff' }"
+            title="总分类数"
+          >
+            <template #prefix>
+              <FolderOutlined />
+            </template>
+          </a-statistic>
+        </a-card>
+
+        <a-card class="stats-card">
+          <a-statistic
+            :value="statistics.enabled"
+            :value-style="{ color: '#52c41a' }"
+            title="启用分类"
+          >
+            <template #prefix>
+              <CheckCircleOutlined />
+            </template>
+          </a-statistic>
+        </a-card>
+
+        <a-card class="stats-card">
+          <a-statistic
+            :value="statistics.disabled"
+            :value-style="{ color: '#ff4d4f' }"
+            title="禁用分类"
+          >
+            <template #prefix>
+              <StopOutlined />
+            </template>
+          </a-statistic>
+        </a-card>
+      </div>
+    </template>
+
+    <!-- 数据表格 -->
+    <div class="table-container">
+      <a-card>
+        <a-table
+          :columns="tableColumns"
+          :data-source="categoryList"
+          :loading="loading"
+          :pagination="paginationConfig"
+          :scroll="{ x: 'max-content' }"
+          bordered
+          row-key="id"
+          @change="handleTableChange"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'name'">
+              <div class="name-cell">
+                <span class="category-name">{{ record.name }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'status'">
+              <a-tag
+                :color="
+                  record.status === CategoryStatus.Enabled ? 'green' : 'default'
+                "
+              >
+                {{ record.status === CategoryStatus.Enabled ? '启用' : '禁用' }}
+              </a-tag>
+            </template>
+
+            <template v-if="column.key === 'operator'">
+              <div class="operator-info">
+                <a-avatar
+                  size="small"
+                  :style="{
+                    backgroundColor: getAvatarColor(record.operator_name),
+                  }"
+                >
+                  {{ getInitials(record.operator_name) }}
+                </a-avatar>
+                <span class="operator-name">{{ record.operator_name }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'created_at'">
+              <div class="date-info">
+                <div class="date">{{ formatDate(record.created_at) }}</div>
+                <div class="time">{{ formatTime(record.created_at) }}</div>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'action'">
+              <div class="action-buttons">
+                <a-button
+                  size="small"
+                  type="primary"
+                  @click="handleView(record)"
+                >
+                  查看
+                </a-button>
+                <a-button
+                  size="small"
+                  type="default"
+                  @click="handleEdit(record)"
+                >
+                  编辑
+                </a-button>
+                <a-dropdown>
+                  <template #overlay>
+                    <a-menu
+                      @click="({ key }: any) => handleMenuAction(key, record)"
+                    >
+                      <a-menu-item key="toggleStatus">
+                        <template
+                          v-if="record.status === CategoryStatus.Enabled"
+                        >
+                          <StopOutlined />
+                          禁用
+                        </template>
+                        <template v-else>
+                          <CheckCircleOutlined />
+                          启用
+                        </template>
+                      </a-menu-item>
+                      <a-menu-divider v-if="can('workorder.category.delete')" />
+                      <a-menu-item
+                        v-if="can('workorder.category.delete')"
+                        key="delete"
+                        danger
+                      >
+                        <DeleteOutlined />
+                        删除
+                      </a-menu-item>
+                    </a-menu>
+                  </template>
+                  <a-button size="small">
+                    更多
+                    <DownOutlined />
+                  </a-button>
+                </a-dropdown>
+              </div>
+            </template>
+          </template>
+        </a-table>
+      </a-card>
+    </div>
+
+    <!-- 创建/编辑对话框 -->
+    <a-modal
+      :confirm-loading="submitLoading"
+      :open="formDialog.visible"
+      :title="formDialog.isEdit ? '编辑分类' : '创建分类'"
+      :width="dialogWidth"
+      destroy-on-close
+      @cancel="closeFormDialog"
+      @ok="handleSubmit"
+    >
+      <a-form
+        ref="formRef"
+        :model="formDialog.data"
+        :rules="formRules"
+        layout="vertical"
+      >
+        <a-form-item label="分类名称" name="name">
+          <a-input
+            v-model:value="formDialog.data.name"
+            maxlength="100"
+            placeholder="请输入分类名称"
+          />
+        </a-form-item>
+
+        <a-form-item label="分类描述" name="description">
+          <a-textarea
+            v-model:value="formDialog.data.description"
+            :rows="3"
+            maxlength="500"
+            placeholder="请输入分类描述（可选）"
+          />
+        </a-form-item>
+
+        <a-form-item label="状态" name="status">
+          <a-radio-group v-model:value="formDialog.data.status">
+            <a-radio :value="CategoryStatus.Enabled">启用</a-radio>
+            <a-radio :value="CategoryStatus.Disabled">禁用</a-radio>
+          </a-radio-group>
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- 详情对话框 -->
+    <a-modal
+      :footer="null"
+      :open="detailDialog.visible"
+      :width="dialogWidth"
+      title="分类详情"
+      @cancel="closeDetailDialog"
+    >
+      <div v-if="detailDialog.data" class="detail-content">
+        <a-descriptions :column="1" bordered>
+          <a-descriptions-item label="分类ID">
+            {{ detailDialog.data.id }}
+          </a-descriptions-item>
+          <a-descriptions-item label="分类名称">
+            {{ detailDialog.data.name }}
+          </a-descriptions-item>
+          <a-descriptions-item label="分类描述">
+            {{ detailDialog.data.description || '无描述' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="状态">
+            <a-tag
+              :color="
+                detailDialog.data.status === CategoryStatus.Enabled
+                  ? 'green'
+                  : 'default'
+              "
+            >
+              {{
+                detailDialog.data.status === CategoryStatus.Enabled
+                  ? '启用'
+                  : '禁用'
+              }}
+            </a-tag>
+          </a-descriptions-item>
+          <a-descriptions-item label="操作人">
+            {{ detailDialog.data.operator_name }}
+          </a-descriptions-item>
+          <a-descriptions-item label="创建时间">
+            {{ formatFullDateTime(detailDialog.data.created_at) }}
+          </a-descriptions-item>
+          <a-descriptions-item label="更新时间">
+            {{ formatFullDateTime(detailDialog.data.updated_at) }}
+          </a-descriptions-item>
+        </a-descriptions>
+
+        <div class="detail-footer">
+          <a-button @click="closeDetailDialog">关闭</a-button>
+          <a-button type="primary" @click="handleEdit(detailDialog.data)">
+            编辑
+          </a-button>
+        </div>
+      </div>
+    </a-modal>
+  </OpsPage>
+</template>
 
 <style scoped>
 .create-btn {

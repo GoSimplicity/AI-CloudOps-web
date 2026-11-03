@@ -1,3 +1,93 @@
+<script setup lang="ts">
+import type { FormInstance } from 'ant-design-vue';
+
+import type { FormField } from '#/api/core/workorder/workorder_form_design';
+
+import { ref, watch } from 'vue';
+
+import { FormOutlined, ReloadOutlined } from '@ant-design/icons-vue';
+
+interface Props {
+  fields: FormField[];
+  data?: Record<string, any>;
+  rules?: Record<string, any[]>;
+  showActions?: boolean;
+}
+
+interface Emits {
+  (e: 'update:data', data: Record<string, any>): void;
+  (e: 'submit', data: Record<string, any>): void;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  data: () => ({}),
+  rules: () => ({}),
+  showActions: true,
+});
+
+const emit = defineEmits<Emits>();
+
+const formRef = ref<FormInstance>();
+const localData = ref<Record<string, any>>({ ...(props.data || {}) });
+
+let isUpdatingFromProps = false;
+let isUpdatingFromLocal = false;
+
+// 监听数据变化
+watch(
+  localData,
+  (newData) => {
+    if (!isUpdatingFromProps) {
+      isUpdatingFromLocal = true;
+      emit('update:data', JSON.parse(JSON.stringify(newData)));
+      setTimeout(() => {
+        isUpdatingFromLocal = false;
+      }, 0);
+    }
+  },
+  { deep: true },
+);
+
+// 监听外部数据变化
+watch(
+  () => props.data,
+  (newData) => {
+    if (
+      !isUpdatingFromLocal &&
+      JSON.stringify(localData.value) !== JSON.stringify(newData)
+    ) {
+      isUpdatingFromProps = true;
+      localData.value = JSON.parse(JSON.stringify(newData || {}));
+      setTimeout(() => {
+        isUpdatingFromProps = false;
+      }, 0);
+    }
+  },
+  { deep: true },
+);
+
+// 处理表单提交
+const handleFinish = (values: Record<string, any>) => {
+  emit('submit', values);
+};
+
+// 重置表单
+const resetForm = () => {
+  formRef.value?.resetFields();
+};
+
+// 验证表单
+const validate = () => {
+  return formRef.value?.validate();
+};
+
+// 暴露方法给父组件
+defineExpose({
+  validate,
+  resetForm,
+});
+</script>
+
 <template>
   <div class="dynamic-form">
     <a-form
@@ -154,96 +244,6 @@
     </a-form>
   </div>
 </template>
-
-<script setup lang="ts">
-import type { FormInstance } from 'ant-design-vue';
-
-import type { FormField } from '#/api/core/workorder/workorder_form_design';
-
-import { ref, watch } from 'vue';
-
-import { FormOutlined, ReloadOutlined } from '@ant-design/icons-vue';
-
-interface Props {
-  fields: FormField[];
-  data?: Record<string, any>;
-  rules?: Record<string, any[]>;
-  showActions?: boolean;
-}
-
-interface Emits {
-  (e: 'update:data', data: Record<string, any>): void;
-  (e: 'submit', data: Record<string, any>): void;
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  data: () => ({}),
-  rules: () => ({}),
-  showActions: true,
-});
-
-const emit = defineEmits<Emits>();
-
-const formRef = ref<FormInstance>();
-const localData = ref<Record<string, any>>({ ...(props.data || {}) });
-
-let isUpdatingFromProps = false;
-let isUpdatingFromLocal = false;
-
-// 监听数据变化
-watch(
-  localData,
-  (newData) => {
-    if (!isUpdatingFromProps) {
-      isUpdatingFromLocal = true;
-      emit('update:data', JSON.parse(JSON.stringify(newData)));
-      setTimeout(() => {
-        isUpdatingFromLocal = false;
-      }, 0);
-    }
-  },
-  { deep: true },
-);
-
-// 监听外部数据变化
-watch(
-  () => props.data,
-  (newData) => {
-    if (
-      !isUpdatingFromLocal &&
-      JSON.stringify(localData.value) !== JSON.stringify(newData)
-    ) {
-      isUpdatingFromProps = true;
-      localData.value = JSON.parse(JSON.stringify(newData || {}));
-      setTimeout(() => {
-        isUpdatingFromProps = false;
-      }, 0);
-    }
-  },
-  { deep: true },
-);
-
-// 处理表单提交
-const handleFinish = (values: Record<string, any>) => {
-  emit('submit', values);
-};
-
-// 重置表单
-const resetForm = () => {
-  formRef.value?.resetFields();
-};
-
-// 验证表单
-const validate = () => {
-  return formRef.value?.validate();
-};
-
-// 暴露方法给父组件
-defineExpose({
-  validate,
-  resetForm,
-});
-</script>
 
 <style scoped>
 .dynamic-form {

@@ -1,270 +1,3 @@
-<template>
-  <OpsPage
-    class="predict-analysis"
-    description="明确开始后预测单个指标，保留真实时间、零值与缺失区间"
-    title="预测分析"
-  >
-    <!-- 页面头部 -->
-    <template #actions>
-      <a-space wrap>
-        <a-button @click="resetForm"> 重置 </a-button>
-        <a-button
-          :disabled="!isFormValid || analyzing"
-          :loading="analyzing"
-          type="primary"
-          @click="startAnalysis"
-        >
-          开始分析
-        </a-button>
-      </a-space>
-    </template>
-    <a-alert
-      v-if="predictionError"
-      :message="predictionError"
-      role="alert"
-      show-icon
-      type="error"
-    />
-
-    <a-row :gutter="[24, 24]">
-      <a-col :lg="8" :xs="24">
-        <a-card class="config-card" title="预测配置">
-          <a-form :model="formData" layout="vertical">
-            <a-form-item label="预测类型" name="predictionType">
-              <a-select
-                v-model:value="formData.predictionType"
-                placeholder="选择预测类型"
-                @change="onPredictionTypeChange"
-              >
-                <a-select-option value="qps">
-                  <div class="option-content">
-                    <ThunderboltOutlined style="color: #1890ff" />
-                    <span>QPS预测</span>
-                  </div>
-                </a-select-option>
-                <a-select-option value="cpu">
-                  <div class="option-content">
-                    <ApiOutlined style="color: #ff4d4f" />
-                    <span>CPU预测</span>
-                  </div>
-                </a-select-option>
-                <a-select-option value="memory">
-                  <div class="option-content">
-                    <DatabaseOutlined style="color: #faad14" />
-                    <span>内存预测</span>
-                  </div>
-                </a-select-option>
-                <a-select-option value="disk">
-                  <div class="option-content">
-                    <HddOutlined style="color: #52c41a" />
-                    <span>磁盘预测</span>
-                  </div>
-                </a-select-option>
-              </a-select>
-            </a-form-item>
-
-            <a-form-item
-              :label="getCurrentValueLabel()"
-              name="currentValue"
-              required
-            >
-              <a-input-number
-                v-model:value="formData.currentValue"
-                :min="0"
-                :max="getCurrentValueMax()"
-                :precision="2"
-                style="width: 100%"
-                :placeholder="`输入当前${getCurrentValueLabel()}`"
-                :addon-after="getCurrentValueUnit()"
-                :status="formData.currentValue === null ? 'warning' : ''"
-              />
-              <div
-                v-if="!isFormValid && formData.currentValue !== null"
-                class="form-error"
-              >
-                请输入有效的数值范围: 0 - {{ getCurrentValueMax()
-                }}{{ getCurrentValueUnit() }}
-              </div>
-            </a-form-item>
-
-            <a-form-item label="预测时长" name="predictionHours">
-              <a-slider
-                v-model:value="formData.predictionHours"
-                :marks="timeMarks"
-                :max="168"
-                :min="1"
-                :tipFormatter="(value: number) => `${value}小时`"
-              />
-            </a-form-item>
-
-            <a-form-item label="时间粒度" name="granularity">
-              <a-radio-group
-                v-model:value="formData.granularity"
-                button-style="solid"
-              >
-                <a-radio-button value="minute">分钟</a-radio-button>
-                <a-radio-button value="hour">小时</a-radio-button>
-                <a-radio-button value="day">天</a-radio-button>
-              </a-radio-group>
-            </a-form-item>
-
-            <a-collapse ghost>
-              <a-collapse-panel key="advanced" header="高级选项">
-                <a-form-item label="目标利用率" name="targetUtilization">
-                  <a-slider
-                    v-model:value="formData.targetUtilization"
-                    :max="100"
-                    :min="0"
-                    :step="5"
-                    :tipFormatter="(value: number) => `${value}%`"
-                  />
-                </a-form-item>
-
-                <a-form-item label="敏感度" name="sensitivity">
-                  <a-slider
-                    v-model:value="formData.sensitivity"
-                    :max="1"
-                    :min="0"
-                    :step="0.1"
-                    :tipFormatter="(value: number) => value"
-                  />
-                </a-form-item>
-
-                <a-form-item name="includeConfidence">
-                  <a-checkbox v-model:checked="formData.includeConfidence">
-                    包含置信区间
-                  </a-checkbox>
-                </a-form-item>
-
-                <a-form-item name="includeAnomalyDetection">
-                  <a-checkbox
-                    v-model:checked="formData.includeAnomalyDetection"
-                  >
-                    异常检测
-                  </a-checkbox>
-                </a-form-item>
-
-                <a-form-item name="enableAiInsights">
-                  <a-checkbox v-model:checked="formData.enableAiInsights">
-                    启用AI洞察
-                  </a-checkbox>
-                </a-form-item>
-              </a-collapse-panel>
-            </a-collapse>
-          </a-form>
-          <p class="request-note">
-            仅点击开始分析时调用服务；重置或改参数不会取消已发出的预测。
-          </p>
-        </a-card>
-      </a-col>
-
-      <a-col :lg="16" :xs="24">
-        <a-card v-if="predictionResult" class="result-card" title="预测结果">
-          <template #extra>
-            <a-space wrap>
-              <a-tag :color="getAccuracyColor(predictionResult.model_accuracy)">
-                模型准确率:
-                {{ formatProbability(predictionResult.model_accuracy) }}
-              </a-tag>
-              <a-button size="small" @click="exportResult">
-                <DownloadOutlined />
-                导出
-              </a-button>
-            </a-space>
-          </template>
-
-          <PredictionProvenance
-            :ai-requested="formData.enableAiInsights"
-            :result="predictionResult"
-          />
-          <a-tabs v-model:activeKey="activeChartTab" @change="onChartTabChange">
-            <a-tab-pane key="trend" tab="趋势预测">
-              <div ref="trendChartRef" class="chart-container"></div>
-            </a-tab-pane>
-            <a-tab-pane
-              v-if="formData.includeConfidence"
-              key="confidence"
-              tab="置信区间"
-            >
-              <p v-if="!hasConfidenceBounds">当前响应未提供有效置信区间</p>
-              <div ref="confidenceChartRef" class="chart-container"></div>
-            </a-tab-pane>
-          </a-tabs>
-        </a-card>
-
-        <a-card v-else class="empty-result-card">
-          <a-empty description="暂无预测结果">
-            <template #image>
-              <BarChartOutlined style="font-size: 64px; color: #bfbfbf" />
-            </template>
-            <a-button
-              :disabled="!isFormValid || analyzing"
-              :loading="analyzing"
-              type="primary"
-              @click="startAnalysis"
-            >
-              开始预测分析
-            </a-button>
-          </a-empty>
-        </a-card>
-
-        <a-card
-          v-if="predictionResult?.scaling_recommendations?.length"
-          class="recommendations-card"
-          title="扩缩容建议"
-        >
-          <div class="recommendations-grid">
-            <div
-              v-for="(rec, index) in predictionResult.scaling_recommendations"
-              :key="index"
-              class="recommendation-item"
-            >
-              <div class="rec-icon">
-                <component :is="getActionIcon(rec.action)" />
-              </div>
-              <div class="rec-content">
-                <div class="rec-action">
-                  <a-tag :color="getActionColor(rec.action)">
-                    {{ getActionText(rec.action) }}
-                  </a-tag>
-                  <span class="rec-confidence"
-                    >置信度: {{ formatProbability(rec.confidence) }}</span
-                  >
-                </div>
-                <div class="rec-details">
-                  <div class="rec-time">{{ formatTime(rec.trigger_time) }}</div>
-                  <div class="rec-reason">{{ rec.reason }}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </a-card>
-
-        <a-card
-          v-if="
-            predictionResult?.ai_enhanced &&
-            predictionResult?.ai_insights?.length
-          "
-          class="insights-card"
-          title="AI智能洞察"
-        >
-          <div class="insights-list">
-            <div
-              v-for="(insight, index) in predictionResult.ai_insights"
-              :key="index"
-              class="insight-item"
-            >
-              <BulbOutlined class="insight-icon" />
-              <div class="insight-text">{{ insight }}</div>
-            </div>
-          </div>
-        </a-card>
-      </a-col>
-    </a-row>
-    <PredictionBacktest />
-  </OpsPage>
-</template>
-
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import PredictionProvenance from './PredictionProvenance.vue';
@@ -847,6 +580,273 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleChartResize);
 });
 </script>
+
+<template>
+  <OpsPage
+    class="predict-analysis"
+    description="明确开始后预测单个指标，保留真实时间、零值与缺失区间"
+    title="预测分析"
+  >
+    <!-- 页面头部 -->
+    <template #actions>
+      <a-space wrap>
+        <a-button @click="resetForm"> 重置 </a-button>
+        <a-button
+          :disabled="!isFormValid || analyzing"
+          :loading="analyzing"
+          type="primary"
+          @click="startAnalysis"
+        >
+          开始分析
+        </a-button>
+      </a-space>
+    </template>
+    <a-alert
+      v-if="predictionError"
+      :message="predictionError"
+      role="alert"
+      show-icon
+      type="error"
+    />
+
+    <a-row :gutter="[24, 24]">
+      <a-col :lg="8" :xs="24">
+        <a-card class="config-card" title="预测配置">
+          <a-form :model="formData" layout="vertical">
+            <a-form-item label="预测类型" name="predictionType">
+              <a-select
+                v-model:value="formData.predictionType"
+                placeholder="选择预测类型"
+                @change="onPredictionTypeChange"
+              >
+                <a-select-option value="qps">
+                  <div class="option-content">
+                    <ThunderboltOutlined style="color: #1890ff" />
+                    <span>QPS预测</span>
+                  </div>
+                </a-select-option>
+                <a-select-option value="cpu">
+                  <div class="option-content">
+                    <ApiOutlined style="color: #ff4d4f" />
+                    <span>CPU预测</span>
+                  </div>
+                </a-select-option>
+                <a-select-option value="memory">
+                  <div class="option-content">
+                    <DatabaseOutlined style="color: #faad14" />
+                    <span>内存预测</span>
+                  </div>
+                </a-select-option>
+                <a-select-option value="disk">
+                  <div class="option-content">
+                    <HddOutlined style="color: #52c41a" />
+                    <span>磁盘预测</span>
+                  </div>
+                </a-select-option>
+              </a-select>
+            </a-form-item>
+
+            <a-form-item
+              :label="getCurrentValueLabel()"
+              name="currentValue"
+              required
+            >
+              <a-input-number
+                v-model:value="formData.currentValue"
+                :min="0"
+                :max="getCurrentValueMax()"
+                :precision="2"
+                style="width: 100%"
+                :placeholder="`输入当前${getCurrentValueLabel()}`"
+                :addon-after="getCurrentValueUnit()"
+                :status="formData.currentValue === null ? 'warning' : ''"
+              />
+              <div
+                v-if="!isFormValid && formData.currentValue !== null"
+                class="form-error"
+              >
+                请输入有效的数值范围: 0 - {{ getCurrentValueMax()
+                }}{{ getCurrentValueUnit() }}
+              </div>
+            </a-form-item>
+
+            <a-form-item label="预测时长" name="predictionHours">
+              <a-slider
+                v-model:value="formData.predictionHours"
+                :marks="timeMarks"
+                :max="168"
+                :min="1"
+                :tipFormatter="(value: number) => `${value}小时`"
+              />
+            </a-form-item>
+
+            <a-form-item label="时间粒度" name="granularity">
+              <a-radio-group
+                v-model:value="formData.granularity"
+                button-style="solid"
+              >
+                <a-radio-button value="minute">分钟</a-radio-button>
+                <a-radio-button value="hour">小时</a-radio-button>
+                <a-radio-button value="day">天</a-radio-button>
+              </a-radio-group>
+            </a-form-item>
+
+            <a-collapse ghost>
+              <a-collapse-panel key="advanced" header="高级选项">
+                <a-form-item label="目标利用率" name="targetUtilization">
+                  <a-slider
+                    v-model:value="formData.targetUtilization"
+                    :max="100"
+                    :min="0"
+                    :step="5"
+                    :tipFormatter="(value: number) => `${value}%`"
+                  />
+                </a-form-item>
+
+                <a-form-item label="敏感度" name="sensitivity">
+                  <a-slider
+                    v-model:value="formData.sensitivity"
+                    :max="1"
+                    :min="0"
+                    :step="0.1"
+                    :tipFormatter="(value: number) => value"
+                  />
+                </a-form-item>
+
+                <a-form-item name="includeConfidence">
+                  <a-checkbox v-model:checked="formData.includeConfidence">
+                    包含置信区间
+                  </a-checkbox>
+                </a-form-item>
+
+                <a-form-item name="includeAnomalyDetection">
+                  <a-checkbox
+                    v-model:checked="formData.includeAnomalyDetection"
+                  >
+                    异常检测
+                  </a-checkbox>
+                </a-form-item>
+
+                <a-form-item name="enableAiInsights">
+                  <a-checkbox v-model:checked="formData.enableAiInsights">
+                    启用AI洞察
+                  </a-checkbox>
+                </a-form-item>
+              </a-collapse-panel>
+            </a-collapse>
+          </a-form>
+          <p class="request-note">
+            仅点击开始分析时调用服务；重置或改参数不会取消已发出的预测。
+          </p>
+        </a-card>
+      </a-col>
+
+      <a-col :lg="16" :xs="24">
+        <a-card v-if="predictionResult" class="result-card" title="预测结果">
+          <template #extra>
+            <a-space wrap>
+              <a-tag :color="getAccuracyColor(predictionResult.model_accuracy)">
+                模型准确率:
+                {{ formatProbability(predictionResult.model_accuracy) }}
+              </a-tag>
+              <a-button size="small" @click="exportResult">
+                <DownloadOutlined />
+                导出
+              </a-button>
+            </a-space>
+          </template>
+
+          <PredictionProvenance
+            :ai-requested="formData.enableAiInsights"
+            :result="predictionResult"
+          />
+          <a-tabs v-model:activeKey="activeChartTab" @change="onChartTabChange">
+            <a-tab-pane key="trend" tab="趋势预测">
+              <div ref="trendChartRef" class="chart-container"></div>
+            </a-tab-pane>
+            <a-tab-pane
+              v-if="formData.includeConfidence"
+              key="confidence"
+              tab="置信区间"
+            >
+              <p v-if="!hasConfidenceBounds">当前响应未提供有效置信区间</p>
+              <div ref="confidenceChartRef" class="chart-container"></div>
+            </a-tab-pane>
+          </a-tabs>
+        </a-card>
+
+        <a-card v-else class="empty-result-card">
+          <a-empty description="暂无预测结果">
+            <template #image>
+              <BarChartOutlined style="font-size: 64px; color: #bfbfbf" />
+            </template>
+            <a-button
+              :disabled="!isFormValid || analyzing"
+              :loading="analyzing"
+              type="primary"
+              @click="startAnalysis"
+            >
+              开始预测分析
+            </a-button>
+          </a-empty>
+        </a-card>
+
+        <a-card
+          v-if="predictionResult?.scaling_recommendations?.length"
+          class="recommendations-card"
+          title="扩缩容建议"
+        >
+          <div class="recommendations-grid">
+            <div
+              v-for="(rec, index) in predictionResult.scaling_recommendations"
+              :key="index"
+              class="recommendation-item"
+            >
+              <div class="rec-icon">
+                <component :is="getActionIcon(rec.action)" />
+              </div>
+              <div class="rec-content">
+                <div class="rec-action">
+                  <a-tag :color="getActionColor(rec.action)">
+                    {{ getActionText(rec.action) }}
+                  </a-tag>
+                  <span class="rec-confidence"
+                    >置信度: {{ formatProbability(rec.confidence) }}</span
+                  >
+                </div>
+                <div class="rec-details">
+                  <div class="rec-time">{{ formatTime(rec.trigger_time) }}</div>
+                  <div class="rec-reason">{{ rec.reason }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </a-card>
+
+        <a-card
+          v-if="
+            predictionResult?.ai_enhanced &&
+            predictionResult?.ai_insights?.length
+          "
+          class="insights-card"
+          title="AI智能洞察"
+        >
+          <div class="insights-list">
+            <div
+              v-for="(insight, index) in predictionResult.ai_insights"
+              :key="index"
+              class="insight-item"
+            >
+              <BulbOutlined class="insight-icon" />
+              <div class="insight-text">{{ insight }}</div>
+            </div>
+          </div>
+        </a-card>
+      </a-col>
+    </a-row>
+    <PredictionBacktest />
+  </OpsPage>
+</template>
 
 <style scoped>
 /* 页面头部 */

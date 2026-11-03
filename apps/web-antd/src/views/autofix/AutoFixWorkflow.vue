@@ -1,3 +1,225 @@
+<script setup lang="ts">
+import { computed } from 'vue';
+import { Modal } from 'ant-design-vue';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import WorkflowInput from './WorkflowInput.vue';
+import ApprovalPanel from './ApprovalPanel.vue';
+import { useAutoFixWorkflow } from './useAutoFixWorkflow';
+
+import { Icon } from '@iconify/vue';
+
+import type {
+  AutoFixAction,
+  AutoFixWorkflowMessage,
+} from '#/api/core/aiops/autofix';
+
+import {
+  formatBoolean,
+  getActionIcon,
+  getActionLabel,
+  getAiAnalysisHighlights,
+  getAiPlanHighlights,
+  getAiReviewHighlights,
+  getAllowedActionCount,
+  getFaultLabel,
+  getRiskTagColor,
+  getStatusLabel,
+  getStatusTagColor,
+  normalizeWorkflowResult,
+} from './autofix-format';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
+const workflowAgents = [
+  {
+    description: '识别任务类型',
+    icon: 'lucide:route',
+    name: 'Coordinator',
+    title: 'Coordinator',
+  },
+  {
+    description: '分析事件和日志',
+    icon: 'lucide:search',
+    name: 'Analyzer',
+    title: 'Analyzer',
+  },
+  {
+    description: '规划修复步骤',
+    icon: 'lucide:list-checks',
+    name: 'Planner',
+    title: 'Planner',
+  },
+  {
+    description: '复核风险边界',
+    icon: 'lucide:shield-check',
+    name: 'Reviewer',
+    title: 'Reviewer',
+  },
+  {
+    description: '人工确认高风险动作',
+    icon: 'lucide:user-check',
+    name: 'HumanConfirm',
+    title: 'HumanConfirm',
+  },
+  {
+    description: '执行允许动作',
+    icon: 'lucide:terminal',
+    name: 'Executor',
+    title: 'Executor',
+  },
+];
+
+const {
+  templateKey,
+  running,
+  infoLoading,
+  showRawDrawer,
+  serviceInfo,
+  readyInfo,
+  workflowResult,
+  selectedBlockedActionIds,
+  workflowError,
+  infoError,
+  formData,
+  busy,
+  isFormValid,
+  confirmableBlockedActions,
+  approvalIssue,
+  canConfirmWorkflow,
+  canConfirmAll,
+  applyTemplate,
+  resetForm,
+  toggleBlockedAction,
+  loadServiceInfo,
+  runWorkflow,
+  confirmWorkflowExecution,
+  confirmSingleAction,
+  confirmAllActions,
+  operationOwner,
+  currentOperationId,
+  currentPlanId,
+  operationState,
+  operationDetail,
+  operationHistory,
+  recoveryError,
+  historyError,
+  recoveryLoading,
+  historyLoading,
+  historyLoaded,
+  canStartWorkflow,
+  canReadHistory,
+  canReadOperation,
+  canReadPlan,
+  checkOperation,
+  loadHistory,
+  openHistoryPlan,
+  canOpenHistory,
+  acknowledgeUncertain,
+} = useAutoFixWorkflow();
+function operationLabel(state: string) {
+  const labels: Record<string, string> = {
+    none: '无',
+    unverified: '待核对',
+    not_found: '未找到',
+    building: '处理中',
+    running: '处理中',
+    executing: '处理中',
+    pending: '待审批',
+    completed: '已结束',
+    uncertain: '结果不确定',
+    invalidated: '已失效',
+  };
+  return labels[state] || '状态未知';
+}
+function formatOperationTime(value?: string) {
+  const time = value ? Date.parse(value) : Number.NaN;
+  return Number.isFinite(time) ? new Date(time).toLocaleString() : '时间未知';
+}
+function confirmAcknowledge() {
+  const owner = operationOwner.value;
+  const operationId = currentOperationId.value;
+  const planId = currentPlanId.value;
+  Modal.confirm({
+    title: '确认已核对实际状态',
+    content:
+      '原操作可能已经产生副作用。请先核对目标资源和操作历史；确认后才开始新的操作。',
+    okText: '已核对',
+    cancelText: '取消',
+    onOk: () => acknowledgeUncertain(owner, operationId, planId),
+  });
+}
+const normalizedResult = computed(() =>
+  workflowResult.value ? normalizeWorkflowResult(workflowResult.value) : null,
+);
+const candidateActions = computed<AutoFixAction[]>(
+  () => normalizedResult.value?.candidate_actions || [],
+);
+const blockedActions = computed<AutoFixAction[]>(
+  () => normalizedResult.value?.blocked_actions || [],
+);
+const executedActions = computed<AutoFixAction[]>(
+  () => normalizedResult.value?.executed_actions || [],
+);
+const allowedActionCount = computed(() =>
+  getAllowedActionCount(candidateActions.value),
+);
+const agentMessages = computed<AutoFixWorkflowMessage[]>(
+  () => normalizedResult.value?.messages || [],
+);
+const visibleAgentMessages = computed<AutoFixWorkflowMessage[]>(() =>
+  agentMessages.value.map((item) => ({
+    ...item,
+    content: item.content || item.action || '',
+  })),
+);
+const reviewApproved = computed(() =>
+  Boolean(normalizedResult.value?.review?.approved),
+);
+const reviewReason = computed(
+  () => normalizedResult.value?.review?.reason || '暂无Reviewer结论',
+);
+const rawResultText = computed(() =>
+  JSON.stringify(workflowResult.value || {}, null, 2),
+);
+const aiAnalysisHighlights = computed(() =>
+  getAiAnalysisHighlights(normalizedResult.value?.diagnosis),
+);
+const aiPlanHighlights = computed(() =>
+  getAiPlanHighlights(normalizedResult.value?.plan),
+);
+const aiReviewHighlights = computed(() =>
+  getAiReviewHighlights(normalizedResult.value?.review),
+);
+const currentAgentStep = computed(() => {
+  const used = normalizedResult.value?.agents_used || [];
+  if (!used.length) return 0;
+  const last = used[used.length - 1];
+  return Math.max(
+    0,
+    workflowAgents.findIndex((agent) => agent.name === last),
+  );
+});
+
+const actionColumns = [
+  { dataIndex: 'action_type', key: 'action', title: '动作', width: 260 },
+  {
+    dataIndex: ['risk_assessment', 'risk_level'],
+    key: 'risk',
+    title: '风险',
+    width: 100,
+  },
+  {
+    dataIndex: ['risk_assessment', 'allowed'],
+    key: 'allowed',
+    title: '执行门禁',
+    width: 130,
+  },
+  { key: 'riskDetails', title: '风险评估明细', width: 350 },
+];
+</script>
+
 <template>
   <OpsPage
     class="autofix-workflow"
@@ -497,228 +719,6 @@
     </a-drawer>
   </OpsPage>
 </template>
-
-<script setup lang="ts">
-import { computed } from 'vue';
-import { Modal } from 'ant-design-vue';
-import OpsPage from '#/components/ops/OpsPage.vue';
-import WorkflowInput from './WorkflowInput.vue';
-import ApprovalPanel from './ApprovalPanel.vue';
-import { useAutoFixWorkflow } from './useAutoFixWorkflow';
-
-import { Icon } from '@iconify/vue';
-
-import type {
-  AutoFixAction,
-  AutoFixWorkflowMessage,
-} from '#/api/core/aiops/autofix';
-
-import {
-  formatBoolean,
-  getActionIcon,
-  getActionLabel,
-  getAiAnalysisHighlights,
-  getAiPlanHighlights,
-  getAiReviewHighlights,
-  getAllowedActionCount,
-  getFaultLabel,
-  getRiskTagColor,
-  getStatusLabel,
-  getStatusTagColor,
-  normalizeWorkflowResult,
-} from './autofix-format';
-
-import { usePermission } from '#/utils/permission';
-
-const { can } = usePermission();
-
-const workflowAgents = [
-  {
-    description: '识别任务类型',
-    icon: 'lucide:route',
-    name: 'Coordinator',
-    title: 'Coordinator',
-  },
-  {
-    description: '分析事件和日志',
-    icon: 'lucide:search',
-    name: 'Analyzer',
-    title: 'Analyzer',
-  },
-  {
-    description: '规划修复步骤',
-    icon: 'lucide:list-checks',
-    name: 'Planner',
-    title: 'Planner',
-  },
-  {
-    description: '复核风险边界',
-    icon: 'lucide:shield-check',
-    name: 'Reviewer',
-    title: 'Reviewer',
-  },
-  {
-    description: '人工确认高风险动作',
-    icon: 'lucide:user-check',
-    name: 'HumanConfirm',
-    title: 'HumanConfirm',
-  },
-  {
-    description: '执行允许动作',
-    icon: 'lucide:terminal',
-    name: 'Executor',
-    title: 'Executor',
-  },
-];
-
-const {
-  templateKey,
-  running,
-  infoLoading,
-  showRawDrawer,
-  serviceInfo,
-  readyInfo,
-  workflowResult,
-  selectedBlockedActionIds,
-  workflowError,
-  infoError,
-  formData,
-  busy,
-  isFormValid,
-  confirmableBlockedActions,
-  approvalIssue,
-  canConfirmWorkflow,
-  canConfirmAll,
-  applyTemplate,
-  resetForm,
-  toggleBlockedAction,
-  loadServiceInfo,
-  runWorkflow,
-  confirmWorkflowExecution,
-  confirmSingleAction,
-  confirmAllActions,
-  operationOwner,
-  currentOperationId,
-  currentPlanId,
-  operationState,
-  operationDetail,
-  operationHistory,
-  recoveryError,
-  historyError,
-  recoveryLoading,
-  historyLoading,
-  historyLoaded,
-  canStartWorkflow,
-  canReadHistory,
-  canReadOperation,
-  canReadPlan,
-  checkOperation,
-  loadHistory,
-  openHistoryPlan,
-  canOpenHistory,
-  acknowledgeUncertain,
-} = useAutoFixWorkflow();
-function operationLabel(state: string) {
-  const labels: Record<string, string> = {
-    none: '无',
-    unverified: '待核对',
-    not_found: '未找到',
-    building: '处理中',
-    running: '处理中',
-    executing: '处理中',
-    pending: '待审批',
-    completed: '已结束',
-    uncertain: '结果不确定',
-    invalidated: '已失效',
-  };
-  return labels[state] || '状态未知';
-}
-function formatOperationTime(value?: string) {
-  const time = value ? Date.parse(value) : Number.NaN;
-  return Number.isFinite(time) ? new Date(time).toLocaleString() : '时间未知';
-}
-function confirmAcknowledge() {
-  const owner = operationOwner.value;
-  const operationId = currentOperationId.value;
-  const planId = currentPlanId.value;
-  Modal.confirm({
-    title: '确认已核对实际状态',
-    content:
-      '原操作可能已经产生副作用。请先核对目标资源和操作历史；确认后才开始新的操作。',
-    okText: '已核对',
-    cancelText: '取消',
-    onOk: () => acknowledgeUncertain(owner, operationId, planId),
-  });
-}
-const normalizedResult = computed(() =>
-  workflowResult.value ? normalizeWorkflowResult(workflowResult.value) : null,
-);
-const candidateActions = computed<AutoFixAction[]>(
-  () => normalizedResult.value?.candidate_actions || [],
-);
-const blockedActions = computed<AutoFixAction[]>(
-  () => normalizedResult.value?.blocked_actions || [],
-);
-const executedActions = computed<AutoFixAction[]>(
-  () => normalizedResult.value?.executed_actions || [],
-);
-const allowedActionCount = computed(() =>
-  getAllowedActionCount(candidateActions.value),
-);
-const agentMessages = computed<AutoFixWorkflowMessage[]>(
-  () => normalizedResult.value?.messages || [],
-);
-const visibleAgentMessages = computed<AutoFixWorkflowMessage[]>(() =>
-  agentMessages.value.map((item) => ({
-    ...item,
-    content: item.content || item.action || '',
-  })),
-);
-const reviewApproved = computed(() =>
-  Boolean(normalizedResult.value?.review?.approved),
-);
-const reviewReason = computed(
-  () => normalizedResult.value?.review?.reason || '暂无Reviewer结论',
-);
-const rawResultText = computed(() =>
-  JSON.stringify(workflowResult.value || {}, null, 2),
-);
-const aiAnalysisHighlights = computed(() =>
-  getAiAnalysisHighlights(normalizedResult.value?.diagnosis),
-);
-const aiPlanHighlights = computed(() =>
-  getAiPlanHighlights(normalizedResult.value?.plan),
-);
-const aiReviewHighlights = computed(() =>
-  getAiReviewHighlights(normalizedResult.value?.review),
-);
-const currentAgentStep = computed(() => {
-  const used = normalizedResult.value?.agents_used || [];
-  if (!used.length) return 0;
-  const last = used[used.length - 1];
-  return Math.max(
-    0,
-    workflowAgents.findIndex((agent) => agent.name === last),
-  );
-});
-
-const actionColumns = [
-  { dataIndex: 'action_type', key: 'action', title: '动作', width: 260 },
-  {
-    dataIndex: ['risk_assessment', 'risk_level'],
-    key: 'risk',
-    title: '风险',
-    width: 100,
-  },
-  {
-    dataIndex: ['risk_assessment', 'allowed'],
-    key: 'allowed',
-    title: '执行门禁',
-    width: 130,
-  },
-  { key: 'riskDetails', title: '风险评估明细', width: 350 },
-];
-</script>
 
 <style scoped>
 .operation-card {

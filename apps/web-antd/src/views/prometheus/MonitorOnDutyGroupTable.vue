@@ -1,477 +1,3 @@
-<template>
-  <OpsPage
-    :title="dutyGroupDetail?.name || '值班安排'"
-    description="按月查看排班与历史，管理换班申请"
-  >
-    <!-- 页面标题和操作栏 -->
-    <template #actions>
-      <a-button @click="goBack">返回值班组</a-button>
-      <a-button
-        :disabled="!calendarDays.length || !!scheduleError"
-        :loading="exportLoading"
-        class="action-btn"
-        type="default"
-        @click="exportSchedule"
-      >
-        <template #icon> </template>
-        导出
-      </a-button>
-      <a-button
-        :disabled="!dutyGroupDetail"
-        class="action-btn"
-        type="primary"
-        @click="handleCreateChange"
-      >
-        申请换班
-      </a-button>
-    </template>
-    <template #filters>
-      <div class="search-filters">
-        <a-input-search
-          v-model:value="searchQuery"
-          allow-clear
-          class="search-input"
-          placeholder="搜索值班历史..."
-          @search="handleSearch"
-        />
-        <a-date-picker
-          v-model:value="dateFilter"
-          allow-clear
-          class="filter-select"
-          placeholder="筛选日期"
-          @change="handleDateChange"
-        />
-      </div>
-    </template>
-
-    <!-- 统计面板 -->
-    <template #summary>
-      <div class="stats-section">
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-icon">
-              <Icon icon="carbon:user-multiple" />
-            </div>
-            <div class="stat-content">
-              <div class="stat-number">
-                {{ loadError ? '未知' : stats.totalMembers }}
-              </div>
-              <div class="stat-label">值班成员</div>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-icon">
-              <Icon icon="carbon:user-online" />
-            </div>
-            <div class="stat-content">
-              <div class="stat-number">
-                {{ loadError ? '未知' : stats.todayOnDuty }}
-              </div>
-              <div class="stat-label">今日值班</div>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-icon">
-              <Icon icon="carbon:calendar-heat-map" />
-            </div>
-            <div class="stat-content">
-              <div class="stat-number">
-                {{ loadError ? '未知' : stats.monthlyDutyDays }}
-              </div>
-              <div class="stat-label">本月值班天数</div>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-icon">
-              <Icon icon="carbon:change-catalog" />
-            </div>
-            <div class="stat-content">
-              <div class="stat-number">
-                {{ loadError ? '未知' : stats.changeRecords }}
-              </div>
-              <div class="stat-label">本页换班记录</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </template>
-    <a-alert
-      v-if="loadError"
-      :message="loadError"
-      role="alert"
-      show-icon
-      type="error"
-    >
-      <template #action>
-        <a-button :loading="detailLoading" @click="fetchDutyGroups">
-          重试
-        </a-button>
-      </template>
-    </a-alert>
-
-    <!-- 日历区域 -->
-    <div class="calendar-section">
-      <a-card class="calendar-card">
-        <div class="calendar-header">
-          <div class="calendar-nav">
-            <a-button
-              :disabled="loading"
-              aria-label="上个月"
-              class="nav-btn"
-              size="large"
-              @click="previousMonth"
-            >
-              <Icon icon="carbon:chevron-left" />
-            </a-button>
-            <div class="calendar-title">
-              <h2>{{ currentMonthYear }}</h2>
-              <span class="calendar-subtitle">值班安排</span>
-            </div>
-            <a-button
-              :disabled="loading"
-              aria-label="下个月"
-              class="nav-btn"
-              size="large"
-              @click="nextMonth"
-            >
-              <Icon icon="carbon:chevron-right" />
-            </a-button>
-          </div>
-
-          <div class="calendar-actions">
-            <a-button
-              :disabled="isCurrentMonthToday"
-              size="small"
-              @click="goToToday"
-            >
-              今日
-            </a-button>
-            <a-button :loading="loading" size="small" @click="refreshCalendar">
-              刷新
-            </a-button>
-          </div>
-        </div>
-
-        <a-spin :spinning="loading" size="large">
-          <div class="calendar">
-            <!-- 星期标题 -->
-            <div class="calendar-weekdays">
-              <div
-                v-for="weekday in weekdays"
-                :key="weekday"
-                class="weekday-header"
-              >
-                {{ weekday }}
-              </div>
-            </div>
-
-            <!-- 日历内容 -->
-            <div class="calendar-grid">
-              <div
-                class="calendar-day"
-                v-for="day in calendarDays"
-                :key="day.date"
-                @click="handleDayClick(day)"
-                :class="{
-                  'has-duty': day.user,
-                  today: isToday(day.date),
-                  weekend: isWeekend(day.date),
-                  'current-month': day.isCurrentMonth,
-                  clickable: day.isCurrentMonth,
-                  'is-adjusted': day.isAdjusted,
-                }"
-              >
-                <div class="day-header">
-                  <div class="day-number">{{ formatDayNumber(day.date) }}</div>
-                  <div v-if="day.isCurrentMonth" class="day-badges">
-                    <div class="today-badge" v-if="isToday(day.date)">今日</div>
-                    <div v-if="day.isAdjusted" class="adjusted-badge">换班</div>
-                    <div class="weekend-badge" v-if="isWeekend(day.date)">
-                      {{ getWeekendType(day.date) }}
-                    </div>
-                  </div>
-                </div>
-
-                <div class="day-content">
-                  <div v-if="day.user" class="duty-info">
-                    <a-avatar
-                      size="small"
-                      :style="{
-                        backgroundColor: getAvatarColor(
-                          day.user.real_name || day.user.username,
-                        ),
-                      }"
-                    >
-                      {{ getInitials(day.user.real_name || day.user.username) }}
-                    </a-avatar>
-                    <div class="duty-details">
-                      <span class="duty-name">{{
-                        day.user.real_name || day.user.username
-                      }}</span>
-                      <div v-if="day.originUser" class="duty-extra">
-                        <span class="original-user"
-                          >原: {{ day.originUser }}</span
-                        >
-                      </div>
-                    </div>
-                  </div>
-                  <div v-else class="no-duty">
-                    <span class="no-duty-text">无安排</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </a-spin>
-      </a-card>
-    </div>
-
-    <!-- 值班历史表格 -->
-    <div class="records-section">
-      <a-card>
-        <template #title>
-          <div class="section-title">
-            <Icon icon="carbon:table" />
-            <span>值班历史</span>
-          </div>
-        </template>
-
-        <a-table
-          :columns="historyColumns"
-          :data-source="historyList"
-          :loading="historyLoading"
-          :pagination="paginationConfig"
-          class="records-table"
-          row-key="id"
-          @change="handleTableChange"
-        >
-          <template #bodyCell="{ column, record }">
-            <template v-if="column.key === 'date'">
-              <div class="date-cell">
-                <div class="date-main">
-                  {{ formatDate(record.date_string) }}
-                </div>
-                <div class="date-sub">
-                  {{ getDayOfWeek(record.date_string) }}
-                </div>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'users'">
-              <div class="users-change">
-                <div class="user-item">
-                  <a-avatar
-                    size="small"
-                    :style="{
-                      backgroundColor: getAvatarColor(
-                        getUserName(record.origin_user_id) || '',
-                      ),
-                    }"
-                  >
-                    {{ getInitials(getUserName(record.origin_user_id)) }}
-                  </a-avatar>
-                  <span class="user-name">{{
-                    getUserName(record.origin_user_id)
-                  }}</span>
-                </div>
-                <Icon class="arrow" icon="carbon:arrow-right" />
-                <div class="user-item">
-                  <a-avatar
-                    size="small"
-                    :style="{
-                      backgroundColor: getAvatarColor(
-                        getUserName(record.on_duty_user_id) || '',
-                      ),
-                    }"
-                  >
-                    {{ getInitials(getUserName(record.on_duty_user_id)) }}
-                  </a-avatar>
-                  <span class="user-name">{{
-                    getUserName(record.on_duty_user_id)
-                  }}</span>
-                </div>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'createdAt'">
-              <div class="date-cell">
-                <div class="date-main">
-                  {{ formatDateFromTimestamp(record.created_at) }}
-                </div>
-                <div class="date-sub">
-                  {{ formatTimeFromTimestamp(record.created_at) }}
-                </div>
-              </div>
-            </template>
-          </template>
-
-          <template #emptyText>
-            <div class="empty-state">
-              <Icon class="empty-icon" icon="carbon:no-image" />
-              <div class="empty-title">暂无值班历史</div>
-              <div class="empty-description">当前时间段内没有值班历史记录</div>
-            </div>
-          </template>
-        </a-table>
-      </a-card>
-    </div>
-
-    <!-- 换班申请对话框 -->
-    <a-modal
-      :confirmLoading="submitting"
-      :open="formDialogVisible"
-      :title="formDialog.isEdit ? '编辑换班记录' : '申请换班'"
-      @cancel="closeFormDialog"
-      @ok="saveChange"
-    >
-      <a-form :model="formDialog.form" layout="vertical">
-        <a-form-item label="换班日期" required>
-          <a-date-picker
-            v-model:value="formDialog.form.date"
-            :disabled-date="disabledDate"
-            placeholder="请选择换班日期"
-            style="width: 100%"
-          />
-        </a-form-item>
-
-        <a-form-item label="原值班人" required>
-          <a-select
-            v-model:value="formDialog.form.origin_user_id"
-            :filter-option="filterOption"
-            allow-clear
-            placeholder="请选择原值班人"
-            show-search
-            style="width: 100%"
-          >
-            <a-select-option
-              v-for="member in dutyGroupDetail?.users || []"
-              :key="member.id"
-              :value="member.id"
-            >
-              {{ member.real_name || member.username }}
-            </a-select-option>
-          </a-select>
-        </a-form-item>
-
-        <a-form-item label="新值班人" required>
-          <a-select
-            v-model:value="formDialog.form.on_duty_user_id"
-            :filter-option="filterOption"
-            allow-clear
-            placeholder="请选择新值班人"
-            show-search
-            style="width: 100%"
-          >
-            <a-select-option
-              v-for="member in dutyGroupDetail?.users || []"
-              :key="member.id"
-              :value="member.id"
-            >
-              {{ member.real_name || member.username }}
-            </a-select-option>
-          </a-select>
-        </a-form-item>
-
-        <a-form-item label="换班原因" required>
-          <a-textarea
-            v-model:value="formDialog.form.reason"
-            :maxlength="200"
-            :rows="3"
-            placeholder="请输入换班原因"
-            show-count
-          />
-        </a-form-item>
-      </a-form>
-    </a-modal>
-
-    <!-- 日期详情对话框 -->
-    <a-modal
-      :footer="null"
-      :open="dayDetailVisible"
-      title="值班日详情"
-      width="400"
-      @cancel="closeDayDetail"
-    >
-      <div v-if="selectedDay" class="day-detail-container">
-        <div class="day-detail-header">
-          <div class="date-display">
-            <div class="date-large">
-              {{ formatDayNumber(selectedDay.date) }}
-            </div>
-            <div class="date-info">
-              <div class="date-month">
-                {{ formatMonthDay(selectedDay.date) }}
-              </div>
-              <div class="date-weekday">
-                {{ getDayOfWeek(selectedDay.date) }}
-              </div>
-            </div>
-          </div>
-          <div class="day-badges">
-            <a-tag v-if="isToday(selectedDay.date)" color="blue">今日</a-tag>
-            <a-tag v-if="isWeekend(selectedDay.date)" color="orange">
-              {{ getWeekendType(selectedDay.date) }}
-            </a-tag>
-            <a-tag v-if="selectedDay.isAdjusted" color="purple">已换班</a-tag>
-          </div>
-        </div>
-
-        <div class="duty-detail-content">
-          <div v-if="selectedDay.user" class="duty-assigned">
-            <div class="duty-user-info">
-              <a-avatar
-                size="large"
-                :style="{
-                  backgroundColor: getAvatarColor(
-                    selectedDay.user.real_name || selectedDay.user.username,
-                  ),
-                }"
-              >
-                {{
-                  getInitials(
-                    selectedDay.user.real_name || selectedDay.user.username,
-                  )
-                }}
-              </a-avatar>
-              <div class="user-details">
-                <div class="user-name">
-                  {{ selectedDay.user.real_name || selectedDay.user.username }}
-                </div>
-                <div class="user-role">值班人员</div>
-              </div>
-            </div>
-
-            <div v-if="selectedDay.originUser" class="change-info">
-              <Icon class="change-icon" icon="carbon:change-catalog" />
-              <span>原值班人：{{ selectedDay.originUser }}</span>
-            </div>
-
-            <div class="duty-actions-full">
-              <a-button
-                type="primary"
-                @click="openSwapModal(selectedDay)"
-                :disabled="isPastDate(selectedDay.date)"
-                block
-              >
-                <Icon icon="carbon:change-catalog" />
-                申请换班
-              </a-button>
-            </div>
-          </div>
-
-          <div v-else class="duty-unassigned">
-            <Icon class="unassigned-icon" icon="carbon:user-off" />
-            <div class="unassigned-text">该日期暂无值班安排</div>
-          </div>
-        </div>
-      </div>
-    </a-modal>
-  </OpsPage>
-</template>
-
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
@@ -1402,6 +928,480 @@ onMounted(async () => {
   await initializeData();
 });
 </script>
+
+<template>
+  <OpsPage
+    :title="dutyGroupDetail?.name || '值班安排'"
+    description="按月查看排班与历史，管理换班申请"
+  >
+    <!-- 页面标题和操作栏 -->
+    <template #actions>
+      <a-button @click="goBack">返回值班组</a-button>
+      <a-button
+        :disabled="!calendarDays.length || !!scheduleError"
+        :loading="exportLoading"
+        class="action-btn"
+        type="default"
+        @click="exportSchedule"
+      >
+        <template #icon> </template>
+        导出
+      </a-button>
+      <a-button
+        :disabled="!dutyGroupDetail"
+        class="action-btn"
+        type="primary"
+        @click="handleCreateChange"
+      >
+        申请换班
+      </a-button>
+    </template>
+    <template #filters>
+      <div class="search-filters">
+        <a-input-search
+          v-model:value="searchQuery"
+          allow-clear
+          class="search-input"
+          placeholder="搜索值班历史..."
+          @search="handleSearch"
+        />
+        <a-date-picker
+          v-model:value="dateFilter"
+          allow-clear
+          class="filter-select"
+          placeholder="筛选日期"
+          @change="handleDateChange"
+        />
+      </div>
+    </template>
+
+    <!-- 统计面板 -->
+    <template #summary>
+      <div class="stats-section">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">
+              <Icon icon="carbon:user-multiple" />
+            </div>
+            <div class="stat-content">
+              <div class="stat-number">
+                {{ loadError ? '未知' : stats.totalMembers }}
+              </div>
+              <div class="stat-label">值班成员</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon">
+              <Icon icon="carbon:user-online" />
+            </div>
+            <div class="stat-content">
+              <div class="stat-number">
+                {{ loadError ? '未知' : stats.todayOnDuty }}
+              </div>
+              <div class="stat-label">今日值班</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon">
+              <Icon icon="carbon:calendar-heat-map" />
+            </div>
+            <div class="stat-content">
+              <div class="stat-number">
+                {{ loadError ? '未知' : stats.monthlyDutyDays }}
+              </div>
+              <div class="stat-label">本月值班天数</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon">
+              <Icon icon="carbon:change-catalog" />
+            </div>
+            <div class="stat-content">
+              <div class="stat-number">
+                {{ loadError ? '未知' : stats.changeRecords }}
+              </div>
+              <div class="stat-label">本页换班记录</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+    <a-alert
+      v-if="loadError"
+      :message="loadError"
+      role="alert"
+      show-icon
+      type="error"
+    >
+      <template #action>
+        <a-button :loading="detailLoading" @click="fetchDutyGroups">
+          重试
+        </a-button>
+      </template>
+    </a-alert>
+
+    <!-- 日历区域 -->
+    <div class="calendar-section">
+      <a-card class="calendar-card">
+        <div class="calendar-header">
+          <div class="calendar-nav">
+            <a-button
+              :disabled="loading"
+              aria-label="上个月"
+              class="nav-btn"
+              size="large"
+              @click="previousMonth"
+            >
+              <Icon icon="carbon:chevron-left" />
+            </a-button>
+            <div class="calendar-title">
+              <h2>{{ currentMonthYear }}</h2>
+              <span class="calendar-subtitle">值班安排</span>
+            </div>
+            <a-button
+              :disabled="loading"
+              aria-label="下个月"
+              class="nav-btn"
+              size="large"
+              @click="nextMonth"
+            >
+              <Icon icon="carbon:chevron-right" />
+            </a-button>
+          </div>
+
+          <div class="calendar-actions">
+            <a-button
+              :disabled="isCurrentMonthToday"
+              size="small"
+              @click="goToToday"
+            >
+              今日
+            </a-button>
+            <a-button :loading="loading" size="small" @click="refreshCalendar">
+              刷新
+            </a-button>
+          </div>
+        </div>
+
+        <a-spin :spinning="loading" size="large">
+          <div class="calendar">
+            <!-- 星期标题 -->
+            <div class="calendar-weekdays">
+              <div
+                v-for="weekday in weekdays"
+                :key="weekday"
+                class="weekday-header"
+              >
+                {{ weekday }}
+              </div>
+            </div>
+
+            <!-- 日历内容 -->
+            <div class="calendar-grid">
+              <div
+                class="calendar-day"
+                v-for="day in calendarDays"
+                :key="day.date"
+                @click="handleDayClick(day)"
+                :class="{
+                  'has-duty': day.user,
+                  today: isToday(day.date),
+                  weekend: isWeekend(day.date),
+                  'current-month': day.isCurrentMonth,
+                  clickable: day.isCurrentMonth,
+                  'is-adjusted': day.isAdjusted,
+                }"
+              >
+                <div class="day-header">
+                  <div class="day-number">{{ formatDayNumber(day.date) }}</div>
+                  <div v-if="day.isCurrentMonth" class="day-badges">
+                    <div class="today-badge" v-if="isToday(day.date)">今日</div>
+                    <div v-if="day.isAdjusted" class="adjusted-badge">换班</div>
+                    <div class="weekend-badge" v-if="isWeekend(day.date)">
+                      {{ getWeekendType(day.date) }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="day-content">
+                  <div v-if="day.user" class="duty-info">
+                    <a-avatar
+                      size="small"
+                      :style="{
+                        backgroundColor: getAvatarColor(
+                          day.user.real_name || day.user.username,
+                        ),
+                      }"
+                    >
+                      {{ getInitials(day.user.real_name || day.user.username) }}
+                    </a-avatar>
+                    <div class="duty-details">
+                      <span class="duty-name">{{
+                        day.user.real_name || day.user.username
+                      }}</span>
+                      <div v-if="day.originUser" class="duty-extra">
+                        <span class="original-user"
+                          >原: {{ day.originUser }}</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                  <div v-else class="no-duty">
+                    <span class="no-duty-text">无安排</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </a-spin>
+      </a-card>
+    </div>
+
+    <!-- 值班历史表格 -->
+    <div class="records-section">
+      <a-card>
+        <template #title>
+          <div class="section-title">
+            <Icon icon="carbon:table" />
+            <span>值班历史</span>
+          </div>
+        </template>
+
+        <a-table
+          :columns="historyColumns"
+          :data-source="historyList"
+          :loading="historyLoading"
+          :pagination="paginationConfig"
+          class="records-table"
+          row-key="id"
+          @change="handleTableChange"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'date'">
+              <div class="date-cell">
+                <div class="date-main">
+                  {{ formatDate(record.date_string) }}
+                </div>
+                <div class="date-sub">
+                  {{ getDayOfWeek(record.date_string) }}
+                </div>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'users'">
+              <div class="users-change">
+                <div class="user-item">
+                  <a-avatar
+                    size="small"
+                    :style="{
+                      backgroundColor: getAvatarColor(
+                        getUserName(record.origin_user_id) || '',
+                      ),
+                    }"
+                  >
+                    {{ getInitials(getUserName(record.origin_user_id)) }}
+                  </a-avatar>
+                  <span class="user-name">{{
+                    getUserName(record.origin_user_id)
+                  }}</span>
+                </div>
+                <Icon class="arrow" icon="carbon:arrow-right" />
+                <div class="user-item">
+                  <a-avatar
+                    size="small"
+                    :style="{
+                      backgroundColor: getAvatarColor(
+                        getUserName(record.on_duty_user_id) || '',
+                      ),
+                    }"
+                  >
+                    {{ getInitials(getUserName(record.on_duty_user_id)) }}
+                  </a-avatar>
+                  <span class="user-name">{{
+                    getUserName(record.on_duty_user_id)
+                  }}</span>
+                </div>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'createdAt'">
+              <div class="date-cell">
+                <div class="date-main">
+                  {{ formatDateFromTimestamp(record.created_at) }}
+                </div>
+                <div class="date-sub">
+                  {{ formatTimeFromTimestamp(record.created_at) }}
+                </div>
+              </div>
+            </template>
+          </template>
+
+          <template #emptyText>
+            <div class="empty-state">
+              <Icon class="empty-icon" icon="carbon:no-image" />
+              <div class="empty-title">暂无值班历史</div>
+              <div class="empty-description">当前时间段内没有值班历史记录</div>
+            </div>
+          </template>
+        </a-table>
+      </a-card>
+    </div>
+
+    <!-- 换班申请对话框 -->
+    <a-modal
+      :confirmLoading="submitting"
+      :open="formDialogVisible"
+      :title="formDialog.isEdit ? '编辑换班记录' : '申请换班'"
+      @cancel="closeFormDialog"
+      @ok="saveChange"
+    >
+      <a-form :model="formDialog.form" layout="vertical">
+        <a-form-item label="换班日期" required>
+          <a-date-picker
+            v-model:value="formDialog.form.date"
+            :disabled-date="disabledDate"
+            placeholder="请选择换班日期"
+            style="width: 100%"
+          />
+        </a-form-item>
+
+        <a-form-item label="原值班人" required>
+          <a-select
+            v-model:value="formDialog.form.origin_user_id"
+            :filter-option="filterOption"
+            allow-clear
+            placeholder="请选择原值班人"
+            show-search
+            style="width: 100%"
+          >
+            <a-select-option
+              v-for="member in dutyGroupDetail?.users || []"
+              :key="member.id"
+              :value="member.id"
+            >
+              {{ member.real_name || member.username }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+
+        <a-form-item label="新值班人" required>
+          <a-select
+            v-model:value="formDialog.form.on_duty_user_id"
+            :filter-option="filterOption"
+            allow-clear
+            placeholder="请选择新值班人"
+            show-search
+            style="width: 100%"
+          >
+            <a-select-option
+              v-for="member in dutyGroupDetail?.users || []"
+              :key="member.id"
+              :value="member.id"
+            >
+              {{ member.real_name || member.username }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+
+        <a-form-item label="换班原因" required>
+          <a-textarea
+            v-model:value="formDialog.form.reason"
+            :maxlength="200"
+            :rows="3"
+            placeholder="请输入换班原因"
+            show-count
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- 日期详情对话框 -->
+    <a-modal
+      :footer="null"
+      :open="dayDetailVisible"
+      title="值班日详情"
+      width="400"
+      @cancel="closeDayDetail"
+    >
+      <div v-if="selectedDay" class="day-detail-container">
+        <div class="day-detail-header">
+          <div class="date-display">
+            <div class="date-large">
+              {{ formatDayNumber(selectedDay.date) }}
+            </div>
+            <div class="date-info">
+              <div class="date-month">
+                {{ formatMonthDay(selectedDay.date) }}
+              </div>
+              <div class="date-weekday">
+                {{ getDayOfWeek(selectedDay.date) }}
+              </div>
+            </div>
+          </div>
+          <div class="day-badges">
+            <a-tag v-if="isToday(selectedDay.date)" color="blue">今日</a-tag>
+            <a-tag v-if="isWeekend(selectedDay.date)" color="orange">
+              {{ getWeekendType(selectedDay.date) }}
+            </a-tag>
+            <a-tag v-if="selectedDay.isAdjusted" color="purple">已换班</a-tag>
+          </div>
+        </div>
+
+        <div class="duty-detail-content">
+          <div v-if="selectedDay.user" class="duty-assigned">
+            <div class="duty-user-info">
+              <a-avatar
+                size="large"
+                :style="{
+                  backgroundColor: getAvatarColor(
+                    selectedDay.user.real_name || selectedDay.user.username,
+                  ),
+                }"
+              >
+                {{
+                  getInitials(
+                    selectedDay.user.real_name || selectedDay.user.username,
+                  )
+                }}
+              </a-avatar>
+              <div class="user-details">
+                <div class="user-name">
+                  {{ selectedDay.user.real_name || selectedDay.user.username }}
+                </div>
+                <div class="user-role">值班人员</div>
+              </div>
+            </div>
+
+            <div v-if="selectedDay.originUser" class="change-info">
+              <Icon class="change-icon" icon="carbon:change-catalog" />
+              <span>原值班人：{{ selectedDay.originUser }}</span>
+            </div>
+
+            <div class="duty-actions-full">
+              <a-button
+                type="primary"
+                @click="openSwapModal(selectedDay)"
+                :disabled="isPastDate(selectedDay.date)"
+                block
+              >
+                <Icon icon="carbon:change-catalog" />
+                申请换班
+              </a-button>
+            </div>
+          </div>
+
+          <div v-else class="duty-unassigned">
+            <Icon class="unassigned-icon" icon="carbon:user-off" />
+            <div class="unassigned-text">该日期暂无值班安排</div>
+          </div>
+        </div>
+      </div>
+    </a-modal>
+  </OpsPage>
+</template>
 
 <style scoped>
 /* 保持原有样式不变 */

@@ -1,3 +1,313 @@
+<script setup lang="ts">
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { namespacedResourceKey } from '../shared/utils';
+import { onMounted } from 'vue';
+import {
+  AppstoreOutlined,
+  CheckCircleOutlined,
+  ClearOutlined,
+  CloudServerOutlined,
+  ContainerOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  ExpandOutlined,
+  EyeOutlined,
+  FileAddOutlined,
+  FileTextOutlined,
+  FilterOutlined,
+  FormatPainterOutlined,
+  InboxOutlined,
+  KeyOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+} from '@ant-design/icons-vue';
+import { usePVCPage } from './PVC';
+import { formatDateTime, getRelativeTime } from '../shared/utils';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
+const {
+  // state
+  clusters,
+  namespaces,
+  availablePVs,
+  loading,
+  loadError,
+  clustersError,
+  namespacesError,
+  clustersLoading,
+  namespacesLoading,
+  pvsLoading,
+  searchText,
+  filterClusterId,
+  filterNamespace,
+  filterStatus,
+  filterAccessMode,
+  selectedRows,
+  currentPage,
+  pageSize,
+  total,
+  clustersTotal,
+  namespacesTotal,
+  pvsTotal,
+
+  // form refs
+  formRef,
+  yamlFormRef,
+  createYamlFormRef,
+  expandFormRef,
+
+  // modal state
+  isCreateModalVisible,
+  isCreateYamlModalVisible,
+  isEditModalVisible,
+  isDetailModalVisible,
+  isYamlModalVisible,
+  isExpandModalVisible,
+  isPodsModalVisible,
+  submitLoading,
+  detailLoading,
+  podsLoading,
+
+  // current operation
+  currentOperationPVC,
+  currentPVCDetail,
+  currentPVCPods,
+
+  // form models
+  createFormModel,
+  editFormModel,
+  yamlFormModel,
+  createYamlFormModel,
+  expandFormModel,
+
+  // form rules
+  createFormRules,
+  yamlFormRules,
+  createYamlFormRules,
+  expandFormRules,
+
+  // computed
+  filteredPVCs,
+  rowSelection,
+  pvOptions,
+
+  // helpers
+  getEnvText,
+  getPVCStatusText,
+  getPVCStatusColor,
+  getAccessModeText,
+
+  // api calls
+  fetchClusters,
+  fetchNamespaces,
+  fetchPVCs,
+  createPVC,
+  createPVCByYaml,
+  updatePVC,
+  updatePVCByYaml,
+  deletePVC,
+  expandPVC,
+  deleteBatchPVCs,
+
+  // modal handlers
+  openCreateModal,
+  openCreateYamlModal,
+  openEditModal,
+  openDetailModal,
+  openYamlModal,
+  openExpandModal,
+  openPodsModal,
+
+  // form helpers
+  resetCreateForm,
+  resetEditForm,
+  resetYamlForm,
+  resetCreateYamlForm,
+  resetExpandForm,
+
+  // filter handlers
+  handleClusterChange,
+  handleFilterChange,
+  handleClusterDropdownScroll,
+  loadMoreNamespaces,
+  loadMorePVs,
+
+  // label/annotation helpers
+  newLabelKey,
+  newAnnotationKey,
+  addLabelItem,
+  removeLabelItem,
+  newEditLabelKey,
+  newEditAnnotationKey,
+  addEditLabelItem,
+  removeEditLabelItem,
+
+  // selector helpers
+  newSelectorKey,
+  newSelectorValue,
+  addSelectorItem,
+  removeSelectorItem,
+
+  // yaml operations
+  insertYamlTemplate,
+  formatYaml,
+  validateYaml,
+  clearYaml,
+  formatEditYaml,
+  validateEditYaml,
+
+  // constants
+  K8sPVCStatus,
+} = usePVCPage();
+
+const columns = [
+  {
+    title: 'PVC名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 150,
+    ellipsis: true,
+    fixed: 'left',
+  },
+  {
+    title: '命名空间',
+    dataIndex: 'namespace',
+    key: 'namespace',
+    width: 120,
+    ellipsis: true,
+  },
+  {
+    title: '状态',
+    dataIndex: 'status',
+    key: 'status',
+    width: 90,
+    align: 'center',
+  },
+  {
+    title: '容量信息',
+    dataIndex: 'capacity',
+    key: 'capacity',
+    width: 120,
+    align: 'center',
+  },
+  {
+    title: '访问模式',
+    dataIndex: 'access_modes',
+    key: 'access_modes',
+    width: 140,
+  },
+  {
+    title: '存储类',
+    dataIndex: 'storage_class',
+    key: 'storage_class',
+    width: 130,
+    ellipsis: true,
+  },
+  {
+    title: '绑定PV',
+    dataIndex: 'volume_name',
+    key: 'volume_name',
+    width: 150,
+    ellipsis: true,
+  },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 200,
+    fixed: 'right',
+    align: 'center',
+  },
+];
+
+// Pod列表表格列定义
+const podsColumns = [
+  {
+    title: 'Pod名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 200,
+  },
+  {
+    title: '命名空间',
+    dataIndex: 'namespace',
+    key: 'namespace',
+    width: 120,
+  },
+  {
+    title: '状态',
+    dataIndex: 'status',
+    key: 'status',
+    width: 120,
+  },
+  {
+    title: '节点',
+    dataIndex: 'node_name',
+    key: 'node_name',
+    width: 150,
+  },
+  {
+    title: '创建时间',
+    dataIndex: 'created_at',
+    key: 'created_at',
+    width: 180,
+  },
+];
+
+// 搜索功能
+const onSearch = () => {
+  currentPage.value = 1;
+  fetchPVCs();
+};
+
+// 重置所有筛选条件
+const resetFilters = () => {
+  filterStatus.value = undefined;
+  filterAccessMode.value = undefined;
+  searchText.value = '';
+  filterClusterId.value = undefined;
+  filterNamespace.value = undefined;
+  currentPage.value = 1;
+  fetchPVCs();
+};
+
+// 表格变化处理
+const handleTableChange = (pagination: {
+  current?: number;
+  pageSize?: number;
+}) => {
+  if (pagination) {
+    currentPage.value = pagination.current || currentPage.value;
+    if (pagination.pageSize) {
+      pageSize.value = pagination.pageSize;
+    }
+    fetchPVCs();
+  }
+};
+
+// PV 下拉框滚动处理
+const handlePVDropdownScroll = (e: Event) => {
+  const target = e.target as HTMLElement;
+  if (target.scrollTop + target.offsetHeight === target.scrollHeight) {
+    if (availablePVs.value.length < pvsTotal.value && !pvsLoading.value) {
+      loadMorePVs();
+    }
+  }
+};
+
+// 页面初始化
+onMounted(async () => {
+  await fetchClusters(true);
+});
+</script>
+
 <template>
   <OpsPage
     description="管理和监控集群中的所有 Kubernetes PersistentVolumeClaim 持久化卷声明"
@@ -1680,316 +1990,6 @@
     </a-modal>
   </OpsPage>
 </template>
-
-<script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { namespacedResourceKey } from '../shared/utils';
-import { onMounted } from 'vue';
-import {
-  AppstoreOutlined,
-  CheckCircleOutlined,
-  ClearOutlined,
-  CloudServerOutlined,
-  ContainerOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  ExpandOutlined,
-  EyeOutlined,
-  FileAddOutlined,
-  FileTextOutlined,
-  FilterOutlined,
-  FormatPainterOutlined,
-  InboxOutlined,
-  KeyOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-} from '@ant-design/icons-vue';
-import { usePVCPage } from './PVC';
-import { formatDateTime, getRelativeTime } from '../shared/utils';
-
-import { usePermission } from '#/utils/permission';
-
-const { can } = usePermission();
-
-const {
-  // state
-  clusters,
-  namespaces,
-  availablePVs,
-  loading,
-  loadError,
-  clustersError,
-  namespacesError,
-  clustersLoading,
-  namespacesLoading,
-  pvsLoading,
-  searchText,
-  filterClusterId,
-  filterNamespace,
-  filterStatus,
-  filterAccessMode,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
-  clustersTotal,
-  namespacesTotal,
-  pvsTotal,
-
-  // form refs
-  formRef,
-  yamlFormRef,
-  createYamlFormRef,
-  expandFormRef,
-
-  // modal state
-  isCreateModalVisible,
-  isCreateYamlModalVisible,
-  isEditModalVisible,
-  isDetailModalVisible,
-  isYamlModalVisible,
-  isExpandModalVisible,
-  isPodsModalVisible,
-  submitLoading,
-  detailLoading,
-  podsLoading,
-
-  // current operation
-  currentOperationPVC,
-  currentPVCDetail,
-  currentPVCPods,
-
-  // form models
-  createFormModel,
-  editFormModel,
-  yamlFormModel,
-  createYamlFormModel,
-  expandFormModel,
-
-  // form rules
-  createFormRules,
-  yamlFormRules,
-  createYamlFormRules,
-  expandFormRules,
-
-  // computed
-  filteredPVCs,
-  rowSelection,
-  pvOptions,
-
-  // helpers
-  getEnvText,
-  getPVCStatusText,
-  getPVCStatusColor,
-  getAccessModeText,
-
-  // api calls
-  fetchClusters,
-  fetchNamespaces,
-  fetchPVCs,
-  createPVC,
-  createPVCByYaml,
-  updatePVC,
-  updatePVCByYaml,
-  deletePVC,
-  expandPVC,
-  deleteBatchPVCs,
-
-  // modal handlers
-  openCreateModal,
-  openCreateYamlModal,
-  openEditModal,
-  openDetailModal,
-  openYamlModal,
-  openExpandModal,
-  openPodsModal,
-
-  // form helpers
-  resetCreateForm,
-  resetEditForm,
-  resetYamlForm,
-  resetCreateYamlForm,
-  resetExpandForm,
-
-  // filter handlers
-  handleClusterChange,
-  handleFilterChange,
-  handleClusterDropdownScroll,
-  loadMoreNamespaces,
-  loadMorePVs,
-
-  // label/annotation helpers
-  newLabelKey,
-  newAnnotationKey,
-  addLabelItem,
-  removeLabelItem,
-  newEditLabelKey,
-  newEditAnnotationKey,
-  addEditLabelItem,
-  removeEditLabelItem,
-
-  // selector helpers
-  newSelectorKey,
-  newSelectorValue,
-  addSelectorItem,
-  removeSelectorItem,
-
-  // yaml operations
-  insertYamlTemplate,
-  formatYaml,
-  validateYaml,
-  clearYaml,
-  formatEditYaml,
-  validateEditYaml,
-
-  // constants
-  K8sPVCStatus,
-} = usePVCPage();
-
-const columns = [
-  {
-    title: 'PVC名称',
-    dataIndex: 'name',
-    key: 'name',
-    width: 150,
-    ellipsis: true,
-    fixed: 'left',
-  },
-  {
-    title: '命名空间',
-    dataIndex: 'namespace',
-    key: 'namespace',
-    width: 120,
-    ellipsis: true,
-  },
-  {
-    title: '状态',
-    dataIndex: 'status',
-    key: 'status',
-    width: 90,
-    align: 'center',
-  },
-  {
-    title: '容量信息',
-    dataIndex: 'capacity',
-    key: 'capacity',
-    width: 120,
-    align: 'center',
-  },
-  {
-    title: '访问模式',
-    dataIndex: 'access_modes',
-    key: 'access_modes',
-    width: 140,
-  },
-  {
-    title: '存储类',
-    dataIndex: 'storage_class',
-    key: 'storage_class',
-    width: 130,
-    ellipsis: true,
-  },
-  {
-    title: '绑定PV',
-    dataIndex: 'volume_name',
-    key: 'volume_name',
-    width: 150,
-    ellipsis: true,
-  },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
-  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
-  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 200,
-    fixed: 'right',
-    align: 'center',
-  },
-];
-
-// Pod列表表格列定义
-const podsColumns = [
-  {
-    title: 'Pod名称',
-    dataIndex: 'name',
-    key: 'name',
-    width: 200,
-  },
-  {
-    title: '命名空间',
-    dataIndex: 'namespace',
-    key: 'namespace',
-    width: 120,
-  },
-  {
-    title: '状态',
-    dataIndex: 'status',
-    key: 'status',
-    width: 120,
-  },
-  {
-    title: '节点',
-    dataIndex: 'node_name',
-    key: 'node_name',
-    width: 150,
-  },
-  {
-    title: '创建时间',
-    dataIndex: 'created_at',
-    key: 'created_at',
-    width: 180,
-  },
-];
-
-// 搜索功能
-const onSearch = () => {
-  currentPage.value = 1;
-  fetchPVCs();
-};
-
-// 重置所有筛选条件
-const resetFilters = () => {
-  filterStatus.value = undefined;
-  filterAccessMode.value = undefined;
-  searchText.value = '';
-  filterClusterId.value = undefined;
-  filterNamespace.value = undefined;
-  currentPage.value = 1;
-  fetchPVCs();
-};
-
-// 表格变化处理
-const handleTableChange = (pagination: {
-  current?: number;
-  pageSize?: number;
-}) => {
-  if (pagination) {
-    currentPage.value = pagination.current || currentPage.value;
-    if (pagination.pageSize) {
-      pageSize.value = pagination.pageSize;
-    }
-    fetchPVCs();
-  }
-};
-
-// PV 下拉框滚动处理
-const handlePVDropdownScroll = (e: Event) => {
-  const target = e.target as HTMLElement;
-  if (target.scrollTop + target.offsetHeight === target.scrollHeight) {
-    if (availablePVs.value.length < pvsTotal.value && !pvsLoading.value) {
-      loadMorePVs();
-    }
-  }
-};
-
-// 页面初始化
-onMounted(async () => {
-  await fetchClusters(true);
-});
-</script>
 
 <style scoped>
 @import '../shared/k8s-common.css';

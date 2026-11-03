@@ -1,167 +1,3 @@
-<template>
-  <OpsPage
-    class="knowledge-container"
-    description="上传 UTF-8 文档并管理知识索引"
-    title="知识库管理"
-  >
-    <!-- 页面头部 -->
-    <template #actions>
-      <a-button
-        v-if="can('aiops.assistant.refreshKnowledge')"
-        type="primary"
-        @click="refreshKnowledge"
-        :loading="refreshing"
-      >
-        <template #icon><ReloadOutlined /></template>
-        重建知识索引
-      </a-button>
-    </template>
-    <template #summary>
-      <div class="stats-grid">
-        <a-card class="stat-card">
-          <a-statistic
-            :value="!statsKnown ? '未统计' : knowledgeStats.documents_count"
-            :value-style="{ color: '#1890ff' }"
-            title="文档数量"
-          >
-            <template #prefix><FileTextOutlined /></template>
-          </a-statistic>
-        </a-card>
-        <a-card class="stat-card">
-          <a-statistic
-            :value="!statsKnown ? '未统计' : knowledgeStats.vector_count"
-            :value-style="{ color: '#52c41a' }"
-            title="向量数量"
-          >
-            <template #prefix><NodeIndexOutlined /></template>
-          </a-statistic>
-        </a-card>
-        <a-card class="stat-card">
-          <a-statistic
-            :value="knowledgeStats.last_update"
-            :value-style="{ color: '#fa8c16' }"
-            title="最后更新"
-          >
-            <template #prefix><ClockCircleOutlined /></template>
-          </a-statistic>
-        </a-card>
-      </div>
-    </template>
-
-    <a-alert
-      v-if="loadError"
-      :message="loadError"
-      role="alert"
-      show-icon
-      type="error"
-    />
-    <p class="index-note">
-      重建会重新索引全库并调用嵌入模型；上传和添加仅索引当前文档
-    </p>
-    <div class="knowledge-content">
-      <!-- 统计卡片 -->
-
-      <!-- 功能区域 -->
-      <div class="function-area">
-        <a-row :gutter="24">
-          <!-- 文件上传 -->
-          <a-col :lg="12" :xs="24">
-            <a-card class="function-card" title="文档上传">
-              <div class="upload-area">
-                <a-upload-dragger
-                  v-model:fileList="fileList"
-                  :before-upload="beforeUpload"
-                  :custom-request="handleUpload"
-                  :multiple="true"
-                  accept=".txt,.md"
-                  class="upload-dragger"
-                >
-                  <p class="ant-upload-drag-icon">
-                    <InboxOutlined
-                      style="font-size: 48px; color: var(--ops-accent)"
-                    />
-                  </p>
-                  <p class="ant-upload-text">点击或拖拽文件到此区域上传</p>
-                  <p class="ant-upload-hint">
-                    仅支持 UTF-8 .txt 与 .md，最大 10 MiB；上传会索引当前文档
-                  </p>
-                </a-upload-dragger>
-              </div>
-            </a-card>
-          </a-col>
-
-          <!-- 手动添加文档 -->
-          <a-col :lg="12" :xs="24">
-            <a-card class="function-card" title="手动添加文档">
-              <a-form :model="documentForm" layout="vertical">
-                <a-form-item label="文档标题" name="title">
-                  <a-input
-                    v-model:value="documentForm.title"
-                    placeholder="请输入文档标题"
-                  />
-                </a-form-item>
-                <a-form-item label="文件名" name="file_name">
-                  <a-input
-                    v-model:value="documentForm.file_name"
-                    placeholder="例如: document.txt"
-                  />
-                </a-form-item>
-                <a-form-item label="文档内容" name="content">
-                  <a-textarea
-                    v-model:value="documentForm.content"
-                    :rows="6"
-                    placeholder="请输入文档内容"
-                  />
-                </a-form-item>
-                <a-form-item>
-                  <a-button
-                    :loading="adding"
-                    block
-                    type="primary"
-                    @click="addDocument"
-                  >
-                    添加文档
-                  </a-button>
-                </a-form-item>
-              </a-form>
-            </a-card>
-          </a-col>
-        </a-row>
-      </div>
-
-      <!-- 操作日志 -->
-      <a-card class="log-card" title="操作日志">
-        <div class="log-container">
-          <div v-if="operationLogs.length === 0" class="empty-log">
-            <a-empty description="暂无操作记录" />
-          </div>
-          <div v-else class="log-list">
-            <div
-              v-for="(log, index) in operationLogs"
-              :key="index"
-              class="log-item"
-              :class="{
-                success: log.type === 'success',
-                error: log.type === 'error',
-              }"
-            >
-              <div class="log-icon">
-                <CheckCircleOutlined v-if="log.type === 'success'" />
-                <CloseCircleOutlined v-else-if="log.type === 'error'" />
-                <InfoCircleOutlined v-else />
-              </div>
-              <div class="log-content">
-                <div class="log-message">{{ log.message }}</div>
-                <div class="log-time">{{ log.timestamp }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </a-card>
-    </div>
-  </OpsPage>
-</template>
-
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { onMounted, reactive, ref } from 'vue';
@@ -373,6 +209,170 @@ onMounted(() => {
   addLog('info', '知识库管理页面已加载');
 });
 </script>
+
+<template>
+  <OpsPage
+    class="knowledge-container"
+    description="上传 UTF-8 文档并管理知识索引"
+    title="知识库管理"
+  >
+    <!-- 页面头部 -->
+    <template #actions>
+      <a-button
+        v-if="can('aiops.assistant.refreshKnowledge')"
+        type="primary"
+        @click="refreshKnowledge"
+        :loading="refreshing"
+      >
+        <template #icon><ReloadOutlined /></template>
+        重建知识索引
+      </a-button>
+    </template>
+    <template #summary>
+      <div class="stats-grid">
+        <a-card class="stat-card">
+          <a-statistic
+            :value="!statsKnown ? '未统计' : knowledgeStats.documents_count"
+            :value-style="{ color: '#1890ff' }"
+            title="文档数量"
+          >
+            <template #prefix><FileTextOutlined /></template>
+          </a-statistic>
+        </a-card>
+        <a-card class="stat-card">
+          <a-statistic
+            :value="!statsKnown ? '未统计' : knowledgeStats.vector_count"
+            :value-style="{ color: '#52c41a' }"
+            title="向量数量"
+          >
+            <template #prefix><NodeIndexOutlined /></template>
+          </a-statistic>
+        </a-card>
+        <a-card class="stat-card">
+          <a-statistic
+            :value="knowledgeStats.last_update"
+            :value-style="{ color: '#fa8c16' }"
+            title="最后更新"
+          >
+            <template #prefix><ClockCircleOutlined /></template>
+          </a-statistic>
+        </a-card>
+      </div>
+    </template>
+
+    <a-alert
+      v-if="loadError"
+      :message="loadError"
+      role="alert"
+      show-icon
+      type="error"
+    />
+    <p class="index-note">
+      重建会重新索引全库并调用嵌入模型；上传和添加仅索引当前文档
+    </p>
+    <div class="knowledge-content">
+      <!-- 统计卡片 -->
+
+      <!-- 功能区域 -->
+      <div class="function-area">
+        <a-row :gutter="24">
+          <!-- 文件上传 -->
+          <a-col :lg="12" :xs="24">
+            <a-card class="function-card" title="文档上传">
+              <div class="upload-area">
+                <a-upload-dragger
+                  v-model:fileList="fileList"
+                  :before-upload="beforeUpload"
+                  :custom-request="handleUpload"
+                  :multiple="true"
+                  accept=".txt,.md"
+                  class="upload-dragger"
+                >
+                  <p class="ant-upload-drag-icon">
+                    <InboxOutlined
+                      style="font-size: 48px; color: var(--ops-accent)"
+                    />
+                  </p>
+                  <p class="ant-upload-text">点击或拖拽文件到此区域上传</p>
+                  <p class="ant-upload-hint">
+                    仅支持 UTF-8 .txt 与 .md，最大 10 MiB；上传会索引当前文档
+                  </p>
+                </a-upload-dragger>
+              </div>
+            </a-card>
+          </a-col>
+
+          <!-- 手动添加文档 -->
+          <a-col :lg="12" :xs="24">
+            <a-card class="function-card" title="手动添加文档">
+              <a-form :model="documentForm" layout="vertical">
+                <a-form-item label="文档标题" name="title">
+                  <a-input
+                    v-model:value="documentForm.title"
+                    placeholder="请输入文档标题"
+                  />
+                </a-form-item>
+                <a-form-item label="文件名" name="file_name">
+                  <a-input
+                    v-model:value="documentForm.file_name"
+                    placeholder="例如: document.txt"
+                  />
+                </a-form-item>
+                <a-form-item label="文档内容" name="content">
+                  <a-textarea
+                    v-model:value="documentForm.content"
+                    :rows="6"
+                    placeholder="请输入文档内容"
+                  />
+                </a-form-item>
+                <a-form-item>
+                  <a-button
+                    :loading="adding"
+                    block
+                    type="primary"
+                    @click="addDocument"
+                  >
+                    添加文档
+                  </a-button>
+                </a-form-item>
+              </a-form>
+            </a-card>
+          </a-col>
+        </a-row>
+      </div>
+
+      <!-- 操作日志 -->
+      <a-card class="log-card" title="操作日志">
+        <div class="log-container">
+          <div v-if="operationLogs.length === 0" class="empty-log">
+            <a-empty description="暂无操作记录" />
+          </div>
+          <div v-else class="log-list">
+            <div
+              v-for="(log, index) in operationLogs"
+              :key="index"
+              class="log-item"
+              :class="{
+                success: log.type === 'success',
+                error: log.type === 'error',
+              }"
+            >
+              <div class="log-icon">
+                <CheckCircleOutlined v-if="log.type === 'success'" />
+                <CloseCircleOutlined v-else-if="log.type === 'error'" />
+                <InfoCircleOutlined v-else />
+              </div>
+              <div class="log-content">
+                <div class="log-message">{{ log.message }}</div>
+                <div class="log-time">{{ log.timestamp }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </a-card>
+    </div>
+  </OpsPage>
+</template>
 
 <style scoped>
 .index-note {

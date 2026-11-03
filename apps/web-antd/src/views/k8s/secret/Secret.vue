@@ -1,3 +1,451 @@
+<script lang="ts" setup>
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { namespacedResourceKey } from '../shared/utils';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { message } from 'ant-design-vue';
+import { useSecretPage } from './Secret';
+import { BINARY_VALUE_NOTICE } from './secret-data';
+import {
+  formatDateTime,
+  formatK8sAge,
+  formatK8sTime,
+  getRelativeTime,
+} from '../shared/utils';
+import {
+  AppstoreOutlined,
+  CheckCircleOutlined,
+  ClearOutlined,
+  CopyOutlined,
+  DatabaseOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  ExclamationCircleOutlined,
+  EyeInvisibleOutlined,
+  EyeOutlined,
+  FileAddOutlined,
+  FileTextOutlined,
+  FormatPainterOutlined,
+  KeyOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  SecurityScanOutlined,
+  TagsOutlined,
+} from '@ant-design/icons-vue';
+
+import {
+  SECRET_DETAIL_PERMISSION_CODE,
+  SECRET_UPDATE_PERMISSION_CODE,
+} from '#/constants/permission-codes';
+import { usePermission } from '#/utils/permission';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
+const { can, hasPerm } = usePermission();
+
+const {
+  // state
+  clusters,
+  namespaces,
+  loading,
+  loadError,
+  clustersError,
+  namespacesError,
+  clustersLoading,
+  namespacesLoading,
+  searchText,
+  filterClusterId,
+  filterNamespace,
+  filterType,
+  filterLabels,
+  selectedRows,
+  currentPage,
+  pageSize,
+  total,
+  clustersTotal,
+  namespacesTotal,
+
+  // modal state
+  isCreateModalVisible,
+  isCreateYamlModalVisible,
+  isEditModalVisible,
+  isDetailModalVisible,
+  isYamlModalVisible,
+  submitLoading,
+  detailLoading,
+  isYamlLoading,
+
+  // operation targets
+  currentOperationSecret,
+  currentSecretDetail,
+
+  // form models
+  createFormModel,
+  editFormModel,
+  yamlFormModel,
+  createYamlFormModel,
+
+  // form refs
+  formRef,
+  yamlFormRef,
+  createYamlFormRef,
+
+  // form rules
+  createFormRules,
+  yamlFormRules,
+  createYamlFormRules,
+
+  // computed
+  filteredSecrets,
+  rowSelection,
+
+  // helpers
+  getEnvText,
+  getSecretTypeText,
+  K8sSecretType,
+
+  // operations
+  fetchClusters,
+  fetchNamespaces,
+  fetchSecrets,
+  clearSecrets,
+  clearNamespaces,
+  loadMoreClusters,
+  loadMoreNamespaces,
+
+  // detail operations
+  showSecretDetail,
+  closeDetailModal,
+
+  // YAML operations
+  showYamlModal,
+  closeYamlModal,
+  submitYamlForm,
+
+  // create operations
+  openCreateModal,
+  closeCreateModal,
+  submitCreateForm,
+  openCreateYamlModal,
+  closeCreateYamlModal,
+  submitCreateYamlForm,
+
+  // edit operations
+  openEditModal,
+  closeEditModal,
+  submitEditForm,
+
+  // secret operations
+  deleteSecret,
+
+  // filter operations
+  addFilterLabel,
+  removeFilterLabel,
+  clearFilterLabels,
+
+  // batch operations
+  batchOperation,
+
+  // pagination operations
+  handlePageChange,
+
+  // form field operations
+  removeStringDataField,
+  removeEditStringDataField,
+  removeLabelField,
+  removeEditLabelField,
+  removeAnnotationField,
+  removeEditAnnotationField,
+
+  // yaml operations
+  insertYamlTemplate,
+  formatYaml,
+  validateYaml,
+  clearYaml,
+  formatEditYaml,
+  validateEditYaml,
+
+  // SEC-25/26 reveal / data 编辑
+  revealedValues,
+  revealingKeys,
+  secretDetailDataKeys,
+  revealSecretKey,
+  hideRevealedKey,
+  getPlainValueForCopy,
+  clearRevealedValues,
+  editDataRows,
+  editDataLoading,
+  setEditDataValue,
+  resetEditDataRow,
+  removeEditDataRow,
+  addEditDataRow,
+  getEditDataRowError,
+} = useSecretPage();
+
+// 页面卸载时清空 reveal 得到的明文
+onBeforeUnmount(clearRevealedValues);
+
+const newEditDataKey = ref('');
+const addNewEditData = () => {
+  // incr6 遗留第 18 条：详情加载中按钮已禁用，回车（@press-enter）也不能添加
+  if (editDataLoading.value) return;
+  if (newEditDataKey.value.trim()) {
+    addEditDataRow(newEditDataKey.value);
+    newEditDataKey.value = '';
+  }
+};
+
+/** 复制明文：经 reveal 取值，二进制内容不复制 */
+const copySecretKey = async (key: string) => {
+  const value = await getPlainValueForCopy(key);
+  if (value === undefined) return;
+  if (value === BINARY_VALUE_NOTICE) {
+    message.warning(BINARY_VALUE_NOTICE);
+    return;
+  }
+  await copyToClipboard(value);
+};
+
+// 添加新字段的方法
+const newStringDataKey = ref('');
+const newLabelKey = ref('');
+const newAnnotationKey = ref('');
+const newEditStringDataKey = ref('');
+const newEditLabelKey = ref('');
+const newEditAnnotationKey = ref('');
+
+const addNewStringData = () => {
+  if (newStringDataKey.value && newStringDataKey.value.trim()) {
+    createFormModel.value.string_data[newStringDataKey.value.trim()] = '';
+    newStringDataKey.value = '';
+  }
+};
+
+const addNewLabel = () => {
+  if (newLabelKey.value && newLabelKey.value.trim()) {
+    createFormModel.value.labels[newLabelKey.value.trim()] = '';
+    newLabelKey.value = '';
+  }
+};
+
+const addNewAnnotation = () => {
+  if (newAnnotationKey.value && newAnnotationKey.value.trim()) {
+    createFormModel.value.annotations[newAnnotationKey.value.trim()] = '';
+    newAnnotationKey.value = '';
+  }
+};
+
+const addNewEditStringData = () => {
+  // incr6 遗留第 18 条：详情加载中按钮已禁用，回车（@press-enter）也不能添加
+  if (editDataLoading.value) return;
+  if (newEditStringDataKey.value && newEditStringDataKey.value.trim()) {
+    editFormModel.value.string_data[newEditStringDataKey.value.trim()] = '';
+    newEditStringDataKey.value = '';
+  }
+};
+
+const addNewEditLabel = () => {
+  // incr6 遗留第 18 条：详情加载中按钮已禁用，回车（@press-enter）也不能添加
+  if (editDataLoading.value) return;
+  if (newEditLabelKey.value && newEditLabelKey.value.trim()) {
+    editFormModel.value.labels[newEditLabelKey.value.trim()] = '';
+    newEditLabelKey.value = '';
+  }
+};
+
+const addNewEditAnnotation = () => {
+  // incr6 遗留第 18 条：详情加载中按钮已禁用，回车（@press-enter）也不能添加
+  if (editDataLoading.value) return;
+  if (newEditAnnotationKey.value && newEditAnnotationKey.value.trim()) {
+    editFormModel.value.annotations[newEditAnnotationKey.value.trim()] = '';
+    newEditAnnotationKey.value = '';
+  }
+};
+
+// 获取Secret类型CSS类名
+const getSecretTypeClass = (type: string) => {
+  const typeClassMap: Record<string, string> = {
+    Opaque: 'secret-type-opaque',
+    'kubernetes.io/service-account-token': 'secret-type-service-account',
+    'kubernetes.io/dockercfg': 'secret-type-docker',
+    'kubernetes.io/dockerconfigjson': 'secret-type-docker',
+    'kubernetes.io/basic-auth': 'secret-type-auth',
+    'kubernetes.io/ssh-auth': 'secret-type-auth',
+    'kubernetes.io/tls': 'secret-type-tls',
+    'bootstrap.kubernetes.io/token': 'secret-type-auth',
+  };
+  return typeClassMap[type] || 'secret-type-default';
+};
+
+// 注意：时间格式化函数已移至 shared/utils.ts，使用 formatK8sTime 和 formatK8sAge
+
+// 复制到剪贴板
+const copyToClipboard = async (text: string) => {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      message.success('内容已复制到剪贴板');
+    } else {
+      // 降级方案
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      message.success('内容已复制到剪贴板');
+    }
+  } catch (error) {
+    if (shouldNotifyPageError(error)) message.error('复制失败，请手动复制');
+  }
+};
+
+const onSearch = () => {
+  currentPage.value = 1;
+  fetchSecrets();
+};
+
+const handleFilterChange = () => {
+  currentPage.value = 1;
+  fetchSecrets();
+};
+
+const handleClusterChange = () => {
+  currentPage.value = 1;
+  clearNamespaces();
+  clearSecrets();
+
+  if (filterClusterId.value) {
+    fetchNamespaces(true); // 重置命名空间分页
+    fetchSecrets();
+  }
+};
+
+const handleTableChange = (pagination: {
+  current?: number;
+  pageSize?: number;
+}) => {
+  if (pagination) {
+    handlePageChange(
+      pagination.current || currentPage.value,
+      pagination.pageSize,
+    );
+  }
+};
+
+// 处理集群下拉选择的滚动事件
+const handleClusterDropdownScroll = (e: Event) => {
+  const { target } = e;
+  if (
+    target &&
+    'scrollTop' in target &&
+    'scrollHeight' in target &&
+    'clientHeight' in target
+  ) {
+    const scrollTarget = target as HTMLElement;
+    if (
+      scrollTarget.scrollTop + scrollTarget.clientHeight >=
+      scrollTarget.scrollHeight - 5
+    ) {
+      loadMoreClusters();
+    }
+  }
+};
+
+const columns = [
+  {
+    title: '名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 150,
+    ellipsis: true,
+    fixed: 'left',
+  },
+  {
+    title: '命名空间',
+    dataIndex: 'namespace',
+    key: 'namespace',
+    width: 120,
+    ellipsis: true,
+  },
+  { title: '类型', key: 'type', width: 180, ellipsis: true },
+  {
+    title: '数据项数',
+    dataIndex: 'data_count',
+    key: 'data_count',
+    width: 90,
+    align: 'center',
+  },
+  {
+    title: '大小',
+    dataIndex: 'size',
+    key: 'size',
+    width: 100,
+    align: 'center',
+  },
+  { title: '不可变', key: 'immutable', width: 90, align: 'center' },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
+  { title: '创建时间', key: 'created_at', width: 160 },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 200,
+    fixed: 'right',
+    align: 'center',
+  },
+];
+
+// 标签过滤器状态
+const isLabelsFilterModalVisible = ref(false);
+const newFilterKey = ref('');
+const newFilterValue = ref('');
+
+// 标签过滤器操作
+const openLabelsFilter = () => {
+  isLabelsFilterModalVisible.value = true;
+};
+
+const closeLabelsFilterModal = () => {
+  isLabelsFilterModalVisible.value = false;
+  newFilterKey.value = '';
+  newFilterValue.value = '';
+};
+
+const addNewFilterLabel = () => {
+  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
+    addFilterLabel(newFilterKey.value.trim(), newFilterValue.value.trim());
+    newFilterKey.value = '';
+    newFilterValue.value = '';
+  }
+};
+
+const applyLabelsFilter = () => {
+  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
+    addNewFilterLabel();
+  }
+  closeLabelsFilterModal();
+};
+
+// 重置所有筛选条件
+const resetFilters = () => {
+  searchText.value = '';
+  filterClusterId.value = undefined;
+  filterNamespace.value = undefined;
+  filterType.value = undefined;
+  clearFilterLabels();
+  currentPage.value = 1;
+  clearSecrets();
+  clearNamespaces();
+};
+
+onMounted(async () => {
+  await fetchClusters();
+});
+</script>
+
 <template>
   <OpsPage
     description="管理和监控集群中的所有 Kubernetes Secret 资源"
@@ -1661,454 +2109,6 @@
     </a-modal>
   </OpsPage>
 </template>
-
-<script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { namespacedResourceKey } from '../shared/utils';
-import { onBeforeUnmount, onMounted, ref } from 'vue';
-import { message } from 'ant-design-vue';
-import { useSecretPage } from './Secret';
-import { BINARY_VALUE_NOTICE } from './secret-data';
-import {
-  formatDateTime,
-  formatK8sAge,
-  formatK8sTime,
-  getRelativeTime,
-} from '../shared/utils';
-import {
-  AppstoreOutlined,
-  CheckCircleOutlined,
-  ClearOutlined,
-  CopyOutlined,
-  DatabaseOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  ExclamationCircleOutlined,
-  EyeInvisibleOutlined,
-  EyeOutlined,
-  FileAddOutlined,
-  FileTextOutlined,
-  FormatPainterOutlined,
-  KeyOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-  SecurityScanOutlined,
-  TagsOutlined,
-} from '@ant-design/icons-vue';
-
-import {
-  SECRET_DETAIL_PERMISSION_CODE,
-  SECRET_UPDATE_PERMISSION_CODE,
-} from '#/constants/permission-codes';
-import { usePermission } from '#/utils/permission';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
-
-const { can, hasPerm } = usePermission();
-
-const {
-  // state
-  clusters,
-  namespaces,
-  loading,
-  loadError,
-  clustersError,
-  namespacesError,
-  clustersLoading,
-  namespacesLoading,
-  searchText,
-  filterClusterId,
-  filterNamespace,
-  filterType,
-  filterLabels,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
-  clustersTotal,
-  namespacesTotal,
-
-  // modal state
-  isCreateModalVisible,
-  isCreateYamlModalVisible,
-  isEditModalVisible,
-  isDetailModalVisible,
-  isYamlModalVisible,
-  submitLoading,
-  detailLoading,
-  isYamlLoading,
-
-  // operation targets
-  currentOperationSecret,
-  currentSecretDetail,
-
-  // form models
-  createFormModel,
-  editFormModel,
-  yamlFormModel,
-  createYamlFormModel,
-
-  // form refs
-  formRef,
-  yamlFormRef,
-  createYamlFormRef,
-
-  // form rules
-  createFormRules,
-  yamlFormRules,
-  createYamlFormRules,
-
-  // computed
-  filteredSecrets,
-  rowSelection,
-
-  // helpers
-  getEnvText,
-  getSecretTypeText,
-  K8sSecretType,
-
-  // operations
-  fetchClusters,
-  fetchNamespaces,
-  fetchSecrets,
-  clearSecrets,
-  clearNamespaces,
-  loadMoreClusters,
-  loadMoreNamespaces,
-
-  // detail operations
-  showSecretDetail,
-  closeDetailModal,
-
-  // YAML operations
-  showYamlModal,
-  closeYamlModal,
-  submitYamlForm,
-
-  // create operations
-  openCreateModal,
-  closeCreateModal,
-  submitCreateForm,
-  openCreateYamlModal,
-  closeCreateYamlModal,
-  submitCreateYamlForm,
-
-  // edit operations
-  openEditModal,
-  closeEditModal,
-  submitEditForm,
-
-  // secret operations
-  deleteSecret,
-
-  // filter operations
-  addFilterLabel,
-  removeFilterLabel,
-  clearFilterLabels,
-
-  // batch operations
-  batchOperation,
-
-  // pagination operations
-  handlePageChange,
-
-  // form field operations
-  removeStringDataField,
-  removeEditStringDataField,
-  removeLabelField,
-  removeEditLabelField,
-  removeAnnotationField,
-  removeEditAnnotationField,
-
-  // yaml operations
-  insertYamlTemplate,
-  formatYaml,
-  validateYaml,
-  clearYaml,
-  formatEditYaml,
-  validateEditYaml,
-
-  // SEC-25/26 reveal / data 编辑
-  revealedValues,
-  revealingKeys,
-  secretDetailDataKeys,
-  revealSecretKey,
-  hideRevealedKey,
-  getPlainValueForCopy,
-  clearRevealedValues,
-  editDataRows,
-  editDataLoading,
-  setEditDataValue,
-  resetEditDataRow,
-  removeEditDataRow,
-  addEditDataRow,
-  getEditDataRowError,
-} = useSecretPage();
-
-// 页面卸载时清空 reveal 得到的明文
-onBeforeUnmount(clearRevealedValues);
-
-const newEditDataKey = ref('');
-const addNewEditData = () => {
-  // incr6 遗留第 18 条：详情加载中按钮已禁用，回车（@press-enter）也不能添加
-  if (editDataLoading.value) return;
-  if (newEditDataKey.value.trim()) {
-    addEditDataRow(newEditDataKey.value);
-    newEditDataKey.value = '';
-  }
-};
-
-/** 复制明文：经 reveal 取值，二进制内容不复制 */
-const copySecretKey = async (key: string) => {
-  const value = await getPlainValueForCopy(key);
-  if (value === undefined) return;
-  if (value === BINARY_VALUE_NOTICE) {
-    message.warning(BINARY_VALUE_NOTICE);
-    return;
-  }
-  await copyToClipboard(value);
-};
-
-// 添加新字段的方法
-const newStringDataKey = ref('');
-const newLabelKey = ref('');
-const newAnnotationKey = ref('');
-const newEditStringDataKey = ref('');
-const newEditLabelKey = ref('');
-const newEditAnnotationKey = ref('');
-
-const addNewStringData = () => {
-  if (newStringDataKey.value && newStringDataKey.value.trim()) {
-    createFormModel.value.string_data[newStringDataKey.value.trim()] = '';
-    newStringDataKey.value = '';
-  }
-};
-
-const addNewLabel = () => {
-  if (newLabelKey.value && newLabelKey.value.trim()) {
-    createFormModel.value.labels[newLabelKey.value.trim()] = '';
-    newLabelKey.value = '';
-  }
-};
-
-const addNewAnnotation = () => {
-  if (newAnnotationKey.value && newAnnotationKey.value.trim()) {
-    createFormModel.value.annotations[newAnnotationKey.value.trim()] = '';
-    newAnnotationKey.value = '';
-  }
-};
-
-const addNewEditStringData = () => {
-  // incr6 遗留第 18 条：详情加载中按钮已禁用，回车（@press-enter）也不能添加
-  if (editDataLoading.value) return;
-  if (newEditStringDataKey.value && newEditStringDataKey.value.trim()) {
-    editFormModel.value.string_data[newEditStringDataKey.value.trim()] = '';
-    newEditStringDataKey.value = '';
-  }
-};
-
-const addNewEditLabel = () => {
-  // incr6 遗留第 18 条：详情加载中按钮已禁用，回车（@press-enter）也不能添加
-  if (editDataLoading.value) return;
-  if (newEditLabelKey.value && newEditLabelKey.value.trim()) {
-    editFormModel.value.labels[newEditLabelKey.value.trim()] = '';
-    newEditLabelKey.value = '';
-  }
-};
-
-const addNewEditAnnotation = () => {
-  // incr6 遗留第 18 条：详情加载中按钮已禁用，回车（@press-enter）也不能添加
-  if (editDataLoading.value) return;
-  if (newEditAnnotationKey.value && newEditAnnotationKey.value.trim()) {
-    editFormModel.value.annotations[newEditAnnotationKey.value.trim()] = '';
-    newEditAnnotationKey.value = '';
-  }
-};
-
-// 获取Secret类型CSS类名
-const getSecretTypeClass = (type: string) => {
-  const typeClassMap: Record<string, string> = {
-    Opaque: 'secret-type-opaque',
-    'kubernetes.io/service-account-token': 'secret-type-service-account',
-    'kubernetes.io/dockercfg': 'secret-type-docker',
-    'kubernetes.io/dockerconfigjson': 'secret-type-docker',
-    'kubernetes.io/basic-auth': 'secret-type-auth',
-    'kubernetes.io/ssh-auth': 'secret-type-auth',
-    'kubernetes.io/tls': 'secret-type-tls',
-    'bootstrap.kubernetes.io/token': 'secret-type-auth',
-  };
-  return typeClassMap[type] || 'secret-type-default';
-};
-
-// 注意：时间格式化函数已移至 shared/utils.ts，使用 formatK8sTime 和 formatK8sAge
-
-// 复制到剪贴板
-const copyToClipboard = async (text: string) => {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-      message.success('内容已复制到剪贴板');
-    } else {
-      // 降级方案
-      const textArea = document.createElement('textarea');
-      textArea.value = text;
-      textArea.style.position = 'fixed';
-      textArea.style.opacity = '0';
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      message.success('内容已复制到剪贴板');
-    }
-  } catch (error) {
-    if (shouldNotifyPageError(error)) message.error('复制失败，请手动复制');
-  }
-};
-
-const onSearch = () => {
-  currentPage.value = 1;
-  fetchSecrets();
-};
-
-const handleFilterChange = () => {
-  currentPage.value = 1;
-  fetchSecrets();
-};
-
-const handleClusterChange = () => {
-  currentPage.value = 1;
-  clearNamespaces();
-  clearSecrets();
-
-  if (filterClusterId.value) {
-    fetchNamespaces(true); // 重置命名空间分页
-    fetchSecrets();
-  }
-};
-
-const handleTableChange = (pagination: {
-  current?: number;
-  pageSize?: number;
-}) => {
-  if (pagination) {
-    handlePageChange(
-      pagination.current || currentPage.value,
-      pagination.pageSize,
-    );
-  }
-};
-
-// 处理集群下拉选择的滚动事件
-const handleClusterDropdownScroll = (e: Event) => {
-  const { target } = e;
-  if (
-    target &&
-    'scrollTop' in target &&
-    'scrollHeight' in target &&
-    'clientHeight' in target
-  ) {
-    const scrollTarget = target as HTMLElement;
-    if (
-      scrollTarget.scrollTop + scrollTarget.clientHeight >=
-      scrollTarget.scrollHeight - 5
-    ) {
-      loadMoreClusters();
-    }
-  }
-};
-
-const columns = [
-  {
-    title: '名称',
-    dataIndex: 'name',
-    key: 'name',
-    width: 150,
-    ellipsis: true,
-    fixed: 'left',
-  },
-  {
-    title: '命名空间',
-    dataIndex: 'namespace',
-    key: 'namespace',
-    width: 120,
-    ellipsis: true,
-  },
-  { title: '类型', key: 'type', width: 180, ellipsis: true },
-  {
-    title: '数据项数',
-    dataIndex: 'data_count',
-    key: 'data_count',
-    width: 90,
-    align: 'center',
-  },
-  {
-    title: '大小',
-    dataIndex: 'size',
-    key: 'size',
-    width: 100,
-    align: 'center',
-  },
-  { title: '不可变', key: 'immutable', width: 90, align: 'center' },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
-  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
-  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
-  { title: '创建时间', key: 'created_at', width: 160 },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 200,
-    fixed: 'right',
-    align: 'center',
-  },
-];
-
-// 标签过滤器状态
-const isLabelsFilterModalVisible = ref(false);
-const newFilterKey = ref('');
-const newFilterValue = ref('');
-
-// 标签过滤器操作
-const openLabelsFilter = () => {
-  isLabelsFilterModalVisible.value = true;
-};
-
-const closeLabelsFilterModal = () => {
-  isLabelsFilterModalVisible.value = false;
-  newFilterKey.value = '';
-  newFilterValue.value = '';
-};
-
-const addNewFilterLabel = () => {
-  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
-    addFilterLabel(newFilterKey.value.trim(), newFilterValue.value.trim());
-    newFilterKey.value = '';
-    newFilterValue.value = '';
-  }
-};
-
-const applyLabelsFilter = () => {
-  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
-    addNewFilterLabel();
-  }
-  closeLabelsFilterModal();
-};
-
-// 重置所有筛选条件
-const resetFilters = () => {
-  searchText.value = '';
-  filterClusterId.value = undefined;
-  filterNamespace.value = undefined;
-  filterType.value = undefined;
-  clearFilterLabels();
-  currentPage.value = 1;
-  clearSecrets();
-  clearNamespaces();
-};
-
-onMounted(async () => {
-  await fetchClusters();
-});
-</script>
 
 <style scoped>
 @import '../shared/k8s-common.css';

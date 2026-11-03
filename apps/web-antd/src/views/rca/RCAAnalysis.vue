@@ -1,534 +1,3 @@
-<template>
-  <OpsPage
-    class="rca-analysis"
-    description="明确发起分析后汇总观测与根因证据"
-    title="根因分析"
-  >
-    <!-- 页面头部 -->
-    <template #actions>
-      <a-button
-        :disabled="!isFormValid || analyzing"
-        :loading="analyzing"
-        size="large"
-        type="primary"
-        @click="startAnalysis"
-      >
-        {{ analyzing ? '分析中...' : '开始分析' }}
-      </a-button>
-    </template>
-    <a-alert
-      v-if="analysisError"
-      :message="analysisError"
-      role="alert"
-      show-icon
-      type="error"
-    />
-    <a-alert
-      v-if="metricsError"
-      :message="metricsError"
-      role="alert"
-      show-icon
-      type="warning"
-    />
-
-    <a-row :gutter="[24, 24]">
-      <!-- 左侧配置面板 -->
-      <a-col :lg="7" :xs="24">
-        <a-card class="config-card" title="分析配置">
-          <a-form :model="formData" layout="vertical">
-            <a-form-item label="Kubernetes命名空间" name="namespace" required>
-              <a-input
-                v-model:value="formData.namespace"
-                :disabled="analyzing"
-                :status="!formData.namespace ? 'warning' : ''"
-                placeholder="输入要分析的K8s命名空间"
-              />
-              <div v-if="!formData.namespace" class="form-error">
-                请输入Kubernetes命名空间
-              </div>
-            </a-form-item>
-
-            <a-form-item label="分析时间窗口" name="timeWindowHours">
-              <a-slider
-                v-model:value="formData.timeWindowHours"
-                :disabled="analyzing"
-                :marks="timeMarks"
-                :max="24"
-                :min="0.5"
-                :step="0.5"
-                :tipFormatter="(value: number) => `${value}小时`"
-                class="time-window-slider"
-              />
-            </a-form-item>
-
-            <a-form-item label="Prometheus指标（可选）" name="metrics">
-              <a-select
-                v-model:value="formData.metrics"
-                :disabled="analyzing"
-                :filter-option="filterMetrics"
-                :loading="loadingMetrics"
-                :options="availableMetrics"
-                allow-clear
-                max-tag-count="responsive"
-                mode="multiple"
-                placeholder="选择要分析的指标"
-                show-search
-              />
-              <a-button
-                :loading="loadingMetrics"
-                size="small"
-                style="margin-top: 8px"
-                @click="loadAvailableMetrics"
-              >
-                刷新指标
-              </a-button>
-            </a-form-item>
-          </a-form>
-        </a-card>
-
-        <!-- 分析状态卡片 -->
-        <a-card v-if="analysisResult" class="status-card" title="分析概览">
-          <CollectionSummary
-            :collection="analysisResult.collection"
-            :status="analysisResult.status"
-          />
-          <a-statistic
-            title="分析ID"
-            :value="
-              analysisResult?.analysis_id
-                ? analysisResult.analysis_id.substring(0, 8) + '…'
-                : '未知'
-            "
-            style="margin-bottom: 16px"
-          >
-            <template #suffix>
-              <a-tooltip :title="analysisResult?.analysis_id">
-                <InfoCircleOutlined />
-              </a-tooltip>
-            </template>
-          </a-statistic>
-
-          <a-statistic
-            v-if="
-              analysisResult.status === 'completed' ||
-              analysisResult.status === 'degraded'
-            "
-            title="置信度"
-            :value="
-              Number.isFinite(analysisResult?.confidence_score)
-                ? (analysisResult.confidence_score * 100).toFixed(1)
-                : '未知'
-            "
-            :suffix="
-              Number.isFinite(analysisResult?.confidence_score) ? '%' : ''
-            "
-            :value-style="{
-              color: getConfidenceColor(analysisResult?.confidence_score || 0),
-            }"
-          >
-            <template #prefix>
-              <CheckCircleOutlined
-                v-if="(analysisResult?.confidence_score || 0) > 0.7"
-              />
-              <ExclamationCircleOutlined v-else />
-            </template>
-          </a-statistic>
-        </a-card>
-      </a-col>
-
-      <!-- 右侧结果面板 -->
-      <a-col :lg="17" :xs="24">
-        <!-- 分析中的加载状态 -->
-        <a-card v-if="analyzing" class="loading-card">
-          <div class="loading-container">
-            <a-spin />
-            <p>正在等待服务返回实际结果，请稍候</p>
-          </div>
-        </a-card>
-
-        <!-- 分析结果 -->
-        <a-card
-          v-else-if="
-            analysisResult &&
-            (analysisResult.status === 'completed' ||
-              analysisResult.status === 'degraded')
-          "
-          :body-style="{ padding: 0 }"
-          class="result-card"
-        >
-          <a-tabs
-            v-model:activeKey="activeResultTab"
-            class="result-tabs"
-            @change="onResultTabChange"
-          >
-            <!-- 根因分析标签页 -->
-            <a-tab-pane key="root-causes" tab="根因分析">
-              <div class="tab-content">
-                <!-- 分析元信息 -->
-                <div class="meta-info">
-                  <a-row :gutter="16">
-                    <a-col :span="8">
-                      <div class="meta-item">
-                        <span class="meta-label">命名空间</span>
-                        <span class="meta-value">{{
-                          analysisResult?.namespace
-                        }}</span>
-                      </div>
-                    </a-col>
-                    <a-col :span="8">
-                      <div class="meta-item">
-                        <span class="meta-label">时间窗口</span>
-                        <span class="meta-value"
-                          >{{ analysisResult?.time_window_hours }}小时</span
-                        >
-                      </div>
-                    </a-col>
-                    <a-col :span="8">
-                      <div class="meta-item">
-                        <span class="meta-label">分析时间</span>
-                        <span class="meta-value">{{
-                          formatShortTime(analysisResult?.timestamp)
-                        }}</span>
-                      </div>
-                    </a-col>
-                  </a-row>
-                </div>
-
-                <!-- 根因列表 -->
-                <div class="root-causes-container">
-                  <div
-                    v-if="analysisResult?.root_causes?.length"
-                    class="root-causes-list"
-                  >
-                    <div
-                      v-for="(cause, index) in analysisResult?.root_causes ||
-                      []"
-                      :key="index"
-                      class="root-cause-card"
-                    >
-                      <div class="cause-header">
-                        <div class="cause-title">
-                          <AlertOutlined
-                            :style="{
-                              color: getConfidenceColor(cause.confidence),
-                            }"
-                          />
-                          <span class="cause-type">{{ cause.cause_type }}</span>
-                        </div>
-                        <a-tag :color="getConfidenceColor(cause.confidence)">
-                          置信度 {{ (cause.confidence * 100).toFixed(0) }}%
-                        </a-tag>
-                      </div>
-
-                      <p class="cause-description">{{ cause.description }}</p>
-
-                      <!-- 证据展示 -->
-                      <div v-if="cause.evidence" class="evidence-section">
-                        <!-- 事件证据 -->
-                        <div
-                          v-if="cause.evidence.events?.length"
-                          class="evidence-block"
-                        >
-                          <h5 class="evidence-title">
-                            <FileTextOutlined />
-                            关键事件
-                          </h5>
-                          <div class="events-list">
-                            <div
-                              v-for="(
-                                event, idx
-                              ) in cause.evidence.events.slice(0, 3)"
-                              :key="idx"
-                              class="event-item"
-                            >
-                              <a-tag class="event-tag" color="orange">
-                                {{ event.reason }}
-                              </a-tag>
-                              <span class="event-count"
-                                >×{{ event.count }}</span
-                              >
-                              <a-tooltip :title="event.message">
-                                <span class="event-message">{{
-                                  truncateText(event.message, 60)
-                                }}</span>
-                              </a-tooltip>
-                            </div>
-                            <div
-                              v-if="cause.evidence.events.length > 3"
-                              class="more-indicator"
-                            >
-                              还有
-                              {{ cause.evidence.events.length - 3 }} 个事件...
-                            </div>
-                          </div>
-                        </div>
-
-                        <!-- 日志证据 -->
-                        <div
-                          v-if="cause.evidence.logs?.length"
-                          class="evidence-block"
-                        >
-                          <h5 class="evidence-title">
-                            <BugOutlined />
-                            错误类型
-                          </h5>
-                          <div class="logs-tags">
-                            <a-tag
-                              v-for="log in cause.evidence.logs"
-                              :key="log"
-                              color="red"
-                            >
-                              {{ log }}
-                            </a-tag>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <a-empty v-else description="未发现明确的根因" />
-                </div>
-              </div>
-            </a-tab-pane>
-
-            <!-- 异常检测标签页 -->
-            <a-tab-pane key="anomalies" tab="异常检测">
-              <div class="tab-content">
-                <!-- 异常统计 -->
-                <div v-if="hasAnomalies" class="anomaly-stats">
-                  <a-row :gutter="[16, 16]">
-                    <a-col :sm="6" :xs="12">
-                      <div class="stat-card">
-                        <div class="stat-value">
-                          {{ getCriticalEventsCount() }}
-                        </div>
-                        <div class="stat-label">关键事件</div>
-                      </div>
-                    </a-col>
-                    <a-col :sm="6" :xs="12">
-                      <div class="stat-card">
-                        <div class="stat-value">
-                          {{ getEventClustersCount() }}
-                        </div>
-                        <div class="stat-label">事件集群</div>
-                      </div>
-                    </a-col>
-                    <a-col :sm="6" :xs="12">
-                      <div class="stat-card">
-                        <div class="stat-value">{{ getErrorTypesCount() }}</div>
-                        <div class="stat-label">错误类型</div>
-                      </div>
-                    </a-col>
-                    <a-col :sm="6" :xs="12">
-                      <div class="stat-card">
-                        <div class="stat-value">{{ getTotalErrorCount() }}</div>
-                        <div class="stat-label">错误总数</div>
-                      </div>
-                    </a-col>
-                  </a-row>
-                </div>
-
-                <!-- 图表区域 -->
-                <div v-if="hasAnomalies" class="charts-container">
-                  <a-row :gutter="[16, 16]">
-                    <a-col :span="24">
-                      <div class="chart-wrapper">
-                        <h4 class="chart-title">事件时间分布</h4>
-                        <div ref="eventsChartRef" class="chart-container"></div>
-                      </div>
-                    </a-col>
-                    <a-col :span="12">
-                      <div class="chart-wrapper">
-                        <h4 class="chart-title">集群分布</h4>
-                        <div
-                          ref="clustersChartRef"
-                          class="chart-container-small"
-                        ></div>
-                      </div>
-                    </a-col>
-                    <a-col :span="12">
-                      <div class="chart-wrapper">
-                        <h4 class="chart-title">错误频率</h4>
-                        <div
-                          ref="errorLogsChartRef"
-                          class="chart-container-small"
-                        ></div>
-                      </div>
-                    </a-col>
-                  </a-row>
-                </div>
-
-                <!-- 详细数据 -->
-                <div v-if="hasAnomalies" class="anomaly-details">
-                  <!-- 关键事件表格 -->
-                  <div
-                    v-if="getCriticalEventsCount() > 0"
-                    class="detail-section"
-                  >
-                    <h4 class="section-title">关键事件列表</h4>
-                    <div class="table-wrapper">
-                      <a-table
-                        :dataSource="getCriticalEventsTableData()"
-                        :columns="criticalEventsColumns"
-                        :pagination="{ pageSize: 5, size: 'small' }"
-                        size="small"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- 错误频率 -->
-                  <div v-if="hasErrorFrequency()" class="detail-section">
-                    <h4 class="section-title">错误频率统计</h4>
-                    <div class="error-freq-list">
-                      <div
-                        v-for="(count, key) in analysisResult?.anomalies?.logs
-                          ?.error_frequency || {}"
-                        :key="key"
-                        class="error-freq-item"
-                      >
-                        <span class="error-name">{{
-                          truncateText(String(key), 40)
-                        }}</span>
-                        <a-progress
-                          :percent="getErrorFrequencyPercent(count as number)"
-                          :stroke-color="
-                            getErrorFrequencyColor(count as number)
-                          "
-                          :show-info="false"
-                          size="small"
-                        />
-                        <span class="error-count">{{ count }}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <a-empty v-if="!hasAnomalies" description="未检测到异常" />
-              </div>
-            </a-tab-pane>
-
-            <!-- 相关性分析标签页 -->
-            <a-tab-pane key="correlations" tab="相关性分析">
-              <div class="tab-content">
-                <div v-if="hasCorrelations()" class="correlations-list">
-                  <div
-                    v-for="(
-                      correlation, index
-                    ) in analysisResult?.correlations || []"
-                    :key="index"
-                    class="correlation-card"
-                  >
-                    <div class="correlation-header">
-                      <div class="correlation-title">
-                        <NodeIndexOutlined />
-                        <span>{{ correlation.correlation_type }}</span>
-                      </div>
-                      <a-tag
-                        :color="getConfidenceColor(correlation.confidence)"
-                      >
-                        {{ (correlation.confidence * 100).toFixed(0) }}%
-                      </a-tag>
-                    </div>
-
-                    <div class="correlation-evidence">
-                      <h5>证据链</h5>
-                      <div class="evidence-list">
-                        <a-tag
-                          v-for="ev in correlation.evidence"
-                          :key="ev"
-                          color="blue"
-                        >
-                          {{ ev }}
-                        </a-tag>
-                      </div>
-                    </div>
-
-                    <div
-                      v-if="correlation.timeline?.length"
-                      class="timeline-section"
-                    >
-                      <h5>时间线</h5>
-                      <div class="timeline-list">
-                        <div
-                          v-for="(event, idx) in correlation.timeline.slice(
-                            0,
-                            5,
-                          )"
-                          :key="idx"
-                          class="timeline-item"
-                        >
-                          <span class="timeline-time">{{
-                            formatShortTime(event.timestamp)
-                          }}</span>
-                          <a-tag
-                            :color="getSeverityColor(event.severity)"
-                            size="small"
-                          >
-                            {{ event.type }}
-                          </a-tag>
-                          <a-tooltip :title="event.description">
-                            <span class="timeline-desc">{{
-                              truncateText(event.description, 50)
-                            }}</span>
-                          </a-tooltip>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <a-empty v-else description="暂无相关性分析数据" />
-              </div>
-            </a-tab-pane>
-
-            <!-- 修复建议标签页 -->
-            <a-tab-pane key="recommendations" tab="修复建议">
-              <div class="tab-content">
-                <div
-                  v-if="analysisResult?.recommendations?.length"
-                  class="recommendations-list"
-                >
-                  <div
-                    v-for="(rec, index) in analysisResult?.recommendations ||
-                    []"
-                    :key="index"
-                    class="recommendation-card"
-                  >
-                    <div class="rec-header">
-                      <div class="rec-number">
-                        <BulbOutlined />
-                        <span>建议 {{ index + 1 }}</span>
-                      </div>
-                      <a-tag color="green">推荐</a-tag>
-                    </div>
-                    <div class="rec-content">{{ rec }}</div>
-                    <div class="rec-actions">
-                      <a-button size="small" type="link">查看详情</a-button>
-                      <a-button size="small" type="link">标记完成</a-button>
-                    </div>
-                  </div>
-                </div>
-                <a-empty v-else description="暂无修复建议" />
-              </div>
-            </a-tab-pane>
-          </a-tabs>
-        </a-card>
-
-        <a-card v-else-if="analysisResult" class="empty-card">
-          <a-empty description="无法展示分析结果，请检查采集状态后重试" />
-        </a-card>
-
-        <!-- 空状态 -->
-        <a-card v-else class="empty-card">
-          <a-empty description="请配置参数并开始分析">
-            <template #image>
-              <PartitionOutlined style="font-size: 64px; color: #bfbfbf" />
-            </template>
-          </a-empty>
-        </a-card>
-      </a-col>
-    </a-row>
-  </OpsPage>
-</template>
-
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import CollectionSummary from './CollectionSummary.vue';
@@ -1113,6 +582,537 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleResize);
 });
 </script>
+
+<template>
+  <OpsPage
+    class="rca-analysis"
+    description="明确发起分析后汇总观测与根因证据"
+    title="根因分析"
+  >
+    <!-- 页面头部 -->
+    <template #actions>
+      <a-button
+        :disabled="!isFormValid || analyzing"
+        :loading="analyzing"
+        size="large"
+        type="primary"
+        @click="startAnalysis"
+      >
+        {{ analyzing ? '分析中...' : '开始分析' }}
+      </a-button>
+    </template>
+    <a-alert
+      v-if="analysisError"
+      :message="analysisError"
+      role="alert"
+      show-icon
+      type="error"
+    />
+    <a-alert
+      v-if="metricsError"
+      :message="metricsError"
+      role="alert"
+      show-icon
+      type="warning"
+    />
+
+    <a-row :gutter="[24, 24]">
+      <!-- 左侧配置面板 -->
+      <a-col :lg="7" :xs="24">
+        <a-card class="config-card" title="分析配置">
+          <a-form :model="formData" layout="vertical">
+            <a-form-item label="Kubernetes命名空间" name="namespace" required>
+              <a-input
+                v-model:value="formData.namespace"
+                :disabled="analyzing"
+                :status="!formData.namespace ? 'warning' : ''"
+                placeholder="输入要分析的K8s命名空间"
+              />
+              <div v-if="!formData.namespace" class="form-error">
+                请输入Kubernetes命名空间
+              </div>
+            </a-form-item>
+
+            <a-form-item label="分析时间窗口" name="timeWindowHours">
+              <a-slider
+                v-model:value="formData.timeWindowHours"
+                :disabled="analyzing"
+                :marks="timeMarks"
+                :max="24"
+                :min="0.5"
+                :step="0.5"
+                :tipFormatter="(value: number) => `${value}小时`"
+                class="time-window-slider"
+              />
+            </a-form-item>
+
+            <a-form-item label="Prometheus指标（可选）" name="metrics">
+              <a-select
+                v-model:value="formData.metrics"
+                :disabled="analyzing"
+                :filter-option="filterMetrics"
+                :loading="loadingMetrics"
+                :options="availableMetrics"
+                allow-clear
+                max-tag-count="responsive"
+                mode="multiple"
+                placeholder="选择要分析的指标"
+                show-search
+              />
+              <a-button
+                :loading="loadingMetrics"
+                size="small"
+                style="margin-top: 8px"
+                @click="loadAvailableMetrics"
+              >
+                刷新指标
+              </a-button>
+            </a-form-item>
+          </a-form>
+        </a-card>
+
+        <!-- 分析状态卡片 -->
+        <a-card v-if="analysisResult" class="status-card" title="分析概览">
+          <CollectionSummary
+            :collection="analysisResult.collection"
+            :status="analysisResult.status"
+          />
+          <a-statistic
+            title="分析ID"
+            :value="
+              analysisResult?.analysis_id
+                ? analysisResult.analysis_id.substring(0, 8) + '…'
+                : '未知'
+            "
+            style="margin-bottom: 16px"
+          >
+            <template #suffix>
+              <a-tooltip :title="analysisResult?.analysis_id">
+                <InfoCircleOutlined />
+              </a-tooltip>
+            </template>
+          </a-statistic>
+
+          <a-statistic
+            v-if="
+              analysisResult.status === 'completed' ||
+              analysisResult.status === 'degraded'
+            "
+            title="置信度"
+            :value="
+              Number.isFinite(analysisResult?.confidence_score)
+                ? (analysisResult.confidence_score * 100).toFixed(1)
+                : '未知'
+            "
+            :suffix="
+              Number.isFinite(analysisResult?.confidence_score) ? '%' : ''
+            "
+            :value-style="{
+              color: getConfidenceColor(analysisResult?.confidence_score || 0),
+            }"
+          >
+            <template #prefix>
+              <CheckCircleOutlined
+                v-if="(analysisResult?.confidence_score || 0) > 0.7"
+              />
+              <ExclamationCircleOutlined v-else />
+            </template>
+          </a-statistic>
+        </a-card>
+      </a-col>
+
+      <!-- 右侧结果面板 -->
+      <a-col :lg="17" :xs="24">
+        <!-- 分析中的加载状态 -->
+        <a-card v-if="analyzing" class="loading-card">
+          <div class="loading-container">
+            <a-spin />
+            <p>正在等待服务返回实际结果，请稍候</p>
+          </div>
+        </a-card>
+
+        <!-- 分析结果 -->
+        <a-card
+          v-else-if="
+            analysisResult &&
+            (analysisResult.status === 'completed' ||
+              analysisResult.status === 'degraded')
+          "
+          :body-style="{ padding: 0 }"
+          class="result-card"
+        >
+          <a-tabs
+            v-model:activeKey="activeResultTab"
+            class="result-tabs"
+            @change="onResultTabChange"
+          >
+            <!-- 根因分析标签页 -->
+            <a-tab-pane key="root-causes" tab="根因分析">
+              <div class="tab-content">
+                <!-- 分析元信息 -->
+                <div class="meta-info">
+                  <a-row :gutter="16">
+                    <a-col :span="8">
+                      <div class="meta-item">
+                        <span class="meta-label">命名空间</span>
+                        <span class="meta-value">{{
+                          analysisResult?.namespace
+                        }}</span>
+                      </div>
+                    </a-col>
+                    <a-col :span="8">
+                      <div class="meta-item">
+                        <span class="meta-label">时间窗口</span>
+                        <span class="meta-value"
+                          >{{ analysisResult?.time_window_hours }}小时</span
+                        >
+                      </div>
+                    </a-col>
+                    <a-col :span="8">
+                      <div class="meta-item">
+                        <span class="meta-label">分析时间</span>
+                        <span class="meta-value">{{
+                          formatShortTime(analysisResult?.timestamp)
+                        }}</span>
+                      </div>
+                    </a-col>
+                  </a-row>
+                </div>
+
+                <!-- 根因列表 -->
+                <div class="root-causes-container">
+                  <div
+                    v-if="analysisResult?.root_causes?.length"
+                    class="root-causes-list"
+                  >
+                    <div
+                      v-for="(cause, index) in analysisResult?.root_causes ||
+                      []"
+                      :key="index"
+                      class="root-cause-card"
+                    >
+                      <div class="cause-header">
+                        <div class="cause-title">
+                          <AlertOutlined
+                            :style="{
+                              color: getConfidenceColor(cause.confidence),
+                            }"
+                          />
+                          <span class="cause-type">{{ cause.cause_type }}</span>
+                        </div>
+                        <a-tag :color="getConfidenceColor(cause.confidence)">
+                          置信度 {{ (cause.confidence * 100).toFixed(0) }}%
+                        </a-tag>
+                      </div>
+
+                      <p class="cause-description">{{ cause.description }}</p>
+
+                      <!-- 证据展示 -->
+                      <div v-if="cause.evidence" class="evidence-section">
+                        <!-- 事件证据 -->
+                        <div
+                          v-if="cause.evidence.events?.length"
+                          class="evidence-block"
+                        >
+                          <h5 class="evidence-title">
+                            <FileTextOutlined />
+                            关键事件
+                          </h5>
+                          <div class="events-list">
+                            <div
+                              v-for="(
+                                event, idx
+                              ) in cause.evidence.events.slice(0, 3)"
+                              :key="idx"
+                              class="event-item"
+                            >
+                              <a-tag class="event-tag" color="orange">
+                                {{ event.reason }}
+                              </a-tag>
+                              <span class="event-count"
+                                >×{{ event.count }}</span
+                              >
+                              <a-tooltip :title="event.message">
+                                <span class="event-message">{{
+                                  truncateText(event.message, 60)
+                                }}</span>
+                              </a-tooltip>
+                            </div>
+                            <div
+                              v-if="cause.evidence.events.length > 3"
+                              class="more-indicator"
+                            >
+                              还有
+                              {{ cause.evidence.events.length - 3 }} 个事件...
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- 日志证据 -->
+                        <div
+                          v-if="cause.evidence.logs?.length"
+                          class="evidence-block"
+                        >
+                          <h5 class="evidence-title">
+                            <BugOutlined />
+                            错误类型
+                          </h5>
+                          <div class="logs-tags">
+                            <a-tag
+                              v-for="log in cause.evidence.logs"
+                              :key="log"
+                              color="red"
+                            >
+                              {{ log }}
+                            </a-tag>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <a-empty v-else description="未发现明确的根因" />
+                </div>
+              </div>
+            </a-tab-pane>
+
+            <!-- 异常检测标签页 -->
+            <a-tab-pane key="anomalies" tab="异常检测">
+              <div class="tab-content">
+                <!-- 异常统计 -->
+                <div v-if="hasAnomalies" class="anomaly-stats">
+                  <a-row :gutter="[16, 16]">
+                    <a-col :sm="6" :xs="12">
+                      <div class="stat-card">
+                        <div class="stat-value">
+                          {{ getCriticalEventsCount() }}
+                        </div>
+                        <div class="stat-label">关键事件</div>
+                      </div>
+                    </a-col>
+                    <a-col :sm="6" :xs="12">
+                      <div class="stat-card">
+                        <div class="stat-value">
+                          {{ getEventClustersCount() }}
+                        </div>
+                        <div class="stat-label">事件集群</div>
+                      </div>
+                    </a-col>
+                    <a-col :sm="6" :xs="12">
+                      <div class="stat-card">
+                        <div class="stat-value">{{ getErrorTypesCount() }}</div>
+                        <div class="stat-label">错误类型</div>
+                      </div>
+                    </a-col>
+                    <a-col :sm="6" :xs="12">
+                      <div class="stat-card">
+                        <div class="stat-value">{{ getTotalErrorCount() }}</div>
+                        <div class="stat-label">错误总数</div>
+                      </div>
+                    </a-col>
+                  </a-row>
+                </div>
+
+                <!-- 图表区域 -->
+                <div v-if="hasAnomalies" class="charts-container">
+                  <a-row :gutter="[16, 16]">
+                    <a-col :span="24">
+                      <div class="chart-wrapper">
+                        <h4 class="chart-title">事件时间分布</h4>
+                        <div ref="eventsChartRef" class="chart-container"></div>
+                      </div>
+                    </a-col>
+                    <a-col :span="12">
+                      <div class="chart-wrapper">
+                        <h4 class="chart-title">集群分布</h4>
+                        <div
+                          ref="clustersChartRef"
+                          class="chart-container-small"
+                        ></div>
+                      </div>
+                    </a-col>
+                    <a-col :span="12">
+                      <div class="chart-wrapper">
+                        <h4 class="chart-title">错误频率</h4>
+                        <div
+                          ref="errorLogsChartRef"
+                          class="chart-container-small"
+                        ></div>
+                      </div>
+                    </a-col>
+                  </a-row>
+                </div>
+
+                <!-- 详细数据 -->
+                <div v-if="hasAnomalies" class="anomaly-details">
+                  <!-- 关键事件表格 -->
+                  <div
+                    v-if="getCriticalEventsCount() > 0"
+                    class="detail-section"
+                  >
+                    <h4 class="section-title">关键事件列表</h4>
+                    <div class="table-wrapper">
+                      <a-table
+                        :dataSource="getCriticalEventsTableData()"
+                        :columns="criticalEventsColumns"
+                        :pagination="{ pageSize: 5, size: 'small' }"
+                        size="small"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- 错误频率 -->
+                  <div v-if="hasErrorFrequency()" class="detail-section">
+                    <h4 class="section-title">错误频率统计</h4>
+                    <div class="error-freq-list">
+                      <div
+                        v-for="(count, key) in analysisResult?.anomalies?.logs
+                          ?.error_frequency || {}"
+                        :key="key"
+                        class="error-freq-item"
+                      >
+                        <span class="error-name">{{
+                          truncateText(String(key), 40)
+                        }}</span>
+                        <a-progress
+                          :percent="getErrorFrequencyPercent(count as number)"
+                          :stroke-color="
+                            getErrorFrequencyColor(count as number)
+                          "
+                          :show-info="false"
+                          size="small"
+                        />
+                        <span class="error-count">{{ count }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <a-empty v-if="!hasAnomalies" description="未检测到异常" />
+              </div>
+            </a-tab-pane>
+
+            <!-- 相关性分析标签页 -->
+            <a-tab-pane key="correlations" tab="相关性分析">
+              <div class="tab-content">
+                <div v-if="hasCorrelations()" class="correlations-list">
+                  <div
+                    v-for="(
+                      correlation, index
+                    ) in analysisResult?.correlations || []"
+                    :key="index"
+                    class="correlation-card"
+                  >
+                    <div class="correlation-header">
+                      <div class="correlation-title">
+                        <NodeIndexOutlined />
+                        <span>{{ correlation.correlation_type }}</span>
+                      </div>
+                      <a-tag
+                        :color="getConfidenceColor(correlation.confidence)"
+                      >
+                        {{ (correlation.confidence * 100).toFixed(0) }}%
+                      </a-tag>
+                    </div>
+
+                    <div class="correlation-evidence">
+                      <h5>证据链</h5>
+                      <div class="evidence-list">
+                        <a-tag
+                          v-for="ev in correlation.evidence"
+                          :key="ev"
+                          color="blue"
+                        >
+                          {{ ev }}
+                        </a-tag>
+                      </div>
+                    </div>
+
+                    <div
+                      v-if="correlation.timeline?.length"
+                      class="timeline-section"
+                    >
+                      <h5>时间线</h5>
+                      <div class="timeline-list">
+                        <div
+                          v-for="(event, idx) in correlation.timeline.slice(
+                            0,
+                            5,
+                          )"
+                          :key="idx"
+                          class="timeline-item"
+                        >
+                          <span class="timeline-time">{{
+                            formatShortTime(event.timestamp)
+                          }}</span>
+                          <a-tag
+                            :color="getSeverityColor(event.severity)"
+                            size="small"
+                          >
+                            {{ event.type }}
+                          </a-tag>
+                          <a-tooltip :title="event.description">
+                            <span class="timeline-desc">{{
+                              truncateText(event.description, 50)
+                            }}</span>
+                          </a-tooltip>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <a-empty v-else description="暂无相关性分析数据" />
+              </div>
+            </a-tab-pane>
+
+            <!-- 修复建议标签页 -->
+            <a-tab-pane key="recommendations" tab="修复建议">
+              <div class="tab-content">
+                <div
+                  v-if="analysisResult?.recommendations?.length"
+                  class="recommendations-list"
+                >
+                  <div
+                    v-for="(rec, index) in analysisResult?.recommendations ||
+                    []"
+                    :key="index"
+                    class="recommendation-card"
+                  >
+                    <div class="rec-header">
+                      <div class="rec-number">
+                        <BulbOutlined />
+                        <span>建议 {{ index + 1 }}</span>
+                      </div>
+                      <a-tag color="green">推荐</a-tag>
+                    </div>
+                    <div class="rec-content">{{ rec }}</div>
+                    <div class="rec-actions">
+                      <a-button size="small" type="link">查看详情</a-button>
+                      <a-button size="small" type="link">标记完成</a-button>
+                    </div>
+                  </div>
+                </div>
+                <a-empty v-else description="暂无修复建议" />
+              </div>
+            </a-tab-pane>
+          </a-tabs>
+        </a-card>
+
+        <a-card v-else-if="analysisResult" class="empty-card">
+          <a-empty description="无法展示分析结果，请检查采集状态后重试" />
+        </a-card>
+
+        <!-- 空状态 -->
+        <a-card v-else class="empty-card">
+          <a-empty description="请配置参数并开始分析">
+            <template #image>
+              <PartitionOutlined style="font-size: 64px; color: #bfbfbf" />
+            </template>
+          </a-empty>
+        </a-card>
+      </a-col>
+    </a-row>
+  </OpsPage>
+</template>
 <style scoped>
 /* 页面头部 */
 

@@ -1,3 +1,343 @@
+<script lang="ts" setup>
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { clusterResourceKey } from '../shared/utils';
+import { onMounted, ref } from 'vue';
+import { message } from 'ant-design-vue';
+import { useNodePage } from './Node';
+import { formatDateTime, getRelativeTime } from '../shared/utils';
+import {
+  CheckOutlined,
+  DeleteOutlined,
+  DeploymentUnitOutlined,
+  DisconnectOutlined,
+  EyeOutlined,
+  FilterOutlined,
+  NodeIndexOutlined,
+  PlayCircleOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  StopOutlined,
+  TagsOutlined,
+  WarningOutlined,
+} from '@ant-design/icons-vue';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
+const {
+  // state
+  clusters,
+  loading,
+  loadError,
+  clustersError,
+  clustersLoading,
+  searchText,
+  filterStatus,
+  filterClusterId,
+  selectedRows,
+  currentPage,
+  pageSize,
+
+  // modal state
+  isLabelModalVisible,
+  isTaintModalVisible,
+  isDrainModalVisible,
+  submitLoading,
+
+  // detail modal
+  isDetailModalVisible,
+  detailLoading,
+  currentNodeDetail,
+
+  // form models
+  labelFormModel,
+  taintFormModel,
+  drainFormModel,
+
+  // form refs
+  labelFormRef,
+  taintFormRef,
+  drainFormRef,
+
+  // form rules
+  labelFormRules,
+  taintFormRules,
+  drainFormRules,
+
+  // computed
+  filteredNodes,
+  rowSelection,
+
+  // helpers
+  getEnvText,
+  getStatusText,
+  getStatusColor,
+  getSchedulableText,
+  getSchedulableColor,
+
+  // operations
+  fetchClusters,
+  fetchNodes,
+  clearNodes,
+  showNodeDetail,
+  closeDetailModal,
+
+  // label operations
+  openEditLabelModal,
+  closeLabelModal,
+  submitLabelForm,
+  removeLabelField,
+
+  // taint operations
+  openTaintModal,
+  closeTaintModal,
+  addTaint,
+  removeTaint,
+  isNewTaint,
+  submitTaintForm,
+  hasTaintChanges,
+  validateTaintYaml,
+
+  // schedule operations
+  toggleNodeSchedule,
+
+  // drain operations
+  openDrainModal,
+  closeDrainModal,
+  submitDrainForm,
+
+  // batch operations
+  batchOperation,
+
+  // cluster pagination
+  loadMoreClusters,
+  handlePageChange,
+
+  // pagination state
+  total,
+  clustersTotal,
+
+  // constants
+  NodeStatus,
+} = useNodePage();
+
+// 添加新标签的临时状态
+const newLabelKey = ref('');
+const newLabelValue = ref('');
+
+// YAML 验证相关状态
+const taintYamlData = ref('');
+const yamlValidating = ref(false);
+
+const handleValidateYaml = async () => {
+  if (!taintYamlData.value || !taintYamlData.value.trim()) {
+    message.warning('请输入 YAML 数据');
+    return;
+  }
+
+  yamlValidating.value = true;
+  try {
+    await validateTaintYaml(taintYamlData.value);
+  } finally {
+    yamlValidating.value = false;
+  }
+};
+
+const addNewLabel = () => {
+  if (!newLabelKey.value || !newLabelKey.value.trim()) return;
+  const key = newLabelKey.value.trim();
+  const value = newLabelValue.value || '';
+
+  // 先获取所有现有的键，然后重建对象确保新键在最后
+  const existingKeys = Object.keys(labelFormModel.value.labels);
+  const newLabels: Record<string, string> = {};
+
+  // 先添加所有现有的标签（排除要添加的键，以防重复）
+  existingKeys.forEach((k) => {
+    if (k !== key) {
+      newLabels[k] = labelFormModel.value.labels[k] || '';
+    }
+  });
+
+  // 最后添加新标签
+  newLabels[key] = value;
+
+  labelFormModel.value.labels = newLabels;
+  newLabelKey.value = '';
+  newLabelValue.value = '';
+};
+
+const onSearch = () => {
+  currentPage.value = 1;
+  fetchNodes();
+};
+
+const handleFilterChange = () => {
+  currentPage.value = 1;
+  fetchNodes();
+};
+
+// 重置所有筛选条件
+const resetFilters = () => {
+  filterStatus.value = undefined;
+  filterClusterId.value = undefined;
+  searchText.value = '';
+  currentPage.value = 1;
+  // 清空节点列表
+  clearNodes();
+};
+
+const handleClusterChange = () => {
+  currentPage.value = 1;
+  if (filterClusterId.value) {
+    fetchNodes();
+  } else {
+    // 清空节点列表和选择状态
+    clearNodes();
+  }
+};
+
+const handleTableChange = (pagination: {
+  current?: number;
+  pageSize?: number;
+}) => {
+  if (pagination) {
+    handlePageChange(
+      pagination.current || currentPage.value,
+      pagination.pageSize,
+    );
+  }
+};
+
+// 已弃用的函数：分页组件统一通过 handleTableChange 处理
+
+// 处理集群下拉选择的滚动事件
+const handleClusterDropdownScroll = (e: Event) => {
+  const { target } = e;
+  if (
+    target &&
+    'scrollTop' in target &&
+    'scrollHeight' in target &&
+    'clientHeight' in target
+  ) {
+    const scrollTarget = target as HTMLElement;
+    // 当滚动到底部附近时加载更多
+    if (
+      scrollTarget.scrollTop + scrollTarget.clientHeight >=
+      scrollTarget.scrollHeight - 5
+    ) {
+      loadMoreClusters();
+    }
+  }
+};
+
+const columns = [
+  {
+    title: '名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 150,
+    ellipsis: true,
+    fixed: 'left',
+  },
+  {
+    title: '状态',
+    dataIndex: 'status',
+    key: 'status',
+    width: 90,
+    align: 'center',
+  },
+  {
+    title: '调度',
+    dataIndex: 'schedulable',
+    key: 'schedulable',
+    width: 90,
+    align: 'center',
+  },
+  { title: '角色', dataIndex: 'roles', key: 'roles', width: 120 },
+  {
+    title: '运行时间',
+    dataIndex: 'age',
+    key: 'age',
+    width: 110,
+    align: 'center',
+  },
+  {
+    title: '内部IP',
+    dataIndex: 'internal_ip',
+    key: 'internal_ip',
+    width: 130,
+    ellipsis: true,
+  },
+  {
+    title: 'Kubelet',
+    dataIndex: 'kubelet_version',
+    key: 'kubelet_version',
+    width: 120,
+    align: 'center',
+    ellipsis: true,
+  },
+  {
+    title: '系统',
+    dataIndex: 'os_image',
+    key: 'os_image',
+    width: 140,
+    align: 'center',
+    ellipsis: true,
+  },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 280,
+    fixed: 'right',
+    align: 'center',
+  },
+];
+
+const conditionColumns = [
+  { title: '类型', dataIndex: 'type', key: 'type', width: '15%' },
+  { title: '状态', dataIndex: 'status', key: 'status', width: '10%' },
+  { title: '原因', dataIndex: 'reason', key: 'reason', width: '20%' },
+  {
+    title: '消息',
+    dataIndex: 'message',
+    key: 'message',
+    width: '35%',
+    ellipsis: true,
+  },
+  {
+    title: '最后更新',
+    dataIndex: 'lastTransitionTime',
+    key: 'lastTransitionTime',
+    width: '20%',
+  },
+];
+
+// 检查是否有系统信息
+const hasSystemInfo = (node: any) => {
+  return (
+    node.kubelet_version ||
+    (node.kube_proxy_version && node.kube_proxy_version.trim()) ||
+    node.container_runtime ||
+    node.operating_system ||
+    node.architecture ||
+    node.kernel_version ||
+    node.os_image
+  );
+};
+
+onMounted(async () => {
+  // 页面加载时首先获取集群列表
+  await fetchClusters();
+});
+</script>
+
 <template>
   <OpsPage
     description="管理和监控集群中的所有 Kubernetes 节点"
@@ -1143,346 +1483,6 @@
     </a-modal>
   </OpsPage>
 </template>
-
-<script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { clusterResourceKey } from '../shared/utils';
-import { onMounted, ref } from 'vue';
-import { message } from 'ant-design-vue';
-import { useNodePage } from './Node';
-import { formatDateTime, getRelativeTime } from '../shared/utils';
-import {
-  CheckOutlined,
-  DeleteOutlined,
-  DeploymentUnitOutlined,
-  DisconnectOutlined,
-  EyeOutlined,
-  FilterOutlined,
-  NodeIndexOutlined,
-  PlayCircleOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-  StopOutlined,
-  TagsOutlined,
-  WarningOutlined,
-} from '@ant-design/icons-vue';
-
-import { usePermission } from '#/utils/permission';
-
-const { can } = usePermission();
-
-const {
-  // state
-  clusters,
-  loading,
-  loadError,
-  clustersError,
-  clustersLoading,
-  searchText,
-  filterStatus,
-  filterClusterId,
-  selectedRows,
-  currentPage,
-  pageSize,
-
-  // modal state
-  isLabelModalVisible,
-  isTaintModalVisible,
-  isDrainModalVisible,
-  submitLoading,
-
-  // detail modal
-  isDetailModalVisible,
-  detailLoading,
-  currentNodeDetail,
-
-  // form models
-  labelFormModel,
-  taintFormModel,
-  drainFormModel,
-
-  // form refs
-  labelFormRef,
-  taintFormRef,
-  drainFormRef,
-
-  // form rules
-  labelFormRules,
-  taintFormRules,
-  drainFormRules,
-
-  // computed
-  filteredNodes,
-  rowSelection,
-
-  // helpers
-  getEnvText,
-  getStatusText,
-  getStatusColor,
-  getSchedulableText,
-  getSchedulableColor,
-
-  // operations
-  fetchClusters,
-  fetchNodes,
-  clearNodes,
-  showNodeDetail,
-  closeDetailModal,
-
-  // label operations
-  openEditLabelModal,
-  closeLabelModal,
-  submitLabelForm,
-  removeLabelField,
-
-  // taint operations
-  openTaintModal,
-  closeTaintModal,
-  addTaint,
-  removeTaint,
-  isNewTaint,
-  submitTaintForm,
-  hasTaintChanges,
-  validateTaintYaml,
-
-  // schedule operations
-  toggleNodeSchedule,
-
-  // drain operations
-  openDrainModal,
-  closeDrainModal,
-  submitDrainForm,
-
-  // batch operations
-  batchOperation,
-
-  // cluster pagination
-  loadMoreClusters,
-  handlePageChange,
-
-  // pagination state
-  total,
-  clustersTotal,
-
-  // constants
-  NodeStatus,
-} = useNodePage();
-
-// 添加新标签的临时状态
-const newLabelKey = ref('');
-const newLabelValue = ref('');
-
-// YAML 验证相关状态
-const taintYamlData = ref('');
-const yamlValidating = ref(false);
-
-const handleValidateYaml = async () => {
-  if (!taintYamlData.value || !taintYamlData.value.trim()) {
-    message.warning('请输入 YAML 数据');
-    return;
-  }
-
-  yamlValidating.value = true;
-  try {
-    await validateTaintYaml(taintYamlData.value);
-  } finally {
-    yamlValidating.value = false;
-  }
-};
-
-const addNewLabel = () => {
-  if (!newLabelKey.value || !newLabelKey.value.trim()) return;
-  const key = newLabelKey.value.trim();
-  const value = newLabelValue.value || '';
-
-  // 先获取所有现有的键，然后重建对象确保新键在最后
-  const existingKeys = Object.keys(labelFormModel.value.labels);
-  const newLabels: Record<string, string> = {};
-
-  // 先添加所有现有的标签（排除要添加的键，以防重复）
-  existingKeys.forEach((k) => {
-    if (k !== key) {
-      newLabels[k] = labelFormModel.value.labels[k] || '';
-    }
-  });
-
-  // 最后添加新标签
-  newLabels[key] = value;
-
-  labelFormModel.value.labels = newLabels;
-  newLabelKey.value = '';
-  newLabelValue.value = '';
-};
-
-const onSearch = () => {
-  currentPage.value = 1;
-  fetchNodes();
-};
-
-const handleFilterChange = () => {
-  currentPage.value = 1;
-  fetchNodes();
-};
-
-// 重置所有筛选条件
-const resetFilters = () => {
-  filterStatus.value = undefined;
-  filterClusterId.value = undefined;
-  searchText.value = '';
-  currentPage.value = 1;
-  // 清空节点列表
-  clearNodes();
-};
-
-const handleClusterChange = () => {
-  currentPage.value = 1;
-  if (filterClusterId.value) {
-    fetchNodes();
-  } else {
-    // 清空节点列表和选择状态
-    clearNodes();
-  }
-};
-
-const handleTableChange = (pagination: {
-  current?: number;
-  pageSize?: number;
-}) => {
-  if (pagination) {
-    handlePageChange(
-      pagination.current || currentPage.value,
-      pagination.pageSize,
-    );
-  }
-};
-
-// 已弃用的函数：分页组件统一通过 handleTableChange 处理
-
-// 处理集群下拉选择的滚动事件
-const handleClusterDropdownScroll = (e: Event) => {
-  const { target } = e;
-  if (
-    target &&
-    'scrollTop' in target &&
-    'scrollHeight' in target &&
-    'clientHeight' in target
-  ) {
-    const scrollTarget = target as HTMLElement;
-    // 当滚动到底部附近时加载更多
-    if (
-      scrollTarget.scrollTop + scrollTarget.clientHeight >=
-      scrollTarget.scrollHeight - 5
-    ) {
-      loadMoreClusters();
-    }
-  }
-};
-
-const columns = [
-  {
-    title: '名称',
-    dataIndex: 'name',
-    key: 'name',
-    width: 150,
-    ellipsis: true,
-    fixed: 'left',
-  },
-  {
-    title: '状态',
-    dataIndex: 'status',
-    key: 'status',
-    width: 90,
-    align: 'center',
-  },
-  {
-    title: '调度',
-    dataIndex: 'schedulable',
-    key: 'schedulable',
-    width: 90,
-    align: 'center',
-  },
-  { title: '角色', dataIndex: 'roles', key: 'roles', width: 120 },
-  {
-    title: '运行时间',
-    dataIndex: 'age',
-    key: 'age',
-    width: 110,
-    align: 'center',
-  },
-  {
-    title: '内部IP',
-    dataIndex: 'internal_ip',
-    key: 'internal_ip',
-    width: 130,
-    ellipsis: true,
-  },
-  {
-    title: 'Kubelet',
-    dataIndex: 'kubelet_version',
-    key: 'kubelet_version',
-    width: 120,
-    align: 'center',
-    ellipsis: true,
-  },
-  {
-    title: '系统',
-    dataIndex: 'os_image',
-    key: 'os_image',
-    width: 140,
-    align: 'center',
-    ellipsis: true,
-  },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
-  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
-  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 280,
-    fixed: 'right',
-    align: 'center',
-  },
-];
-
-const conditionColumns = [
-  { title: '类型', dataIndex: 'type', key: 'type', width: '15%' },
-  { title: '状态', dataIndex: 'status', key: 'status', width: '10%' },
-  { title: '原因', dataIndex: 'reason', key: 'reason', width: '20%' },
-  {
-    title: '消息',
-    dataIndex: 'message',
-    key: 'message',
-    width: '35%',
-    ellipsis: true,
-  },
-  {
-    title: '最后更新',
-    dataIndex: 'lastTransitionTime',
-    key: 'lastTransitionTime',
-    width: '20%',
-  },
-];
-
-// 检查是否有系统信息
-const hasSystemInfo = (node: any) => {
-  return (
-    node.kubelet_version ||
-    (node.kube_proxy_version && node.kube_proxy_version.trim()) ||
-    node.container_runtime ||
-    node.operating_system ||
-    node.architecture ||
-    node.kernel_version ||
-    node.os_image
-  );
-};
-
-onMounted(async () => {
-  // 页面加载时首先获取集群列表
-  await fetchClusters();
-});
-</script>
 
 <style scoped>
 @import '../shared/k8s-common.css';

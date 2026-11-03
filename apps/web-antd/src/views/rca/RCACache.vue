@@ -1,3 +1,103 @@
+<script setup lang="ts">
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { useRcaCache } from './useRcaCache';
+import {
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ExclamationCircleOutlined,
+} from '@ant-design/icons-vue';
+import { Icon } from '@iconify/vue';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+const {
+  loadingStats,
+  clearingCache,
+  clearAllModalVisible,
+  cacheStats,
+  statsError,
+  operationError,
+  clearNamespaceForm,
+  clearOperationForm,
+  operationHistory,
+  refreshCacheStats,
+  handleClearNamespaceCache,
+  handleClearOperationCache,
+  showClearAllModal,
+  confirmClearAllCache,
+  clearHistory,
+} = useRcaCache();
+
+// 格式化命中率
+const formatHitRate = (hitRate?: number) => {
+  if (!Number.isFinite(hitRate) || hitRate! < 0 || hitRate! > 100)
+    return '未知';
+  const percentage = hitRate!;
+  return `${percentage.toFixed(1)}%`;
+};
+
+// 获取命中率百分比
+const getHitRatePercent = (hitRate?: number) => {
+  if (hitRate === undefined || hitRate === null) return 0;
+  return hitRate;
+};
+
+// 获取命中率颜色
+const getHitRateColor = (hitRate?: number) => {
+  if (hitRate === undefined || hitRate === null) return '#d9d9d9';
+  const percentage = hitRate / 100;
+  if (percentage >= 0.8) return '#52c41a';
+  if (percentage >= 0.6) return '#1890ff';
+  if (percentage >= 0.4) return '#faad14';
+  return '#ff4d4f';
+};
+
+// 格式化TTL
+const formatTTL = (ttl?: number) => {
+  if (ttl === undefined || ttl === null) return 'N/A';
+  if (ttl < 60) return `${ttl}秒`;
+  if (ttl < 3600) return `${Math.floor(ttl / 60)}分钟`;
+  if (ttl < 86400) return `${Math.floor(ttl / 3600)}小时`;
+  return `${Math.floor(ttl / 86400)}天`;
+};
+
+// 格式化缓存键数量
+const formatTotalKeys = (totalKeys?: number) => {
+  if (totalKeys === undefined || totalKeys === null) return 'N/A';
+  return totalKeys;
+};
+
+// 格式化内存使用
+const formatMemoryUsage = (memoryUsage?: string) => {
+  if (memoryUsage === undefined || memoryUsage === null) return 'N/A';
+  return memoryUsage;
+};
+
+// 格式化缓存前缀
+const formatCachePrefix = (prefix?: string) => {
+  if (!prefix) return 'N/A';
+  return prefix;
+};
+
+// 格式化时间
+const formatTime = (timestamp?: string) => {
+  if (!timestamp) return 'N/A';
+  try {
+    const date = new Date(timestamp);
+    return date.toLocaleString('zh-CN');
+  } catch {
+    return timestamp;
+  }
+};
+
+// 格式化状态消息
+const formatStatusMessage = (message?: string) => {
+  if (!message) return '无';
+  return message;
+};
+</script>
+
 <template>
   <OpsPage
     class="rca-cache"
@@ -328,106 +428,6 @@
     </a-modal>
   </OpsPage>
 </template>
-
-<script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { useRcaCache } from './useRcaCache';
-import {
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  ExclamationCircleOutlined,
-} from '@ant-design/icons-vue';
-import { Icon } from '@iconify/vue';
-
-import { usePermission } from '#/utils/permission';
-
-const { can } = usePermission();
-const {
-  loadingStats,
-  clearingCache,
-  clearAllModalVisible,
-  cacheStats,
-  statsError,
-  operationError,
-  clearNamespaceForm,
-  clearOperationForm,
-  operationHistory,
-  refreshCacheStats,
-  handleClearNamespaceCache,
-  handleClearOperationCache,
-  showClearAllModal,
-  confirmClearAllCache,
-  clearHistory,
-} = useRcaCache();
-
-// 格式化命中率
-const formatHitRate = (hitRate?: number) => {
-  if (!Number.isFinite(hitRate) || hitRate! < 0 || hitRate! > 100)
-    return '未知';
-  const percentage = hitRate!;
-  return `${percentage.toFixed(1)}%`;
-};
-
-// 获取命中率百分比
-const getHitRatePercent = (hitRate?: number) => {
-  if (hitRate === undefined || hitRate === null) return 0;
-  return hitRate;
-};
-
-// 获取命中率颜色
-const getHitRateColor = (hitRate?: number) => {
-  if (hitRate === undefined || hitRate === null) return '#d9d9d9';
-  const percentage = hitRate / 100;
-  if (percentage >= 0.8) return '#52c41a';
-  if (percentage >= 0.6) return '#1890ff';
-  if (percentage >= 0.4) return '#faad14';
-  return '#ff4d4f';
-};
-
-// 格式化TTL
-const formatTTL = (ttl?: number) => {
-  if (ttl === undefined || ttl === null) return 'N/A';
-  if (ttl < 60) return `${ttl}秒`;
-  if (ttl < 3600) return `${Math.floor(ttl / 60)}分钟`;
-  if (ttl < 86400) return `${Math.floor(ttl / 3600)}小时`;
-  return `${Math.floor(ttl / 86400)}天`;
-};
-
-// 格式化缓存键数量
-const formatTotalKeys = (totalKeys?: number) => {
-  if (totalKeys === undefined || totalKeys === null) return 'N/A';
-  return totalKeys;
-};
-
-// 格式化内存使用
-const formatMemoryUsage = (memoryUsage?: string) => {
-  if (memoryUsage === undefined || memoryUsage === null) return 'N/A';
-  return memoryUsage;
-};
-
-// 格式化缓存前缀
-const formatCachePrefix = (prefix?: string) => {
-  if (!prefix) return 'N/A';
-  return prefix;
-};
-
-// 格式化时间
-const formatTime = (timestamp?: string) => {
-  if (!timestamp) return 'N/A';
-  try {
-    const date = new Date(timestamp);
-    return date.toLocaleString('zh-CN');
-  } catch {
-    return timestamp;
-  }
-};
-
-// 格式化状态消息
-const formatStatusMessage = (message?: string) => {
-  if (!message) return '无';
-  return message;
-};
-</script>
 
 <style scoped>
 /* 页面头部 */

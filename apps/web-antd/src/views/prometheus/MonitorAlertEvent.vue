@@ -1,333 +1,3 @@
-<template>
-  <OpsPage description="按状态查询事件，认领或管理静默" title="告警事件">
-    <!-- 页面标题 -->
-    <template #filters>
-      <div class="search-filters">
-        <a-input-search
-          v-model:value="searchText"
-          allow-clear
-          class="search-input"
-          placeholder="搜索告警事件名称..."
-          @change="handleSearchChange"
-          @search="handleSearch"
-        />
-        <a-select
-          v-model:value="statusFilter"
-          allow-clear
-          class="filter-select"
-          placeholder="告警状态"
-          @change="handleStatusChange"
-        >
-          <a-select-option :value="undefined">全部状态</a-select-option>
-          <a-select-option value="firing">告警中</a-select-option>
-          <a-select-option value="silenced">已屏蔽</a-select-option>
-          <a-select-option value="claimed">已认领</a-select-option>
-          <a-select-option value="resolved">已恢复</a-select-option>
-        </a-select>
-        <a-select
-          v-model:value="eventTimesFilter"
-          allow-clear
-          class="filter-select"
-          placeholder="触发次数（本页）"
-          @change="handleEventTimesChange"
-        >
-          <a-select-option :value="undefined">全部</a-select-option>
-          <a-select-option :value="1">1次</a-select-option>
-          <a-select-option :value="5">5次以上</a-select-option>
-          <a-select-option :value="10">10次以上</a-select-option>
-        </a-select>
-        <a-button class="reset-btn" @click="handleResetFilters">
-          重置
-        </a-button>
-      </div>
-    </template>
-
-    <!-- 统计卡片 -->
-    <template #summary>
-      <div class="stats-row">
-        <a-row :gutter="[16, 16]">
-          <a-col :lg="6" :md="6" :sm="6" :xs="12">
-            <a-card class="stats-card">
-              <a-statistic
-                :value="loadError ? '未知' : stats.total"
-                :value-style="{ color: '#3f8600' }"
-                title="本页总告警事件"
-              >
-                <template #prefix>
-                  <Icon icon="carbon:container-registry" />
-                </template>
-              </a-statistic>
-            </a-card>
-          </a-col>
-          <a-col :lg="6" :md="6" :sm="6" :xs="12">
-            <a-card class="stats-card">
-              <a-statistic
-                :value="loadError ? '未知' : stats.firing"
-                :value-style="{ color: '#cf1322' }"
-                title="本页告警中事件"
-              >
-                <template #prefix>
-                  <Icon icon="carbon:warning-alt" />
-                </template>
-              </a-statistic>
-            </a-card>
-          </a-col>
-          <a-col :lg="6" :md="6" :sm="6" :xs="12">
-            <a-card class="stats-card">
-              <a-statistic
-                :value="loadError ? '未知' : stats.silenced"
-                :value-style="{ color: '#faad14' }"
-                title="本页已屏蔽事件"
-              >
-                <template #prefix>
-                  <Icon icon="carbon:data-table" />
-                </template>
-              </a-statistic>
-            </a-card>
-          </a-col>
-          <a-col :lg="6" :md="6" :sm="6" :xs="12">
-            <a-card class="stats-card">
-              <a-statistic
-                :value="loadError ? '未知' : stats.claimed"
-                :value-style="{ color: '#52c41a' }"
-                title="本页已认领事件"
-              >
-                <template #prefix>
-                  <Icon icon="carbon:server" />
-                </template>
-              </a-statistic>
-            </a-card>
-          </a-col>
-        </a-row>
-      </div>
-    </template>
-
-    <a-alert
-      v-if="loadError"
-      :message="loadError"
-      role="alert"
-      show-icon
-      type="error"
-    >
-      <template #action>
-        <a-button :loading="loading" size="small" @click="fetchResources">
-          重试
-        </a-button>
-      </template>
-    </a-alert>
-
-    <!-- 表格容器 -->
-    <div class="table-container">
-      <a-card>
-        <a-table
-          :columns="columns"
-          :data-source="data"
-          :loading="loading"
-          :pagination="paginationConfig"
-          :scroll="{ x: 1600 }"
-          bordered
-          row-key="id"
-          @change="handleTableChange"
-        >
-          <template #bodyCell="{ column, record }">
-            <template v-if="column.key === 'alert_name'">
-              <div class="alert-name-cell">
-                <div
-                  class="alert-badge"
-                  :class="getAlertStatusClass(record)"
-                ></div>
-                <span class="alert-name-text">{{ record.alert_name }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'status'">
-              <a-tag :color="getStatusColor(record.status)">
-                {{ getStatusText(record.status) }}
-              </a-tag>
-            </template>
-
-            <template v-if="column.key === 'labels'">
-              <div class="tag-container">
-                <a-tag
-                  v-for="label in record.labels || []"
-                  :key="label"
-                  class="tech-tag label-tag"
-                >
-                  {{ label }}
-                </a-tag>
-                <span
-                  v-if="!(record.labels && record.labels.length)"
-                  class="empty-text"
-                  >无标签</span
-                >
-              </div>
-            </template>
-
-            <template v-if="column.key === 'event_times'">
-              <div class="event-times-info">
-                <span class="times-value">{{ record.event_times }}</span>
-                <span class="times-unit">次</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'send_group_name'">
-              <div class="group-info">
-                <a-avatar
-                  size="small"
-                  :style="{
-                    backgroundColor: getAvatarColor(
-                      (record.send_group?.name as string) || '',
-                    ),
-                  }"
-                >
-                  {{ getInitials((record.send_group?.name as string) || '') }}
-                </a-avatar>
-                <span class="group-name">{{
-                  (record.send_group?.name as string) ||
-                  `ID: ${record.send_group_id}`
-                }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'created_at'">
-              <div class="date-info">
-                <span class="date">{{ formatDate(record.created_at) }}</span>
-                <span class="time">{{ formatTime(record.created_at) }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'action'">
-              <div class="action-buttons">
-                <a-tooltip title="屏蔽告警">
-                  <a-button
-                    size="small"
-                    type="primary"
-                    @click="handleSilence(record)"
-                  >
-                    <template #icon>
-                      <Icon icon="mdi:bell-off-outline" />
-                    </template>
-                  </a-button>
-                </a-tooltip>
-                <a-tooltip title="认领告警">
-                  <a-button
-                    size="small"
-                    type="default"
-                    @click="handleClaim(record)"
-                  >
-                    <template #icon>
-                      <Icon icon="mdi:hand-back-right-outline" />
-                    </template>
-                  </a-button>
-                </a-tooltip>
-                <a-dropdown>
-                  <template #overlay>
-                    <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
-                      <a-menu-item key="unsilence">
-                        <Icon icon="mdi:bell-ring-outline" /> 取消屏蔽
-                      </a-menu-item>
-                      <a-menu-divider />
-                      <a-menu-item key="detail">查看详情</a-menu-item>
-                    </a-menu>
-                  </template>
-                  <a-button size="small">
-                    更多
-                    <DownOutlined />
-                  </a-button>
-                </a-dropdown>
-              </div>
-            </template>
-          </template>
-        </a-table>
-      </a-card>
-    </div>
-
-    <!-- 详情对话框 -->
-    <a-modal
-      :footer="null"
-      :open="detailDialogVisible"
-      :width="previewDialogWidth"
-      class="detail-dialog"
-      title="告警事件详情"
-      @cancel="closeDetailDialog"
-    >
-      <div v-if="detailDialog.form" class="alert-details">
-        <div class="detail-header">
-          <h2>{{ detailDialog.form.alert_name }}</h2>
-          <div class="detail-badges">
-            <a-tag :color="getStatusColor(detailDialog.form.status)">
-              {{ getStatusText(detailDialog.form.status) }}
-            </a-tag>
-          </div>
-        </div>
-
-        <a-descriptions :column="1" :labelStyle="{ width: '150px' }" bordered>
-          <a-descriptions-item label="告警ID">
-            {{ detailDialog.form.id }}
-          </a-descriptions-item>
-          <a-descriptions-item label="告警名称">
-            {{ detailDialog.form.alert_name }}
-          </a-descriptions-item>
-          <a-descriptions-item label="告警状态">
-            <a-tag :color="getStatusColor(detailDialog.form.status)">
-              {{ getStatusText(detailDialog.form.status) }}
-            </a-tag>
-          </a-descriptions-item>
-          <a-descriptions-item label="发送组ID">
-            {{ detailDialog.form.send_group_id || '未分配' }}
-          </a-descriptions-item>
-          <a-descriptions-item label="发送组名称">
-            {{ (detailDialog.form.send_group?.name as string) || '未分配' }}
-          </a-descriptions-item>
-          <a-descriptions-item label="触发次数">
-            {{ detailDialog.form.event_times }}次
-          </a-descriptions-item>
-          <a-descriptions-item label="静默ID">
-            {{ detailDialog.form.silence_id || '无' }}
-          </a-descriptions-item>
-          <a-descriptions-item label="认领用户ID">
-            {{ detailDialog.form.ren_ling_user_id || '未认领' }}
-          </a-descriptions-item>
-          <a-descriptions-item label="规则名称">
-            {{ detailDialog.form.alert_name || '未知' }}
-          </a-descriptions-item>
-          <a-descriptions-item label="创建时间">
-            {{ formatFullDateTime(detailDialog.form?.created_at || '') }}
-          </a-descriptions-item>
-          <a-descriptions-item label="标签组">
-            <div class="tag-container">
-              <a-tag
-                v-for="label in detailDialog.form.labels || []"
-                :key="label"
-                class="tech-tag label-tag"
-              >
-                {{ label }}
-              </a-tag>
-              <span
-                v-if="
-                  !(detailDialog.form.labels && detailDialog.form.labels.length)
-                "
-                class="empty-text"
-                >无标签</span
-              >
-            </div>
-          </a-descriptions-item>
-        </a-descriptions>
-
-        <div class="detail-footer">
-          <a-button @click="closeDetailDialog">关闭</a-button>
-          <a-button type="primary" @click="handleSilence(detailDialog.form)">
-            屏蔽告警
-          </a-button>
-          <a-button type="default" @click="handleClaim(detailDialog.form)">
-            认领告警
-          </a-button>
-        </div>
-      </div>
-    </a-modal>
-  </OpsPage>
-</template>
-
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
@@ -788,6 +458,336 @@ onMounted(() => {
   fetchResources();
 });
 </script>
+
+<template>
+  <OpsPage description="按状态查询事件，认领或管理静默" title="告警事件">
+    <!-- 页面标题 -->
+    <template #filters>
+      <div class="search-filters">
+        <a-input-search
+          v-model:value="searchText"
+          allow-clear
+          class="search-input"
+          placeholder="搜索告警事件名称..."
+          @change="handleSearchChange"
+          @search="handleSearch"
+        />
+        <a-select
+          v-model:value="statusFilter"
+          allow-clear
+          class="filter-select"
+          placeholder="告警状态"
+          @change="handleStatusChange"
+        >
+          <a-select-option :value="undefined">全部状态</a-select-option>
+          <a-select-option value="firing">告警中</a-select-option>
+          <a-select-option value="silenced">已屏蔽</a-select-option>
+          <a-select-option value="claimed">已认领</a-select-option>
+          <a-select-option value="resolved">已恢复</a-select-option>
+        </a-select>
+        <a-select
+          v-model:value="eventTimesFilter"
+          allow-clear
+          class="filter-select"
+          placeholder="触发次数（本页）"
+          @change="handleEventTimesChange"
+        >
+          <a-select-option :value="undefined">全部</a-select-option>
+          <a-select-option :value="1">1次</a-select-option>
+          <a-select-option :value="5">5次以上</a-select-option>
+          <a-select-option :value="10">10次以上</a-select-option>
+        </a-select>
+        <a-button class="reset-btn" @click="handleResetFilters">
+          重置
+        </a-button>
+      </div>
+    </template>
+
+    <!-- 统计卡片 -->
+    <template #summary>
+      <div class="stats-row">
+        <a-row :gutter="[16, 16]">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
+            <a-card class="stats-card">
+              <a-statistic
+                :value="loadError ? '未知' : stats.total"
+                :value-style="{ color: '#3f8600' }"
+                title="本页总告警事件"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:container-registry" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
+            <a-card class="stats-card">
+              <a-statistic
+                :value="loadError ? '未知' : stats.firing"
+                :value-style="{ color: '#cf1322' }"
+                title="本页告警中事件"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:warning-alt" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
+            <a-card class="stats-card">
+              <a-statistic
+                :value="loadError ? '未知' : stats.silenced"
+                :value-style="{ color: '#faad14' }"
+                title="本页已屏蔽事件"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:data-table" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
+            <a-card class="stats-card">
+              <a-statistic
+                :value="loadError ? '未知' : stats.claimed"
+                :value-style="{ color: '#52c41a' }"
+                title="本页已认领事件"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:server" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+        </a-row>
+      </div>
+    </template>
+
+    <a-alert
+      v-if="loadError"
+      :message="loadError"
+      role="alert"
+      show-icon
+      type="error"
+    >
+      <template #action>
+        <a-button :loading="loading" size="small" @click="fetchResources">
+          重试
+        </a-button>
+      </template>
+    </a-alert>
+
+    <!-- 表格容器 -->
+    <div class="table-container">
+      <a-card>
+        <a-table
+          :columns="columns"
+          :data-source="data"
+          :loading="loading"
+          :pagination="paginationConfig"
+          :scroll="{ x: 1600 }"
+          bordered
+          row-key="id"
+          @change="handleTableChange"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'alert_name'">
+              <div class="alert-name-cell">
+                <div
+                  class="alert-badge"
+                  :class="getAlertStatusClass(record)"
+                ></div>
+                <span class="alert-name-text">{{ record.alert_name }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'status'">
+              <a-tag :color="getStatusColor(record.status)">
+                {{ getStatusText(record.status) }}
+              </a-tag>
+            </template>
+
+            <template v-if="column.key === 'labels'">
+              <div class="tag-container">
+                <a-tag
+                  v-for="label in record.labels || []"
+                  :key="label"
+                  class="tech-tag label-tag"
+                >
+                  {{ label }}
+                </a-tag>
+                <span
+                  v-if="!(record.labels && record.labels.length)"
+                  class="empty-text"
+                  >无标签</span
+                >
+              </div>
+            </template>
+
+            <template v-if="column.key === 'event_times'">
+              <div class="event-times-info">
+                <span class="times-value">{{ record.event_times }}</span>
+                <span class="times-unit">次</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'send_group_name'">
+              <div class="group-info">
+                <a-avatar
+                  size="small"
+                  :style="{
+                    backgroundColor: getAvatarColor(
+                      (record.send_group?.name as string) || '',
+                    ),
+                  }"
+                >
+                  {{ getInitials((record.send_group?.name as string) || '') }}
+                </a-avatar>
+                <span class="group-name">{{
+                  (record.send_group?.name as string) ||
+                  `ID: ${record.send_group_id}`
+                }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'created_at'">
+              <div class="date-info">
+                <span class="date">{{ formatDate(record.created_at) }}</span>
+                <span class="time">{{ formatTime(record.created_at) }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'action'">
+              <div class="action-buttons">
+                <a-tooltip title="屏蔽告警">
+                  <a-button
+                    size="small"
+                    type="primary"
+                    @click="handleSilence(record)"
+                  >
+                    <template #icon>
+                      <Icon icon="mdi:bell-off-outline" />
+                    </template>
+                  </a-button>
+                </a-tooltip>
+                <a-tooltip title="认领告警">
+                  <a-button
+                    size="small"
+                    type="default"
+                    @click="handleClaim(record)"
+                  >
+                    <template #icon>
+                      <Icon icon="mdi:hand-back-right-outline" />
+                    </template>
+                  </a-button>
+                </a-tooltip>
+                <a-dropdown>
+                  <template #overlay>
+                    <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
+                      <a-menu-item key="unsilence">
+                        <Icon icon="mdi:bell-ring-outline" /> 取消屏蔽
+                      </a-menu-item>
+                      <a-menu-divider />
+                      <a-menu-item key="detail">查看详情</a-menu-item>
+                    </a-menu>
+                  </template>
+                  <a-button size="small">
+                    更多
+                    <DownOutlined />
+                  </a-button>
+                </a-dropdown>
+              </div>
+            </template>
+          </template>
+        </a-table>
+      </a-card>
+    </div>
+
+    <!-- 详情对话框 -->
+    <a-modal
+      :footer="null"
+      :open="detailDialogVisible"
+      :width="previewDialogWidth"
+      class="detail-dialog"
+      title="告警事件详情"
+      @cancel="closeDetailDialog"
+    >
+      <div v-if="detailDialog.form" class="alert-details">
+        <div class="detail-header">
+          <h2>{{ detailDialog.form.alert_name }}</h2>
+          <div class="detail-badges">
+            <a-tag :color="getStatusColor(detailDialog.form.status)">
+              {{ getStatusText(detailDialog.form.status) }}
+            </a-tag>
+          </div>
+        </div>
+
+        <a-descriptions :column="1" :labelStyle="{ width: '150px' }" bordered>
+          <a-descriptions-item label="告警ID">
+            {{ detailDialog.form.id }}
+          </a-descriptions-item>
+          <a-descriptions-item label="告警名称">
+            {{ detailDialog.form.alert_name }}
+          </a-descriptions-item>
+          <a-descriptions-item label="告警状态">
+            <a-tag :color="getStatusColor(detailDialog.form.status)">
+              {{ getStatusText(detailDialog.form.status) }}
+            </a-tag>
+          </a-descriptions-item>
+          <a-descriptions-item label="发送组ID">
+            {{ detailDialog.form.send_group_id || '未分配' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="发送组名称">
+            {{ (detailDialog.form.send_group?.name as string) || '未分配' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="触发次数">
+            {{ detailDialog.form.event_times }}次
+          </a-descriptions-item>
+          <a-descriptions-item label="静默ID">
+            {{ detailDialog.form.silence_id || '无' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="认领用户ID">
+            {{ detailDialog.form.ren_ling_user_id || '未认领' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="规则名称">
+            {{ detailDialog.form.alert_name || '未知' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="创建时间">
+            {{ formatFullDateTime(detailDialog.form?.created_at || '') }}
+          </a-descriptions-item>
+          <a-descriptions-item label="标签组">
+            <div class="tag-container">
+              <a-tag
+                v-for="label in detailDialog.form.labels || []"
+                :key="label"
+                class="tech-tag label-tag"
+              >
+                {{ label }}
+              </a-tag>
+              <span
+                v-if="
+                  !(detailDialog.form.labels && detailDialog.form.labels.length)
+                "
+                class="empty-text"
+                >无标签</span
+              >
+            </div>
+          </a-descriptions-item>
+        </a-descriptions>
+
+        <div class="detail-footer">
+          <a-button @click="closeDetailDialog">关闭</a-button>
+          <a-button type="primary" @click="handleSilence(detailDialog.form)">
+            屏蔽告警
+          </a-button>
+          <a-button type="default" @click="handleClaim(detailDialog.form)">
+            认领告警
+          </a-button>
+        </div>
+      </div>
+    </a-modal>
+  </OpsPage>
+</template>
 
 <style scoped>
 .search-input {

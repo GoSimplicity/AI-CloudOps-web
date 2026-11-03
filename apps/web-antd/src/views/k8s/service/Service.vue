@@ -1,3 +1,479 @@
+<script lang="ts" setup>
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { onMounted, ref } from 'vue';
+import { message, Modal } from 'ant-design-vue';
+import { useServicePage } from './Service';
+import {
+  formatDateTime,
+  formatK8sTime,
+  getRelativeTime,
+  namespacedResourceKey,
+} from '../shared/utils';
+import yaml from 'js-yaml';
+import {
+  AppstoreOutlined,
+  CheckCircleOutlined,
+  ClearOutlined,
+  DeleteOutlined,
+  DeploymentUnitOutlined,
+  EditOutlined,
+  EyeOutlined,
+  FileAddOutlined,
+  FileTextOutlined,
+  FilterOutlined,
+  FormatPainterOutlined,
+  GlobalOutlined,
+  NodeIndexOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  TagsOutlined,
+} from '@ant-design/icons-vue';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
+const {
+  // state
+  clusters,
+  namespaces,
+  loading,
+  loadError,
+  clustersError,
+  namespacesError,
+  clustersLoading,
+  namespacesLoading,
+  searchText,
+  filterStatus,
+  filterClusterId,
+  filterNamespace,
+  filterType,
+  filterLabels,
+  selectedRows,
+  currentPage,
+  pageSize,
+  total,
+  clustersTotal,
+  namespacesTotal,
+
+  // modal state
+  isCreateModalVisible,
+  isCreateYamlModalVisible,
+  isEditModalVisible,
+  isDetailModalVisible,
+  isYamlModalVisible,
+  isEndpointsModalVisible,
+  submitLoading,
+  detailLoading,
+
+  // operation targets
+  currentOperationService,
+  currentServiceDetail,
+  serviceEndpoints,
+
+  // form models
+  createFormModel,
+  editFormModel,
+  yamlFormModel,
+  createYamlFormModel,
+
+  // form refs
+  formRef,
+  editFormRef,
+  yamlFormRef,
+  createYamlFormRef,
+
+  // form rules
+  createFormRules,
+  editFormRules,
+  yamlFormRules,
+  createYamlFormRules,
+
+  // computed
+  filteredServices,
+  rowSelection,
+
+  // helpers
+  getEnvText,
+  getStatusText,
+  getStatusColor,
+  getServiceTypeText,
+  getServiceTypeColor,
+
+  // operations
+  fetchClusters,
+  fetchNamespaces,
+  fetchServices,
+  clearServices,
+  clearNamespaces,
+
+  loadMoreNamespaces,
+
+  // detail operations
+  showServiceDetail,
+  closeDetailModal,
+
+  // YAML operations
+  showYamlModal,
+  closeYamlModal,
+  submitYamlForm,
+
+  // create operations
+  openCreateModal,
+  closeCreateModal,
+  submitCreateForm,
+  openCreateYamlModal,
+  closeCreateYamlModal,
+  submitCreateYamlForm,
+
+  // edit operations
+  openEditModal,
+  closeEditModal,
+  submitEditForm,
+
+  // service operations
+  deleteService,
+
+  // endpoints operations
+  showEndpointsModal,
+  closeEndpointsModal,
+
+  // filter operations
+  addFilterLabel,
+  removeFilterLabel,
+  clearFilterLabels,
+
+  // batch operations
+  batchOperation,
+
+  // pagination operations
+  handlePageChange,
+  onSearch,
+  handleFilterChange,
+  handleClusterChange,
+  handleClusterDropdownScroll,
+
+  // form field operations
+  addPortField,
+  removePortField,
+  removeLabelField,
+  removeAnnotationField,
+  removeSelectorField,
+
+  // edit form field operations
+  addEditPortField,
+  removeEditPortField,
+  addNewEditLabel,
+  removeEditLabelField,
+  addNewEditSelector,
+  removeEditSelectorField,
+  addNewEditAnnotation,
+  removeEditAnnotationField,
+
+  // edit form helper variables
+  newEditLabelKey,
+  newEditSelectorKey,
+  newEditAnnotationKey,
+
+  // constants
+  K8sSvcStatus,
+} = useServicePage();
+
+// 添加新标签/注解/选择器的方法
+const newLabelKey = ref('');
+const newAnnotationKey = ref('');
+const newSelectorKey = ref('');
+
+const addNewLabel = () => {
+  if (newLabelKey.value && newLabelKey.value.trim()) {
+    createFormModel.value.labels[newLabelKey.value.trim()] = '';
+    newLabelKey.value = '';
+  }
+};
+
+const addNewAnnotation = () => {
+  if (newAnnotationKey.value && newAnnotationKey.value.trim()) {
+    createFormModel.value.annotations[newAnnotationKey.value.trim()] = '';
+    newAnnotationKey.value = '';
+  }
+};
+
+const addNewSelector = () => {
+  if (newSelectorKey.value && newSelectorKey.value.trim()) {
+    createFormModel.value.selector[newSelectorKey.value.trim()] = '';
+    newSelectorKey.value = '';
+  }
+};
+
+// 表格分页变化处理
+const handleTableChange = (pagination: {
+  current?: number;
+  pageSize?: number;
+}) => {
+  if (pagination) {
+    handlePageChange(
+      pagination.current || currentPage.value,
+      pagination.pageSize,
+    );
+  }
+};
+
+const columns = [
+  {
+    title: '名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 150,
+    ellipsis: true,
+    fixed: 'left',
+  },
+  {
+    title: '命名空间',
+    dataIndex: 'namespace',
+    key: 'namespace',
+    width: 120,
+    ellipsis: true,
+  },
+  {
+    title: '状态',
+    dataIndex: 'status',
+    key: 'status',
+    width: 90,
+    align: 'center',
+  },
+  {
+    title: '类型',
+    dataIndex: 'type',
+    key: 'type',
+    width: 110,
+    align: 'center',
+  },
+  { title: '集群IP', dataIndex: 'cluster_ip', key: 'cluster_ip', width: 130 },
+  { title: '端口', dataIndex: 'ports', key: 'ports', width: 200 },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 230,
+    fixed: 'right',
+    align: 'center',
+  },
+];
+
+const portColumns = [
+  { title: '名称', dataIndex: 'name', key: 'name' },
+  { title: '协议', dataIndex: 'protocol', key: 'protocol' },
+  { title: '端口', dataIndex: 'port', key: 'port' },
+  { title: '目标端口', dataIndex: 'target_port', key: 'target_port' },
+  { title: '节点端口', dataIndex: 'node_port', key: 'node_port' },
+];
+
+// 动态获取可见的端口列（只显示有数据的列）
+const getVisiblePortColumns = (ports: any[]) => {
+  if (!ports || ports.length === 0) return portColumns;
+
+  // 检查是否有任何端口配置了 node_port
+  const hasNodePort = ports.some(
+    (port) => port.node_port && port.node_port > 0,
+  );
+
+  // 如果没有 node_port，则过滤掉该列
+  if (!hasNodePort) {
+    return portColumns.filter((col) => col.key !== 'node_port');
+  }
+
+  return portColumns;
+};
+
+const endpointColumns = [
+  { title: 'IP地址', dataIndex: 'ip', key: 'ip' },
+  { title: '端口', dataIndex: 'port', key: 'port' },
+  { title: '协议', dataIndex: 'protocol', key: 'protocol' },
+  { title: '状态', dataIndex: 'ready', key: 'ready' },
+];
+
+// 标签过滤器状态
+const isLabelsFilterModalVisible = ref(false);
+const newFilterKey = ref('');
+const newFilterValue = ref('');
+
+// 标签过滤器操作
+const openLabelsFilter = () => {
+  isLabelsFilterModalVisible.value = true;
+};
+
+const closeLabelsFilterModal = () => {
+  isLabelsFilterModalVisible.value = false;
+  newFilterKey.value = '';
+  newFilterValue.value = '';
+};
+
+const addNewFilterLabel = () => {
+  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
+    addFilterLabel(newFilterKey.value.trim(), newFilterValue.value.trim());
+    newFilterKey.value = '';
+    newFilterValue.value = '';
+  }
+};
+
+const applyLabelsFilter = () => {
+  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
+    addNewFilterLabel();
+  }
+  closeLabelsFilterModal();
+};
+
+// 重置所有筛选条件
+const resetFilters = () => {
+  filterStatus.value = undefined;
+  filterType.value = undefined;
+  searchText.value = '';
+  filterClusterId.value = undefined;
+  filterNamespace.value = undefined;
+  clearFilterLabels();
+  currentPage.value = 1;
+  clearServices();
+  clearNamespaces();
+  message.success('已重置所有筛选条件');
+};
+
+// YAML 工具栏函数
+const SERVICE_YAML_TEMPLATE = `apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+  namespace: default
+spec:
+  selector:
+    app: my-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP`;
+
+const insertYamlTemplate = () => {
+  if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+    Modal.confirm({
+      title: '确认操作',
+      content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
+      okText: '确认',
+      cancelText: '取消',
+      centered: true,
+      onOk: () => {
+        createYamlFormModel.value.yaml = SERVICE_YAML_TEMPLATE;
+        message.success('模板已插入');
+      },
+    });
+  } else {
+    createYamlFormModel.value.yaml = SERVICE_YAML_TEMPLATE;
+    message.success('模板已插入');
+  }
+};
+
+const formatYaml = () => {
+  const yamlContent = createYamlFormModel.value.yaml;
+  if (!yamlContent || !yamlContent.trim()) {
+    message.warning('YAML 内容为空，无法格式化');
+    return;
+  }
+
+  try {
+    const parsed = yaml.load(yamlContent);
+    const formatted = yaml.dump(parsed, {
+      indent: 2,
+      lineWidth: -1,
+      noRefs: true,
+      sortKeys: false,
+    });
+    createYamlFormModel.value.yaml = formatted;
+    message.success('YAML 格式化成功');
+  } catch (error: any) {
+    message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+  }
+};
+
+const validateYaml = () => {
+  const yamlContent = createYamlFormModel.value.yaml;
+  if (!yamlContent || !yamlContent.trim()) {
+    message.warning('YAML 内容为空，无法检查');
+    return;
+  }
+
+  try {
+    const parsed = yaml.load(yamlContent);
+
+    if (!parsed || typeof parsed !== 'object') {
+      message.warning('YAML 内容无效：应为对象格式');
+      return;
+    }
+
+    const service = parsed as any;
+    const issues: string[] = [];
+
+    if (!service.apiVersion) {
+      issues.push('缺少 apiVersion 字段');
+    }
+    if (!service.kind) {
+      issues.push('缺少 kind 字段');
+    } else if (service.kind !== 'Service') {
+      issues.push(`kind 应为 "Service"，当前为 "${service.kind}"`);
+    }
+    if (!service.metadata?.name) {
+      issues.push('缺少 metadata.name 字段');
+    }
+    if (!service.spec) {
+      issues.push('缺少 spec 字段');
+    }
+
+    if (issues.length > 0) {
+      Modal.warning({
+        title: 'YAML 格式检查警告',
+        content: '发现以下问题：\n' + issues.join('\n'),
+        width: 500,
+        centered: true,
+      });
+    } else {
+      message.success('YAML 格式检查通过');
+    }
+  } catch (error: any) {
+    Modal.error({
+      title: 'YAML 格式检查失败',
+      content: `语法错误：${error.message || '未知错误'}`,
+      width: 600,
+      centered: true,
+    });
+  }
+};
+
+const clearYaml = () => {
+  if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+    Modal.confirm({
+      title: '确认清空',
+      content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
+      okText: '确认清空',
+      okType: 'danger',
+      cancelText: '取消',
+      centered: true,
+      onOk: () => {
+        createYamlFormModel.value.yaml = '';
+        message.success('YAML 内容已清空');
+      },
+    });
+  } else {
+    message.info('YAML 内容已为空');
+  }
+};
+
+onMounted(async () => {
+  await fetchClusters();
+});
+</script>
+
 <template>
   <OpsPage
     description="按集群和命名空间查询与维护 Service"
@@ -1568,482 +2044,6 @@
     </a-modal>
   </OpsPage>
 </template>
-
-<script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { onMounted, ref } from 'vue';
-import { message, Modal } from 'ant-design-vue';
-import { useServicePage } from './Service';
-import {
-  formatDateTime,
-  formatK8sTime,
-  getRelativeTime,
-  namespacedResourceKey,
-} from '../shared/utils';
-import yaml from 'js-yaml';
-import {
-  AppstoreOutlined,
-  CheckCircleOutlined,
-  ClearOutlined,
-  DeleteOutlined,
-  DeploymentUnitOutlined,
-  EditOutlined,
-  EyeOutlined,
-  FileAddOutlined,
-  FileTextOutlined,
-  FilterOutlined,
-  FormatPainterOutlined,
-  GlobalOutlined,
-  NodeIndexOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-  TagsOutlined,
-} from '@ant-design/icons-vue';
-
-import { usePermission } from '#/utils/permission';
-
-const { can } = usePermission();
-
-const {
-  // state
-  clusters,
-  namespaces,
-  loading,
-  loadError,
-  clustersError,
-  namespacesError,
-  clustersLoading,
-  namespacesLoading,
-  searchText,
-  filterStatus,
-  filterClusterId,
-  filterNamespace,
-  filterType,
-  filterLabels,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
-  clustersTotal,
-  namespacesTotal,
-
-  // modal state
-  isCreateModalVisible,
-  isCreateYamlModalVisible,
-  isEditModalVisible,
-  isDetailModalVisible,
-  isYamlModalVisible,
-  isEndpointsModalVisible,
-  submitLoading,
-  detailLoading,
-
-  // operation targets
-  currentOperationService,
-  currentServiceDetail,
-  serviceEndpoints,
-
-  // form models
-  createFormModel,
-  editFormModel,
-  yamlFormModel,
-  createYamlFormModel,
-
-  // form refs
-  formRef,
-  editFormRef,
-  yamlFormRef,
-  createYamlFormRef,
-
-  // form rules
-  createFormRules,
-  editFormRules,
-  yamlFormRules,
-  createYamlFormRules,
-
-  // computed
-  filteredServices,
-  rowSelection,
-
-  // helpers
-  getEnvText,
-  getStatusText,
-  getStatusColor,
-  getServiceTypeText,
-  getServiceTypeColor,
-
-  // operations
-  fetchClusters,
-  fetchNamespaces,
-  fetchServices,
-  clearServices,
-  clearNamespaces,
-
-  loadMoreNamespaces,
-
-  // detail operations
-  showServiceDetail,
-  closeDetailModal,
-
-  // YAML operations
-  showYamlModal,
-  closeYamlModal,
-  submitYamlForm,
-
-  // create operations
-  openCreateModal,
-  closeCreateModal,
-  submitCreateForm,
-  openCreateYamlModal,
-  closeCreateYamlModal,
-  submitCreateYamlForm,
-
-  // edit operations
-  openEditModal,
-  closeEditModal,
-  submitEditForm,
-
-  // service operations
-  deleteService,
-
-  // endpoints operations
-  showEndpointsModal,
-  closeEndpointsModal,
-
-  // filter operations
-  addFilterLabel,
-  removeFilterLabel,
-  clearFilterLabels,
-
-  // batch operations
-  batchOperation,
-
-  // pagination operations
-  handlePageChange,
-  onSearch,
-  handleFilterChange,
-  handleClusterChange,
-  handleClusterDropdownScroll,
-
-  // form field operations
-  addPortField,
-  removePortField,
-  removeLabelField,
-  removeAnnotationField,
-  removeSelectorField,
-
-  // edit form field operations
-  addEditPortField,
-  removeEditPortField,
-  addNewEditLabel,
-  removeEditLabelField,
-  addNewEditSelector,
-  removeEditSelectorField,
-  addNewEditAnnotation,
-  removeEditAnnotationField,
-
-  // edit form helper variables
-  newEditLabelKey,
-  newEditSelectorKey,
-  newEditAnnotationKey,
-
-  // constants
-  K8sSvcStatus,
-} = useServicePage();
-
-// 添加新标签/注解/选择器的方法
-const newLabelKey = ref('');
-const newAnnotationKey = ref('');
-const newSelectorKey = ref('');
-
-const addNewLabel = () => {
-  if (newLabelKey.value && newLabelKey.value.trim()) {
-    createFormModel.value.labels[newLabelKey.value.trim()] = '';
-    newLabelKey.value = '';
-  }
-};
-
-const addNewAnnotation = () => {
-  if (newAnnotationKey.value && newAnnotationKey.value.trim()) {
-    createFormModel.value.annotations[newAnnotationKey.value.trim()] = '';
-    newAnnotationKey.value = '';
-  }
-};
-
-const addNewSelector = () => {
-  if (newSelectorKey.value && newSelectorKey.value.trim()) {
-    createFormModel.value.selector[newSelectorKey.value.trim()] = '';
-    newSelectorKey.value = '';
-  }
-};
-
-// 表格分页变化处理
-const handleTableChange = (pagination: {
-  current?: number;
-  pageSize?: number;
-}) => {
-  if (pagination) {
-    handlePageChange(
-      pagination.current || currentPage.value,
-      pagination.pageSize,
-    );
-  }
-};
-
-const columns = [
-  {
-    title: '名称',
-    dataIndex: 'name',
-    key: 'name',
-    width: 150,
-    ellipsis: true,
-    fixed: 'left',
-  },
-  {
-    title: '命名空间',
-    dataIndex: 'namespace',
-    key: 'namespace',
-    width: 120,
-    ellipsis: true,
-  },
-  {
-    title: '状态',
-    dataIndex: 'status',
-    key: 'status',
-    width: 90,
-    align: 'center',
-  },
-  {
-    title: '类型',
-    dataIndex: 'type',
-    key: 'type',
-    width: 110,
-    align: 'center',
-  },
-  { title: '集群IP', dataIndex: 'cluster_ip', key: 'cluster_ip', width: 130 },
-  { title: '端口', dataIndex: 'ports', key: 'ports', width: 200 },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
-  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
-  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 230,
-    fixed: 'right',
-    align: 'center',
-  },
-];
-
-const portColumns = [
-  { title: '名称', dataIndex: 'name', key: 'name' },
-  { title: '协议', dataIndex: 'protocol', key: 'protocol' },
-  { title: '端口', dataIndex: 'port', key: 'port' },
-  { title: '目标端口', dataIndex: 'target_port', key: 'target_port' },
-  { title: '节点端口', dataIndex: 'node_port', key: 'node_port' },
-];
-
-// 动态获取可见的端口列（只显示有数据的列）
-const getVisiblePortColumns = (ports: any[]) => {
-  if (!ports || ports.length === 0) return portColumns;
-
-  // 检查是否有任何端口配置了 node_port
-  const hasNodePort = ports.some(
-    (port) => port.node_port && port.node_port > 0,
-  );
-
-  // 如果没有 node_port，则过滤掉该列
-  if (!hasNodePort) {
-    return portColumns.filter((col) => col.key !== 'node_port');
-  }
-
-  return portColumns;
-};
-
-const endpointColumns = [
-  { title: 'IP地址', dataIndex: 'ip', key: 'ip' },
-  { title: '端口', dataIndex: 'port', key: 'port' },
-  { title: '协议', dataIndex: 'protocol', key: 'protocol' },
-  { title: '状态', dataIndex: 'ready', key: 'ready' },
-];
-
-// 标签过滤器状态
-const isLabelsFilterModalVisible = ref(false);
-const newFilterKey = ref('');
-const newFilterValue = ref('');
-
-// 标签过滤器操作
-const openLabelsFilter = () => {
-  isLabelsFilterModalVisible.value = true;
-};
-
-const closeLabelsFilterModal = () => {
-  isLabelsFilterModalVisible.value = false;
-  newFilterKey.value = '';
-  newFilterValue.value = '';
-};
-
-const addNewFilterLabel = () => {
-  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
-    addFilterLabel(newFilterKey.value.trim(), newFilterValue.value.trim());
-    newFilterKey.value = '';
-    newFilterValue.value = '';
-  }
-};
-
-const applyLabelsFilter = () => {
-  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
-    addNewFilterLabel();
-  }
-  closeLabelsFilterModal();
-};
-
-// 重置所有筛选条件
-const resetFilters = () => {
-  filterStatus.value = undefined;
-  filterType.value = undefined;
-  searchText.value = '';
-  filterClusterId.value = undefined;
-  filterNamespace.value = undefined;
-  clearFilterLabels();
-  currentPage.value = 1;
-  clearServices();
-  clearNamespaces();
-  message.success('已重置所有筛选条件');
-};
-
-// YAML 工具栏函数
-const SERVICE_YAML_TEMPLATE = `apiVersion: v1
-kind: Service
-metadata:
-  name: my-service
-  namespace: default
-spec:
-  selector:
-    app: my-app
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 8080
-  type: ClusterIP`;
-
-const insertYamlTemplate = () => {
-  if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
-    Modal.confirm({
-      title: '确认操作',
-      content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
-      okText: '确认',
-      cancelText: '取消',
-      centered: true,
-      onOk: () => {
-        createYamlFormModel.value.yaml = SERVICE_YAML_TEMPLATE;
-        message.success('模板已插入');
-      },
-    });
-  } else {
-    createYamlFormModel.value.yaml = SERVICE_YAML_TEMPLATE;
-    message.success('模板已插入');
-  }
-};
-
-const formatYaml = () => {
-  const yamlContent = createYamlFormModel.value.yaml;
-  if (!yamlContent || !yamlContent.trim()) {
-    message.warning('YAML 内容为空，无法格式化');
-    return;
-  }
-
-  try {
-    const parsed = yaml.load(yamlContent);
-    const formatted = yaml.dump(parsed, {
-      indent: 2,
-      lineWidth: -1,
-      noRefs: true,
-      sortKeys: false,
-    });
-    createYamlFormModel.value.yaml = formatted;
-    message.success('YAML 格式化成功');
-  } catch (error: any) {
-    message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
-  }
-};
-
-const validateYaml = () => {
-  const yamlContent = createYamlFormModel.value.yaml;
-  if (!yamlContent || !yamlContent.trim()) {
-    message.warning('YAML 内容为空，无法检查');
-    return;
-  }
-
-  try {
-    const parsed = yaml.load(yamlContent);
-
-    if (!parsed || typeof parsed !== 'object') {
-      message.warning('YAML 内容无效：应为对象格式');
-      return;
-    }
-
-    const service = parsed as any;
-    const issues: string[] = [];
-
-    if (!service.apiVersion) {
-      issues.push('缺少 apiVersion 字段');
-    }
-    if (!service.kind) {
-      issues.push('缺少 kind 字段');
-    } else if (service.kind !== 'Service') {
-      issues.push(`kind 应为 "Service"，当前为 "${service.kind}"`);
-    }
-    if (!service.metadata?.name) {
-      issues.push('缺少 metadata.name 字段');
-    }
-    if (!service.spec) {
-      issues.push('缺少 spec 字段');
-    }
-
-    if (issues.length > 0) {
-      Modal.warning({
-        title: 'YAML 格式检查警告',
-        content: '发现以下问题：\n' + issues.join('\n'),
-        width: 500,
-        centered: true,
-      });
-    } else {
-      message.success('YAML 格式检查通过');
-    }
-  } catch (error: any) {
-    Modal.error({
-      title: 'YAML 格式检查失败',
-      content: `语法错误：${error.message || '未知错误'}`,
-      width: 600,
-      centered: true,
-    });
-  }
-};
-
-const clearYaml = () => {
-  if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
-    Modal.confirm({
-      title: '确认清空',
-      content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
-      okText: '确认清空',
-      okType: 'danger',
-      cancelText: '取消',
-      centered: true,
-      onOk: () => {
-        createYamlFormModel.value.yaml = '';
-        message.success('YAML 内容已清空');
-      },
-    });
-  } else {
-    message.info('YAML 内容已为空');
-  }
-};
-
-onMounted(async () => {
-  await fetchClusters();
-});
-</script>
 
 <style scoped>
 @import '../shared/k8s-common.css';

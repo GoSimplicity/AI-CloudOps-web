@@ -1,3 +1,230 @@
+<script lang="ts" setup>
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { onMounted } from 'vue';
+import { message } from 'ant-design-vue';
+import { useTemplatePage } from './Template';
+import { formatDateTime, getRelativeTime } from '../shared/utils';
+import {
+  CheckCircleOutlined,
+  ClearOutlined,
+  CopyOutlined,
+  DatabaseOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  EyeOutlined,
+  FileAddOutlined,
+  FileTextOutlined,
+  FormatPainterOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+} from '@ant-design/icons-vue';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
+const {
+  // state
+  clusters,
+  loading,
+  loadError,
+  clustersError,
+  clustersLoading,
+  searchText,
+  filterClusterId,
+  selectedRows,
+  currentPage,
+  pageSize,
+  total,
+  clustersTotal,
+
+  // modal state
+  isCreateModalVisible,
+  isEditModalVisible,
+  isDetailModalVisible,
+  isYamlModalVisible,
+  submitLoading,
+  detailLoading,
+  checkLoading,
+
+  // operation targets
+  currentOperationTemplate,
+  currentTemplateDetail,
+
+  // form models
+  createFormModel,
+  editFormModel,
+  yamlFormModel,
+
+  // form refs
+  formRef,
+  editFormRef,
+
+  // form rules
+  createFormRules,
+  editFormRules,
+
+  // computed
+  filteredTemplates,
+  rowSelection,
+
+  // helpers
+  getEnvText,
+  getClusterName,
+  getUserDisplay,
+  formatK8sTime,
+
+  // operations
+  fetchClusters,
+  fetchTemplates,
+  clearTemplates,
+  loadMoreClusters,
+
+  // detail operations
+  showTemplateDetail,
+  closeDetailModal,
+
+  // YAML operations
+  showYamlModal,
+  closeYamlModal,
+
+  // create operations
+  openCreateModal,
+  closeCreateModal,
+  submitCreateForm,
+
+  // edit operations
+  openEditModal,
+  closeEditModal,
+  submitEditForm,
+
+  // template operations
+  deleteTemplate,
+  checkTemplate,
+
+  // batch operations
+  batchOperation,
+
+  // pagination operations
+  handlePageChange,
+
+  // YAML operations
+  insertYamlTemplate,
+  formatYaml,
+  validateYaml,
+  clearYaml,
+  formatEditYaml,
+  validateEditYaml,
+} = useTemplatePage();
+
+const onSearch = () => {
+  currentPage.value = 1;
+  fetchTemplates();
+};
+
+const handleClusterChange = () => {
+  currentPage.value = 1;
+  clearTemplates();
+
+  if (filterClusterId.value) {
+    fetchTemplates();
+  }
+};
+
+const handleTableChange = (pagination: {
+  current?: number;
+  pageSize?: number;
+}) => {
+  if (pagination) {
+    handlePageChange(
+      pagination.current || currentPage.value,
+      pagination.pageSize,
+    );
+  }
+};
+
+// 处理集群下拉选择的滚动事件
+const handleClusterDropdownScroll = (e: Event) => {
+  const { target } = e;
+  if (
+    target &&
+    'scrollTop' in target &&
+    'scrollHeight' in target &&
+    'clientHeight' in target
+  ) {
+    const scrollTarget = target as HTMLElement;
+    if (
+      scrollTarget.scrollTop + scrollTarget.clientHeight >=
+      scrollTarget.scrollHeight - 5
+    ) {
+      loadMoreClusters();
+    }
+  }
+};
+
+// 获取 YAML 预览内容
+const getYamlPreview = (content: string) => {
+  if (!content) return '暂无内容';
+  const lines = content.split('\n');
+  if (lines.length <= 3) return content;
+  return lines.slice(0, 3).join('\n') + '\n...';
+};
+
+// 复制 YAML 内容
+const copyYamlContent = () => {
+  if (!yamlFormModel.value.content) {
+    message.warning('暂无内容可复制');
+    return;
+  }
+
+  navigator.clipboard
+    .writeText(yamlFormModel.value.content)
+    .then(() => {
+      message.success('YAML 内容已复制到剪贴板');
+    })
+    .catch(() => {
+      message.error('复制失败，请手动选择复制');
+    });
+};
+
+const columns = [
+  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
+  {
+    title: '名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 150,
+    ellipsis: true,
+    fixed: 'left',
+  },
+  { title: '所属集群', dataIndex: 'cluster_id', key: 'cluster_id', width: 130 },
+  { title: '创建用户', dataIndex: 'user_id', key: 'user_id', width: 120 },
+  { title: 'YAML 内容', dataIndex: 'content', key: 'content', width: 250 },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
+  { title: '更新时间', dataIndex: 'updated_at', key: 'updated_at', width: 160 },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 200,
+    fixed: 'right',
+    align: 'center',
+  },
+];
+
+// 重置所有筛选条件
+const resetFilters = () => {
+  searchText.value = '';
+  filterClusterId.value = undefined;
+  currentPage.value = 1;
+  clearTemplates();
+};
+
+onMounted(async () => {
+  await fetchClusters();
+});
+</script>
+
 <template>
   <OpsPage
     description="管理和维护 Kubernetes YAML 配置模板"
@@ -501,233 +728,6 @@
     </a-modal>
   </OpsPage>
 </template>
-
-<script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { onMounted } from 'vue';
-import { message } from 'ant-design-vue';
-import { useTemplatePage } from './Template';
-import { formatDateTime, getRelativeTime } from '../shared/utils';
-import {
-  CheckCircleOutlined,
-  ClearOutlined,
-  CopyOutlined,
-  DatabaseOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  EyeOutlined,
-  FileAddOutlined,
-  FileTextOutlined,
-  FormatPainterOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-} from '@ant-design/icons-vue';
-
-import { usePermission } from '#/utils/permission';
-
-const { can } = usePermission();
-
-const {
-  // state
-  clusters,
-  loading,
-  loadError,
-  clustersError,
-  clustersLoading,
-  searchText,
-  filterClusterId,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
-  clustersTotal,
-
-  // modal state
-  isCreateModalVisible,
-  isEditModalVisible,
-  isDetailModalVisible,
-  isYamlModalVisible,
-  submitLoading,
-  detailLoading,
-  checkLoading,
-
-  // operation targets
-  currentOperationTemplate,
-  currentTemplateDetail,
-
-  // form models
-  createFormModel,
-  editFormModel,
-  yamlFormModel,
-
-  // form refs
-  formRef,
-  editFormRef,
-
-  // form rules
-  createFormRules,
-  editFormRules,
-
-  // computed
-  filteredTemplates,
-  rowSelection,
-
-  // helpers
-  getEnvText,
-  getClusterName,
-  getUserDisplay,
-  formatK8sTime,
-
-  // operations
-  fetchClusters,
-  fetchTemplates,
-  clearTemplates,
-  loadMoreClusters,
-
-  // detail operations
-  showTemplateDetail,
-  closeDetailModal,
-
-  // YAML operations
-  showYamlModal,
-  closeYamlModal,
-
-  // create operations
-  openCreateModal,
-  closeCreateModal,
-  submitCreateForm,
-
-  // edit operations
-  openEditModal,
-  closeEditModal,
-  submitEditForm,
-
-  // template operations
-  deleteTemplate,
-  checkTemplate,
-
-  // batch operations
-  batchOperation,
-
-  // pagination operations
-  handlePageChange,
-
-  // YAML operations
-  insertYamlTemplate,
-  formatYaml,
-  validateYaml,
-  clearYaml,
-  formatEditYaml,
-  validateEditYaml,
-} = useTemplatePage();
-
-const onSearch = () => {
-  currentPage.value = 1;
-  fetchTemplates();
-};
-
-const handleClusterChange = () => {
-  currentPage.value = 1;
-  clearTemplates();
-
-  if (filterClusterId.value) {
-    fetchTemplates();
-  }
-};
-
-const handleTableChange = (pagination: {
-  current?: number;
-  pageSize?: number;
-}) => {
-  if (pagination) {
-    handlePageChange(
-      pagination.current || currentPage.value,
-      pagination.pageSize,
-    );
-  }
-};
-
-// 处理集群下拉选择的滚动事件
-const handleClusterDropdownScroll = (e: Event) => {
-  const { target } = e;
-  if (
-    target &&
-    'scrollTop' in target &&
-    'scrollHeight' in target &&
-    'clientHeight' in target
-  ) {
-    const scrollTarget = target as HTMLElement;
-    if (
-      scrollTarget.scrollTop + scrollTarget.clientHeight >=
-      scrollTarget.scrollHeight - 5
-    ) {
-      loadMoreClusters();
-    }
-  }
-};
-
-// 获取 YAML 预览内容
-const getYamlPreview = (content: string) => {
-  if (!content) return '暂无内容';
-  const lines = content.split('\n');
-  if (lines.length <= 3) return content;
-  return lines.slice(0, 3).join('\n') + '\n...';
-};
-
-// 复制 YAML 内容
-const copyYamlContent = () => {
-  if (!yamlFormModel.value.content) {
-    message.warning('暂无内容可复制');
-    return;
-  }
-
-  navigator.clipboard
-    .writeText(yamlFormModel.value.content)
-    .then(() => {
-      message.success('YAML 内容已复制到剪贴板');
-    })
-    .catch(() => {
-      message.error('复制失败，请手动选择复制');
-    });
-};
-
-const columns = [
-  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
-  {
-    title: '名称',
-    dataIndex: 'name',
-    key: 'name',
-    width: 150,
-    ellipsis: true,
-    fixed: 'left',
-  },
-  { title: '所属集群', dataIndex: 'cluster_id', key: 'cluster_id', width: 130 },
-  { title: '创建用户', dataIndex: 'user_id', key: 'user_id', width: 120 },
-  { title: 'YAML 内容', dataIndex: 'content', key: 'content', width: 250 },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
-  { title: '更新时间', dataIndex: 'updated_at', key: 'updated_at', width: 160 },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 200,
-    fixed: 'right',
-    align: 'center',
-  },
-];
-
-// 重置所有筛选条件
-const resetFilters = () => {
-  searchText.value = '';
-  filterClusterId.value = undefined;
-  currentPage.value = 1;
-  clearTemplates();
-};
-
-onMounted(async () => {
-  await fetchClusters();
-});
-</script>
 
 <style scoped>
 @import '../shared/k8s-common.css';

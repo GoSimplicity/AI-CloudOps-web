@@ -1,504 +1,3 @@
-<template>
-  <div class="ai-assistant-container">
-    <!-- 优化的悬浮按钮 -->
-    <div
-      class="assistant-float-button"
-      @click="toggleFloatWindow"
-      :class="{ active: isFloatWindowVisible }"
-    >
-      <div class="float-button-icon">
-        <MessageCircle :size="24" />
-      </div>
-
-      <!-- 浮动提示 -->
-      <div v-if="!isFloatWindowVisible" class="tooltip-content">
-        <Sparkles :size="16" />
-        <span>AI-CloudOps助手</span>
-      </div>
-    </div>
-
-    <!-- 悬浮窗 -->
-    <div
-      v-if="isFloatWindowVisible"
-      ref="floatWindow"
-      :style="floatWindowStyle"
-      class="ai-float-window"
-    >
-      <!-- 悬浮窗头部 -->
-      <div class="float-window-header" @mousedown="startDrag">
-        <div class="header-title">
-          <div class="title-icon">
-            <Bot :size="20" />
-          </div>
-          <div class="title-content">
-            <span class="title-text">AI-CloudOps助手</span>
-            <span class="title-subtitle">智能运维助手</span>
-          </div>
-        </div>
-
-        <div class="header-actions">
-          <button
-            class="action-button minimize-btn"
-            title="最小化"
-            @click="minimizeWindow"
-            @mousedown.stop
-          >
-            <Minus :size="16" />
-          </button>
-          <button
-            :title="isExpanded ? '缩小' : '放大'"
-            class="action-button resize-btn"
-            @click="toggleWindowSize"
-            @mousedown.stop
-          >
-            <Minimize2 v-if="isExpanded" :size="16" />
-            <Maximize2 v-else :size="16" />
-          </button>
-          <button
-            class="action-button clear-btn"
-            title="新建会话"
-            @click="clearChat"
-            @mousedown.stop
-          >
-            <Trash2 :size="16" />
-          </button>
-          <button
-            v-if="can('aiops.assistant.refreshKnowledge')"
-            class="action-button refresh-btn"
-            @mousedown.stop
-            @click="refreshKnowledge"
-            title="刷新知识库"
-            :disabled="isRefreshing"
-          >
-            <RefreshCw :class="{ spinning: isRefreshing }" :size="16" />
-          </button>
-          <button
-            class="action-button close-btn"
-            title="关闭"
-            @click="closeWindow"
-            @mousedown.stop
-          >
-            <X :size="16" />
-          </button>
-        </div>
-      </div>
-
-      <!-- 状态栏 -->
-      <div class="status-bar">
-        <div class="status-left">
-          <div class="status-indicator">
-            <div class="status-dot" :class="{ online: isConnected }"></div>
-            <span class="status-text">
-              {{ connectionStatus }}
-            </span>
-          </div>
-
-          <!-- 模式切换器 -->
-          <div class="mode-switcher">
-            <button
-              class="mode-button"
-              :disabled="sending || !!pendingTurn || !!sessionNotice"
-              :class="{ active: currentMode === 1 }"
-              @click="switchMode('rag')"
-              title="RAG模式 - 基于知识库回答"
-            >
-              <FileText :size="12" />
-              RAG
-            </button>
-            <button
-              class="mode-button"
-              :disabled="sending || !!pendingTurn || !!sessionNotice"
-              :class="{ active: currentMode === 2 }"
-              @click="switchMode('mcp')"
-              title="MCP模式 - 工具调用模式"
-            >
-              <Zap :size="12" />
-              MCP
-            </button>
-          </div>
-
-          <!-- 会话切换器 -->
-          <div class="session-switcher" @click.stop>
-            <button
-              :title="currentSessionName"
-              class="session-button"
-              @click="showSessionsPanel = !showSessionsPanel"
-            >
-              会话：{{ currentSessionName }}
-            </button>
-            <div v-if="showSessionsPanel" class="session-panel">
-              <div class="sessions-header">
-                <span>会话列表</span>
-                <button
-                  class="sessions-new"
-                  title="新建会话"
-                  @click="createNewSession"
-                >
-                  <Plus :size="12" />
-                </button>
-              </div>
-              <div class="sessions-list">
-                <div
-                  v-for="s in sessions"
-                  :key="s.localId"
-                  class="session-item"
-                  :class="{ active: s.localId === currentLocalSessionId }"
-                  @click="switchToSession(s.localId)"
-                >
-                  <span class="session-name">{{ s.name }}</span>
-                  <div class="session-actions">
-                    <button
-                      class="session-action-btn"
-                      title="重命名"
-                      @click.stop="renameSession(s.localId)"
-                    >
-                      <Edit2 :size="12" />
-                    </button>
-                    <button
-                      class="session-action-btn"
-                      title="删除"
-                      @click.stop="deleteSession(s.localId)"
-                    >
-                      <Trash2 :size="12" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="message-count">
-          {{ Math.max(0, chatMessages.length - 1) }} 条对话
-        </div>
-      </div>
-
-      <!-- 错误提示 -->
-      <div v-if="errorMessage" class="error-banner">
-        <AlertCircle :size="16" />
-        <span>{{ errorMessage }}</span>
-        <button
-          v-if="lastFailedQuestion && !sending && !pendingTurn"
-          class="error-retry"
-          @click="retryLast"
-        >
-          重试
-        </button>
-        <button class="error-close" @click="errorMessage = ''">
-          <X :size="14" />
-        </button>
-      </div>
-      <div
-        v-if="pendingTurn || sessionNotice"
-        class="error-banner"
-        role="alert"
-      >
-        <AlertCircle :size="16" />
-        <span>{{
-          sessionNotice || '本次请求结果尚未确认，请查询会话状态。'
-        }}</span>
-        <button
-          v-if="!sending && pendingTurn"
-          class="error-retry"
-          @click="recoverTurn"
-        >
-          查询并恢复
-        </button>
-        <button
-          v-else-if="!sending && sessionNotice && sessionId"
-          class="error-retry"
-          @click="restoreCurrentSession"
-        >
-          重新查询
-        </button>
-      </div>
-
-      <!-- 消息内容区域 -->
-      <div
-        ref="messagesContainer"
-        class="chat-messages"
-        @click="onMessagesClick"
-      >
-        <div
-          v-for="(msg, index) in chatMessages"
-          :key="`msg-${index}-${msg.time}`"
-          :class="['message', msg.type]"
-        >
-          <div class="message-wrapper">
-            <div class="avatar">
-              <div
-                class="avatar-container"
-                :class="msg.type === 'ai' ? 'ai-avatar' : 'user-avatar'"
-              >
-                <Bot v-if="msg.type === 'ai'" :size="18" />
-                <User v-else :size="18" />
-              </div>
-            </div>
-            <div class="content">
-              <div class="message-header">
-                <span class="name">{{
-                  msg.type === 'user' ? '您' : 'AI助手'
-                }}</span>
-                <span class="time">{{ msg.time }}</span>
-              </div>
-
-              <!-- AI思考状态 -->
-              <div
-                v-if="msg.type === 'ai' && !msg.content && sending"
-                class="typing-content"
-              >
-                <div class="typing-animation">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
-                <div class="typing-info">
-                  <span class="typing-text">AI正在思考中...</span>
-                  <div class="typing-details">
-                    <span
-                      class="mode-badge"
-                      :class="currentMode === 1 ? 'rag' : 'mcp'"
-                    >
-                      {{ currentMode === 1 ? 'RAG模式' : 'MCP模式' }}
-                    </span>
-                    <span v-if="sessionId" class="session-info">
-                      会话: {{ sessionId.slice(-8) }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 正常消息内容 -->
-              <div
-                v-else
-                class="text"
-                v-html="renderMarkdown(msg.content || '')"
-              ></div>
-
-              <!-- 消息来源显示 -->
-              <div
-                v-if="msg.sources && msg.sources.length > 0"
-                class="message-sources"
-              >
-                <div class="sources-header">
-                  <FileText :size="14" />
-                  <span>参考来源</span>
-                </div>
-                <div class="sources-list">
-                  <div
-                    v-for="(source, idx) in msg.sources"
-                    :key="`source-${idx}`"
-                    class="source-item"
-                  >
-                    <div class="source-title">文档 {{ idx + 1 }}</div>
-                    <div class="source-preview">
-                      {{
-                        source.content
-                          ? source.content.substring(0, 100) + '...'
-                          : '内容不可用'
-                      }}
-                    </div>
-                    <div v-if="source.score !== undefined" class="source-score">
-                      相关性: {{ (source.score * 100).toFixed(1) }}%
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 后续问题推荐 -->
-              <div
-                v-if="msg.followUpQuestions && msg.followUpQuestions.length > 0"
-                class="follow-up-questions"
-              >
-                <div class="follow-up-header">
-                  <HelpCircle :size="14" />
-                  <span>您可能还想问</span>
-                </div>
-                <div class="follow-up-list">
-                  <button
-                    v-for="(question, idx) in msg.followUpQuestions"
-                    :key="`followup-${idx}`"
-                    :disabled="sending"
-                    class="follow-up-question"
-                    @click="sendQuickMessage(question)"
-                  >
-                    {{ question }}
-                  </button>
-                </div>
-              </div>
-
-              <div
-                v-if="msg.type === 'ai' && msg.content"
-                class="message-actions"
-              >
-                <button
-                  class="message-action-btn"
-                  title="复制"
-                  @click="copyMessage(msg.content)"
-                >
-                  <Copy :size="12" />
-                </button>
-                <button
-                  :disabled="sending"
-                  class="message-action-btn"
-                  title="重新生成"
-                  @click="regenerateAnswer(index)"
-                >
-                  <RefreshCw :size="12" />
-                </button>
-                <button
-                  class="message-action-btn"
-                  title="点赞"
-                  @click="toggleLike(index)"
-                >
-                  <ThumbsUp :class="{ liked: msg.liked }" :size="12" />
-                </button>
-              </div>
-
-              <div v-if="msg.type === 'user'" class="message-actions">
-                <button
-                  :disabled="sending"
-                  class="message-action-btn"
-                  title="重发"
-                  @click="resendMessage(index)"
-                >
-                  <RotateCcw :size="12" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 快捷操作 -->
-      <div v-if="!sending && !isMinimized" class="quick-actions">
-        <div class="quick-action-buttons">
-          <button
-            v-for="action in quickActions"
-            :key="action.text"
-            class="quick-action-btn"
-            @click="sendQuickMessage(action.text)"
-          >
-            <component :is="action.icon" :size="12" />
-            {{ action.text }}
-          </button>
-        </div>
-      </div>
-
-      <!-- 输入区域 -->
-      <div v-if="!isMinimized" class="chat-input">
-        <div class="textarea-container">
-          <div class="input-wrapper">
-            <textarea
-              ref="messageInput"
-              v-model="globalInputMessage"
-              :disabled="sending || !!pendingTurn || !!sessionNotice"
-              class="message-input"
-              placeholder="请输入您的问题...（Enter发送，Shift+Enter换行）"
-              rows="1"
-              @compositionend="onCompositionEnd"
-              @compositionstart="onCompositionStart"
-              @input="onInputChange"
-              @keydown="handleEnterKey"
-            ></textarea>
-
-            <div class="input-actions">
-              <!-- 高级选项按钮 -->
-              <button
-                class="advanced-options-btn"
-                @click="showAdvancedOptions = !showAdvancedOptions"
-                title="高级选项"
-                :class="{ active: showAdvancedOptions }"
-              >
-                <Settings2 :size="16" />
-              </button>
-
-              <button
-                v-if="sending"
-                class="stop-button"
-                title="停止生成"
-                @click="cancelGeneration"
-              >
-                <Square :size="16" />
-              </button>
-
-              <button
-                class="send-button"
-                :disabled="
-                  !globalInputMessage.trim() ||
-                  sending ||
-                  !!pendingTurn ||
-                  !!sessionNotice
-                "
-                @click="handleSearch"
-                :class="{ loading: sending }"
-              >
-                <Send v-if="!sending" :size="16" />
-                <div v-else class="loading-spinner"></div>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 高级选项 -->
-        <div v-if="showAdvancedOptions" class="advanced-options">
-          <div class="option-item">
-            <label class="option-label">
-              <input
-                v-model="useWebSearch"
-                class="option-checkbox"
-                type="checkbox"
-              />
-              <span>启用网络搜索</span>
-            </label>
-          </div>
-          <div class="option-item">
-            <label class="option-label">
-              <span>最大上下文文档数：</span>
-              <select v-model="maxContextDocs" class="option-select">
-                <option value="3">3</option>
-                <option value="5">5</option>
-                <option value="10">10</option>
-                <option value="15">15</option>
-              </select>
-            </label>
-          </div>
-        </div>
-
-        <div class="input-hints">
-          <span class="hint-item">Enter发送 / Shift+Enter换行</span>
-          <div class="mode-info">
-            <span
-              class="mode-indicator"
-              :class="currentMode === 1 ? 'rag' : 'mcp'"
-            >
-              {{ currentMode === 1 ? 'RAG模式' : 'MCP模式' }}
-            </span>
-          </div>
-          <span class="shortcut-hint">
-            <span class="shortcut-key">Ctrl + /</span>
-            快速打开
-          </span>
-        </div>
-      </div>
-
-      <!-- 调整大小的拖拽手柄 -->
-      <div
-        v-if="!isExpanded && !isMinimized"
-        class="resize-handle"
-        @mousedown="startResize"
-      ></div>
-    </div>
-
-    <!-- 遮罩层 -->
-    <div
-      v-if="isFloatWindowVisible"
-      class="float-window-overlay"
-      @click="closeWindow"
-    ></div>
-  </div>
-</template>
-
 <script setup>
 import {
   computed,
@@ -1985,6 +1484,507 @@ onBeforeUnmount(() => {
   document.removeEventListener('mouseup', stopResize);
 });
 </script>
+
+<template>
+  <div class="ai-assistant-container">
+    <!-- 优化的悬浮按钮 -->
+    <div
+      class="assistant-float-button"
+      @click="toggleFloatWindow"
+      :class="{ active: isFloatWindowVisible }"
+    >
+      <div class="float-button-icon">
+        <MessageCircle :size="24" />
+      </div>
+
+      <!-- 浮动提示 -->
+      <div v-if="!isFloatWindowVisible" class="tooltip-content">
+        <Sparkles :size="16" />
+        <span>AI-CloudOps助手</span>
+      </div>
+    </div>
+
+    <!-- 悬浮窗 -->
+    <div
+      v-if="isFloatWindowVisible"
+      ref="floatWindow"
+      :style="floatWindowStyle"
+      class="ai-float-window"
+    >
+      <!-- 悬浮窗头部 -->
+      <div class="float-window-header" @mousedown="startDrag">
+        <div class="header-title">
+          <div class="title-icon">
+            <Bot :size="20" />
+          </div>
+          <div class="title-content">
+            <span class="title-text">AI-CloudOps助手</span>
+            <span class="title-subtitle">智能运维助手</span>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button
+            class="action-button minimize-btn"
+            title="最小化"
+            @click="minimizeWindow"
+            @mousedown.stop
+          >
+            <Minus :size="16" />
+          </button>
+          <button
+            :title="isExpanded ? '缩小' : '放大'"
+            class="action-button resize-btn"
+            @click="toggleWindowSize"
+            @mousedown.stop
+          >
+            <Minimize2 v-if="isExpanded" :size="16" />
+            <Maximize2 v-else :size="16" />
+          </button>
+          <button
+            class="action-button clear-btn"
+            title="新建会话"
+            @click="clearChat"
+            @mousedown.stop
+          >
+            <Trash2 :size="16" />
+          </button>
+          <button
+            v-if="can('aiops.assistant.refreshKnowledge')"
+            class="action-button refresh-btn"
+            @mousedown.stop
+            @click="refreshKnowledge"
+            title="刷新知识库"
+            :disabled="isRefreshing"
+          >
+            <RefreshCw :class="{ spinning: isRefreshing }" :size="16" />
+          </button>
+          <button
+            class="action-button close-btn"
+            title="关闭"
+            @click="closeWindow"
+            @mousedown.stop
+          >
+            <X :size="16" />
+          </button>
+        </div>
+      </div>
+
+      <!-- 状态栏 -->
+      <div class="status-bar">
+        <div class="status-left">
+          <div class="status-indicator">
+            <div class="status-dot" :class="{ online: isConnected }"></div>
+            <span class="status-text">
+              {{ connectionStatus }}
+            </span>
+          </div>
+
+          <!-- 模式切换器 -->
+          <div class="mode-switcher">
+            <button
+              class="mode-button"
+              :disabled="sending || !!pendingTurn || !!sessionNotice"
+              :class="{ active: currentMode === 1 }"
+              @click="switchMode('rag')"
+              title="RAG模式 - 基于知识库回答"
+            >
+              <FileText :size="12" />
+              RAG
+            </button>
+            <button
+              class="mode-button"
+              :disabled="sending || !!pendingTurn || !!sessionNotice"
+              :class="{ active: currentMode === 2 }"
+              @click="switchMode('mcp')"
+              title="MCP模式 - 工具调用模式"
+            >
+              <Zap :size="12" />
+              MCP
+            </button>
+          </div>
+
+          <!-- 会话切换器 -->
+          <div class="session-switcher" @click.stop>
+            <button
+              :title="currentSessionName"
+              class="session-button"
+              @click="showSessionsPanel = !showSessionsPanel"
+            >
+              会话：{{ currentSessionName }}
+            </button>
+            <div v-if="showSessionsPanel" class="session-panel">
+              <div class="sessions-header">
+                <span>会话列表</span>
+                <button
+                  class="sessions-new"
+                  title="新建会话"
+                  @click="createNewSession"
+                >
+                  <Plus :size="12" />
+                </button>
+              </div>
+              <div class="sessions-list">
+                <div
+                  v-for="s in sessions"
+                  :key="s.localId"
+                  class="session-item"
+                  :class="{ active: s.localId === currentLocalSessionId }"
+                  @click="switchToSession(s.localId)"
+                >
+                  <span class="session-name">{{ s.name }}</span>
+                  <div class="session-actions">
+                    <button
+                      class="session-action-btn"
+                      title="重命名"
+                      @click.stop="renameSession(s.localId)"
+                    >
+                      <Edit2 :size="12" />
+                    </button>
+                    <button
+                      class="session-action-btn"
+                      title="删除"
+                      @click.stop="deleteSession(s.localId)"
+                    >
+                      <Trash2 :size="12" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="message-count">
+          {{ Math.max(0, chatMessages.length - 1) }} 条对话
+        </div>
+      </div>
+
+      <!-- 错误提示 -->
+      <div v-if="errorMessage" class="error-banner">
+        <AlertCircle :size="16" />
+        <span>{{ errorMessage }}</span>
+        <button
+          v-if="lastFailedQuestion && !sending && !pendingTurn"
+          class="error-retry"
+          @click="retryLast"
+        >
+          重试
+        </button>
+        <button class="error-close" @click="errorMessage = ''">
+          <X :size="14" />
+        </button>
+      </div>
+      <div
+        v-if="pendingTurn || sessionNotice"
+        class="error-banner"
+        role="alert"
+      >
+        <AlertCircle :size="16" />
+        <span>{{
+          sessionNotice || '本次请求结果尚未确认，请查询会话状态。'
+        }}</span>
+        <button
+          v-if="!sending && pendingTurn"
+          class="error-retry"
+          @click="recoverTurn"
+        >
+          查询并恢复
+        </button>
+        <button
+          v-else-if="!sending && sessionNotice && sessionId"
+          class="error-retry"
+          @click="restoreCurrentSession"
+        >
+          重新查询
+        </button>
+      </div>
+
+      <!-- 消息内容区域 -->
+      <div
+        ref="messagesContainer"
+        class="chat-messages"
+        @click="onMessagesClick"
+      >
+        <div
+          v-for="(msg, index) in chatMessages"
+          :key="`msg-${index}-${msg.time}`"
+          :class="['message', msg.type]"
+        >
+          <div class="message-wrapper">
+            <div class="avatar">
+              <div
+                class="avatar-container"
+                :class="msg.type === 'ai' ? 'ai-avatar' : 'user-avatar'"
+              >
+                <Bot v-if="msg.type === 'ai'" :size="18" />
+                <User v-else :size="18" />
+              </div>
+            </div>
+            <div class="content">
+              <div class="message-header">
+                <span class="name">{{
+                  msg.type === 'user' ? '您' : 'AI助手'
+                }}</span>
+                <span class="time">{{ msg.time }}</span>
+              </div>
+
+              <!-- AI思考状态 -->
+              <div
+                v-if="msg.type === 'ai' && !msg.content && sending"
+                class="typing-content"
+              >
+                <div class="typing-animation">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+                <div class="typing-info">
+                  <span class="typing-text">AI正在思考中...</span>
+                  <div class="typing-details">
+                    <span
+                      class="mode-badge"
+                      :class="currentMode === 1 ? 'rag' : 'mcp'"
+                    >
+                      {{ currentMode === 1 ? 'RAG模式' : 'MCP模式' }}
+                    </span>
+                    <span v-if="sessionId" class="session-info">
+                      会话: {{ sessionId.slice(-8) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 正常消息内容 -->
+              <div
+                v-else
+                class="text"
+                v-html="renderMarkdown(msg.content || '')"
+              ></div>
+
+              <!-- 消息来源显示 -->
+              <div
+                v-if="msg.sources && msg.sources.length > 0"
+                class="message-sources"
+              >
+                <div class="sources-header">
+                  <FileText :size="14" />
+                  <span>参考来源</span>
+                </div>
+                <div class="sources-list">
+                  <div
+                    v-for="(source, idx) in msg.sources"
+                    :key="`source-${idx}`"
+                    class="source-item"
+                  >
+                    <div class="source-title">文档 {{ idx + 1 }}</div>
+                    <div class="source-preview">
+                      {{
+                        source.content
+                          ? source.content.substring(0, 100) + '...'
+                          : '内容不可用'
+                      }}
+                    </div>
+                    <div v-if="source.score !== undefined" class="source-score">
+                      相关性: {{ (source.score * 100).toFixed(1) }}%
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 后续问题推荐 -->
+              <div
+                v-if="msg.followUpQuestions && msg.followUpQuestions.length > 0"
+                class="follow-up-questions"
+              >
+                <div class="follow-up-header">
+                  <HelpCircle :size="14" />
+                  <span>您可能还想问</span>
+                </div>
+                <div class="follow-up-list">
+                  <button
+                    v-for="(question, idx) in msg.followUpQuestions"
+                    :key="`followup-${idx}`"
+                    :disabled="sending"
+                    class="follow-up-question"
+                    @click="sendQuickMessage(question)"
+                  >
+                    {{ question }}
+                  </button>
+                </div>
+              </div>
+
+              <div
+                v-if="msg.type === 'ai' && msg.content"
+                class="message-actions"
+              >
+                <button
+                  class="message-action-btn"
+                  title="复制"
+                  @click="copyMessage(msg.content)"
+                >
+                  <Copy :size="12" />
+                </button>
+                <button
+                  :disabled="sending"
+                  class="message-action-btn"
+                  title="重新生成"
+                  @click="regenerateAnswer(index)"
+                >
+                  <RefreshCw :size="12" />
+                </button>
+                <button
+                  class="message-action-btn"
+                  title="点赞"
+                  @click="toggleLike(index)"
+                >
+                  <ThumbsUp :class="{ liked: msg.liked }" :size="12" />
+                </button>
+              </div>
+
+              <div v-if="msg.type === 'user'" class="message-actions">
+                <button
+                  :disabled="sending"
+                  class="message-action-btn"
+                  title="重发"
+                  @click="resendMessage(index)"
+                >
+                  <RotateCcw :size="12" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 快捷操作 -->
+      <div v-if="!sending && !isMinimized" class="quick-actions">
+        <div class="quick-action-buttons">
+          <button
+            v-for="action in quickActions"
+            :key="action.text"
+            class="quick-action-btn"
+            @click="sendQuickMessage(action.text)"
+          >
+            <component :is="action.icon" :size="12" />
+            {{ action.text }}
+          </button>
+        </div>
+      </div>
+
+      <!-- 输入区域 -->
+      <div v-if="!isMinimized" class="chat-input">
+        <div class="textarea-container">
+          <div class="input-wrapper">
+            <textarea
+              ref="messageInput"
+              v-model="globalInputMessage"
+              :disabled="sending || !!pendingTurn || !!sessionNotice"
+              class="message-input"
+              placeholder="请输入您的问题...（Enter发送，Shift+Enter换行）"
+              rows="1"
+              @compositionend="onCompositionEnd"
+              @compositionstart="onCompositionStart"
+              @input="onInputChange"
+              @keydown="handleEnterKey"
+            ></textarea>
+
+            <div class="input-actions">
+              <!-- 高级选项按钮 -->
+              <button
+                class="advanced-options-btn"
+                @click="showAdvancedOptions = !showAdvancedOptions"
+                title="高级选项"
+                :class="{ active: showAdvancedOptions }"
+              >
+                <Settings2 :size="16" />
+              </button>
+
+              <button
+                v-if="sending"
+                class="stop-button"
+                title="停止生成"
+                @click="cancelGeneration"
+              >
+                <Square :size="16" />
+              </button>
+
+              <button
+                class="send-button"
+                :disabled="
+                  !globalInputMessage.trim() ||
+                  sending ||
+                  !!pendingTurn ||
+                  !!sessionNotice
+                "
+                @click="handleSearch"
+                :class="{ loading: sending }"
+              >
+                <Send v-if="!sending" :size="16" />
+                <div v-else class="loading-spinner"></div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 高级选项 -->
+        <div v-if="showAdvancedOptions" class="advanced-options">
+          <div class="option-item">
+            <label class="option-label">
+              <input
+                v-model="useWebSearch"
+                class="option-checkbox"
+                type="checkbox"
+              />
+              <span>启用网络搜索</span>
+            </label>
+          </div>
+          <div class="option-item">
+            <label class="option-label">
+              <span>最大上下文文档数：</span>
+              <select v-model="maxContextDocs" class="option-select">
+                <option value="3">3</option>
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="15">15</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="input-hints">
+          <span class="hint-item">Enter发送 / Shift+Enter换行</span>
+          <div class="mode-info">
+            <span
+              class="mode-indicator"
+              :class="currentMode === 1 ? 'rag' : 'mcp'"
+            >
+              {{ currentMode === 1 ? 'RAG模式' : 'MCP模式' }}
+            </span>
+          </div>
+          <span class="shortcut-hint">
+            <span class="shortcut-key">Ctrl + /</span>
+            快速打开
+          </span>
+        </div>
+      </div>
+
+      <!-- 调整大小的拖拽手柄 -->
+      <div
+        v-if="!isExpanded && !isMinimized"
+        class="resize-handle"
+        @mousedown="startResize"
+      ></div>
+    </div>
+
+    <!-- 遮罩层 -->
+    <div
+      v-if="isFloatWindowVisible"
+      class="float-window-overlay"
+      @click="closeWindow"
+    ></div>
+  </div>
+</template>
 
 <style scoped>
 .ai-assistant-container {

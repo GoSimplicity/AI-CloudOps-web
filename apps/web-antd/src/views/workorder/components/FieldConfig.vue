@@ -1,3 +1,141 @@
+<script setup lang="ts">
+import { computed, nextTick, ref, watch } from 'vue';
+
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons-vue';
+
+import {
+  type FormField,
+  FormFieldType,
+} from '#/api/core/workorder/workorder_form_design';
+
+interface Props {
+  field: FormField;
+}
+
+interface Emits {
+  (e: 'update', field: FormField): void;
+}
+
+const props = defineProps<Props>();
+const emit = defineEmits<Emits>();
+
+// 创建本地字段的深拷贝
+const localField = ref<FormField>(JSON.parse(JSON.stringify(props.field)));
+
+// 处理必填状态的转换
+const isRequired = computed({
+  get: () => localField.value.required === 1,
+  set: (value: boolean) => {
+    localField.value.required = value ? 1 : 0;
+  },
+});
+
+// 计算属性
+const needsOptions = computed(() => {
+  return [
+    FormFieldType.Select,
+    FormFieldType.Radio,
+    FormFieldType.Checkbox,
+  ].includes(localField.value.type as any);
+});
+
+const showDefaultValue = computed(() => {
+  return ![FormFieldType.Date].includes(localField.value.type as any);
+});
+
+// 标记更新是否来自props
+let isUpdatingFromProps = false;
+
+// 监听字段变化并发出更新事件
+watch(
+  localField,
+  (newField) => {
+    if (!isUpdatingFromProps) {
+      emit('update', JSON.parse(JSON.stringify(newField)));
+    }
+  },
+  { deep: true },
+);
+
+// 监听props变化
+watch(
+  () => props.field,
+  (newField) => {
+    if (JSON.stringify(localField.value) !== JSON.stringify(newField)) {
+      isUpdatingFromProps = true;
+      nextTick(() => {
+        localField.value = JSON.parse(JSON.stringify(newField));
+        setTimeout(() => {
+          isUpdatingFromProps = false;
+        }, 0);
+      });
+    }
+  },
+  { deep: true },
+);
+
+// 处理类型变化
+const handleTypeChange = (type: string) => {
+  localField.value.type = type;
+
+  // 根据类型初始化选项和默认值
+  if (
+    needsOptions.value &&
+    (!localField.value.options || localField.value.options.length === 0)
+  ) {
+    localField.value.options = ['选项1', '选项2'];
+  } else if (!needsOptions.value) {
+    localField.value.options = undefined;
+  }
+
+  // 重置默认值
+  switch (type) {
+    case FormFieldType.Checkbox: {
+      localField.value.default = [];
+      break;
+    }
+    case FormFieldType.Number: {
+      localField.value.default = 0;
+      break;
+    }
+    case FormFieldType.Switch: {
+      localField.value.default = false;
+      break;
+    }
+    case FormFieldType.Date: {
+      localField.value.default = undefined;
+      break;
+    }
+    default: {
+      localField.value.default = '';
+    }
+  }
+};
+
+// 添加选项
+const addOption = () => {
+  if (!localField.value.options) {
+    localField.value.options = [];
+  }
+  const optionIndex = localField.value.options.length + 1;
+  localField.value.options.push(`选项${optionIndex}`);
+};
+
+// 删除选项
+const removeOption = (index: number) => {
+  if (localField.value.options && localField.value.options.length > index) {
+    localField.value.options.splice(index, 1);
+  }
+};
+
+// 更新选项
+const updateOption = (index: number, value: string) => {
+  if (localField.value.options && localField.value.options.length > index) {
+    localField.value.options[index] = value;
+  }
+};
+</script>
+
 <template>
   <div class="field-config">
     <a-form class="config-form" layout="vertical">
@@ -225,144 +363,6 @@
     </a-form>
   </div>
 </template>
-
-<script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue';
-
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons-vue';
-
-import {
-  type FormField,
-  FormFieldType,
-} from '#/api/core/workorder/workorder_form_design';
-
-interface Props {
-  field: FormField;
-}
-
-interface Emits {
-  (e: 'update', field: FormField): void;
-}
-
-const props = defineProps<Props>();
-const emit = defineEmits<Emits>();
-
-// 创建本地字段的深拷贝
-const localField = ref<FormField>(JSON.parse(JSON.stringify(props.field)));
-
-// 处理必填状态的转换
-const isRequired = computed({
-  get: () => localField.value.required === 1,
-  set: (value: boolean) => {
-    localField.value.required = value ? 1 : 0;
-  },
-});
-
-// 计算属性
-const needsOptions = computed(() => {
-  return [
-    FormFieldType.Select,
-    FormFieldType.Radio,
-    FormFieldType.Checkbox,
-  ].includes(localField.value.type as any);
-});
-
-const showDefaultValue = computed(() => {
-  return ![FormFieldType.Date].includes(localField.value.type as any);
-});
-
-// 标记更新是否来自props
-let isUpdatingFromProps = false;
-
-// 监听字段变化并发出更新事件
-watch(
-  localField,
-  (newField) => {
-    if (!isUpdatingFromProps) {
-      emit('update', JSON.parse(JSON.stringify(newField)));
-    }
-  },
-  { deep: true },
-);
-
-// 监听props变化
-watch(
-  () => props.field,
-  (newField) => {
-    if (JSON.stringify(localField.value) !== JSON.stringify(newField)) {
-      isUpdatingFromProps = true;
-      nextTick(() => {
-        localField.value = JSON.parse(JSON.stringify(newField));
-        setTimeout(() => {
-          isUpdatingFromProps = false;
-        }, 0);
-      });
-    }
-  },
-  { deep: true },
-);
-
-// 处理类型变化
-const handleTypeChange = (type: string) => {
-  localField.value.type = type;
-
-  // 根据类型初始化选项和默认值
-  if (
-    needsOptions.value &&
-    (!localField.value.options || localField.value.options.length === 0)
-  ) {
-    localField.value.options = ['选项1', '选项2'];
-  } else if (!needsOptions.value) {
-    localField.value.options = undefined;
-  }
-
-  // 重置默认值
-  switch (type) {
-    case FormFieldType.Checkbox: {
-      localField.value.default = [];
-      break;
-    }
-    case FormFieldType.Number: {
-      localField.value.default = 0;
-      break;
-    }
-    case FormFieldType.Switch: {
-      localField.value.default = false;
-      break;
-    }
-    case FormFieldType.Date: {
-      localField.value.default = undefined;
-      break;
-    }
-    default: {
-      localField.value.default = '';
-    }
-  }
-};
-
-// 添加选项
-const addOption = () => {
-  if (!localField.value.options) {
-    localField.value.options = [];
-  }
-  const optionIndex = localField.value.options.length + 1;
-  localField.value.options.push(`选项${optionIndex}`);
-};
-
-// 删除选项
-const removeOption = (index: number) => {
-  if (localField.value.options && localField.value.options.length > index) {
-    localField.value.options.splice(index, 1);
-  }
-};
-
-// 更新选项
-const updateOption = (index: number, value: string) => {
-  if (localField.value.options && localField.value.options.length > index) {
-    localField.value.options[index] = value;
-  }
-};
-</script>
 
 <style scoped>
 .field-config {

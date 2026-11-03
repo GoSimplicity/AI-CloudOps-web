@@ -1,3 +1,486 @@
+<script lang="ts" setup>
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { namespacedResourceKey } from '../shared/utils';
+import { onMounted, ref } from 'vue';
+import { message, Modal } from 'ant-design-vue';
+import { useIngressPage } from './Ingress';
+import { formatDateTime, getRelativeTime } from '../shared/utils';
+import yaml from 'js-yaml';
+import {
+  AppstoreOutlined,
+  CheckCircleOutlined,
+  ClearOutlined,
+  DeleteOutlined,
+  DeploymentUnitOutlined,
+  EditOutlined,
+  EyeOutlined,
+  FileAddOutlined,
+  FileTextOutlined,
+  FilterOutlined,
+  FormatPainterOutlined,
+  GlobalOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  TagsOutlined,
+} from '@ant-design/icons-vue';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
+const {
+  // state
+  clusters,
+  namespaces,
+  loading,
+  loadError,
+  clustersError,
+  namespacesError,
+  clustersLoading,
+  namespacesLoading,
+  searchText,
+  filterStatus,
+  filterClusterId,
+  filterNamespace,
+  filterLabels,
+  selectedRows,
+  currentPage,
+  pageSize,
+  total,
+  clustersTotal,
+  namespacesTotal,
+
+  // modal state
+  isCreateModalVisible,
+  isCreateYamlModalVisible,
+  isEditModalVisible,
+  isDetailModalVisible,
+  isYamlModalVisible,
+  submitLoading,
+  detailLoading,
+
+  // operation targets
+  currentOperationIngress,
+  currentIngressDetail,
+
+  // form models
+  createFormModel,
+  editFormModel,
+  yamlFormModel,
+  createYamlFormModel,
+
+  // form refs
+  formRef,
+  editFormRef,
+  yamlFormRef,
+  createYamlFormRef,
+
+  // form rules
+  createFormRules,
+  editFormRules,
+  yamlFormRules,
+  createYamlFormRules,
+
+  // computed
+  filteredIngresses,
+  rowSelection,
+
+  // helpers
+  getEnvText,
+  getStatusText,
+  getStatusColor,
+
+  // operations
+  fetchClusters,
+  fetchNamespaces,
+  fetchIngresses,
+  clearIngresses,
+  clearNamespaces,
+  loadMoreClusters,
+  loadMoreNamespaces,
+
+  // detail operations
+  showIngressDetail,
+  closeDetailModal,
+
+  // YAML operations
+  showYamlModal,
+  closeYamlModal,
+  submitYamlForm,
+
+  // create operations
+  openCreateModal,
+  closeCreateModal,
+  submitCreateForm,
+  openCreateYamlModal,
+  closeCreateYamlModal,
+  submitCreateYamlForm,
+
+  // edit operations
+  openEditModal,
+  closeEditModal,
+  submitEditForm,
+
+  // ingress operations
+  deleteIngress,
+
+  // filter operations
+  addFilterLabel,
+  removeFilterLabel,
+  clearFilterLabels,
+
+  // batch operations
+  batchOperation,
+
+  // pagination operations
+  handlePageChange,
+
+  // form field operations
+  addRuleField,
+  removeRuleField,
+  addTlsField,
+  removeTlsField,
+  removeLabelField,
+  removeAnnotationField,
+
+  // edit form field operations
+  addEditRuleField,
+  removeEditRuleField,
+  addEditTlsField,
+  removeEditTlsField,
+  addNewEditLabel,
+  removeEditLabelField,
+  addNewEditAnnotation,
+  removeEditAnnotationField,
+
+  // edit form helper variables
+  newEditLabelKey,
+  newEditAnnotationKey,
+
+  // constants
+  K8sIngressStatus,
+} = useIngressPage();
+
+// 添加新标签/注解的方法
+const newLabelKey = ref('');
+const newAnnotationKey = ref('');
+
+const addNewLabel = () => {
+  if (newLabelKey.value && newLabelKey.value.trim()) {
+    createFormModel.value.labels[newLabelKey.value.trim()] = '';
+    newLabelKey.value = '';
+  }
+};
+
+const addNewAnnotation = () => {
+  if (newAnnotationKey.value && newAnnotationKey.value.trim()) {
+    createFormModel.value.annotations[newAnnotationKey.value.trim()] = '';
+    newAnnotationKey.value = '';
+  }
+};
+
+const onSearch = () => {
+  currentPage.value = 1;
+  fetchIngresses();
+};
+
+const handleFilterChange = () => {
+  currentPage.value = 1;
+  fetchIngresses();
+};
+
+const handleClusterChange = () => {
+  currentPage.value = 1;
+  clearNamespaces();
+  clearIngresses();
+
+  if (filterClusterId.value) {
+    fetchNamespaces(true); // 重置命名空间分页
+    fetchIngresses();
+  }
+};
+
+const handleTableChange = (pagination: {
+  current?: number;
+  pageSize?: number;
+}) => {
+  if (pagination) {
+    handlePageChange(
+      pagination.current || currentPage.value,
+      pagination.pageSize,
+    );
+  }
+};
+
+// 处理集群下拉选择的滚动事件
+const handleClusterDropdownScroll = (e: Event) => {
+  const { target } = e;
+  if (
+    target &&
+    'scrollTop' in target &&
+    'scrollHeight' in target &&
+    'clientHeight' in target
+  ) {
+    const scrollTarget = target as HTMLElement;
+    if (
+      scrollTarget.scrollTop + scrollTarget.clientHeight >=
+      scrollTarget.scrollHeight - 5
+    ) {
+      loadMoreClusters();
+    }
+  }
+};
+
+const columns = [
+  {
+    title: '名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 150,
+    ellipsis: true,
+    fixed: 'left',
+  },
+  {
+    title: '命名空间',
+    dataIndex: 'namespace',
+    key: 'namespace',
+    width: 120,
+    ellipsis: true,
+  },
+  {
+    title: '状态',
+    dataIndex: 'status',
+    key: 'status',
+    width: 90,
+    align: 'center',
+  },
+  {
+    title: 'Ingress类',
+    dataIndex: 'ingress_class_name',
+    key: 'ingress_class_name',
+    width: 130,
+    align: 'center',
+  },
+  { title: '主机', dataIndex: 'hosts', key: 'hosts', width: 180 },
+  {
+    title: '负载均衡器',
+    dataIndex: 'load_balancer',
+    key: 'load_balancer',
+    width: 160,
+  },
+  {
+    title: '规则',
+    dataIndex: 'rules',
+    key: 'rules',
+    width: 90,
+    align: 'center',
+  },
+  { title: 'TLS', dataIndex: 'tls', key: 'tls', width: 80, align: 'center' },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 230,
+    fixed: 'right',
+    align: 'center',
+  },
+];
+
+const ruleColumns = [
+  { title: '主机', dataIndex: 'host', key: 'host' },
+  { title: '路径', dataIndex: 'http', key: 'http' },
+];
+
+const tlsColumns = [
+  { title: 'Secret 名称', dataIndex: 'secret_name', key: 'secret_name' },
+  { title: '主机列表', dataIndex: 'hosts', key: 'hosts' },
+];
+
+// 标签过滤器状态
+const isLabelsFilterModalVisible = ref(false);
+const newFilterKey = ref('');
+const newFilterValue = ref('');
+
+// 标签过滤器操作
+const openLabelsFilter = () => {
+  isLabelsFilterModalVisible.value = true;
+};
+
+const closeLabelsFilterModal = () => {
+  isLabelsFilterModalVisible.value = false;
+  newFilterKey.value = '';
+  newFilterValue.value = '';
+};
+
+const addNewFilterLabel = () => {
+  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
+    addFilterLabel(newFilterKey.value.trim(), newFilterValue.value.trim());
+    newFilterKey.value = '';
+    newFilterValue.value = '';
+  }
+};
+
+const applyLabelsFilter = () => {
+  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
+    addNewFilterLabel();
+  }
+  closeLabelsFilterModal();
+};
+
+// 重置所有筛选条件
+const resetFilters = () => {
+  filterStatus.value = undefined;
+  searchText.value = '';
+  filterClusterId.value = undefined;
+  filterNamespace.value = undefined;
+  clearFilterLabels();
+  currentPage.value = 1;
+  clearIngresses();
+  clearNamespaces();
+};
+
+// YAML 工具栏函数
+const INGRESS_YAML_TEMPLATE = `apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-ingress
+  namespace: default
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: my-service
+                port:
+                  number: 80`;
+
+const insertYamlTemplate = () => {
+  if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+    Modal.confirm({
+      title: '确认操作',
+      content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
+      okText: '确认',
+      cancelText: '取消',
+      centered: true,
+      onOk: () => {
+        createYamlFormModel.value.yaml = INGRESS_YAML_TEMPLATE;
+        message.success('模板已插入');
+      },
+    });
+  } else {
+    createYamlFormModel.value.yaml = INGRESS_YAML_TEMPLATE;
+    message.success('模板已插入');
+  }
+};
+
+const formatYaml = () => {
+  const yamlContent = createYamlFormModel.value.yaml;
+  if (!yamlContent || !yamlContent.trim()) {
+    message.warning('YAML 内容为空，无法格式化');
+    return;
+  }
+
+  try {
+    const parsed = yaml.load(yamlContent);
+    const formatted = yaml.dump(parsed, {
+      indent: 2,
+      lineWidth: -1,
+      noRefs: true,
+      sortKeys: false,
+    });
+    createYamlFormModel.value.yaml = formatted;
+    message.success('YAML 格式化成功');
+  } catch (error: any) {
+    message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+  }
+};
+
+const validateYaml = () => {
+  const yamlContent = createYamlFormModel.value.yaml;
+  if (!yamlContent || !yamlContent.trim()) {
+    message.warning('YAML 内容为空，无法检查');
+    return;
+  }
+
+  try {
+    const parsed = yaml.load(yamlContent);
+
+    if (!parsed || typeof parsed !== 'object') {
+      message.warning('YAML 内容无效：应为对象格式');
+      return;
+    }
+
+    const ingress = parsed as any;
+    const issues: string[] = [];
+
+    if (!ingress.apiVersion) {
+      issues.push('缺少 apiVersion 字段');
+    }
+    if (!ingress.kind) {
+      issues.push('缺少 kind 字段');
+    } else if (ingress.kind !== 'Ingress') {
+      issues.push(`kind 应为 "Ingress"，当前为 "${ingress.kind}"`);
+    }
+    if (!ingress.metadata?.name) {
+      issues.push('缺少 metadata.name 字段');
+    }
+    if (!ingress.spec) {
+      issues.push('缺少 spec 字段');
+    }
+
+    if (issues.length > 0) {
+      Modal.warning({
+        title: 'YAML 格式检查警告',
+        content: '发现以下问题：\n' + issues.join('\n'),
+        width: 500,
+        centered: true,
+      });
+    } else {
+      message.success('YAML 格式检查通过');
+    }
+  } catch (error: any) {
+    Modal.error({
+      title: 'YAML 格式检查失败',
+      content: `语法错误：${error.message || '未知错误'}`,
+      width: 600,
+      centered: true,
+    });
+  }
+};
+
+const clearYaml = () => {
+  if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+    Modal.confirm({
+      title: '确认清空',
+      content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
+      okText: '确认清空',
+      okType: 'danger',
+      cancelText: '取消',
+      centered: true,
+      onOk: () => {
+        createYamlFormModel.value.yaml = '';
+        message.success('YAML 内容已清空');
+      },
+    });
+  } else {
+    message.info('YAML 内容已为空');
+  }
+};
+
+onMounted(async () => {
+  await fetchClusters();
+});
+</script>
+
 <template>
   <OpsPage
     description="管理和监控集群中的所有 Kubernetes Ingress"
@@ -1563,489 +2046,6 @@
     </a-modal>
   </OpsPage>
 </template>
-
-<script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { namespacedResourceKey } from '../shared/utils';
-import { onMounted, ref } from 'vue';
-import { message, Modal } from 'ant-design-vue';
-import { useIngressPage } from './Ingress';
-import { formatDateTime, getRelativeTime } from '../shared/utils';
-import yaml from 'js-yaml';
-import {
-  AppstoreOutlined,
-  CheckCircleOutlined,
-  ClearOutlined,
-  DeleteOutlined,
-  DeploymentUnitOutlined,
-  EditOutlined,
-  EyeOutlined,
-  FileAddOutlined,
-  FileTextOutlined,
-  FilterOutlined,
-  FormatPainterOutlined,
-  GlobalOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-  TagsOutlined,
-} from '@ant-design/icons-vue';
-
-import { usePermission } from '#/utils/permission';
-
-const { can } = usePermission();
-
-const {
-  // state
-  clusters,
-  namespaces,
-  loading,
-  loadError,
-  clustersError,
-  namespacesError,
-  clustersLoading,
-  namespacesLoading,
-  searchText,
-  filterStatus,
-  filterClusterId,
-  filterNamespace,
-  filterLabels,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
-  clustersTotal,
-  namespacesTotal,
-
-  // modal state
-  isCreateModalVisible,
-  isCreateYamlModalVisible,
-  isEditModalVisible,
-  isDetailModalVisible,
-  isYamlModalVisible,
-  submitLoading,
-  detailLoading,
-
-  // operation targets
-  currentOperationIngress,
-  currentIngressDetail,
-
-  // form models
-  createFormModel,
-  editFormModel,
-  yamlFormModel,
-  createYamlFormModel,
-
-  // form refs
-  formRef,
-  editFormRef,
-  yamlFormRef,
-  createYamlFormRef,
-
-  // form rules
-  createFormRules,
-  editFormRules,
-  yamlFormRules,
-  createYamlFormRules,
-
-  // computed
-  filteredIngresses,
-  rowSelection,
-
-  // helpers
-  getEnvText,
-  getStatusText,
-  getStatusColor,
-
-  // operations
-  fetchClusters,
-  fetchNamespaces,
-  fetchIngresses,
-  clearIngresses,
-  clearNamespaces,
-  loadMoreClusters,
-  loadMoreNamespaces,
-
-  // detail operations
-  showIngressDetail,
-  closeDetailModal,
-
-  // YAML operations
-  showYamlModal,
-  closeYamlModal,
-  submitYamlForm,
-
-  // create operations
-  openCreateModal,
-  closeCreateModal,
-  submitCreateForm,
-  openCreateYamlModal,
-  closeCreateYamlModal,
-  submitCreateYamlForm,
-
-  // edit operations
-  openEditModal,
-  closeEditModal,
-  submitEditForm,
-
-  // ingress operations
-  deleteIngress,
-
-  // filter operations
-  addFilterLabel,
-  removeFilterLabel,
-  clearFilterLabels,
-
-  // batch operations
-  batchOperation,
-
-  // pagination operations
-  handlePageChange,
-
-  // form field operations
-  addRuleField,
-  removeRuleField,
-  addTlsField,
-  removeTlsField,
-  removeLabelField,
-  removeAnnotationField,
-
-  // edit form field operations
-  addEditRuleField,
-  removeEditRuleField,
-  addEditTlsField,
-  removeEditTlsField,
-  addNewEditLabel,
-  removeEditLabelField,
-  addNewEditAnnotation,
-  removeEditAnnotationField,
-
-  // edit form helper variables
-  newEditLabelKey,
-  newEditAnnotationKey,
-
-  // constants
-  K8sIngressStatus,
-} = useIngressPage();
-
-// 添加新标签/注解的方法
-const newLabelKey = ref('');
-const newAnnotationKey = ref('');
-
-const addNewLabel = () => {
-  if (newLabelKey.value && newLabelKey.value.trim()) {
-    createFormModel.value.labels[newLabelKey.value.trim()] = '';
-    newLabelKey.value = '';
-  }
-};
-
-const addNewAnnotation = () => {
-  if (newAnnotationKey.value && newAnnotationKey.value.trim()) {
-    createFormModel.value.annotations[newAnnotationKey.value.trim()] = '';
-    newAnnotationKey.value = '';
-  }
-};
-
-const onSearch = () => {
-  currentPage.value = 1;
-  fetchIngresses();
-};
-
-const handleFilterChange = () => {
-  currentPage.value = 1;
-  fetchIngresses();
-};
-
-const handleClusterChange = () => {
-  currentPage.value = 1;
-  clearNamespaces();
-  clearIngresses();
-
-  if (filterClusterId.value) {
-    fetchNamespaces(true); // 重置命名空间分页
-    fetchIngresses();
-  }
-};
-
-const handleTableChange = (pagination: {
-  current?: number;
-  pageSize?: number;
-}) => {
-  if (pagination) {
-    handlePageChange(
-      pagination.current || currentPage.value,
-      pagination.pageSize,
-    );
-  }
-};
-
-// 处理集群下拉选择的滚动事件
-const handleClusterDropdownScroll = (e: Event) => {
-  const { target } = e;
-  if (
-    target &&
-    'scrollTop' in target &&
-    'scrollHeight' in target &&
-    'clientHeight' in target
-  ) {
-    const scrollTarget = target as HTMLElement;
-    if (
-      scrollTarget.scrollTop + scrollTarget.clientHeight >=
-      scrollTarget.scrollHeight - 5
-    ) {
-      loadMoreClusters();
-    }
-  }
-};
-
-const columns = [
-  {
-    title: '名称',
-    dataIndex: 'name',
-    key: 'name',
-    width: 150,
-    ellipsis: true,
-    fixed: 'left',
-  },
-  {
-    title: '命名空间',
-    dataIndex: 'namespace',
-    key: 'namespace',
-    width: 120,
-    ellipsis: true,
-  },
-  {
-    title: '状态',
-    dataIndex: 'status',
-    key: 'status',
-    width: 90,
-    align: 'center',
-  },
-  {
-    title: 'Ingress类',
-    dataIndex: 'ingress_class_name',
-    key: 'ingress_class_name',
-    width: 130,
-    align: 'center',
-  },
-  { title: '主机', dataIndex: 'hosts', key: 'hosts', width: 180 },
-  {
-    title: '负载均衡器',
-    dataIndex: 'load_balancer',
-    key: 'load_balancer',
-    width: 160,
-  },
-  {
-    title: '规则',
-    dataIndex: 'rules',
-    key: 'rules',
-    width: 90,
-    align: 'center',
-  },
-  { title: 'TLS', dataIndex: 'tls', key: 'tls', width: 80, align: 'center' },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
-  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
-  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 230,
-    fixed: 'right',
-    align: 'center',
-  },
-];
-
-const ruleColumns = [
-  { title: '主机', dataIndex: 'host', key: 'host' },
-  { title: '路径', dataIndex: 'http', key: 'http' },
-];
-
-const tlsColumns = [
-  { title: 'Secret 名称', dataIndex: 'secret_name', key: 'secret_name' },
-  { title: '主机列表', dataIndex: 'hosts', key: 'hosts' },
-];
-
-// 标签过滤器状态
-const isLabelsFilterModalVisible = ref(false);
-const newFilterKey = ref('');
-const newFilterValue = ref('');
-
-// 标签过滤器操作
-const openLabelsFilter = () => {
-  isLabelsFilterModalVisible.value = true;
-};
-
-const closeLabelsFilterModal = () => {
-  isLabelsFilterModalVisible.value = false;
-  newFilterKey.value = '';
-  newFilterValue.value = '';
-};
-
-const addNewFilterLabel = () => {
-  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
-    addFilterLabel(newFilterKey.value.trim(), newFilterValue.value.trim());
-    newFilterKey.value = '';
-    newFilterValue.value = '';
-  }
-};
-
-const applyLabelsFilter = () => {
-  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
-    addNewFilterLabel();
-  }
-  closeLabelsFilterModal();
-};
-
-// 重置所有筛选条件
-const resetFilters = () => {
-  filterStatus.value = undefined;
-  searchText.value = '';
-  filterClusterId.value = undefined;
-  filterNamespace.value = undefined;
-  clearFilterLabels();
-  currentPage.value = 1;
-  clearIngresses();
-  clearNamespaces();
-};
-
-// YAML 工具栏函数
-const INGRESS_YAML_TEMPLATE = `apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: my-ingress
-  namespace: default
-spec:
-  ingressClassName: nginx
-  rules:
-    - host: example.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: my-service
-                port:
-                  number: 80`;
-
-const insertYamlTemplate = () => {
-  if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
-    Modal.confirm({
-      title: '确认操作',
-      content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
-      okText: '确认',
-      cancelText: '取消',
-      centered: true,
-      onOk: () => {
-        createYamlFormModel.value.yaml = INGRESS_YAML_TEMPLATE;
-        message.success('模板已插入');
-      },
-    });
-  } else {
-    createYamlFormModel.value.yaml = INGRESS_YAML_TEMPLATE;
-    message.success('模板已插入');
-  }
-};
-
-const formatYaml = () => {
-  const yamlContent = createYamlFormModel.value.yaml;
-  if (!yamlContent || !yamlContent.trim()) {
-    message.warning('YAML 内容为空，无法格式化');
-    return;
-  }
-
-  try {
-    const parsed = yaml.load(yamlContent);
-    const formatted = yaml.dump(parsed, {
-      indent: 2,
-      lineWidth: -1,
-      noRefs: true,
-      sortKeys: false,
-    });
-    createYamlFormModel.value.yaml = formatted;
-    message.success('YAML 格式化成功');
-  } catch (error: any) {
-    message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
-  }
-};
-
-const validateYaml = () => {
-  const yamlContent = createYamlFormModel.value.yaml;
-  if (!yamlContent || !yamlContent.trim()) {
-    message.warning('YAML 内容为空，无法检查');
-    return;
-  }
-
-  try {
-    const parsed = yaml.load(yamlContent);
-
-    if (!parsed || typeof parsed !== 'object') {
-      message.warning('YAML 内容无效：应为对象格式');
-      return;
-    }
-
-    const ingress = parsed as any;
-    const issues: string[] = [];
-
-    if (!ingress.apiVersion) {
-      issues.push('缺少 apiVersion 字段');
-    }
-    if (!ingress.kind) {
-      issues.push('缺少 kind 字段');
-    } else if (ingress.kind !== 'Ingress') {
-      issues.push(`kind 应为 "Ingress"，当前为 "${ingress.kind}"`);
-    }
-    if (!ingress.metadata?.name) {
-      issues.push('缺少 metadata.name 字段');
-    }
-    if (!ingress.spec) {
-      issues.push('缺少 spec 字段');
-    }
-
-    if (issues.length > 0) {
-      Modal.warning({
-        title: 'YAML 格式检查警告',
-        content: '发现以下问题：\n' + issues.join('\n'),
-        width: 500,
-        centered: true,
-      });
-    } else {
-      message.success('YAML 格式检查通过');
-    }
-  } catch (error: any) {
-    Modal.error({
-      title: 'YAML 格式检查失败',
-      content: `语法错误：${error.message || '未知错误'}`,
-      width: 600,
-      centered: true,
-    });
-  }
-};
-
-const clearYaml = () => {
-  if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
-    Modal.confirm({
-      title: '确认清空',
-      content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
-      okText: '确认清空',
-      okType: 'danger',
-      cancelText: '取消',
-      centered: true,
-      onOk: () => {
-        createYamlFormModel.value.yaml = '';
-        message.success('YAML 内容已清空');
-      },
-    });
-  } else {
-    message.info('YAML 内容已为空');
-  }
-};
-
-onMounted(async () => {
-  await fetchClusters();
-});
-</script>
 
 <style scoped>
 @import '../shared/k8s-common.css';

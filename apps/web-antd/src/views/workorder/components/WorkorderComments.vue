@@ -1,372 +1,3 @@
-<template>
-  <div>
-    <!-- 快速评论对话框 -->
-    <a-modal
-      :confirm-loading="loading"
-      :destroy-on-close="true"
-      :open="commentDialog.visible"
-      :width="dialogWidth"
-      cancel-text="取消"
-      class="responsive-modal comment-modal"
-      ok-text="发布评论"
-      title="添加评论"
-      @cancel="
-        () => {
-          commentDialog.visible = false;
-        }
-      "
-      @ok="saveComment"
-    >
-      <div class="comment-form-wrapper">
-        <a-form :model="commentDialog.form" layout="vertical">
-          <a-form-item
-            :rules="[{ required: true, message: '请输入评论内容' }]"
-            label="评论内容"
-            name="content"
-          >
-            <a-textarea
-              v-model:value="commentDialog.form.content"
-              :max-length="500"
-              :rows="5"
-              class="comment-textarea"
-              placeholder="分享你的想法或意见..."
-              show-count
-            />
-          </a-form-item>
-          <div class="comment-options">
-            <a-checkbox
-              v-model:checked="commentDialog.form.is_system"
-              class="system-checkbox"
-            >
-              <span class="checkbox-text">
-                <IconComponent icon="system" /> 系统评论
-              </span>
-            </a-checkbox>
-            <div class="quick-actions">
-              <a-tooltip title="快速插入当前时间">
-                <a-button size="small" type="text" @click="insertCurrentTime">
-                  <IconComponent icon="time" />
-                </a-button>
-              </a-tooltip>
-              <a-tooltip title="快速插入处理建议">
-                <a-button size="small" type="text" @click="insertSuggestion">
-                  <IconComponent icon="suggestion" />
-                </a-button>
-              </a-tooltip>
-            </div>
-          </div>
-        </a-form>
-      </div>
-    </a-modal>
-
-    <!-- 评论查看对话框 -->
-    <a-modal
-      :footer="null"
-      :open="commentsViewDialog.visible"
-      :width="previewDialogWidth"
-      centered
-      class="comments-dialog responsive-modal"
-      title=""
-      @cancel="
-        () => {
-          commentsViewDialog.visible = false;
-        }
-      "
-    >
-      <template #title>
-        <div class="comments-dialog-header">
-          <div class="header-info">
-            <IconComponent class="header-icon" icon="comment" />
-            <span class="header-title">工单评论</span>
-            <a-badge :count="commentsList.length" class="comment-count" />
-          </div>
-          <div class="header-actions">
-            <a-tooltip title="刷新评论">
-              <a-button size="small" type="text" @click="refreshComments">
-                <IconComponent icon="refresh" />
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="排序方式">
-              <a-dropdown>
-                <a-button size="small" type="text">
-                  <IconComponent icon="sort" />
-                </a-button>
-                <template #overlay>
-                  <a-menu @click="handleSortChange">
-                    <a-menu-item key="newest">最新优先</a-menu-item>
-                    <a-menu-item key="oldest">最早优先</a-menu-item>
-                  </a-menu>
-                </template>
-              </a-dropdown>
-            </a-tooltip>
-          </div>
-        </div>
-      </template>
-
-      <div class="comments-content">
-        <!-- 快速评论输入框 -->
-        <div class="quick-comment-section">
-          <!-- 引用预览卡片 -->
-          <div v-if="quotedComment" class="quoted-comment-preview">
-            <div class="quote-header">
-              <div class="quote-info">
-                <IconComponent icon="quote" />
-                <span class="quote-label"
-                  >引用 @{{ quotedComment.operator_name }} 的评论</span
-                >
-                <span class="quote-time">{{
-                  formatRelativeTime(quotedComment.created_at)
-                }}</span>
-              </div>
-              <a-button
-                class="quote-close"
-                size="small"
-                type="text"
-                @click="clearQuote"
-              >
-                <IconComponent icon="close" />
-              </a-button>
-            </div>
-            <div class="quote-content">
-              <div class="quoted-text">
-                {{ truncateText(quotedComment.content, 80) }}
-              </div>
-            </div>
-          </div>
-
-          <div class="quick-comment-input">
-            <a-textarea
-              ref="quickTextareaRef"
-              v-model:value="quickCommentText"
-              :rows="2"
-              class="quick-textarea"
-              placeholder="快速添加评论..."
-              @keydown.ctrl.enter="submitQuickComment"
-            />
-            <div class="quick-comment-actions">
-              <span class="keyboard-hint">Ctrl + Enter 快速发送</span>
-              <a-button
-                :loading="quickCommenting"
-                size="small"
-                type="primary"
-                @click="submitQuickComment"
-              >
-                <IconComponent icon="send" /> 发送
-              </a-button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 评论列表 -->
-        <div
-          v-if="commentsList.length === 0 && !loading"
-          class="empty-comments"
-        >
-          <a-empty description="">
-            <template #image>
-              <div class="empty-icon">
-                <IconComponent icon="empty-comment" />
-              </div>
-            </template>
-            <template #description>
-              <div class="empty-description">
-                <div class="empty-title">还没有评论</div>
-                <div class="empty-subtitle">成为第一个评论的人吧</div>
-              </div>
-            </template>
-          </a-empty>
-        </div>
-
-        <a-spin :spinning="loading" tip="加载评论中...">
-          <div v-if="commentsList.length > 0" class="comments-list">
-            <div
-              v-for="(comment, index) in sortedComments"
-              :key="comment.id"
-              class="comment-item"
-              :class="{
-                'comment-highlight': comment.id === highlightCommentId,
-              }"
-            >
-              <div class="comment-wrapper">
-                <div class="comment-avatar">
-                  <a-avatar
-                    :size="40"
-                    :style="{
-                      backgroundColor: getAvatarColor(
-                        comment.operator_name || '',
-                      ),
-                    }"
-                    class="user-avatar"
-                  >
-                    {{ getInitials(comment.operator_name) }}
-                  </a-avatar>
-                  <div v-if="comment.is_system === 1" class="system-badge">
-                    <IconComponent icon="system" />
-                  </div>
-                </div>
-
-                <div class="comment-body">
-                  <div class="comment-header">
-                    <div class="commenter-info">
-                      <span class="commenter-name">{{
-                        comment.operator_name
-                      }}</span>
-                      <a-tag
-                        v-if="comment.is_system === 1"
-                        class="system-tag"
-                        color="orange"
-                        size="small"
-                      >
-                        <IconComponent icon="system" /> 系统
-                      </a-tag>
-                      <span class="comment-floor">#{{ index + 1 }}</span>
-                    </div>
-                    <div class="comment-meta">
-                      <span class="comment-time">{{
-                        formatRelativeTime(comment.created_at)
-                      }}</span>
-                      <a-dropdown placement="bottomRight" trigger="click">
-                        <a-button class="more-actions" size="small" type="text">
-                          <IconComponent icon="more" />
-                        </a-button>
-                        <template #overlay>
-                          <a-menu>
-                            <a-menu-item
-                              key="reply"
-                              @click="showReplyInput(comment.id)"
-                            >
-                              <IconComponent icon="reply" /> 回复
-                            </a-menu-item>
-                            <a-menu-item
-                              key="quote"
-                              @click="quoteComment(comment)"
-                            >
-                              <IconComponent icon="quote" /> 引用
-                            </a-menu-item>
-                            <a-menu-item
-                              key="copy"
-                              @click="copyComment(comment.content)"
-                            >
-                              <IconComponent icon="copy" /> 复制
-                            </a-menu-item>
-                          </a-menu>
-                        </template>
-                      </a-dropdown>
-                    </div>
-                  </div>
-
-                  <div class="comment-content">
-                    <div
-                      class="comment-text"
-                      v-html="formatCommentContent(comment.content)"
-                    ></div>
-                  </div>
-
-                  <div class="comment-actions">
-                    <a-button
-                      class="action-btn"
-                      size="small"
-                      type="text"
-                      @click="showReplyInput(comment.id)"
-                    >
-                      <IconComponent icon="reply" /> 回复
-                    </a-button>
-                  </div>
-
-                  <!-- 回复输入框 -->
-                  <div
-                    v-if="replyInputVisible[comment.id]"
-                    class="reply-input-section"
-                  >
-                    <div class="reply-input-wrapper">
-                      <a-textarea
-                        v-model:value="replyText[comment.id]"
-                        :placeholder="`回复 ${comment.operator_name}...`"
-                        :rows="3"
-                        class="reply-textarea"
-                        @keydown.ctrl.enter="submitReply(comment.id)"
-                      />
-                      <div class="reply-actions">
-                        <a-button size="small" @click="cancelReply(comment.id)">
-                          取消
-                        </a-button>
-                        <a-button
-                          :loading="replySubmitting[comment.id]"
-                          size="small"
-                          type="primary"
-                          @click="submitReply(comment.id)"
-                        >
-                          回复
-                        </a-button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- 回复列表 -->
-                  <div
-                    v-if="comment.children && comment.children.length > 0"
-                    class="comment-replies"
-                  >
-                    <div class="replies-header">
-                      <IconComponent icon="replies" />
-                      <span>{{ comment.children.length }} 条回复</span>
-                      <a-button
-                        size="small"
-                        type="text"
-                        @click="toggleReplies(comment.id)"
-                      >
-                        {{ repliesExpanded[comment.id] ? '收起' : '展开' }}
-                      </a-button>
-                    </div>
-
-                    <div
-                      v-show="repliesExpanded[comment.id]"
-                      class="replies-list"
-                    >
-                      <div
-                        v-for="reply in comment.children"
-                        :key="reply.id"
-                        class="reply-item"
-                      >
-                        <div class="reply-avatar">
-                          <a-avatar
-                            :size="32"
-                            :style="{
-                              backgroundColor: getAvatarColor(
-                                reply.operator_name || '',
-                              ),
-                            }"
-                          >
-                            {{ getInitials(reply.operator_name) }}
-                          </a-avatar>
-                        </div>
-                        <div class="reply-body">
-                          <div class="reply-header">
-                            <span class="replier-name">{{
-                              reply.operator_name
-                            }}</span>
-                            <span class="reply-time">{{
-                              formatRelativeTime(reply.created_at)
-                            }}</span>
-                          </div>
-                          <div
-                            class="reply-content"
-                            v-html="formatCommentContent(reply.content)"
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </a-spin>
-      </div>
-    </a-modal>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { formatCommentContent } from '#/utils/comment-content';
 import { computed, nextTick, reactive, ref } from 'vue';
@@ -847,6 +478,375 @@ defineExpose({
   showCommentsView,
 });
 </script>
+
+<template>
+  <div>
+    <!-- 快速评论对话框 -->
+    <a-modal
+      :confirm-loading="loading"
+      :destroy-on-close="true"
+      :open="commentDialog.visible"
+      :width="dialogWidth"
+      cancel-text="取消"
+      class="responsive-modal comment-modal"
+      ok-text="发布评论"
+      title="添加评论"
+      @cancel="
+        () => {
+          commentDialog.visible = false;
+        }
+      "
+      @ok="saveComment"
+    >
+      <div class="comment-form-wrapper">
+        <a-form :model="commentDialog.form" layout="vertical">
+          <a-form-item
+            :rules="[{ required: true, message: '请输入评论内容' }]"
+            label="评论内容"
+            name="content"
+          >
+            <a-textarea
+              v-model:value="commentDialog.form.content"
+              :max-length="500"
+              :rows="5"
+              class="comment-textarea"
+              placeholder="分享你的想法或意见..."
+              show-count
+            />
+          </a-form-item>
+          <div class="comment-options">
+            <a-checkbox
+              v-model:checked="commentDialog.form.is_system"
+              class="system-checkbox"
+            >
+              <span class="checkbox-text">
+                <IconComponent icon="system" /> 系统评论
+              </span>
+            </a-checkbox>
+            <div class="quick-actions">
+              <a-tooltip title="快速插入当前时间">
+                <a-button size="small" type="text" @click="insertCurrentTime">
+                  <IconComponent icon="time" />
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="快速插入处理建议">
+                <a-button size="small" type="text" @click="insertSuggestion">
+                  <IconComponent icon="suggestion" />
+                </a-button>
+              </a-tooltip>
+            </div>
+          </div>
+        </a-form>
+      </div>
+    </a-modal>
+
+    <!-- 评论查看对话框 -->
+    <a-modal
+      :footer="null"
+      :open="commentsViewDialog.visible"
+      :width="previewDialogWidth"
+      centered
+      class="comments-dialog responsive-modal"
+      title=""
+      @cancel="
+        () => {
+          commentsViewDialog.visible = false;
+        }
+      "
+    >
+      <template #title>
+        <div class="comments-dialog-header">
+          <div class="header-info">
+            <IconComponent class="header-icon" icon="comment" />
+            <span class="header-title">工单评论</span>
+            <a-badge :count="commentsList.length" class="comment-count" />
+          </div>
+          <div class="header-actions">
+            <a-tooltip title="刷新评论">
+              <a-button size="small" type="text" @click="refreshComments">
+                <IconComponent icon="refresh" />
+              </a-button>
+            </a-tooltip>
+            <a-tooltip title="排序方式">
+              <a-dropdown>
+                <a-button size="small" type="text">
+                  <IconComponent icon="sort" />
+                </a-button>
+                <template #overlay>
+                  <a-menu @click="handleSortChange">
+                    <a-menu-item key="newest">最新优先</a-menu-item>
+                    <a-menu-item key="oldest">最早优先</a-menu-item>
+                  </a-menu>
+                </template>
+              </a-dropdown>
+            </a-tooltip>
+          </div>
+        </div>
+      </template>
+
+      <div class="comments-content">
+        <!-- 快速评论输入框 -->
+        <div class="quick-comment-section">
+          <!-- 引用预览卡片 -->
+          <div v-if="quotedComment" class="quoted-comment-preview">
+            <div class="quote-header">
+              <div class="quote-info">
+                <IconComponent icon="quote" />
+                <span class="quote-label"
+                  >引用 @{{ quotedComment.operator_name }} 的评论</span
+                >
+                <span class="quote-time">{{
+                  formatRelativeTime(quotedComment.created_at)
+                }}</span>
+              </div>
+              <a-button
+                class="quote-close"
+                size="small"
+                type="text"
+                @click="clearQuote"
+              >
+                <IconComponent icon="close" />
+              </a-button>
+            </div>
+            <div class="quote-content">
+              <div class="quoted-text">
+                {{ truncateText(quotedComment.content, 80) }}
+              </div>
+            </div>
+          </div>
+
+          <div class="quick-comment-input">
+            <a-textarea
+              ref="quickTextareaRef"
+              v-model:value="quickCommentText"
+              :rows="2"
+              class="quick-textarea"
+              placeholder="快速添加评论..."
+              @keydown.ctrl.enter="submitQuickComment"
+            />
+            <div class="quick-comment-actions">
+              <span class="keyboard-hint">Ctrl + Enter 快速发送</span>
+              <a-button
+                :loading="quickCommenting"
+                size="small"
+                type="primary"
+                @click="submitQuickComment"
+              >
+                <IconComponent icon="send" /> 发送
+              </a-button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 评论列表 -->
+        <div
+          v-if="commentsList.length === 0 && !loading"
+          class="empty-comments"
+        >
+          <a-empty description="">
+            <template #image>
+              <div class="empty-icon">
+                <IconComponent icon="empty-comment" />
+              </div>
+            </template>
+            <template #description>
+              <div class="empty-description">
+                <div class="empty-title">还没有评论</div>
+                <div class="empty-subtitle">成为第一个评论的人吧</div>
+              </div>
+            </template>
+          </a-empty>
+        </div>
+
+        <a-spin :spinning="loading" tip="加载评论中...">
+          <div v-if="commentsList.length > 0" class="comments-list">
+            <div
+              v-for="(comment, index) in sortedComments"
+              :key="comment.id"
+              class="comment-item"
+              :class="{
+                'comment-highlight': comment.id === highlightCommentId,
+              }"
+            >
+              <div class="comment-wrapper">
+                <div class="comment-avatar">
+                  <a-avatar
+                    :size="40"
+                    :style="{
+                      backgroundColor: getAvatarColor(
+                        comment.operator_name || '',
+                      ),
+                    }"
+                    class="user-avatar"
+                  >
+                    {{ getInitials(comment.operator_name) }}
+                  </a-avatar>
+                  <div v-if="comment.is_system === 1" class="system-badge">
+                    <IconComponent icon="system" />
+                  </div>
+                </div>
+
+                <div class="comment-body">
+                  <div class="comment-header">
+                    <div class="commenter-info">
+                      <span class="commenter-name">{{
+                        comment.operator_name
+                      }}</span>
+                      <a-tag
+                        v-if="comment.is_system === 1"
+                        class="system-tag"
+                        color="orange"
+                        size="small"
+                      >
+                        <IconComponent icon="system" /> 系统
+                      </a-tag>
+                      <span class="comment-floor">#{{ index + 1 }}</span>
+                    </div>
+                    <div class="comment-meta">
+                      <span class="comment-time">{{
+                        formatRelativeTime(comment.created_at)
+                      }}</span>
+                      <a-dropdown placement="bottomRight" trigger="click">
+                        <a-button class="more-actions" size="small" type="text">
+                          <IconComponent icon="more" />
+                        </a-button>
+                        <template #overlay>
+                          <a-menu>
+                            <a-menu-item
+                              key="reply"
+                              @click="showReplyInput(comment.id)"
+                            >
+                              <IconComponent icon="reply" /> 回复
+                            </a-menu-item>
+                            <a-menu-item
+                              key="quote"
+                              @click="quoteComment(comment)"
+                            >
+                              <IconComponent icon="quote" /> 引用
+                            </a-menu-item>
+                            <a-menu-item
+                              key="copy"
+                              @click="copyComment(comment.content)"
+                            >
+                              <IconComponent icon="copy" /> 复制
+                            </a-menu-item>
+                          </a-menu>
+                        </template>
+                      </a-dropdown>
+                    </div>
+                  </div>
+
+                  <div class="comment-content">
+                    <div
+                      class="comment-text"
+                      v-html="formatCommentContent(comment.content)"
+                    ></div>
+                  </div>
+
+                  <div class="comment-actions">
+                    <a-button
+                      class="action-btn"
+                      size="small"
+                      type="text"
+                      @click="showReplyInput(comment.id)"
+                    >
+                      <IconComponent icon="reply" /> 回复
+                    </a-button>
+                  </div>
+
+                  <!-- 回复输入框 -->
+                  <div
+                    v-if="replyInputVisible[comment.id]"
+                    class="reply-input-section"
+                  >
+                    <div class="reply-input-wrapper">
+                      <a-textarea
+                        v-model:value="replyText[comment.id]"
+                        :placeholder="`回复 ${comment.operator_name}...`"
+                        :rows="3"
+                        class="reply-textarea"
+                        @keydown.ctrl.enter="submitReply(comment.id)"
+                      />
+                      <div class="reply-actions">
+                        <a-button size="small" @click="cancelReply(comment.id)">
+                          取消
+                        </a-button>
+                        <a-button
+                          :loading="replySubmitting[comment.id]"
+                          size="small"
+                          type="primary"
+                          @click="submitReply(comment.id)"
+                        >
+                          回复
+                        </a-button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 回复列表 -->
+                  <div
+                    v-if="comment.children && comment.children.length > 0"
+                    class="comment-replies"
+                  >
+                    <div class="replies-header">
+                      <IconComponent icon="replies" />
+                      <span>{{ comment.children.length }} 条回复</span>
+                      <a-button
+                        size="small"
+                        type="text"
+                        @click="toggleReplies(comment.id)"
+                      >
+                        {{ repliesExpanded[comment.id] ? '收起' : '展开' }}
+                      </a-button>
+                    </div>
+
+                    <div
+                      v-show="repliesExpanded[comment.id]"
+                      class="replies-list"
+                    >
+                      <div
+                        v-for="reply in comment.children"
+                        :key="reply.id"
+                        class="reply-item"
+                      >
+                        <div class="reply-avatar">
+                          <a-avatar
+                            :size="32"
+                            :style="{
+                              backgroundColor: getAvatarColor(
+                                reply.operator_name || '',
+                              ),
+                            }"
+                          >
+                            {{ getInitials(reply.operator_name) }}
+                          </a-avatar>
+                        </div>
+                        <div class="reply-body">
+                          <div class="reply-header">
+                            <span class="replier-name">{{
+                              reply.operator_name
+                            }}</span>
+                            <span class="reply-time">{{
+                              formatRelativeTime(reply.created_at)
+                            }}</span>
+                          </div>
+                          <div
+                            class="reply-content"
+                            v-html="formatCommentContent(reply.content)"
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </a-spin>
+      </div>
+    </a-modal>
+  </div>
+</template>
 
 <style scoped>
 /* 评论对话框样式增强 */

@@ -1,3 +1,436 @@
+<script lang="ts" setup>
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { namespacedResourceKey } from '../shared/utils';
+import { onMounted, ref } from 'vue';
+import { message, Modal } from 'ant-design-vue';
+import { useStatefulSetPage } from './StatefulSet';
+import { rollbackStatefulSetApi } from '#/api/core/k8s/k8s_statefulset';
+import { formatDateTime, getRelativeTime } from '../shared/utils';
+import {
+  ApiOutlined,
+  AppstoreOutlined,
+  CheckCircleOutlined,
+  ClearOutlined,
+  ContainerOutlined,
+  DatabaseOutlined,
+  DeleteOutlined,
+  DeploymentUnitOutlined,
+  EditOutlined,
+  ExpandOutlined,
+  EyeOutlined,
+  FileAddOutlined,
+  FileTextOutlined,
+  FilterOutlined,
+  FormatPainterOutlined,
+  HistoryOutlined,
+  PlusOutlined,
+  RedoOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  TagsOutlined,
+} from '@ant-design/icons-vue';
+
+import { usePermission } from '#/utils/permission';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
+const { can } = usePermission();
+
+const {
+  // state
+  clusters,
+  namespaces,
+  loading,
+  loadError,
+  clustersError,
+  namespacesError,
+  clustersLoading,
+  namespacesLoading,
+  searchText,
+  filterStatus,
+  filterClusterId,
+  filterNamespace,
+  filterServiceName,
+  filterLabels,
+  selectedRows,
+  currentPage,
+  pageSize,
+  total,
+  clustersTotal,
+  namespacesTotal,
+
+  // modal state
+  isCreateModalVisible,
+  isCreateYamlModalVisible,
+  isEditModalVisible,
+  isDetailModalVisible,
+  isScaleModalVisible,
+  isYamlModalVisible,
+  isPodModalVisible,
+  isHistoryModalVisible,
+  submitLoading,
+  detailLoading,
+
+  // operation targets
+  currentOperationStatefulSet,
+  currentStatefulSetDetail,
+  statefulSetPods,
+  statefulSetHistory,
+
+  // form models
+  createFormModel,
+  createYamlFormModel,
+  editFormModel,
+  scaleFormModel,
+  yamlFormModel,
+
+  // form refs
+  formRef,
+  editFormRef,
+  scaleFormRef,
+  yamlFormRef,
+  createYamlFormRef,
+
+  // form rules
+  createFormRules,
+  editFormRules,
+  scaleFormRules,
+  yamlFormRules,
+  createYamlFormRules,
+
+  // computed
+  filteredStatefulSets,
+  rowSelection,
+
+  // helpers
+  getEnvText,
+  getStatusText,
+  getStatusColor,
+
+  // operations
+  fetchClusters,
+  fetchNamespaces,
+  fetchStatefulSets,
+  clearStatefulSets,
+  clearNamespaces,
+  loadMoreClusters,
+  loadMoreNamespaces,
+
+  // detail operations
+  showStatefulSetDetail,
+  closeDetailModal,
+
+  // YAML operations
+  showYamlModal,
+  closeYamlModal,
+  submitYamlForm,
+  insertYamlTemplate,
+  formatYaml,
+  validateYaml,
+  clearYaml,
+  formatEditYaml,
+  validateEditYaml,
+
+  // create operations
+  openCreateModal,
+  closeCreateModal,
+  submitCreateForm,
+  openCreateYamlModal,
+  closeCreateYamlModal,
+  submitCreateYamlForm,
+
+  // edit operations
+  openEditModal,
+  closeEditModal,
+  submitEditForm,
+
+  // statefulSet operations
+  deleteStatefulSet,
+  restartStatefulSet,
+
+  // scale operations
+  openScaleModal,
+  closeScaleModal,
+  submitScaleForm,
+
+  // pod operations
+  showPodModal,
+  closePodModal,
+
+  // history operations
+  showHistoryModal,
+  closeHistoryModal,
+
+  // filter operations
+  addFilterLabel,
+  removeFilterLabel,
+  clearFilterLabels,
+
+  // batch operations
+  batchOperation,
+
+  // pagination operations
+  handlePageChange,
+
+  // form field operations
+  addImageField,
+  removeImageField,
+  addEditImageField,
+  removeEditImageField,
+  removeLabelField,
+  removeAnnotationField,
+  removeEditLabelField,
+  removeEditAnnotationField,
+
+  // constants
+  K8sStatefulSetStatus,
+
+  // formatters
+  formatTime,
+} = useStatefulSetPage();
+
+// 添加新标签/注解的方法
+const newLabelKey = ref('');
+const newAnnotationKey = ref('');
+const newEditLabelKey = ref('');
+const newEditAnnotationKey = ref('');
+
+const addNewLabel = () => {
+  if (newLabelKey.value && newLabelKey.value.trim()) {
+    createFormModel.value.labels[newLabelKey.value.trim()] = '';
+    newLabelKey.value = '';
+  }
+};
+
+const addNewAnnotation = () => {
+  if (newAnnotationKey.value && newAnnotationKey.value.trim()) {
+    createFormModel.value.annotations[newAnnotationKey.value.trim()] = '';
+    newAnnotationKey.value = '';
+  }
+};
+
+const addNewEditLabel = () => {
+  if (newEditLabelKey.value && newEditLabelKey.value.trim()) {
+    editFormModel.value.labels.push({
+      key: newEditLabelKey.value.trim(),
+      value: '',
+    });
+    newEditLabelKey.value = '';
+  }
+};
+
+const addNewEditAnnotation = () => {
+  if (newEditAnnotationKey.value && newEditAnnotationKey.value.trim()) {
+    editFormModel.value.annotations.push({
+      key: newEditAnnotationKey.value.trim(),
+      value: '',
+    });
+    newEditAnnotationKey.value = '';
+  }
+};
+
+const onSearch = () => {
+  currentPage.value = 1;
+  fetchStatefulSets();
+};
+
+const handleFilterChange = () => {
+  currentPage.value = 1;
+  fetchStatefulSets();
+};
+
+const handleClusterChange = () => {
+  currentPage.value = 1;
+  clearNamespaces();
+  clearStatefulSets();
+
+  if (filterClusterId.value) {
+    fetchNamespaces(true); // 重置命名空间分页
+    fetchStatefulSets();
+  }
+};
+
+const handleTableChange = (pagination: {
+  current?: number;
+  pageSize?: number;
+}) => {
+  if (pagination) {
+    handlePageChange(
+      pagination.current || currentPage.value,
+      pagination.pageSize,
+    );
+  }
+};
+
+// 处理集群下拉选择的滚动事件
+const handleClusterDropdownScroll = (e: Event) => {
+  const { target } = e;
+  if (
+    target &&
+    'scrollTop' in target &&
+    'scrollHeight' in target &&
+    'clientHeight' in target
+  ) {
+    const scrollTarget = target as HTMLElement;
+    if (
+      scrollTarget.scrollTop + scrollTarget.clientHeight >=
+      scrollTarget.scrollHeight - 5
+    ) {
+      loadMoreClusters();
+    }
+  }
+};
+
+const columns = [
+  {
+    title: '名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 150,
+    ellipsis: true,
+    fixed: 'left',
+  },
+  {
+    title: '命名空间',
+    dataIndex: 'namespace',
+    key: 'namespace',
+    width: 120,
+    ellipsis: true,
+  },
+  {
+    title: '状态',
+    dataIndex: 'status',
+    key: 'status',
+    width: 90,
+    align: 'center',
+  },
+  { title: '副本详情', key: 'replicas', width: 130, align: 'center' },
+  {
+    title: '服务名称',
+    dataIndex: 'service_name',
+    key: 'service_name',
+    width: 130,
+    ellipsis: true,
+  },
+  {
+    title: '更新策略',
+    dataIndex: 'update_strategy',
+    key: 'update_strategy',
+    width: 100,
+    align: 'center',
+  },
+  {
+    title: 'Pod策略',
+    dataIndex: 'pod_management_policy',
+    key: 'pod_management_policy',
+    width: 100,
+    align: 'center',
+  },
+  { title: '镜像', dataIndex: 'images', key: 'images', width: 200 },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 380,
+    fixed: 'right',
+    align: 'center',
+  },
+];
+
+// 标签过滤器状态
+const isLabelsFilterModalVisible = ref(false);
+const newFilterKey = ref('');
+const newFilterValue = ref('');
+
+// 标签过滤器操作
+const openLabelsFilter = () => {
+  isLabelsFilterModalVisible.value = true;
+};
+
+const closeLabelsFilterModal = () => {
+  isLabelsFilterModalVisible.value = false;
+  newFilterKey.value = '';
+  newFilterValue.value = '';
+};
+
+const addNewFilterLabel = () => {
+  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
+    addFilterLabel(newFilterKey.value.trim(), newFilterValue.value.trim());
+    newFilterKey.value = '';
+    newFilterValue.value = '';
+  }
+};
+
+const applyLabelsFilter = () => {
+  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
+    addNewFilterLabel();
+  }
+  closeLabelsFilterModal();
+};
+
+// 重置所有筛选条件
+const resetFilters = () => {
+  filterStatus.value = undefined;
+  searchText.value = '';
+  filterClusterId.value = undefined;
+  filterNamespace.value = undefined;
+  filterServiceName.value = undefined;
+  clearFilterLabels();
+  currentPage.value = 1;
+  clearStatefulSets();
+  clearNamespaces();
+};
+
+// 快速回滚到指定版本
+const rollbackToVersion = (revision: number) => {
+  if (!currentOperationStatefulSet.value) return;
+
+  Modal.confirm({
+    title: '回滚确认',
+    content: `确定要将 StatefulSet "${currentOperationStatefulSet.value.name}" 回滚到版本 ${revision} 吗？`,
+    okText: '确认回滚',
+    okType: 'primary',
+    cancelText: '取消',
+    centered: true,
+    onOk: async () => {
+      try {
+        const clusterId =
+          currentOperationStatefulSet.value!.cluster_id ||
+          filterClusterId.value;
+        if (!clusterId || clusterId === 0) {
+          message.error('无效的集群ID，请重新选择集群');
+          return;
+        }
+
+        await rollbackStatefulSetApi(
+          clusterId,
+          currentOperationStatefulSet.value!.namespace,
+          currentOperationStatefulSet.value!.name,
+          {
+            cluster_id: clusterId,
+            namespace: currentOperationStatefulSet.value!.namespace,
+            name: currentOperationStatefulSet.value!.name,
+            revision,
+          },
+        );
+        message.success(`StatefulSet 回滚到版本 ${revision} 成功`);
+        closeHistoryModal();
+        await fetchStatefulSets();
+      } catch (error) {
+        if (shouldNotifyPageError(error))
+          message.error(`StatefulSet 回滚到版本 ${revision} 失败`);
+      }
+    },
+  });
+};
+
+onMounted(async () => {
+  await fetchClusters();
+});
+</script>
+
 <template>
   <OpsPage
     description="管理和监控集群中的所有 Kubernetes StatefulSet"
@@ -1745,439 +2178,6 @@
     </a-modal>
   </OpsPage>
 </template>
-
-<script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { namespacedResourceKey } from '../shared/utils';
-import { onMounted, ref } from 'vue';
-import { message, Modal } from 'ant-design-vue';
-import { useStatefulSetPage } from './StatefulSet';
-import { rollbackStatefulSetApi } from '#/api/core/k8s/k8s_statefulset';
-import { formatDateTime, getRelativeTime } from '../shared/utils';
-import {
-  ApiOutlined,
-  AppstoreOutlined,
-  CheckCircleOutlined,
-  ClearOutlined,
-  ContainerOutlined,
-  DatabaseOutlined,
-  DeleteOutlined,
-  DeploymentUnitOutlined,
-  EditOutlined,
-  ExpandOutlined,
-  EyeOutlined,
-  FileAddOutlined,
-  FileTextOutlined,
-  FilterOutlined,
-  FormatPainterOutlined,
-  HistoryOutlined,
-  PlusOutlined,
-  RedoOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-  TagsOutlined,
-} from '@ant-design/icons-vue';
-
-import { usePermission } from '#/utils/permission';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
-
-const { can } = usePermission();
-
-const {
-  // state
-  clusters,
-  namespaces,
-  loading,
-  loadError,
-  clustersError,
-  namespacesError,
-  clustersLoading,
-  namespacesLoading,
-  searchText,
-  filterStatus,
-  filterClusterId,
-  filterNamespace,
-  filterServiceName,
-  filterLabels,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
-  clustersTotal,
-  namespacesTotal,
-
-  // modal state
-  isCreateModalVisible,
-  isCreateYamlModalVisible,
-  isEditModalVisible,
-  isDetailModalVisible,
-  isScaleModalVisible,
-  isYamlModalVisible,
-  isPodModalVisible,
-  isHistoryModalVisible,
-  submitLoading,
-  detailLoading,
-
-  // operation targets
-  currentOperationStatefulSet,
-  currentStatefulSetDetail,
-  statefulSetPods,
-  statefulSetHistory,
-
-  // form models
-  createFormModel,
-  createYamlFormModel,
-  editFormModel,
-  scaleFormModel,
-  yamlFormModel,
-
-  // form refs
-  formRef,
-  editFormRef,
-  scaleFormRef,
-  yamlFormRef,
-  createYamlFormRef,
-
-  // form rules
-  createFormRules,
-  editFormRules,
-  scaleFormRules,
-  yamlFormRules,
-  createYamlFormRules,
-
-  // computed
-  filteredStatefulSets,
-  rowSelection,
-
-  // helpers
-  getEnvText,
-  getStatusText,
-  getStatusColor,
-
-  // operations
-  fetchClusters,
-  fetchNamespaces,
-  fetchStatefulSets,
-  clearStatefulSets,
-  clearNamespaces,
-  loadMoreClusters,
-  loadMoreNamespaces,
-
-  // detail operations
-  showStatefulSetDetail,
-  closeDetailModal,
-
-  // YAML operations
-  showYamlModal,
-  closeYamlModal,
-  submitYamlForm,
-  insertYamlTemplate,
-  formatYaml,
-  validateYaml,
-  clearYaml,
-  formatEditYaml,
-  validateEditYaml,
-
-  // create operations
-  openCreateModal,
-  closeCreateModal,
-  submitCreateForm,
-  openCreateYamlModal,
-  closeCreateYamlModal,
-  submitCreateYamlForm,
-
-  // edit operations
-  openEditModal,
-  closeEditModal,
-  submitEditForm,
-
-  // statefulSet operations
-  deleteStatefulSet,
-  restartStatefulSet,
-
-  // scale operations
-  openScaleModal,
-  closeScaleModal,
-  submitScaleForm,
-
-  // pod operations
-  showPodModal,
-  closePodModal,
-
-  // history operations
-  showHistoryModal,
-  closeHistoryModal,
-
-  // filter operations
-  addFilterLabel,
-  removeFilterLabel,
-  clearFilterLabels,
-
-  // batch operations
-  batchOperation,
-
-  // pagination operations
-  handlePageChange,
-
-  // form field operations
-  addImageField,
-  removeImageField,
-  addEditImageField,
-  removeEditImageField,
-  removeLabelField,
-  removeAnnotationField,
-  removeEditLabelField,
-  removeEditAnnotationField,
-
-  // constants
-  K8sStatefulSetStatus,
-
-  // formatters
-  formatTime,
-} = useStatefulSetPage();
-
-// 添加新标签/注解的方法
-const newLabelKey = ref('');
-const newAnnotationKey = ref('');
-const newEditLabelKey = ref('');
-const newEditAnnotationKey = ref('');
-
-const addNewLabel = () => {
-  if (newLabelKey.value && newLabelKey.value.trim()) {
-    createFormModel.value.labels[newLabelKey.value.trim()] = '';
-    newLabelKey.value = '';
-  }
-};
-
-const addNewAnnotation = () => {
-  if (newAnnotationKey.value && newAnnotationKey.value.trim()) {
-    createFormModel.value.annotations[newAnnotationKey.value.trim()] = '';
-    newAnnotationKey.value = '';
-  }
-};
-
-const addNewEditLabel = () => {
-  if (newEditLabelKey.value && newEditLabelKey.value.trim()) {
-    editFormModel.value.labels.push({
-      key: newEditLabelKey.value.trim(),
-      value: '',
-    });
-    newEditLabelKey.value = '';
-  }
-};
-
-const addNewEditAnnotation = () => {
-  if (newEditAnnotationKey.value && newEditAnnotationKey.value.trim()) {
-    editFormModel.value.annotations.push({
-      key: newEditAnnotationKey.value.trim(),
-      value: '',
-    });
-    newEditAnnotationKey.value = '';
-  }
-};
-
-const onSearch = () => {
-  currentPage.value = 1;
-  fetchStatefulSets();
-};
-
-const handleFilterChange = () => {
-  currentPage.value = 1;
-  fetchStatefulSets();
-};
-
-const handleClusterChange = () => {
-  currentPage.value = 1;
-  clearNamespaces();
-  clearStatefulSets();
-
-  if (filterClusterId.value) {
-    fetchNamespaces(true); // 重置命名空间分页
-    fetchStatefulSets();
-  }
-};
-
-const handleTableChange = (pagination: {
-  current?: number;
-  pageSize?: number;
-}) => {
-  if (pagination) {
-    handlePageChange(
-      pagination.current || currentPage.value,
-      pagination.pageSize,
-    );
-  }
-};
-
-// 处理集群下拉选择的滚动事件
-const handleClusterDropdownScroll = (e: Event) => {
-  const { target } = e;
-  if (
-    target &&
-    'scrollTop' in target &&
-    'scrollHeight' in target &&
-    'clientHeight' in target
-  ) {
-    const scrollTarget = target as HTMLElement;
-    if (
-      scrollTarget.scrollTop + scrollTarget.clientHeight >=
-      scrollTarget.scrollHeight - 5
-    ) {
-      loadMoreClusters();
-    }
-  }
-};
-
-const columns = [
-  {
-    title: '名称',
-    dataIndex: 'name',
-    key: 'name',
-    width: 150,
-    ellipsis: true,
-    fixed: 'left',
-  },
-  {
-    title: '命名空间',
-    dataIndex: 'namespace',
-    key: 'namespace',
-    width: 120,
-    ellipsis: true,
-  },
-  {
-    title: '状态',
-    dataIndex: 'status',
-    key: 'status',
-    width: 90,
-    align: 'center',
-  },
-  { title: '副本详情', key: 'replicas', width: 130, align: 'center' },
-  {
-    title: '服务名称',
-    dataIndex: 'service_name',
-    key: 'service_name',
-    width: 130,
-    ellipsis: true,
-  },
-  {
-    title: '更新策略',
-    dataIndex: 'update_strategy',
-    key: 'update_strategy',
-    width: 100,
-    align: 'center',
-  },
-  {
-    title: 'Pod策略',
-    dataIndex: 'pod_management_policy',
-    key: 'pod_management_policy',
-    width: 100,
-    align: 'center',
-  },
-  { title: '镜像', dataIndex: 'images', key: 'images', width: 200 },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
-  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
-  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 380,
-    fixed: 'right',
-    align: 'center',
-  },
-];
-
-// 标签过滤器状态
-const isLabelsFilterModalVisible = ref(false);
-const newFilterKey = ref('');
-const newFilterValue = ref('');
-
-// 标签过滤器操作
-const openLabelsFilter = () => {
-  isLabelsFilterModalVisible.value = true;
-};
-
-const closeLabelsFilterModal = () => {
-  isLabelsFilterModalVisible.value = false;
-  newFilterKey.value = '';
-  newFilterValue.value = '';
-};
-
-const addNewFilterLabel = () => {
-  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
-    addFilterLabel(newFilterKey.value.trim(), newFilterValue.value.trim());
-    newFilterKey.value = '';
-    newFilterValue.value = '';
-  }
-};
-
-const applyLabelsFilter = () => {
-  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
-    addNewFilterLabel();
-  }
-  closeLabelsFilterModal();
-};
-
-// 重置所有筛选条件
-const resetFilters = () => {
-  filterStatus.value = undefined;
-  searchText.value = '';
-  filterClusterId.value = undefined;
-  filterNamespace.value = undefined;
-  filterServiceName.value = undefined;
-  clearFilterLabels();
-  currentPage.value = 1;
-  clearStatefulSets();
-  clearNamespaces();
-};
-
-// 快速回滚到指定版本
-const rollbackToVersion = (revision: number) => {
-  if (!currentOperationStatefulSet.value) return;
-
-  Modal.confirm({
-    title: '回滚确认',
-    content: `确定要将 StatefulSet "${currentOperationStatefulSet.value.name}" 回滚到版本 ${revision} 吗？`,
-    okText: '确认回滚',
-    okType: 'primary',
-    cancelText: '取消',
-    centered: true,
-    onOk: async () => {
-      try {
-        const clusterId =
-          currentOperationStatefulSet.value!.cluster_id ||
-          filterClusterId.value;
-        if (!clusterId || clusterId === 0) {
-          message.error('无效的集群ID，请重新选择集群');
-          return;
-        }
-
-        await rollbackStatefulSetApi(
-          clusterId,
-          currentOperationStatefulSet.value!.namespace,
-          currentOperationStatefulSet.value!.name,
-          {
-            cluster_id: clusterId,
-            namespace: currentOperationStatefulSet.value!.namespace,
-            name: currentOperationStatefulSet.value!.name,
-            revision,
-          },
-        );
-        message.success(`StatefulSet 回滚到版本 ${revision} 成功`);
-        closeHistoryModal();
-        await fetchStatefulSets();
-      } catch (error) {
-        if (shouldNotifyPageError(error))
-          message.error(`StatefulSet 回滚到版本 ${revision} 失败`);
-      }
-    },
-  });
-};
-
-onMounted(async () => {
-  await fetchClusters();
-});
-</script>
 
 <style scoped>
 @import '../shared/k8s-common.css';

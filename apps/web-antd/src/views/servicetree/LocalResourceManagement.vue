@@ -728,7 +728,7 @@ const closeDetails = () => {
     <template #actions>
       <a-button class="btn-create" type="primary" @click="showCreateModal">
         <template #icon>
-          <plus-outlined />
+          <PlusOutlined />
         </template>
         <span class="btn-text">添加服务器</span> </a-button
       ><a-button :loading="loading" @click="fetchLocalResources()">
@@ -772,7 +772,7 @@ const closeDetails = () => {
             <a-card class="stats-card">
               <a-statistic :value="pagination.total" title="匹配服务器">
                 <template #prefix>
-                  <desktop-outlined />
+                  <DesktopOutlined />
                 </template>
               </a-statistic>
             </a-card>
@@ -788,7 +788,7 @@ const closeDetails = () => {
                 "
               >
                 <template #prefix>
-                  <api-outlined />
+                  <ApiOutlined />
                 </template>
               </a-statistic>
             </a-card>
@@ -803,7 +803,7 @@ const closeDetails = () => {
                 "
               >
                 <template #prefix>
-                  <desktop-outlined />
+                  <DesktopOutlined />
                 </template>
               </a-statistic>
             </a-card>
@@ -819,7 +819,7 @@ const closeDetails = () => {
                 "
               >
                 <template #prefix>
-                  <deployment-unit-outlined />
+                  <DeploymentUnitOutlined />
                 </template>
               </a-statistic>
             </a-card>
@@ -865,8 +865,8 @@ const closeDetails = () => {
                 :color="record.os_type === 'linux' ? 'blue' : 'green'"
                 class="tech-tag"
               >
-                <windows-outlined v-if="record.os_type === 'windows'" />
-                <desktop-outlined v-else />
+                <WindowsOutlined v-if="record.os_type === 'windows'" />
+                <DesktopOutlined v-else />
                 {{ record.os_type === 'linux' ? 'Linux' : 'Windows' }}
               </a-tag>
             </template>
@@ -978,7 +978,7 @@ const closeDetails = () => {
                   <template #overlay>
                     <a-menu>
                       <a-menu-item key="bind" @click="showBindModal(record)">
-                        <deployment-unit-outlined /> 绑定服务树
+                        <DeploymentUnitOutlined /> 绑定服务树
                       </a-menu-item>
                       <a-menu-item
                         key="unbind"
@@ -987,14 +987,14 @@ const closeDetails = () => {
                         "
                         @click="showUnbindModal(record)"
                       >
-                        <deployment-unit-outlined /> 解绑服务树
+                        <DeploymentUnitOutlined /> 解绑服务树
                       </a-menu-item>
                       <a-menu-item
                         v-if="can('tree.local.terminal')"
                         key="terminal"
                         @click="handleConnectTerminal(record)"
                       >
-                        <code-outlined /> 连接终端
+                        <CodeOutlined /> 连接终端
                       </a-menu-item>
                       <a-menu-divider v-if="can('tree.local.delete')" />
                       <a-menu-item
@@ -1003,13 +1003,13 @@ const closeDetails = () => {
                         @click="handleDelete(record)"
                         danger
                       >
-                        <delete-outlined /> 删除
+                        <DeleteOutlined /> 删除
                       </a-menu-item>
                     </a-menu>
                   </template>
                   <a-button size="small">
                     更多
-                    <down-outlined />
+                    <DownOutlined />
                   </a-button>
                 </a-dropdown>
               </div>
@@ -1080,10 +1080,10 @@ const closeDetails = () => {
                 placeholder="选择操作系统"
               >
                 <a-select-option value="linux">
-                  <desktop-outlined /> Linux
+                  <DesktopOutlined /> Linux
                 </a-select-option>
                 <a-select-option value="windows">
-                  <windows-outlined /> Windows
+                  <WindowsOutlined /> Windows
                 </a-select-option>
               </a-select>
             </a-form-item>
@@ -1183,7 +1183,7 @@ const closeDetails = () => {
                   @pressEnter="addTag"
                 />
                 <a-button class="add-tag-btn" type="dashed" @click="addTag">
-                  <plus-outlined /> 添加标签
+                  <PlusOutlined /> 添加标签
                 </a-button>
               </div>
             </div>
@@ -1287,10 +1287,10 @@ const closeDetails = () => {
                   :color="currentDetail.os_type === 'linux' ? 'blue' : 'green'"
                   class="tech-tag"
                 >
-                  <windows-outlined
+                  <WindowsOutlined
                     v-if="currentDetail.os_type === 'windows'"
                   />
-                  <desktop-outlined v-else />
+                  <DesktopOutlined v-else />
                   {{ currentDetail.os_type === 'linux' ? 'Linux' : 'Windows' }}
                 </a-tag>
               </div>
@@ -1400,7 +1400,7 @@ const closeDetails = () => {
             <div class="drawer-actions">
               <a-button-group>
                 <a-button @click="handleEdit(currentDetail)">
-                  <edit-outlined /> 编辑
+                  <EditOutlined /> 编辑
                 </a-button>
               </a-button-group>
               <a-button
@@ -1408,7 +1408,7 @@ const closeDetails = () => {
                 danger
                 @click="handleDelete(currentDetail)"
               >
-                <delete-outlined /> 删除
+                <DeleteOutlined /> 删除
               </a-button>
             </div>
           </div>

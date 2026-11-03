@@ -1,3 +1,377 @@
+<script lang="ts" setup>
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { clusterResourceKey } from '../shared/utils';
+import { onMounted, ref } from 'vue';
+import { formatK8sTime } from '../shared/utils';
+import { useClusterRoleBindingPage } from './ClusterRoleBinding';
+import {
+  CheckCircleOutlined,
+  ClearOutlined,
+  DeleteOutlined,
+  DeploymentUnitOutlined,
+  EditOutlined,
+  EyeOutlined,
+  FileAddOutlined,
+  FileTextOutlined,
+  FormatPainterOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  TagsOutlined,
+  UserSwitchOutlined,
+} from '@ant-design/icons-vue';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
+const {
+  // state
+  clusters,
+  loading,
+  loadError,
+  clustersError,
+  clustersLoading,
+  searchText,
+  filterClusterId,
+  filterLabels,
+  selectedRows,
+  currentPage,
+  pageSize,
+  total,
+  clustersTotal,
+
+  // modal state
+  isCreateModalVisible,
+  isCreateYamlModalVisible,
+  isEditModalVisible,
+  isDetailModalVisible,
+  isYamlModalVisible,
+  submitLoading,
+  detailLoading,
+
+  // operation targets
+  currentOperationClusterRoleBinding,
+  currentClusterRoleBindingDetail,
+
+  // form models
+  createFormModel,
+  editFormModel,
+  createYamlFormModel,
+  yamlFormModel,
+
+  // form refs
+  formRef,
+  editFormRef,
+  yamlFormRef,
+  createYamlFormRef,
+
+  // form rules
+  createFormRules,
+  editFormRules,
+  createYamlFormRules,
+  yamlFormRules,
+
+  // computed
+  filteredClusterRoleBindings,
+  rowSelection,
+
+  // helpers
+  getEnvText,
+
+  // operations
+  fetchClusters,
+  fetchClusterRoleBindings,
+  clearClusterRoleBindings,
+  loadMoreClusters,
+
+  // detail operations
+  showClusterRoleBindingDetail,
+  closeDetailModal,
+
+  // YAML operations
+  showYamlModal,
+  closeYamlModal,
+  submitYamlForm,
+
+  // create operations
+  openCreateModal,
+  closeCreateModal,
+  submitCreateForm,
+  openCreateYamlModal,
+  closeCreateYamlModal,
+  submitCreateYamlForm,
+
+  // edit operations
+  openEditModal,
+  closeEditModal,
+  submitEditForm,
+
+  // clusterRoleBinding operations
+  deleteClusterRoleBinding,
+
+  // filter operations
+  addFilterLabel,
+  removeFilterLabel,
+  clearFilterLabels,
+
+  // batch operations
+  batchOperation,
+
+  // pagination operations
+  handlePageChange,
+
+  // form field operations
+  addSubjectField,
+  removeSubjectField,
+  removeLabelField,
+  removeAnnotationField,
+  addEditSubjectField,
+  removeEditSubjectField,
+  removeEditLabelField,
+  removeEditAnnotationField,
+
+  // YAML utility functions
+  insertYamlTemplate,
+  formatYaml,
+  validateYaml,
+  clearYaml,
+  formatEditYaml,
+  validateEditYaml,
+} = useClusterRoleBindingPage();
+
+// 添加新标签/注解的方法
+const newLabelKey = ref('');
+const newAnnotationKey = ref('');
+const editLabelKey = ref('');
+const editAnnotationKey = ref('');
+
+const addNewLabel = () => {
+  if (newLabelKey.value && newLabelKey.value.trim()) {
+    createFormModel.value.labels[newLabelKey.value.trim()] = '';
+    newLabelKey.value = '';
+  }
+};
+
+const addNewAnnotation = () => {
+  if (newAnnotationKey.value && newAnnotationKey.value.trim()) {
+    createFormModel.value.annotations[newAnnotationKey.value.trim()] = '';
+    newAnnotationKey.value = '';
+  }
+};
+
+const addEditLabel = () => {
+  if (editLabelKey.value && editLabelKey.value.trim()) {
+    editFormModel.value.labels[editLabelKey.value.trim()] = '';
+    editLabelKey.value = '';
+  }
+};
+
+const addEditAnnotation = () => {
+  if (editAnnotationKey.value && editAnnotationKey.value.trim()) {
+    editFormModel.value.annotations[editAnnotationKey.value.trim()] = '';
+    editAnnotationKey.value = '';
+  }
+};
+
+// 格式化age显示
+const formatAge = (age: string, creationTimestamp?: string): string => {
+  if (age && age.trim() !== '') {
+    return age;
+  }
+
+  if (!creationTimestamp) {
+    return '-';
+  }
+
+  try {
+    const createTime = new Date(creationTimestamp);
+    const now = new Date();
+    const diff = now.getTime() - createTime.getTime();
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (days > 365) {
+      const years = Math.floor(days / 365);
+      return `${years}年${days % 365}天`;
+    } else if (days > 30) {
+      const months = Math.floor(days / 30);
+      return `${months}月${days % 30}天`;
+    } else if (days > 0) {
+      return `${days}天${hours}小时`;
+    } else if (hours > 0) {
+      return `${hours}小时${minutes}分钟`;
+    } else if (minutes > 0) {
+      return `${minutes}分钟`;
+    } else {
+      return '刚刚';
+    }
+  } catch {
+    return '-';
+  }
+};
+
+// 注意：时间格式化函数已移至 shared/utils.ts，使用 formatK8sTime
+const formatCreationTime = formatK8sTime;
+
+const onSearch = () => {
+  currentPage.value = 1;
+  fetchClusterRoleBindings();
+};
+
+const handleClusterChange = () => {
+  currentPage.value = 1;
+  clearClusterRoleBindings();
+
+  if (filterClusterId.value) {
+    fetchClusterRoleBindings();
+  }
+};
+
+const handleTableChange = (pagination: {
+  current?: number;
+  pageSize?: number;
+}) => {
+  if (pagination) {
+    handlePageChange(
+      pagination.current || currentPage.value,
+      pagination.pageSize,
+    );
+  }
+};
+
+// 处理集群下拉选择的滚动事件
+const handleClusterDropdownScroll = (e: Event) => {
+  const { target } = e;
+  if (
+    target &&
+    'scrollTop' in target &&
+    'scrollHeight' in target &&
+    'clientHeight' in target
+  ) {
+    const scrollTarget = target as HTMLElement;
+    if (
+      scrollTarget.scrollTop + scrollTarget.clientHeight >=
+      scrollTarget.scrollHeight - 5
+    ) {
+      loadMoreClusters();
+    }
+  }
+};
+
+// 获取主体类型对应的颜色
+const getSubjectColor = (kind?: null | string) => {
+  if (!kind) return 'default';
+
+  switch (kind) {
+    case 'User': {
+      return 'blue';
+    }
+    case 'Group': {
+      return 'green';
+    }
+    case 'ServiceAccount': {
+      return 'orange';
+    }
+    default: {
+      return 'default';
+    }
+  }
+};
+
+const columns = [
+  {
+    title: '名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: '18%',
+    ellipsis: true,
+    sorter: (a: any, b: any) => a.name.localeCompare(b.name),
+  },
+  {
+    title: '角色引用',
+    key: 'roleRef',
+    width: '22%',
+    ellipsis: true,
+  },
+  {
+    title: '主体',
+    key: 'subjects',
+    width: '25%',
+    ellipsis: true,
+  },
+  {
+    title: '标签',
+    dataIndex: 'labels',
+    key: 'labels',
+    width: '15%',
+    ellipsis: true,
+  },
+  {
+    title: '创建时间',
+    key: 'created_at',
+    width: '12%',
+    sorter: (a: any, b: any) => {
+      const timeA = new Date(a.created_at).getTime();
+      const timeB = new Date(b.created_at).getTime();
+      return timeA - timeB;
+    },
+  },
+  {
+    title: '操作',
+    key: 'actions',
+    width: '8%',
+    fixed: 'right',
+  },
+];
+
+// 标签过滤器状态
+const isLabelsFilterModalVisible = ref(false);
+const newFilterKey = ref('');
+const newFilterValue = ref('');
+
+// 标签过滤器操作
+const openLabelsFilter = () => {
+  isLabelsFilterModalVisible.value = true;
+};
+
+const closeLabelsFilterModal = () => {
+  isLabelsFilterModalVisible.value = false;
+  newFilterKey.value = '';
+  newFilterValue.value = '';
+};
+
+const addNewFilterLabel = () => {
+  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
+    addFilterLabel(newFilterKey.value.trim(), newFilterValue.value.trim());
+    newFilterKey.value = '';
+    newFilterValue.value = '';
+  }
+};
+
+const applyLabelsFilter = () => {
+  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
+    addNewFilterLabel();
+  }
+  closeLabelsFilterModal();
+};
+
+// 重置所有筛选条件
+const resetFilters = () => {
+  searchText.value = '';
+  filterClusterId.value = undefined;
+  clearFilterLabels();
+  currentPage.value = 1;
+  clearClusterRoleBindings();
+};
+
+onMounted(async () => {
+  await fetchClusters();
+});
+</script>
+
 <template>
   <OpsPage
     description="管理和监控集群中的所有 Kubernetes ClusterRoleBinding"
@@ -1301,380 +1675,6 @@
     </a-modal>
   </OpsPage>
 </template>
-
-<script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { clusterResourceKey } from '../shared/utils';
-import { onMounted, ref } from 'vue';
-import { formatK8sTime } from '../shared/utils';
-import { useClusterRoleBindingPage } from './ClusterRoleBinding';
-import {
-  CheckCircleOutlined,
-  ClearOutlined,
-  DeleteOutlined,
-  DeploymentUnitOutlined,
-  EditOutlined,
-  EyeOutlined,
-  FileAddOutlined,
-  FileTextOutlined,
-  FormatPainterOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-  TagsOutlined,
-  UserSwitchOutlined,
-} from '@ant-design/icons-vue';
-
-import { usePermission } from '#/utils/permission';
-
-const { can } = usePermission();
-
-const {
-  // state
-  clusters,
-  loading,
-  loadError,
-  clustersError,
-  clustersLoading,
-  searchText,
-  filterClusterId,
-  filterLabels,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
-  clustersTotal,
-
-  // modal state
-  isCreateModalVisible,
-  isCreateYamlModalVisible,
-  isEditModalVisible,
-  isDetailModalVisible,
-  isYamlModalVisible,
-  submitLoading,
-  detailLoading,
-
-  // operation targets
-  currentOperationClusterRoleBinding,
-  currentClusterRoleBindingDetail,
-
-  // form models
-  createFormModel,
-  editFormModel,
-  createYamlFormModel,
-  yamlFormModel,
-
-  // form refs
-  formRef,
-  editFormRef,
-  yamlFormRef,
-  createYamlFormRef,
-
-  // form rules
-  createFormRules,
-  editFormRules,
-  createYamlFormRules,
-  yamlFormRules,
-
-  // computed
-  filteredClusterRoleBindings,
-  rowSelection,
-
-  // helpers
-  getEnvText,
-
-  // operations
-  fetchClusters,
-  fetchClusterRoleBindings,
-  clearClusterRoleBindings,
-  loadMoreClusters,
-
-  // detail operations
-  showClusterRoleBindingDetail,
-  closeDetailModal,
-
-  // YAML operations
-  showYamlModal,
-  closeYamlModal,
-  submitYamlForm,
-
-  // create operations
-  openCreateModal,
-  closeCreateModal,
-  submitCreateForm,
-  openCreateYamlModal,
-  closeCreateYamlModal,
-  submitCreateYamlForm,
-
-  // edit operations
-  openEditModal,
-  closeEditModal,
-  submitEditForm,
-
-  // clusterRoleBinding operations
-  deleteClusterRoleBinding,
-
-  // filter operations
-  addFilterLabel,
-  removeFilterLabel,
-  clearFilterLabels,
-
-  // batch operations
-  batchOperation,
-
-  // pagination operations
-  handlePageChange,
-
-  // form field operations
-  addSubjectField,
-  removeSubjectField,
-  removeLabelField,
-  removeAnnotationField,
-  addEditSubjectField,
-  removeEditSubjectField,
-  removeEditLabelField,
-  removeEditAnnotationField,
-
-  // YAML utility functions
-  insertYamlTemplate,
-  formatYaml,
-  validateYaml,
-  clearYaml,
-  formatEditYaml,
-  validateEditYaml,
-} = useClusterRoleBindingPage();
-
-// 添加新标签/注解的方法
-const newLabelKey = ref('');
-const newAnnotationKey = ref('');
-const editLabelKey = ref('');
-const editAnnotationKey = ref('');
-
-const addNewLabel = () => {
-  if (newLabelKey.value && newLabelKey.value.trim()) {
-    createFormModel.value.labels[newLabelKey.value.trim()] = '';
-    newLabelKey.value = '';
-  }
-};
-
-const addNewAnnotation = () => {
-  if (newAnnotationKey.value && newAnnotationKey.value.trim()) {
-    createFormModel.value.annotations[newAnnotationKey.value.trim()] = '';
-    newAnnotationKey.value = '';
-  }
-};
-
-const addEditLabel = () => {
-  if (editLabelKey.value && editLabelKey.value.trim()) {
-    editFormModel.value.labels[editLabelKey.value.trim()] = '';
-    editLabelKey.value = '';
-  }
-};
-
-const addEditAnnotation = () => {
-  if (editAnnotationKey.value && editAnnotationKey.value.trim()) {
-    editFormModel.value.annotations[editAnnotationKey.value.trim()] = '';
-    editAnnotationKey.value = '';
-  }
-};
-
-// 格式化age显示
-const formatAge = (age: string, creationTimestamp?: string): string => {
-  if (age && age.trim() !== '') {
-    return age;
-  }
-
-  if (!creationTimestamp) {
-    return '-';
-  }
-
-  try {
-    const createTime = new Date(creationTimestamp);
-    const now = new Date();
-    const diff = now.getTime() - createTime.getTime();
-
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-    if (days > 365) {
-      const years = Math.floor(days / 365);
-      return `${years}年${days % 365}天`;
-    } else if (days > 30) {
-      const months = Math.floor(days / 30);
-      return `${months}月${days % 30}天`;
-    } else if (days > 0) {
-      return `${days}天${hours}小时`;
-    } else if (hours > 0) {
-      return `${hours}小时${minutes}分钟`;
-    } else if (minutes > 0) {
-      return `${minutes}分钟`;
-    } else {
-      return '刚刚';
-    }
-  } catch {
-    return '-';
-  }
-};
-
-// 注意：时间格式化函数已移至 shared/utils.ts，使用 formatK8sTime
-const formatCreationTime = formatK8sTime;
-
-const onSearch = () => {
-  currentPage.value = 1;
-  fetchClusterRoleBindings();
-};
-
-const handleClusterChange = () => {
-  currentPage.value = 1;
-  clearClusterRoleBindings();
-
-  if (filterClusterId.value) {
-    fetchClusterRoleBindings();
-  }
-};
-
-const handleTableChange = (pagination: {
-  current?: number;
-  pageSize?: number;
-}) => {
-  if (pagination) {
-    handlePageChange(
-      pagination.current || currentPage.value,
-      pagination.pageSize,
-    );
-  }
-};
-
-// 处理集群下拉选择的滚动事件
-const handleClusterDropdownScroll = (e: Event) => {
-  const { target } = e;
-  if (
-    target &&
-    'scrollTop' in target &&
-    'scrollHeight' in target &&
-    'clientHeight' in target
-  ) {
-    const scrollTarget = target as HTMLElement;
-    if (
-      scrollTarget.scrollTop + scrollTarget.clientHeight >=
-      scrollTarget.scrollHeight - 5
-    ) {
-      loadMoreClusters();
-    }
-  }
-};
-
-// 获取主体类型对应的颜色
-const getSubjectColor = (kind?: null | string) => {
-  if (!kind) return 'default';
-
-  switch (kind) {
-    case 'User': {
-      return 'blue';
-    }
-    case 'Group': {
-      return 'green';
-    }
-    case 'ServiceAccount': {
-      return 'orange';
-    }
-    default: {
-      return 'default';
-    }
-  }
-};
-
-const columns = [
-  {
-    title: '名称',
-    dataIndex: 'name',
-    key: 'name',
-    width: '18%',
-    ellipsis: true,
-    sorter: (a: any, b: any) => a.name.localeCompare(b.name),
-  },
-  {
-    title: '角色引用',
-    key: 'roleRef',
-    width: '22%',
-    ellipsis: true,
-  },
-  {
-    title: '主体',
-    key: 'subjects',
-    width: '25%',
-    ellipsis: true,
-  },
-  {
-    title: '标签',
-    dataIndex: 'labels',
-    key: 'labels',
-    width: '15%',
-    ellipsis: true,
-  },
-  {
-    title: '创建时间',
-    key: 'created_at',
-    width: '12%',
-    sorter: (a: any, b: any) => {
-      const timeA = new Date(a.created_at).getTime();
-      const timeB = new Date(b.created_at).getTime();
-      return timeA - timeB;
-    },
-  },
-  {
-    title: '操作',
-    key: 'actions',
-    width: '8%',
-    fixed: 'right',
-  },
-];
-
-// 标签过滤器状态
-const isLabelsFilterModalVisible = ref(false);
-const newFilterKey = ref('');
-const newFilterValue = ref('');
-
-// 标签过滤器操作
-const openLabelsFilter = () => {
-  isLabelsFilterModalVisible.value = true;
-};
-
-const closeLabelsFilterModal = () => {
-  isLabelsFilterModalVisible.value = false;
-  newFilterKey.value = '';
-  newFilterValue.value = '';
-};
-
-const addNewFilterLabel = () => {
-  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
-    addFilterLabel(newFilterKey.value.trim(), newFilterValue.value.trim());
-    newFilterKey.value = '';
-    newFilterValue.value = '';
-  }
-};
-
-const applyLabelsFilter = () => {
-  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
-    addNewFilterLabel();
-  }
-  closeLabelsFilterModal();
-};
-
-// 重置所有筛选条件
-const resetFilters = () => {
-  searchText.value = '';
-  filterClusterId.value = undefined;
-  clearFilterLabels();
-  currentPage.value = 1;
-  clearClusterRoleBindings();
-};
-
-onMounted(async () => {
-  await fetchClusters();
-});
-</script>
 
 <style scoped>
 @import '../shared/k8s-common.css';

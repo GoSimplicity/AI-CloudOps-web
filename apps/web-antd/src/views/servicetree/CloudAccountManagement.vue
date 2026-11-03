@@ -982,11 +982,11 @@ const closeDetails = () => {
           @click="showCreateModal"
           class="btn-create"
         >
-          <template #icon><plus-outlined /></template>
+          <template #icon><PlusOutlined /></template>
           <span class="btn-text">添加账户</span>
         </a-button>
         <a-button @click="exportToExcel(cloudAccounts)">
-          <export-outlined /> 导出当前页
+          <ExportOutlined /> 导出当前页
         </a-button> </a-space
       ><a-button :loading="loading" @click="fetchCloudAccounts()">
         刷新
@@ -1001,7 +1001,7 @@ const closeDetails = () => {
             <a-card class="stats-card">
               <a-statistic :value="pagination.total" title="匹配账户数">
                 <template #prefix>
-                  <cloud-outlined />
+                  <CloudOutlined />
                 </template>
               </a-statistic>
             </a-card>
@@ -1010,7 +1010,7 @@ const closeDetails = () => {
             <a-card class="stats-card">
               <a-statistic :value="enabledCount" title="本页已启用">
                 <template #prefix>
-                  <check-circle-outlined />
+                  <CheckCircleOutlined />
                 </template>
               </a-statistic>
             </a-card>
@@ -1019,7 +1019,7 @@ const closeDetails = () => {
             <a-card class="stats-card">
               <a-statistic :value="aliCloudCount" title="本页阿里云">
                 <template #prefix>
-                  <cloud-server-outlined />
+                  <CloudServerOutlined />
                 </template>
               </a-statistic>
             </a-card>
@@ -1028,7 +1028,7 @@ const closeDetails = () => {
             <a-card class="stats-card">
               <a-statistic :value="tencentAndAwsCount" title="本页腾讯云 / AWS">
                 <template #prefix>
-                  <global-outlined />
+                  <GlobalOutlined />
                 </template>
               </a-statistic>
             </a-card>
@@ -1049,7 +1049,7 @@ const closeDetails = () => {
             @change="handleSearchChange"
             @pressEnter="handleSearch"
           >
-            <template #prefix><search-outlined /></template>
+            <template #prefix><SearchOutlined /></template>
           </a-input>
         </a-form-item>
         <a-form-item label="云厂商">
@@ -1095,10 +1095,10 @@ const closeDetails = () => {
         <a-form-item>
           <a-space>
             <a-button type="primary" @click="handleSearch">
-              <search-outlined /> 查询
+              <SearchOutlined /> 查询
             </a-button>
             <a-button class="reset-btn" @click="resetFilter">
-              <clear-outlined /> 重置
+              <ClearOutlined /> 重置
             </a-button>
           </a-space>
         </a-form-item>
@@ -1145,7 +1145,7 @@ const closeDetails = () => {
                 :color="getProviderColor(record.provider)"
                 class="provider-tag"
               >
-                <cloud-outlined class="tag-icon" />
+                <CloudOutlined class="tag-icon" />
                 {{ getProviderText(record.provider) }}
               </a-tag>
             </template>
@@ -1153,7 +1153,7 @@ const closeDetails = () => {
             <!-- 地域列 -->
             <template v-else-if="column.key === 'region'">
               <div class="region-cell">
-                <environment-outlined class="region-icon" />
+                <EnvironmentOutlined class="region-icon" />
                 <a-space wrap>
                   <a-tag
                     v-for="region in record.regions ?? []"
@@ -1237,7 +1237,7 @@ const closeDetails = () => {
             <!-- 创建时间列 -->
             <template v-else-if="column.key === 'created_at'">
               <div class="date-cell">
-                <clock-circle-outlined class="date-icon" />
+                <ClockCircleOutlined class="date-icon" />
                 {{ formatDateTime(record.created_at) }}
               </div>
             </template>
@@ -1254,7 +1254,7 @@ const closeDetails = () => {
                     type="text"
                     @click="handleViewDetail(record)"
                   >
-                    <eye-outlined />
+                    <EyeOutlined />
                   </a-button>
                 </a-tooltip>
                 <a-tooltip
@@ -1270,7 +1270,7 @@ const closeDetails = () => {
                     :disabled="!isSupportedAccountProvider(record.provider)"
                     @click="handleEdit(record)"
                   >
-                    <edit-outlined />
+                    <EditOutlined />
                   </a-button>
                 </a-tooltip>
                 <a-tooltip
@@ -1286,7 +1286,7 @@ const closeDetails = () => {
                     "
                     @click="handleVerify(record)"
                   >
-                    <safety-certificate-outlined />
+                    <SafetyCertificateOutlined />
                   </a-button>
                 </a-tooltip>
                 <a-tooltip v-if="can('tree.cloudAccount.delete')" title="删除">
@@ -1297,7 +1297,7 @@ const closeDetails = () => {
                     danger
                     @click="handleDelete(record)"
                   >
-                    <delete-outlined />
+                    <DeleteOutlined />
                   </a-button>
                 </a-tooltip>
               </a-space>
@@ -1336,7 +1336,7 @@ const closeDetails = () => {
         layout="vertical"
       >
         <a-divider orientation="left">
-          <info-circle-outlined /> 基本信息
+          <InfoCircleOutlined /> 基本信息
         </a-divider>
         <a-row :gutter="16">
           <a-col :span="24">
@@ -1346,7 +1346,7 @@ const closeDetails = () => {
                 placeholder="请输入云账户名称"
                 size="large"
               >
-                <template #prefix><user-outlined /></template>
+                <template #prefix><UserOutlined /></template>
               </a-input>
             </a-form-item>
           </a-col>
@@ -1360,22 +1360,22 @@ const closeDetails = () => {
                 @change="changeProvider"
               >
                 <a-select-option :value="CloudProvider.AliCloud">
-                  <cloud-outlined /> 阿里云
+                  <CloudOutlined /> 阿里云
                 </a-select-option>
                 <a-select-option :value="CloudProvider.TencentCloud">
-                  <cloud-outlined /> 腾讯云
+                  <CloudOutlined /> 腾讯云
                 </a-select-option>
                 <a-select-option :value="CloudProvider.HuaweiCloud">
-                  <cloud-outlined /> 华为云
+                  <CloudOutlined /> 华为云
                 </a-select-option>
                 <a-select-option :value="CloudProvider.AWS">
-                  <cloud-outlined /> AWS
+                  <CloudOutlined /> AWS
                 </a-select-option>
                 <a-select-option :value="CloudProvider.Azure">
-                  <cloud-outlined /> Azure
+                  <CloudOutlined /> Azure
                 </a-select-option>
                 <a-select-option :value="CloudProvider.GCP">
-                  <cloud-outlined /> GCP
+                  <CloudOutlined /> GCP
                 </a-select-option>
               </a-select>
             </a-form-item>
@@ -1418,7 +1418,7 @@ const closeDetails = () => {
         </a-row>
 
         <a-divider orientation="left">
-          <safety-certificate-outlined /> 凭证配置
+          <SafetyCertificateOutlined /> 凭证配置
         </a-divider>
         <a-form-item
           v-if="
@@ -1479,7 +1479,7 @@ const closeDetails = () => {
                 placeholder="请输入 Access Key"
                 size="large"
               >
-                <template #prefix><key-outlined /></template>
+                <template #prefix><KeyOutlined /></template>
               </a-input>
             </a-form-item>
           </a-col>
@@ -1491,7 +1491,7 @@ const closeDetails = () => {
                 placeholder="请输入 Secret Key"
                 size="large"
               >
-                <template #prefix><lock-outlined /></template>
+                <template #prefix><LockOutlined /></template>
               </a-input-password>
             </a-form-item>
           </a-col>
@@ -1592,7 +1592,7 @@ const closeDetails = () => {
         </a-row>
 
         <a-divider orientation="left">
-          <tags-outlined /> 账户信息（可选）
+          <TagsOutlined /> 账户信息（可选）
         </a-divider>
         <a-row :gutter="16">
           <a-col :sm="12" :xs="24">
@@ -1806,7 +1806,7 @@ const closeDetails = () => {
                   "
                   @click="handleVerify(currentDetail)"
                 >
-                  <safety-certificate-outlined /> 验证凭证
+                  <SafetyCertificateOutlined /> 验证凭证
                 </a-button>
                 <a-button
                   v-if="
@@ -1818,7 +1818,7 @@ const closeDetails = () => {
                   "
                   @click="handleEdit(currentDetail)"
                 >
-                  <edit-outlined /> 编辑
+                  <EditOutlined /> 编辑
                 </a-button>
               </a-button-group>
               <a-button
@@ -1827,7 +1827,7 @@ const closeDetails = () => {
                 :disabled="!isSupportedAccountProvider(currentDetail.provider)"
                 @click="handleDelete(currentDetail)"
               >
-                <delete-outlined /> 删除
+                <DeleteOutlined /> 删除
               </a-button>
             </div>
           </div>

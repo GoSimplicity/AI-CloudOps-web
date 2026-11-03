@@ -1,425 +1,3 @@
-<template>
-  <OpsPage
-    class="rca-diagnosis"
-    description="按选择范围诊断，部分失败与未知状态单独显示"
-    title="快速诊断"
-  >
-    <!-- 页面头部 -->
-    <template #actions>
-      <a-button
-        :disabled="!isFormValid || loading"
-        :loading="loading"
-        size="large"
-        type="primary"
-        @click="refreshAllDiagnosis"
-      >
-        {{ loading ? '诊断中...' : '开始诊断' }}
-      </a-button>
-    </template>
-
-    <!-- 诊断参数配置 -->
-    <a-alert
-      v-if="diagnosisError"
-      :message="diagnosisError"
-      role="alert"
-      show-icon
-      type="error"
-    />
-    <div class="config-section">
-      <div class="section-header">
-        <h2>诊断配置</h2>
-        <a-tag :color="hasInitialData ? '#10b981' : '#f59e0b'">
-          {{ hasInitialData ? '已配置' : '待配置' }}
-        </a-tag>
-      </div>
-
-      <div class="config-grid">
-        <div class="config-item">
-          <label>命名空间</label>
-          <a-input
-            v-model:value="inputData.namespace"
-            :disabled="loading"
-            class="modern-input"
-            placeholder="输入K8s命名空间"
-          />
-        </div>
-        <div class="config-item">
-          <label>时间范围</label>
-          <a-select
-            v-model:value="timeRange"
-            :disabled="loading"
-            class="modern-select"
-          >
-            <a-select-option value="1">1小时</a-select-option>
-            <a-select-option value="6">6小时</a-select-option>
-            <a-select-option value="24">24小时</a-select-option>
-          </a-select>
-        </div>
-        <div class="config-item">
-          <label>诊断级别</label>
-          <a-radio-group
-            v-model:value="diagnosisLevel"
-            :disabled="loading"
-            button-style="solid"
-          >
-            <a-radio-button value="quick">快速</a-radio-button>
-            <a-radio-button value="standard">标准</a-radio-button>
-            <a-radio-button value="comprehensive">全面</a-radio-button>
-          </a-radio-group>
-        </div>
-        <div class="config-item">
-          <label>每30秒诊断（会重复调用分析服务）</label>
-          <div class="switch-container">
-            <a-switch
-              v-model:checked="autoRefresh"
-              @change="toggleAutoRefresh"
-            />
-            <span class="switch-label">{{
-              autoRefresh ? '已开启' : '已关闭'
-            }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <CollectionSummary
-      v-if="quickDiagnosisResult && !loading"
-      :collection="quickDiagnosisResult.collection"
-      :status="quickDiagnosisResult.status"
-    />
-
-    <!-- 核心指标卡片 -->
-    <div class="metrics-grid">
-      <div class="metric-card critical">
-        <div class="metric-icon"><Icon icon="mdi:alert-outline" /></div>
-        <div class="metric-info">
-          <div class="metric-value">
-            {{
-              quickUsable
-                ? getCriticalIssuesCount()
-                : quickDiagnosisResult
-                  ? '未知'
-                  : '待诊断'
-            }}
-          </div>
-          <div class="metric-label">关键问题</div>
-        </div>
-        <div
-          class="metric-trend"
-          :class="
-            !quickUsable
-              ? 'trend-unknown'
-              : getCriticalIssuesCount() > 0
-                ? 'trend-up'
-                : 'trend-stable'
-          "
-        >
-          {{
-            !quickUsable
-              ? '结果不可用'
-              : getCriticalIssuesCount() > 0
-                ? '需要关注'
-                : '本次未见关键问题'
-          }}
-        </div>
-      </div>
-
-      <div class="metric-card warning">
-        <div class="metric-icon"><Icon icon="mdi:alert-circle-outline" /></div>
-        <div class="metric-info">
-          <div class="metric-value">
-            {{
-              quickUsable
-                ? getWarningsCount()
-                : quickDiagnosisResult
-                  ? '未知'
-                  : '待诊断'
-            }}
-          </div>
-          <div class="metric-label">警告信息</div>
-        </div>
-        <div
-          class="metric-trend"
-          :class="
-            !quickUsable
-              ? 'trend-unknown'
-              : getWarningsCount() > 0
-                ? 'trend-warning'
-                : 'trend-stable'
-          "
-        >
-          {{
-            !quickUsable
-              ? '结果不可用'
-              : getWarningsCount() > 0
-                ? '存在警告'
-                : '本次无警告'
-          }}
-        </div>
-      </div>
-
-      <div class="metric-card errors">
-        <div class="metric-icon"><Icon icon="mdi:bug-outline" /></div>
-        <div class="metric-info">
-          <div class="metric-value">
-            {{ errorSummaryResult ? getTotalErrors() : '未查询' }}
-          </div>
-          <div class="metric-label">错误总数</div>
-        </div>
-        <div
-          class="metric-trend"
-          :class="
-            !errorSummaryResult
-              ? 'trend-unknown'
-              : getTotalErrors() > 100
-                ? 'trend-up'
-                : 'trend-stable'
-          "
-        >
-          过去{{ timeRange }}小时
-        </div>
-      </div>
-
-      <div class="metric-card health">
-        <div class="metric-icon">
-          <Icon icon="mdi:clipboard-check-outline" />
-        </div>
-        <div class="metric-info">
-          <div class="metric-value">
-            {{
-              quickDiagnosisResult
-                ? analysisStatus(quickDiagnosisResult.status).label
-                : '待诊断'
-            }}
-          </div>
-          <div class="metric-label">诊断状态</div>
-        </div>
-        <div class="metric-trend">以本次检查范围为准</div>
-      </div>
-    </div>
-
-    <!-- 诊断结果区域 -->
-    <div v-if="quickDiagnosisResult || loading" class="diagnosis-section">
-      <!-- 加载状态 -->
-      <div v-if="loading" class="loading-container">
-        <a-spin />
-        <p>正在等待服务返回实际结果，请稍候</p>
-      </div>
-
-      <!-- 诊断结果 -->
-      <div v-else-if="quickUsable" class="issues-container">
-        <!-- 关键问题 -->
-        <div class="issues-panel critical-panel">
-          <div class="panel-header">
-            <h3>关键问题</h3>
-            <span class="issue-count">{{
-              quickUsable
-                ? getCriticalIssuesCount()
-                : quickDiagnosisResult
-                  ? '未知'
-                  : '待诊断'
-            }}</span>
-          </div>
-          <div class="issues-list">
-            <div
-              v-for="(issue, index) in formattedCriticalIssues"
-              :key="index"
-              class="issue-item critical-item"
-            >
-              <div class="issue-header">
-                <span class="issue-type">{{ issue.type || 'unknown' }}</span>
-                <span class="issue-severity">{{
-                  issue.severity || 'critical'
-                }}</span>
-                <span v-if="issue.timestamp" class="issue-time">
-                  {{ formatShortTime(issue.timestamp) }}
-                </span>
-              </div>
-              <div class="issue-description">
-                {{ issue.description || issue }}
-              </div>
-              <div
-                class="issue-confidence"
-                v-if="Number.isFinite(issue.confidence)"
-              >
-                <div class="confidence-bar">
-                  <div
-                    :style="{ width: issue.confidence * 100 + '%' }"
-                    class="confidence-fill"
-                  ></div>
-                </div>
-                <span class="confidence-text"
-                  >{{ (issue.confidence * 100).toFixed(0) }}%</span
-                >
-              </div>
-            </div>
-            <div v-if="getCriticalIssuesCount() === 0" class="empty-state">
-              ✅ 未发现关键问题
-            </div>
-          </div>
-        </div>
-
-        <!-- 建议措施 -->
-        <div class="issues-panel recommendations-panel">
-          <div class="panel-header">
-            <h3>建议措施</h3>
-            <span class="issue-count">{{ getRecommendationsCount() }}</span>
-          </div>
-          <div class="recommendations-list">
-            <div
-              v-for="(rec, index) in quickDiagnosisResult?.recommendations ||
-              []"
-              :key="index"
-              class="recommendation-item"
-            >
-              <span class="rec-icon">💡</span>
-              <span class="rec-text">{{ rec }}</span>
-              <span class="rec-priority">P{{ index + 1 }}</span>
-            </div>
-            <div v-if="getRecommendationsCount() === 0" class="empty-state">
-              暂无建议
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 图表区域 -->
-    <a-alert
-      v-if="diagnosisFailures.length"
-      type="warning"
-      :message="`未完成：${diagnosisFailures.join('、')}。当前结果不代表完整健康检查。`"
-      show-icon
-    />
-    <div v-if="hasInitialData" class="charts-section">
-      <div class="chart-container">
-        <div class="chart-header">
-          <h3>本次诊断错误总量</h3>
-          <a-radio-group v-model:value="chartType" size="small">
-            <a-radio-button value="line">折线图</a-radio-button>
-            <a-radio-button value="bar">柱状图</a-radio-button>
-          </a-radio-group>
-        </div>
-        <div ref="errorTrendsChartRef" class="chart-content"></div>
-      </div>
-
-      <div class="chart-container">
-        <div class="chart-header">
-          <h3>错误分类统计</h3>
-        </div>
-        <div ref="errorCategoriesChartRef" class="chart-content"></div>
-      </div>
-    </div>
-
-    <!-- 根因分析详情 -->
-    <div v-if="rcaAnalysisResult" class="rca-section">
-      <div class="section-header">
-        <h2>根因分析</h2>
-        <a-tag v-if="rcaUsable" color="#6366f1">
-          置信度:
-          {{
-            Number.isFinite(rcaAnalysisResult.confidence_score)
-              ? (rcaAnalysisResult.confidence_score * 100).toFixed(1) + '%'
-              : '未知'
-          }}
-        </a-tag>
-      </div>
-
-      <CollectionSummary
-        :collection="rcaAnalysisResult.collection"
-        :status="rcaAnalysisResult.status"
-      />
-      <div v-if="rcaUsable" class="rca-content">
-        <div
-          v-for="(cause, index) in rcaAnalysisResult.root_causes"
-          :key="index"
-          class="root-cause-card"
-        >
-          <div class="cause-header">
-            <span class="cause-type">{{ cause.cause_type || 'unknown' }}</span>
-            <div class="cause-confidence">
-              <div class="confidence-mini-bar">
-                <div
-                  :style="{ width: cause.confidence * 100 + '%' }"
-                  class="confidence-mini-fill"
-                ></div>
-              </div>
-            </div>
-          </div>
-          <p class="cause-description">{{ cause.description || '暂无描述' }}</p>
-          <div
-            v-if="cause.affected_components?.length"
-            class="cause-components"
-          >
-            <span class="components-label">影响组件:</span>
-            <a-tag
-              v-for="comp in cause.affected_components"
-              :key="comp"
-              size="small"
-            >
-              {{ comp }}
-            </a-tag>
-          </div>
-          <div
-            v-if="cause.recommendations?.length"
-            class="cause-recommendations"
-          >
-            <span class="components-label">建议:</span>
-            <div class="rec-list">
-              <div
-                v-for="(rec, recIndex) in cause.recommendations"
-                :key="recIndex"
-                class="rec-item"
-              >
-                {{ rec }}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 系统摘要 -->
-    <div v-if="hasInitialData" class="summary-section">
-      <div class="summary-grid">
-        <div class="summary-item">
-          <span class="summary-label">命名空间</span>
-          <span class="summary-value">{{
-            diagnosisContext?.namespace || '未知'
-          }}</span>
-        </div>
-        <div class="summary-item">
-          <span class="summary-label">分析时间</span>
-          <span class="summary-value">{{ getCurrentTime() }}</span>
-        </div>
-        <div class="summary-item">
-          <span class="summary-label">时间范围</span>
-          <span class="summary-value"
-            >{{ diagnosisContext?.hours ?? '未知' }}小时</span
-          >
-        </div>
-        <div class="summary-item">
-          <span class="summary-label">诊断状态</span>
-          <span class="summary-value">{{
-            quickDiagnosisResult
-              ? analysisStatus(quickDiagnosisResult.status).label
-              : '未知'
-          }}</span>
-        </div>
-        <div
-          v-if="quickDiagnosisResult?.analysis_duration"
-          class="summary-item"
-        >
-          <span class="summary-label">分析耗时</span>
-          <span class="summary-value"
-            >{{ quickDiagnosisResult.analysis_duration }}ms</span
-          >
-        </div>
-      </div>
-    </div>
-  </OpsPage>
-</template>
-
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import CollectionSummary from './CollectionSummary.vue';
@@ -922,6 +500,428 @@ onUnmounted(() => {
   }
 });
 </script>
+
+<template>
+  <OpsPage
+    class="rca-diagnosis"
+    description="按选择范围诊断，部分失败与未知状态单独显示"
+    title="快速诊断"
+  >
+    <!-- 页面头部 -->
+    <template #actions>
+      <a-button
+        :disabled="!isFormValid || loading"
+        :loading="loading"
+        size="large"
+        type="primary"
+        @click="refreshAllDiagnosis"
+      >
+        {{ loading ? '诊断中...' : '开始诊断' }}
+      </a-button>
+    </template>
+
+    <!-- 诊断参数配置 -->
+    <a-alert
+      v-if="diagnosisError"
+      :message="diagnosisError"
+      role="alert"
+      show-icon
+      type="error"
+    />
+    <div class="config-section">
+      <div class="section-header">
+        <h2>诊断配置</h2>
+        <a-tag :color="hasInitialData ? '#10b981' : '#f59e0b'">
+          {{ hasInitialData ? '已配置' : '待配置' }}
+        </a-tag>
+      </div>
+
+      <div class="config-grid">
+        <div class="config-item">
+          <label>命名空间</label>
+          <a-input
+            v-model:value="inputData.namespace"
+            :disabled="loading"
+            class="modern-input"
+            placeholder="输入K8s命名空间"
+          />
+        </div>
+        <div class="config-item">
+          <label>时间范围</label>
+          <a-select
+            v-model:value="timeRange"
+            :disabled="loading"
+            class="modern-select"
+          >
+            <a-select-option value="1">1小时</a-select-option>
+            <a-select-option value="6">6小时</a-select-option>
+            <a-select-option value="24">24小时</a-select-option>
+          </a-select>
+        </div>
+        <div class="config-item">
+          <label>诊断级别</label>
+          <a-radio-group
+            v-model:value="diagnosisLevel"
+            :disabled="loading"
+            button-style="solid"
+          >
+            <a-radio-button value="quick">快速</a-radio-button>
+            <a-radio-button value="standard">标准</a-radio-button>
+            <a-radio-button value="comprehensive">全面</a-radio-button>
+          </a-radio-group>
+        </div>
+        <div class="config-item">
+          <label>每30秒诊断（会重复调用分析服务）</label>
+          <div class="switch-container">
+            <a-switch
+              v-model:checked="autoRefresh"
+              @change="toggleAutoRefresh"
+            />
+            <span class="switch-label">{{
+              autoRefresh ? '已开启' : '已关闭'
+            }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <CollectionSummary
+      v-if="quickDiagnosisResult && !loading"
+      :collection="quickDiagnosisResult.collection"
+      :status="quickDiagnosisResult.status"
+    />
+
+    <!-- 核心指标卡片 -->
+    <div class="metrics-grid">
+      <div class="metric-card critical">
+        <div class="metric-icon"><Icon icon="mdi:alert-outline" /></div>
+        <div class="metric-info">
+          <div class="metric-value">
+            {{
+              quickUsable
+                ? getCriticalIssuesCount()
+                : quickDiagnosisResult
+                  ? '未知'
+                  : '待诊断'
+            }}
+          </div>
+          <div class="metric-label">关键问题</div>
+        </div>
+        <div
+          class="metric-trend"
+          :class="
+            !quickUsable
+              ? 'trend-unknown'
+              : getCriticalIssuesCount() > 0
+                ? 'trend-up'
+                : 'trend-stable'
+          "
+        >
+          {{
+            !quickUsable
+              ? '结果不可用'
+              : getCriticalIssuesCount() > 0
+                ? '需要关注'
+                : '本次未见关键问题'
+          }}
+        </div>
+      </div>
+
+      <div class="metric-card warning">
+        <div class="metric-icon"><Icon icon="mdi:alert-circle-outline" /></div>
+        <div class="metric-info">
+          <div class="metric-value">
+            {{
+              quickUsable
+                ? getWarningsCount()
+                : quickDiagnosisResult
+                  ? '未知'
+                  : '待诊断'
+            }}
+          </div>
+          <div class="metric-label">警告信息</div>
+        </div>
+        <div
+          class="metric-trend"
+          :class="
+            !quickUsable
+              ? 'trend-unknown'
+              : getWarningsCount() > 0
+                ? 'trend-warning'
+                : 'trend-stable'
+          "
+        >
+          {{
+            !quickUsable
+              ? '结果不可用'
+              : getWarningsCount() > 0
+                ? '存在警告'
+                : '本次无警告'
+          }}
+        </div>
+      </div>
+
+      <div class="metric-card errors">
+        <div class="metric-icon"><Icon icon="mdi:bug-outline" /></div>
+        <div class="metric-info">
+          <div class="metric-value">
+            {{ errorSummaryResult ? getTotalErrors() : '未查询' }}
+          </div>
+          <div class="metric-label">错误总数</div>
+        </div>
+        <div
+          class="metric-trend"
+          :class="
+            !errorSummaryResult
+              ? 'trend-unknown'
+              : getTotalErrors() > 100
+                ? 'trend-up'
+                : 'trend-stable'
+          "
+        >
+          过去{{ timeRange }}小时
+        </div>
+      </div>
+
+      <div class="metric-card health">
+        <div class="metric-icon">
+          <Icon icon="mdi:clipboard-check-outline" />
+        </div>
+        <div class="metric-info">
+          <div class="metric-value">
+            {{
+              quickDiagnosisResult
+                ? analysisStatus(quickDiagnosisResult.status).label
+                : '待诊断'
+            }}
+          </div>
+          <div class="metric-label">诊断状态</div>
+        </div>
+        <div class="metric-trend">以本次检查范围为准</div>
+      </div>
+    </div>
+
+    <!-- 诊断结果区域 -->
+    <div v-if="quickDiagnosisResult || loading" class="diagnosis-section">
+      <!-- 加载状态 -->
+      <div v-if="loading" class="loading-container">
+        <a-spin />
+        <p>正在等待服务返回实际结果，请稍候</p>
+      </div>
+
+      <!-- 诊断结果 -->
+      <div v-else-if="quickUsable" class="issues-container">
+        <!-- 关键问题 -->
+        <div class="issues-panel critical-panel">
+          <div class="panel-header">
+            <h3>关键问题</h3>
+            <span class="issue-count">{{
+              quickUsable
+                ? getCriticalIssuesCount()
+                : quickDiagnosisResult
+                  ? '未知'
+                  : '待诊断'
+            }}</span>
+          </div>
+          <div class="issues-list">
+            <div
+              v-for="(issue, index) in formattedCriticalIssues"
+              :key="index"
+              class="issue-item critical-item"
+            >
+              <div class="issue-header">
+                <span class="issue-type">{{ issue.type || 'unknown' }}</span>
+                <span class="issue-severity">{{
+                  issue.severity || 'critical'
+                }}</span>
+                <span v-if="issue.timestamp" class="issue-time">
+                  {{ formatShortTime(issue.timestamp) }}
+                </span>
+              </div>
+              <div class="issue-description">
+                {{ issue.description || issue }}
+              </div>
+              <div
+                class="issue-confidence"
+                v-if="Number.isFinite(issue.confidence)"
+              >
+                <div class="confidence-bar">
+                  <div
+                    :style="{ width: issue.confidence * 100 + '%' }"
+                    class="confidence-fill"
+                  ></div>
+                </div>
+                <span class="confidence-text"
+                  >{{ (issue.confidence * 100).toFixed(0) }}%</span
+                >
+              </div>
+            </div>
+            <div v-if="getCriticalIssuesCount() === 0" class="empty-state">
+              ✅ 未发现关键问题
+            </div>
+          </div>
+        </div>
+
+        <!-- 建议措施 -->
+        <div class="issues-panel recommendations-panel">
+          <div class="panel-header">
+            <h3>建议措施</h3>
+            <span class="issue-count">{{ getRecommendationsCount() }}</span>
+          </div>
+          <div class="recommendations-list">
+            <div
+              v-for="(rec, index) in quickDiagnosisResult?.recommendations ||
+              []"
+              :key="index"
+              class="recommendation-item"
+            >
+              <span class="rec-icon">💡</span>
+              <span class="rec-text">{{ rec }}</span>
+              <span class="rec-priority">P{{ index + 1 }}</span>
+            </div>
+            <div v-if="getRecommendationsCount() === 0" class="empty-state">
+              暂无建议
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 图表区域 -->
+    <a-alert
+      v-if="diagnosisFailures.length"
+      type="warning"
+      :message="`未完成：${diagnosisFailures.join('、')}。当前结果不代表完整健康检查。`"
+      show-icon
+    />
+    <div v-if="hasInitialData" class="charts-section">
+      <div class="chart-container">
+        <div class="chart-header">
+          <h3>本次诊断错误总量</h3>
+          <a-radio-group v-model:value="chartType" size="small">
+            <a-radio-button value="line">折线图</a-radio-button>
+            <a-radio-button value="bar">柱状图</a-radio-button>
+          </a-radio-group>
+        </div>
+        <div ref="errorTrendsChartRef" class="chart-content"></div>
+      </div>
+
+      <div class="chart-container">
+        <div class="chart-header">
+          <h3>错误分类统计</h3>
+        </div>
+        <div ref="errorCategoriesChartRef" class="chart-content"></div>
+      </div>
+    </div>
+
+    <!-- 根因分析详情 -->
+    <div v-if="rcaAnalysisResult" class="rca-section">
+      <div class="section-header">
+        <h2>根因分析</h2>
+        <a-tag v-if="rcaUsable" color="#6366f1">
+          置信度:
+          {{
+            Number.isFinite(rcaAnalysisResult.confidence_score)
+              ? (rcaAnalysisResult.confidence_score * 100).toFixed(1) + '%'
+              : '未知'
+          }}
+        </a-tag>
+      </div>
+
+      <CollectionSummary
+        :collection="rcaAnalysisResult.collection"
+        :status="rcaAnalysisResult.status"
+      />
+      <div v-if="rcaUsable" class="rca-content">
+        <div
+          v-for="(cause, index) in rcaAnalysisResult.root_causes"
+          :key="index"
+          class="root-cause-card"
+        >
+          <div class="cause-header">
+            <span class="cause-type">{{ cause.cause_type || 'unknown' }}</span>
+            <div class="cause-confidence">
+              <div class="confidence-mini-bar">
+                <div
+                  :style="{ width: cause.confidence * 100 + '%' }"
+                  class="confidence-mini-fill"
+                ></div>
+              </div>
+            </div>
+          </div>
+          <p class="cause-description">{{ cause.description || '暂无描述' }}</p>
+          <div
+            v-if="cause.affected_components?.length"
+            class="cause-components"
+          >
+            <span class="components-label">影响组件:</span>
+            <a-tag
+              v-for="comp in cause.affected_components"
+              :key="comp"
+              size="small"
+            >
+              {{ comp }}
+            </a-tag>
+          </div>
+          <div
+            v-if="cause.recommendations?.length"
+            class="cause-recommendations"
+          >
+            <span class="components-label">建议:</span>
+            <div class="rec-list">
+              <div
+                v-for="(rec, recIndex) in cause.recommendations"
+                :key="recIndex"
+                class="rec-item"
+              >
+                {{ rec }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 系统摘要 -->
+    <div v-if="hasInitialData" class="summary-section">
+      <div class="summary-grid">
+        <div class="summary-item">
+          <span class="summary-label">命名空间</span>
+          <span class="summary-value">{{
+            diagnosisContext?.namespace || '未知'
+          }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">分析时间</span>
+          <span class="summary-value">{{ getCurrentTime() }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">时间范围</span>
+          <span class="summary-value"
+            >{{ diagnosisContext?.hours ?? '未知' }}小时</span
+          >
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">诊断状态</span>
+          <span class="summary-value">{{
+            quickDiagnosisResult
+              ? analysisStatus(quickDiagnosisResult.status).label
+              : '未知'
+          }}</span>
+        </div>
+        <div
+          v-if="quickDiagnosisResult?.analysis_duration"
+          class="summary-item"
+        >
+          <span class="summary-label">分析耗时</span>
+          <span class="summary-value"
+            >{{ quickDiagnosisResult.analysis_duration }}ms</span
+          >
+        </div>
+      </div>
+    </div>
+  </OpsPage>
+</template>
 
 <style scoped>
 .trend-unknown {

@@ -1,190 +1,3 @@
-<template>
-  <OpsPage
-    class="info-container"
-    description="查看初始化状态、能力说明与服务配置"
-    title="服务信息"
-  >
-    <!-- 页面头部 -->
-    <template #actions>
-      <a-button
-        v-if="can('aiops.assistant.clearCache')"
-        :loading="clearingCache"
-        :disabled="clearingCache"
-        title="清除服务查询缓存，保留知识文档与会话记录"
-        @click="clearServiceCache"
-      >
-        清除服务缓存
-      </a-button>
-      <a-button
-        :loading="loading || configLoading"
-        type="primary"
-        @click="refreshInfo"
-      >
-        <template #icon>
-          <ReloadOutlined />
-        </template>
-        刷新信息
-      </a-button>
-    </template>
-
-    <a-alert
-      v-if="loadError"
-      :message="loadError"
-      role="alert"
-      show-icon
-      type="error"
-    >
-      <template #action>
-        <a-button :loading="loading || configLoading" @click="refreshInfo">
-          重试
-        </a-button>
-      </template>
-    </a-alert>
-    <div class="info-content">
-      <!-- 服务状态概览 -->
-      <div class="status-overview">
-        <a-card class="status-card">
-          <div class="status-item">
-            <div
-              class="status-icon"
-              :class="{ online: serviceInfo.status === 'initialized' }"
-            >
-              <CheckCircleOutlined
-                v-if="serviceInfo.status === 'initialized'"
-              />
-              <CloseCircleOutlined v-else />
-            </div>
-            <div class="status-content">
-              <div class="status-title">初始化状态</div>
-              <div class="status-value" :class="serviceInfo.status">
-                {{ getStatusText(serviceInfo.status || '') }}
-              </div>
-            </div>
-          </div>
-        </a-card>
-      </div>
-
-      <!-- 服务基本信息 -->
-      <a-card :loading="loading" class="info-card" title="基本信息">
-        <a-descriptions :column="{ xs: 1, md: 2 }" bordered>
-          <a-descriptions-item label="服务名称">
-            <a-tag color="blue">{{ serviceInfo.service || '未知' }}</a-tag>
-          </a-descriptions-item>
-          <a-descriptions-item label="服务版本">
-            <a-tag color="green">{{ serviceInfo.version || '未知' }}</a-tag>
-          </a-descriptions-item>
-          <a-descriptions-item label="服务描述">
-            {{ serviceInfo.description || '暂无描述' }}
-          </a-descriptions-item>
-          <a-descriptions-item label="约束条件">
-            <div v-if="serviceInfo.constraints">
-              <a-tag
-                v-for="(value, key) in serviceInfo.constraints"
-                :key="key"
-                class="constraint-tag"
-              >
-                {{ key }}: {{ value }}
-              </a-tag>
-            </div>
-            <span v-else class="text-muted">无特殊约束</span>
-          </a-descriptions-item>
-        </a-descriptions>
-      </a-card>
-
-      <!-- 服务能力 -->
-      <a-card :loading="loading" class="info-card" title="服务能力">
-        <div
-          v-if="serviceInfo.capabilities && serviceInfo.capabilities.length > 0"
-          class="capabilities-grid"
-        >
-          <div
-            v-for="capability in serviceInfo.capabilities"
-            :key="capability"
-            class="capability-item"
-          >
-            <div class="capability-icon">
-              <ThunderboltOutlined />
-            </div>
-            <div class="capability-text">{{ capability }}</div>
-          </div>
-        </div>
-        <div v-else class="empty-capabilities">
-          <a-empty description="暂无能力信息" />
-        </div>
-      </a-card>
-
-      <!-- API 端点 -->
-      <a-card :loading="loading" class="info-card" title="API 端点">
-        <div
-          v-if="
-            serviceInfo.endpoints &&
-            Object.keys(serviceInfo.endpoints).length > 0
-          "
-        >
-          <div
-            v-for="(url, name) in serviceInfo.endpoints"
-            :key="name"
-            class="endpoint-item"
-          >
-            <div class="endpoint-header">
-              <a-tag color="purple">{{ name }}</a-tag>
-              <a-button size="small" type="link" @click="copyToClipboard(url)">
-                <template #icon>
-                  <CopyOutlined />
-                </template>
-                复制
-              </a-button>
-            </div>
-            <div class="endpoint-url">{{ url }}</div>
-          </div>
-        </div>
-        <div v-else class="empty-endpoints">
-          <a-empty description="暂无端点信息" />
-        </div>
-      </a-card>
-
-      <!-- 配置信息 -->
-      <a-card :loading="configLoading" class="info-card" title="配置参数">
-        <div
-          v-if="configInfo.config && Object.keys(configInfo.config).length > 0"
-        >
-          <a-collapse v-model:activeKey="activeConfigKeys" ghost>
-            <a-collapse-panel
-              v-for="(value, key) in configInfo.config"
-              :key="key"
-              :header="key"
-            >
-              <div class="config-content">
-                <pre class="config-value">{{ formatConfigValue(value) }}</pre>
-              </div>
-            </a-collapse-panel>
-          </a-collapse>
-        </div>
-        <div v-else class="empty-config">
-          <a-empty description="暂无配置信息" />
-        </div>
-
-        <div
-          v-if="configInfo.version || configInfo.timestamp"
-          class="config-meta"
-        >
-          <a-divider />
-          <div class="meta-info">
-            <span v-if="configInfo.version" class="meta-item">
-              <CalendarOutlined />
-              版本: {{ configInfo.version }}
-            </span>
-            <span v-if="configInfo.timestamp" class="meta-item">
-              <ClockCircleOutlined />
-              更新时间: {{ formatTimestamp(configInfo.timestamp) }}
-            </span>
-          </div>
-        </div>
-      </a-card>
-    </div>
-  </OpsPage>
-</template>
-
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
@@ -372,6 +185,193 @@ onMounted(() => {
   refreshInfo();
 });
 </script>
+
+<template>
+  <OpsPage
+    class="info-container"
+    description="查看初始化状态、能力说明与服务配置"
+    title="服务信息"
+  >
+    <!-- 页面头部 -->
+    <template #actions>
+      <a-button
+        v-if="can('aiops.assistant.clearCache')"
+        :loading="clearingCache"
+        :disabled="clearingCache"
+        title="清除服务查询缓存，保留知识文档与会话记录"
+        @click="clearServiceCache"
+      >
+        清除服务缓存
+      </a-button>
+      <a-button
+        :loading="loading || configLoading"
+        type="primary"
+        @click="refreshInfo"
+      >
+        <template #icon>
+          <ReloadOutlined />
+        </template>
+        刷新信息
+      </a-button>
+    </template>
+
+    <a-alert
+      v-if="loadError"
+      :message="loadError"
+      role="alert"
+      show-icon
+      type="error"
+    >
+      <template #action>
+        <a-button :loading="loading || configLoading" @click="refreshInfo">
+          重试
+        </a-button>
+      </template>
+    </a-alert>
+    <div class="info-content">
+      <!-- 服务状态概览 -->
+      <div class="status-overview">
+        <a-card class="status-card">
+          <div class="status-item">
+            <div
+              class="status-icon"
+              :class="{ online: serviceInfo.status === 'initialized' }"
+            >
+              <CheckCircleOutlined
+                v-if="serviceInfo.status === 'initialized'"
+              />
+              <CloseCircleOutlined v-else />
+            </div>
+            <div class="status-content">
+              <div class="status-title">初始化状态</div>
+              <div class="status-value" :class="serviceInfo.status">
+                {{ getStatusText(serviceInfo.status || '') }}
+              </div>
+            </div>
+          </div>
+        </a-card>
+      </div>
+
+      <!-- 服务基本信息 -->
+      <a-card :loading="loading" class="info-card" title="基本信息">
+        <a-descriptions :column="{ xs: 1, md: 2 }" bordered>
+          <a-descriptions-item label="服务名称">
+            <a-tag color="blue">{{ serviceInfo.service || '未知' }}</a-tag>
+          </a-descriptions-item>
+          <a-descriptions-item label="服务版本">
+            <a-tag color="green">{{ serviceInfo.version || '未知' }}</a-tag>
+          </a-descriptions-item>
+          <a-descriptions-item label="服务描述">
+            {{ serviceInfo.description || '暂无描述' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="约束条件">
+            <div v-if="serviceInfo.constraints">
+              <a-tag
+                v-for="(value, key) in serviceInfo.constraints"
+                :key="key"
+                class="constraint-tag"
+              >
+                {{ key }}: {{ value }}
+              </a-tag>
+            </div>
+            <span v-else class="text-muted">无特殊约束</span>
+          </a-descriptions-item>
+        </a-descriptions>
+      </a-card>
+
+      <!-- 服务能力 -->
+      <a-card :loading="loading" class="info-card" title="服务能力">
+        <div
+          v-if="serviceInfo.capabilities && serviceInfo.capabilities.length > 0"
+          class="capabilities-grid"
+        >
+          <div
+            v-for="capability in serviceInfo.capabilities"
+            :key="capability"
+            class="capability-item"
+          >
+            <div class="capability-icon">
+              <ThunderboltOutlined />
+            </div>
+            <div class="capability-text">{{ capability }}</div>
+          </div>
+        </div>
+        <div v-else class="empty-capabilities">
+          <a-empty description="暂无能力信息" />
+        </div>
+      </a-card>
+
+      <!-- API 端点 -->
+      <a-card :loading="loading" class="info-card" title="API 端点">
+        <div
+          v-if="
+            serviceInfo.endpoints &&
+            Object.keys(serviceInfo.endpoints).length > 0
+          "
+        >
+          <div
+            v-for="(url, name) in serviceInfo.endpoints"
+            :key="name"
+            class="endpoint-item"
+          >
+            <div class="endpoint-header">
+              <a-tag color="purple">{{ name }}</a-tag>
+              <a-button size="small" type="link" @click="copyToClipboard(url)">
+                <template #icon>
+                  <CopyOutlined />
+                </template>
+                复制
+              </a-button>
+            </div>
+            <div class="endpoint-url">{{ url }}</div>
+          </div>
+        </div>
+        <div v-else class="empty-endpoints">
+          <a-empty description="暂无端点信息" />
+        </div>
+      </a-card>
+
+      <!-- 配置信息 -->
+      <a-card :loading="configLoading" class="info-card" title="配置参数">
+        <div
+          v-if="configInfo.config && Object.keys(configInfo.config).length > 0"
+        >
+          <a-collapse v-model:activeKey="activeConfigKeys" ghost>
+            <a-collapse-panel
+              v-for="(value, key) in configInfo.config"
+              :key="key"
+              :header="key"
+            >
+              <div class="config-content">
+                <pre class="config-value">{{ formatConfigValue(value) }}</pre>
+              </div>
+            </a-collapse-panel>
+          </a-collapse>
+        </div>
+        <div v-else class="empty-config">
+          <a-empty description="暂无配置信息" />
+        </div>
+
+        <div
+          v-if="configInfo.version || configInfo.timestamp"
+          class="config-meta"
+        >
+          <a-divider />
+          <div class="meta-info">
+            <span v-if="configInfo.version" class="meta-item">
+              <CalendarOutlined />
+              版本: {{ configInfo.version }}
+            </span>
+            <span v-if="configInfo.timestamp" class="meta-item">
+              <ClockCircleOutlined />
+              更新时间: {{ formatTimestamp(configInfo.timestamp) }}
+            </span>
+          </div>
+        </div>
+      </a-card>
+    </div>
+  </OpsPage>
+</template>
 
 <style scoped>
 /* 页面头部 */

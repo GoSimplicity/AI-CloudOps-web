@@ -1,132 +1,3 @@
-<template>
-  <div class="process-basic-config">
-    <a-form
-      ref="formRef"
-      :model="formData"
-      :rules="formRules"
-      layout="vertical"
-    >
-      <a-row :gutter="16">
-        <a-col :span="12">
-          <a-form-item label="流程名称" name="name">
-            <a-input
-              v-model:value="formData.name"
-              placeholder="请输入流程名称"
-            />
-          </a-form-item>
-        </a-col>
-        <a-col :span="12">
-          <a-form-item label="关联表单" name="form_design_id">
-            <a-select
-              v-model:value="formData.form_design_id"
-              :filter-option="false"
-              :loading="formSelectorLoading"
-              :not-found-content="formSelectorLoading ? undefined : '无数据'"
-              allow-clear
-              option-label-prop="children"
-              placeholder="请选择关联表单"
-              show-search
-              style="width: 100%"
-              @dropdown-visible-change="handleFormDropdownChange"
-              @search="handleFormSearch"
-            >
-              <a-select-option
-                v-for="form in forms"
-                :key="form.id"
-                :value="form.id"
-              >
-                {{ form.name }}
-              </a-select-option>
-            </a-select>
-            <div class="field-hint">
-              <InfoCircleOutlined /> 只能选择已发布的表单设计
-            </div>
-          </a-form-item>
-        </a-col>
-      </a-row>
-
-      <a-row :gutter="16">
-        <a-col :span="8">
-          <a-form-item label="分类" name="category_id">
-            <a-select
-              v-model:value="formData.category_id"
-              :filter-option="false"
-              :loading="categorySelectorLoading"
-              :not-found-content="
-                categorySelectorLoading ? undefined : '无数据'
-              "
-              allow-clear
-              option-label-prop="children"
-              placeholder="请选择分类"
-              show-search
-              style="width: 100%"
-              @dropdown-visible-change="handleCategoryDropdownChange"
-              @search="handleCategorySearch"
-            >
-              <a-select-option
-                v-for="cat in categories"
-                :key="cat.id"
-                :value="cat.id"
-              >
-                {{ cat.name }}
-              </a-select-option>
-            </a-select>
-          </a-form-item>
-        </a-col>
-        <a-col :span="8">
-          <a-form-item label="状态" name="status">
-            <a-radio-group v-model:value="formData.status">
-              <a-radio :value="ProcessStatus.Draft">草稿</a-radio>
-              <a-radio :value="ProcessStatus.Published">已发布</a-radio>
-              <a-radio :value="ProcessStatus.Archived">已归档</a-radio>
-            </a-radio-group>
-          </a-form-item>
-        </a-col>
-        <a-col :span="8">
-          <a-form-item label="默认流程">
-            <a-checkbox
-              :checked="formData.is_default === 1"
-              @change="handleDefaultChange"
-            >
-              设为默认流程
-            </a-checkbox>
-          </a-form-item>
-        </a-col>
-      </a-row>
-
-      <a-form-item label="描述" name="description">
-        <a-textarea
-          v-model:value="formData.description"
-          :rows="3"
-          placeholder="请输入流程描述"
-        />
-      </a-form-item>
-
-      <a-form-item label="标签" name="tags">
-        <a-select
-          v-model:value="formData.tags"
-          :token-separators="[',']"
-          mode="tags"
-          placeholder="输入标签后按回车添加"
-          style="width: 100%"
-        />
-      </a-form-item>
-
-      <a-form-item label="流程定义" name="definition">
-        <a-textarea
-          v-model:value="definitionJsonString"
-          :class="{ 'json-error': jsonError }"
-          :rows="8"
-          placeholder="请粘贴流程设计的JSON定义"
-        />
-        <div v-if="jsonError" class="json-error-message">
-          {{ jsonError }}
-        </div>
-      </a-form-item>
-    </a-form>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { InfoCircleOutlined } from '@ant-design/icons-vue';
@@ -354,6 +225,135 @@ onMounted(async () => {
   await Promise.all([loadForms(), loadCategories()]);
 });
 </script>
+
+<template>
+  <div class="process-basic-config">
+    <a-form
+      ref="formRef"
+      :model="formData"
+      :rules="formRules"
+      layout="vertical"
+    >
+      <a-row :gutter="16">
+        <a-col :span="12">
+          <a-form-item label="流程名称" name="name">
+            <a-input
+              v-model:value="formData.name"
+              placeholder="请输入流程名称"
+            />
+          </a-form-item>
+        </a-col>
+        <a-col :span="12">
+          <a-form-item label="关联表单" name="form_design_id">
+            <a-select
+              v-model:value="formData.form_design_id"
+              :filter-option="false"
+              :loading="formSelectorLoading"
+              :not-found-content="formSelectorLoading ? undefined : '无数据'"
+              allow-clear
+              option-label-prop="children"
+              placeholder="请选择关联表单"
+              show-search
+              style="width: 100%"
+              @dropdown-visible-change="handleFormDropdownChange"
+              @search="handleFormSearch"
+            >
+              <a-select-option
+                v-for="form in forms"
+                :key="form.id"
+                :value="form.id"
+              >
+                {{ form.name }}
+              </a-select-option>
+            </a-select>
+            <div class="field-hint">
+              <InfoCircleOutlined /> 只能选择已发布的表单设计
+            </div>
+          </a-form-item>
+        </a-col>
+      </a-row>
+
+      <a-row :gutter="16">
+        <a-col :span="8">
+          <a-form-item label="分类" name="category_id">
+            <a-select
+              v-model:value="formData.category_id"
+              :filter-option="false"
+              :loading="categorySelectorLoading"
+              :not-found-content="
+                categorySelectorLoading ? undefined : '无数据'
+              "
+              allow-clear
+              option-label-prop="children"
+              placeholder="请选择分类"
+              show-search
+              style="width: 100%"
+              @dropdown-visible-change="handleCategoryDropdownChange"
+              @search="handleCategorySearch"
+            >
+              <a-select-option
+                v-for="cat in categories"
+                :key="cat.id"
+                :value="cat.id"
+              >
+                {{ cat.name }}
+              </a-select-option>
+            </a-select>
+          </a-form-item>
+        </a-col>
+        <a-col :span="8">
+          <a-form-item label="状态" name="status">
+            <a-radio-group v-model:value="formData.status">
+              <a-radio :value="ProcessStatus.Draft">草稿</a-radio>
+              <a-radio :value="ProcessStatus.Published">已发布</a-radio>
+              <a-radio :value="ProcessStatus.Archived">已归档</a-radio>
+            </a-radio-group>
+          </a-form-item>
+        </a-col>
+        <a-col :span="8">
+          <a-form-item label="默认流程">
+            <a-checkbox
+              :checked="formData.is_default === 1"
+              @change="handleDefaultChange"
+            >
+              设为默认流程
+            </a-checkbox>
+          </a-form-item>
+        </a-col>
+      </a-row>
+
+      <a-form-item label="描述" name="description">
+        <a-textarea
+          v-model:value="formData.description"
+          :rows="3"
+          placeholder="请输入流程描述"
+        />
+      </a-form-item>
+
+      <a-form-item label="标签" name="tags">
+        <a-select
+          v-model:value="formData.tags"
+          :token-separators="[',']"
+          mode="tags"
+          placeholder="输入标签后按回车添加"
+          style="width: 100%"
+        />
+      </a-form-item>
+
+      <a-form-item label="流程定义" name="definition">
+        <a-textarea
+          v-model:value="definitionJsonString"
+          :class="{ 'json-error': jsonError }"
+          :rows="8"
+          placeholder="请粘贴流程设计的JSON定义"
+        />
+        <div v-if="jsonError" class="json-error-message">
+          {{ jsonError }}
+        </div>
+      </a-form-item>
+    </a-form>
+  </div>
+</template>
 
 <style scoped>
 .process-basic-config {

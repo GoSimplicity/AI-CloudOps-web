@@ -1,3 +1,20 @@
+<script setup lang="ts">
+import { computed } from 'vue';
+import type { RCACollection } from '#/api/core/aiops/rca';
+import { analysisStatus, coverageText, sourceText } from './collection';
+
+const props = defineProps<{ status?: string; collection?: RCACollection }>();
+const statusInfo = computed(() => analysisStatus(props.status));
+const sources = [
+  { key: 'metrics', label: '指标' },
+  { key: 'events', label: '事件' },
+  { key: 'logs', label: '日志' },
+] as const;
+function validCount(count?: number) {
+  return typeof count === 'number' && Number.isSafeInteger(count) && count >= 0;
+}
+</script>
+
 <template>
   <section aria-label="分析状态和数据采集情况" class="collection-summary">
     <a-alert
@@ -25,23 +42,6 @@
     </ul>
   </section>
 </template>
-
-<script setup lang="ts">
-import { computed } from 'vue';
-import type { RCACollection } from '#/api/core/aiops/rca';
-import { analysisStatus, coverageText, sourceText } from './collection';
-
-const props = defineProps<{ status?: string; collection?: RCACollection }>();
-const statusInfo = computed(() => analysisStatus(props.status));
-const sources = [
-  { key: 'metrics', label: '指标' },
-  { key: 'events', label: '事件' },
-  { key: 'logs', label: '日志' },
-] as const;
-function validCount(count?: number) {
-  return typeof count === 'number' && Number.isSafeInteger(count) && count >= 0;
-}
-</script>
 
 <style scoped>
 .collection-summary {

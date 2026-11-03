@@ -1,3 +1,406 @@
+<script lang="ts" setup>
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { onMounted, ref } from 'vue';
+import { message } from 'ant-design-vue';
+import { useConfigMapPage } from './ConfigMap';
+import {
+  formatDateTime,
+  formatK8sTime,
+  getRelativeTime,
+  namespacedResourceKey,
+} from '../shared/utils';
+import {
+  AppstoreOutlined,
+  CheckCircleOutlined,
+  ClearOutlined,
+  DatabaseOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  EyeOutlined,
+  FileAddOutlined,
+  FileTextOutlined,
+  FormatPainterOutlined,
+  KeyOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  SettingOutlined,
+  TagsOutlined,
+} from '@ant-design/icons-vue';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
+const {
+  // state
+  clusters,
+  namespaces,
+  loading,
+  loadError,
+  clustersError,
+  namespacesError,
+  clustersLoading,
+  namespacesLoading,
+  searchText,
+  filterClusterId,
+  filterNamespace,
+  filterDataKey,
+  filterLabels,
+  selectedRows,
+  currentPage,
+  pageSize,
+  total,
+  clustersTotal,
+  namespacesTotal,
+
+  // modal state
+  isCreateModalVisible,
+  isCreateYamlModalVisible,
+  isEditModalVisible,
+  isDetailModalVisible,
+  isYamlModalVisible,
+  submitLoading,
+  detailLoading,
+
+  // operation targets
+  currentOperationConfigMap,
+  currentConfigMapDetail,
+
+  // form models
+  createFormModel,
+  editFormModel,
+  yamlFormModel,
+  createYamlFormModel,
+
+  // form refs
+  formRef,
+  yamlFormRef,
+  createYamlFormRef,
+
+  // form rules
+  createFormRules,
+  yamlFormRules,
+  createYamlFormRules,
+
+  // computed
+  filteredConfigMaps,
+  rowSelection,
+
+  // helpers
+  getEnvText,
+  parseJsonField,
+
+  // operations
+  fetchClusters,
+  fetchNamespaces,
+  fetchConfigMaps,
+  clearConfigMaps,
+  clearNamespaces,
+  loadMoreClusters,
+  loadMoreNamespaces,
+
+  // detail operations
+  showConfigMapDetail,
+  closeDetailModal,
+
+  // YAML operations
+  showYamlModal,
+  closeYamlModal,
+  submitYamlForm,
+
+  // create operations
+  openCreateModal,
+  closeCreateModal,
+  submitCreateForm,
+  openCreateYamlModal,
+  closeCreateYamlModal,
+  submitCreateYamlForm,
+
+  // edit operations
+  openEditModal,
+  closeEditModal,
+  submitEditForm,
+
+  // configmap operations
+  deleteConfigMap,
+
+  // filter operations
+  addFilterLabel,
+  removeFilterLabel,
+  clearFilterLabels,
+
+  // batch operations
+  batchOperation,
+
+  // pagination operations
+  handlePageChange,
+
+  // form field operations
+  removeDataField,
+  removeEditDataField,
+  removeBinaryDataField,
+  removeEditBinaryDataField,
+  removeLabelField,
+  removeEditLabelField,
+  removeAnnotationField,
+  removeEditAnnotationField,
+
+  // yaml operations
+  insertYamlTemplate,
+  formatYaml,
+  validateYaml,
+  clearYaml,
+  formatEditYaml,
+  validateEditYaml,
+} = useConfigMapPage();
+
+// 添加新字段的方法
+const newDataKey = ref('');
+const newBinaryDataKey = ref('');
+const newLabelKey = ref('');
+const newAnnotationKey = ref('');
+const newEditDataKey = ref('');
+const newEditBinaryDataKey = ref('');
+const newEditLabelKey = ref('');
+const newEditAnnotationKey = ref('');
+
+const addNewData = () => {
+  if (newDataKey.value && newDataKey.value.trim()) {
+    createFormModel.value.data[newDataKey.value.trim()] = '';
+    newDataKey.value = '';
+  }
+};
+
+const addNewBinaryData = () => {
+  if (newBinaryDataKey.value && newBinaryDataKey.value.trim()) {
+    createFormModel.value.binary_data[newBinaryDataKey.value.trim()] = '';
+    newBinaryDataKey.value = '';
+  }
+};
+
+const addNewLabel = () => {
+  if (newLabelKey.value && newLabelKey.value.trim()) {
+    createFormModel.value.labels[newLabelKey.value.trim()] = '';
+    newLabelKey.value = '';
+  }
+};
+
+const addNewAnnotation = () => {
+  if (newAnnotationKey.value && newAnnotationKey.value.trim()) {
+    createFormModel.value.annotations[newAnnotationKey.value.trim()] = '';
+    newAnnotationKey.value = '';
+  }
+};
+
+const addNewEditData = () => {
+  if (newEditDataKey.value && newEditDataKey.value.trim()) {
+    editFormModel.value.data[newEditDataKey.value.trim()] = '';
+    newEditDataKey.value = '';
+  }
+};
+
+const addNewEditBinaryData = () => {
+  if (newEditBinaryDataKey.value && newEditBinaryDataKey.value.trim()) {
+    editFormModel.value.binary_data[newEditBinaryDataKey.value.trim()] = '';
+    newEditBinaryDataKey.value = '';
+  }
+};
+
+const addNewEditLabel = () => {
+  if (newEditLabelKey.value && newEditLabelKey.value.trim()) {
+    editFormModel.value.labels[newEditLabelKey.value.trim()] = '';
+    newEditLabelKey.value = '';
+  }
+};
+
+const addNewEditAnnotation = () => {
+  if (newEditAnnotationKey.value && newEditAnnotationKey.value.trim()) {
+    editFormModel.value.annotations[newEditAnnotationKey.value.trim()] = '';
+    newEditAnnotationKey.value = '';
+  }
+};
+
+// 注意：时间格式化函数已移至 shared/utils.ts，使用 formatK8sTime
+
+const onSearch = () => {
+  currentPage.value = 1;
+  fetchConfigMaps();
+};
+
+const handleFilterChange = () => {
+  currentPage.value = 1;
+  fetchConfigMaps();
+};
+
+const handleClusterChange = () => {
+  currentPage.value = 1;
+  clearNamespaces();
+  clearConfigMaps();
+
+  if (filterClusterId.value) {
+    fetchNamespaces(true); // 重置命名空间分页
+    fetchConfigMaps();
+  }
+};
+
+const handleTableChange = (pagination: {
+  current?: number;
+  pageSize?: number;
+}) => {
+  if (pagination) {
+    handlePageChange(
+      pagination.current || currentPage.value,
+      pagination.pageSize,
+    );
+  }
+};
+
+// 处理集群下拉选择的滚动事件
+const handleClusterDropdownScroll = (e: Event) => {
+  const { target } = e;
+  if (
+    target &&
+    'scrollTop' in target &&
+    'scrollHeight' in target &&
+    'clientHeight' in target
+  ) {
+    const scrollTarget = target as HTMLElement;
+    if (
+      scrollTarget.scrollTop + scrollTarget.clientHeight >=
+      scrollTarget.scrollHeight - 5
+    ) {
+      loadMoreClusters();
+    }
+  }
+};
+
+const formatAge = (age?: string) => {
+  if (!age) return '-';
+
+  try {
+    // 解析时间字符串，提取小时、分钟、秒
+    const hourMatch = age.match(/(\d+)h/);
+    const minuteMatch = age.match(/(\d+)m/);
+    const secondMatch = age.match(/(\d+(?:\.\d+)?)s/);
+
+    const hours = hourMatch && hourMatch[1] ? parseInt(hourMatch[1]) : 0;
+    const minutes =
+      minuteMatch && minuteMatch[1] ? parseInt(minuteMatch[1]) : 0;
+    const seconds =
+      secondMatch && secondMatch[1] ? parseFloat(secondMatch[1]) : 0;
+
+    // 转换为天、小时、分钟
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+
+    // 根据时间长度选择合适的显示格式
+    if (days > 0) {
+      if (remainingHours > 0) {
+        return `${days}天 ${remainingHours}小时`;
+      }
+      return `${days}天`;
+    } else if (hours > 0) {
+      if (minutes > 0) {
+        return `${hours}小时 ${minutes}分钟`;
+      }
+      return `${hours}小时`;
+    } else if (minutes > 0) {
+      return `${minutes}分钟`;
+    } else {
+      return `${Math.floor(seconds)}秒`;
+    }
+  } catch {
+    return age; // 如果解析失败，返回原始值
+  }
+};
+
+const columns = [
+  {
+    title: '名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 150,
+    ellipsis: true,
+    fixed: 'left',
+  },
+  {
+    title: '命名空间',
+    dataIndex: 'namespace',
+    key: 'namespace',
+    width: 120,
+    ellipsis: true,
+  },
+  { title: '数据项', key: 'data_count', width: 90, align: 'center' },
+  {
+    title: '大小',
+    dataIndex: 'size',
+    key: 'size',
+    width: 100,
+    align: 'center',
+  },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 200,
+    fixed: 'right',
+    align: 'center',
+  },
+];
+
+// 标签过滤器状态
+const isLabelsFilterModalVisible = ref(false);
+const newFilterKey = ref('');
+const newFilterValue = ref('');
+
+// 标签过滤器操作
+const openLabelsFilter = () => {
+  isLabelsFilterModalVisible.value = true;
+};
+
+const closeLabelsFilterModal = () => {
+  isLabelsFilterModalVisible.value = false;
+  newFilterKey.value = '';
+  newFilterValue.value = '';
+};
+
+const addNewFilterLabel = () => {
+  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
+    addFilterLabel(newFilterKey.value.trim(), newFilterValue.value.trim());
+    newFilterKey.value = '';
+    newFilterValue.value = '';
+  }
+};
+
+const applyLabelsFilter = () => {
+  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
+    addNewFilterLabel();
+  }
+  closeLabelsFilterModal();
+};
+
+// 重置所有筛选条件
+const resetFilters = () => {
+  searchText.value = '';
+  filterClusterId.value = undefined;
+  filterNamespace.value = undefined;
+  filterDataKey.value = undefined;
+  clearFilterLabels();
+  currentPage.value = 1;
+  clearConfigMaps();
+  clearNamespaces();
+  message.success('已重置所有筛选条件');
+};
+
+onMounted(async () => {
+  await fetchClusters();
+});
+</script>
+
 <template>
   <OpsPage
     description="按集群和命名空间查询与维护 ConfigMap"
@@ -1459,409 +1862,6 @@
     </a-modal>
   </OpsPage>
 </template>
-
-<script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { onMounted, ref } from 'vue';
-import { message } from 'ant-design-vue';
-import { useConfigMapPage } from './ConfigMap';
-import {
-  formatDateTime,
-  formatK8sTime,
-  getRelativeTime,
-  namespacedResourceKey,
-} from '../shared/utils';
-import {
-  AppstoreOutlined,
-  CheckCircleOutlined,
-  ClearOutlined,
-  DatabaseOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  EyeOutlined,
-  FileAddOutlined,
-  FileTextOutlined,
-  FormatPainterOutlined,
-  KeyOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-  SettingOutlined,
-  TagsOutlined,
-} from '@ant-design/icons-vue';
-
-import { usePermission } from '#/utils/permission';
-
-const { can } = usePermission();
-
-const {
-  // state
-  clusters,
-  namespaces,
-  loading,
-  loadError,
-  clustersError,
-  namespacesError,
-  clustersLoading,
-  namespacesLoading,
-  searchText,
-  filterClusterId,
-  filterNamespace,
-  filterDataKey,
-  filterLabels,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
-  clustersTotal,
-  namespacesTotal,
-
-  // modal state
-  isCreateModalVisible,
-  isCreateYamlModalVisible,
-  isEditModalVisible,
-  isDetailModalVisible,
-  isYamlModalVisible,
-  submitLoading,
-  detailLoading,
-
-  // operation targets
-  currentOperationConfigMap,
-  currentConfigMapDetail,
-
-  // form models
-  createFormModel,
-  editFormModel,
-  yamlFormModel,
-  createYamlFormModel,
-
-  // form refs
-  formRef,
-  yamlFormRef,
-  createYamlFormRef,
-
-  // form rules
-  createFormRules,
-  yamlFormRules,
-  createYamlFormRules,
-
-  // computed
-  filteredConfigMaps,
-  rowSelection,
-
-  // helpers
-  getEnvText,
-  parseJsonField,
-
-  // operations
-  fetchClusters,
-  fetchNamespaces,
-  fetchConfigMaps,
-  clearConfigMaps,
-  clearNamespaces,
-  loadMoreClusters,
-  loadMoreNamespaces,
-
-  // detail operations
-  showConfigMapDetail,
-  closeDetailModal,
-
-  // YAML operations
-  showYamlModal,
-  closeYamlModal,
-  submitYamlForm,
-
-  // create operations
-  openCreateModal,
-  closeCreateModal,
-  submitCreateForm,
-  openCreateYamlModal,
-  closeCreateYamlModal,
-  submitCreateYamlForm,
-
-  // edit operations
-  openEditModal,
-  closeEditModal,
-  submitEditForm,
-
-  // configmap operations
-  deleteConfigMap,
-
-  // filter operations
-  addFilterLabel,
-  removeFilterLabel,
-  clearFilterLabels,
-
-  // batch operations
-  batchOperation,
-
-  // pagination operations
-  handlePageChange,
-
-  // form field operations
-  removeDataField,
-  removeEditDataField,
-  removeBinaryDataField,
-  removeEditBinaryDataField,
-  removeLabelField,
-  removeEditLabelField,
-  removeAnnotationField,
-  removeEditAnnotationField,
-
-  // yaml operations
-  insertYamlTemplate,
-  formatYaml,
-  validateYaml,
-  clearYaml,
-  formatEditYaml,
-  validateEditYaml,
-} = useConfigMapPage();
-
-// 添加新字段的方法
-const newDataKey = ref('');
-const newBinaryDataKey = ref('');
-const newLabelKey = ref('');
-const newAnnotationKey = ref('');
-const newEditDataKey = ref('');
-const newEditBinaryDataKey = ref('');
-const newEditLabelKey = ref('');
-const newEditAnnotationKey = ref('');
-
-const addNewData = () => {
-  if (newDataKey.value && newDataKey.value.trim()) {
-    createFormModel.value.data[newDataKey.value.trim()] = '';
-    newDataKey.value = '';
-  }
-};
-
-const addNewBinaryData = () => {
-  if (newBinaryDataKey.value && newBinaryDataKey.value.trim()) {
-    createFormModel.value.binary_data[newBinaryDataKey.value.trim()] = '';
-    newBinaryDataKey.value = '';
-  }
-};
-
-const addNewLabel = () => {
-  if (newLabelKey.value && newLabelKey.value.trim()) {
-    createFormModel.value.labels[newLabelKey.value.trim()] = '';
-    newLabelKey.value = '';
-  }
-};
-
-const addNewAnnotation = () => {
-  if (newAnnotationKey.value && newAnnotationKey.value.trim()) {
-    createFormModel.value.annotations[newAnnotationKey.value.trim()] = '';
-    newAnnotationKey.value = '';
-  }
-};
-
-const addNewEditData = () => {
-  if (newEditDataKey.value && newEditDataKey.value.trim()) {
-    editFormModel.value.data[newEditDataKey.value.trim()] = '';
-    newEditDataKey.value = '';
-  }
-};
-
-const addNewEditBinaryData = () => {
-  if (newEditBinaryDataKey.value && newEditBinaryDataKey.value.trim()) {
-    editFormModel.value.binary_data[newEditBinaryDataKey.value.trim()] = '';
-    newEditBinaryDataKey.value = '';
-  }
-};
-
-const addNewEditLabel = () => {
-  if (newEditLabelKey.value && newEditLabelKey.value.trim()) {
-    editFormModel.value.labels[newEditLabelKey.value.trim()] = '';
-    newEditLabelKey.value = '';
-  }
-};
-
-const addNewEditAnnotation = () => {
-  if (newEditAnnotationKey.value && newEditAnnotationKey.value.trim()) {
-    editFormModel.value.annotations[newEditAnnotationKey.value.trim()] = '';
-    newEditAnnotationKey.value = '';
-  }
-};
-
-// 注意：时间格式化函数已移至 shared/utils.ts，使用 formatK8sTime
-
-const onSearch = () => {
-  currentPage.value = 1;
-  fetchConfigMaps();
-};
-
-const handleFilterChange = () => {
-  currentPage.value = 1;
-  fetchConfigMaps();
-};
-
-const handleClusterChange = () => {
-  currentPage.value = 1;
-  clearNamespaces();
-  clearConfigMaps();
-
-  if (filterClusterId.value) {
-    fetchNamespaces(true); // 重置命名空间分页
-    fetchConfigMaps();
-  }
-};
-
-const handleTableChange = (pagination: {
-  current?: number;
-  pageSize?: number;
-}) => {
-  if (pagination) {
-    handlePageChange(
-      pagination.current || currentPage.value,
-      pagination.pageSize,
-    );
-  }
-};
-
-// 处理集群下拉选择的滚动事件
-const handleClusterDropdownScroll = (e: Event) => {
-  const { target } = e;
-  if (
-    target &&
-    'scrollTop' in target &&
-    'scrollHeight' in target &&
-    'clientHeight' in target
-  ) {
-    const scrollTarget = target as HTMLElement;
-    if (
-      scrollTarget.scrollTop + scrollTarget.clientHeight >=
-      scrollTarget.scrollHeight - 5
-    ) {
-      loadMoreClusters();
-    }
-  }
-};
-
-const formatAge = (age?: string) => {
-  if (!age) return '-';
-
-  try {
-    // 解析时间字符串，提取小时、分钟、秒
-    const hourMatch = age.match(/(\d+)h/);
-    const minuteMatch = age.match(/(\d+)m/);
-    const secondMatch = age.match(/(\d+(?:\.\d+)?)s/);
-
-    const hours = hourMatch && hourMatch[1] ? parseInt(hourMatch[1]) : 0;
-    const minutes =
-      minuteMatch && minuteMatch[1] ? parseInt(minuteMatch[1]) : 0;
-    const seconds =
-      secondMatch && secondMatch[1] ? parseFloat(secondMatch[1]) : 0;
-
-    // 转换为天、小时、分钟
-    const days = Math.floor(hours / 24);
-    const remainingHours = hours % 24;
-
-    // 根据时间长度选择合适的显示格式
-    if (days > 0) {
-      if (remainingHours > 0) {
-        return `${days}天 ${remainingHours}小时`;
-      }
-      return `${days}天`;
-    } else if (hours > 0) {
-      if (minutes > 0) {
-        return `${hours}小时 ${minutes}分钟`;
-      }
-      return `${hours}小时`;
-    } else if (minutes > 0) {
-      return `${minutes}分钟`;
-    } else {
-      return `${Math.floor(seconds)}秒`;
-    }
-  } catch {
-    return age; // 如果解析失败，返回原始值
-  }
-};
-
-const columns = [
-  {
-    title: '名称',
-    dataIndex: 'name',
-    key: 'name',
-    width: 150,
-    ellipsis: true,
-    fixed: 'left',
-  },
-  {
-    title: '命名空间',
-    dataIndex: 'namespace',
-    key: 'namespace',
-    width: 120,
-    ellipsis: true,
-  },
-  { title: '数据项', key: 'data_count', width: 90, align: 'center' },
-  {
-    title: '大小',
-    dataIndex: 'size',
-    key: 'size',
-    width: 100,
-    align: 'center',
-  },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
-  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
-  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 200,
-    fixed: 'right',
-    align: 'center',
-  },
-];
-
-// 标签过滤器状态
-const isLabelsFilterModalVisible = ref(false);
-const newFilterKey = ref('');
-const newFilterValue = ref('');
-
-// 标签过滤器操作
-const openLabelsFilter = () => {
-  isLabelsFilterModalVisible.value = true;
-};
-
-const closeLabelsFilterModal = () => {
-  isLabelsFilterModalVisible.value = false;
-  newFilterKey.value = '';
-  newFilterValue.value = '';
-};
-
-const addNewFilterLabel = () => {
-  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
-    addFilterLabel(newFilterKey.value.trim(), newFilterValue.value.trim());
-    newFilterKey.value = '';
-    newFilterValue.value = '';
-  }
-};
-
-const applyLabelsFilter = () => {
-  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
-    addNewFilterLabel();
-  }
-  closeLabelsFilterModal();
-};
-
-// 重置所有筛选条件
-const resetFilters = () => {
-  searchText.value = '';
-  filterClusterId.value = undefined;
-  filterNamespace.value = undefined;
-  filterDataKey.value = undefined;
-  clearFilterLabels();
-  currentPage.value = 1;
-  clearConfigMaps();
-  clearNamespaces();
-  message.success('已重置所有筛选条件');
-};
-
-onMounted(async () => {
-  await fetchClusters();
-});
-</script>
 
 <style scoped>
 @import '../shared/k8s-common.css';

@@ -1,3 +1,604 @@
+<script setup lang="ts">
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { useListRequest } from './useListRequest';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { message, Modal } from 'ant-design-vue';
+import {
+  DownOutlined,
+  MinusCircleOutlined,
+  PlusOutlined,
+} from '@ant-design/icons-vue';
+import { Icon } from '@iconify/vue';
+import {
+  createMonitorAlertManagerPoolApi,
+  type CreateMonitorAlertManagerPoolReq,
+  deleteMonitorAlertManagerPoolApi,
+  type GetAlertManagerPoolListParams,
+  getMonitorAlertManagerPoolApi,
+  getMonitorAlertManagerPoolListApi,
+  type MonitorAlertManagerPool,
+  updateMonitorAlertManagerPoolApi,
+  type UpdateMonitorAlertManagerPoolReq,
+} from '#/api/core/prometheus/prometheus_alert_pool';
+
+import { getUserList, type GetUserListReq } from '#/api/core/system/user';
+
+import { usePermission } from '#/utils/permission';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
+const { can } = usePermission();
+
+// 动态表单项接口
+interface DynamicItem {
+  value: string;
+  key: number;
+}
+
+interface LabelItem {
+  labelKey: string;
+  labelValue: string;
+  key: number;
+}
+
+// 响应式对话框宽度
+const formDialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '900px';
+  }
+  return '900px';
+});
+
+const previewDialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '80%';
+  }
+  return '80%';
+});
+
+// 列定义
+const columns = [
+  {
+    title: '实例池名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 200,
+    fixed: 'left',
+  },
+  {
+    title: 'AlertManager实例',
+    dataIndex: 'alert_manager_instances',
+    key: 'alert_manager_instances',
+    width: 220,
+  },
+  { title: '分组标签', dataIndex: 'group_by', key: 'group_by', width: 180 },
+  {
+    title: '时间配置',
+    dataIndex: 'timing_config',
+    key: 'timing_config',
+    width: 160,
+  },
+  { title: '接收器', dataIndex: 'receiver', key: 'receiver', width: 120 },
+  {
+    title: '创建人',
+    dataIndex: 'create_user_name',
+    key: 'creator',
+    width: 120,
+  },
+  { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
+  {
+    title: '操作',
+    key: 'action',
+    width: 200,
+    align: 'center' as const,
+    fixed: 'right',
+  },
+];
+
+// 状态数据
+const loading = ref(false);
+const { loadError, beginRequest } = useListRequest(loading);
+const searchText = ref('');
+const data = ref<MonitorAlertManagerPool[]>([]);
+
+// 防抖处理
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+onBeforeUnmount(() => {
+  if (searchTimeout) clearTimeout(searchTimeout);
+});
+
+// 分页配置
+const paginationConfig = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showSizeChanger: true,
+  showQuickJumper: true,
+  showTotal: (total: number) => `共 ${total} 条记录`,
+  size: 'default' as const,
+});
+
+// 统计数据
+const stats = reactive({
+  total: 0,
+  alertInstances: 0,
+  active: 0,
+  groupLabels: 0,
+});
+
+// 对话框状态
+const isAddModalVisible = ref(false);
+const isEditModalVisible = ref(false);
+const detailDialogVisible = ref(false);
+
+// 表单数据
+const addForm = reactive({
+  name: '',
+  alert_manager_instances: [{ value: '', key: Date.now() }],
+  resolve_timeout: '',
+  group_wait: '',
+  group_interval: '',
+  repeat_interval: '',
+  group_by: [{ labelKey: '', labelValue: '', key: Date.now() }],
+  receiver: '',
+});
+
+const editForm = reactive({
+  id: 0,
+  name: '',
+  alert_manager_instances: [{ value: '', key: Date.now() }],
+  resolve_timeout: '',
+  group_wait: '',
+  group_interval: '',
+  repeat_interval: '',
+  group_by: [{ labelKey: '', labelValue: '', key: Date.now() }],
+  receiver: '',
+});
+
+// 详情对话框数据
+const detailDialog = reactive({
+  form: null as MonitorAlertManagerPool | null,
+});
+
+// 用户选择模态框状态
+const isUserModalVisible = ref(false);
+const userList = ref<any[]>([]);
+const userLoading = ref(false);
+const userPagination = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showSizeChanger: false,
+});
+const userSearchText = ref('');
+const activeForm = ref<'add' | 'edit' | null>(null);
+
+const userColumns = [
+  { title: '用户名', dataIndex: 'username', key: 'username' },
+  { title: '昵称', dataIndex: 'nickname', key: 'nickname' },
+  { title: '邮箱', dataIndex: 'email', key: 'email' },
+  { title: '操作', key: 'action', width: 80, align: 'center' as const },
+];
+
+// 表单验证规则
+const formRules = {
+  name: [
+    { required: true, message: '请输入实例池名称', trigger: 'blur' },
+    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' },
+  ],
+};
+
+const getAvatarColor = (name: string): string => {
+  const colors = [
+    '#1890ff',
+    '#52c41a',
+    '#faad14',
+    '#f5222d',
+    '#722ed1',
+    '#13c2c2',
+    '#eb2f96',
+    '#fa8c16',
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length]!;
+};
+
+const getInitials = (name: string): string => {
+  if (!name) return '';
+  return name.slice(0, 2).toUpperCase();
+};
+
+const formatDate = (dateString: string): string => {
+  if (!dateString) return '';
+  return new Date(dateString).toLocaleDateString('zh-CN');
+};
+
+const formatTime = (dateString: string): string => {
+  if (!dateString) return '';
+  return new Date(dateString).toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const formatFullDateTime = (dateString?: string): string => {
+  if (!dateString) return '';
+  return new Date(dateString).toLocaleString('zh-CN');
+};
+
+// 更新统计数据
+const updateStats = () => {
+  stats.total = paginationConfig.total;
+  stats.alertInstances = data.value.reduce((total, item) => {
+    return total + (item.alert_manager_instances?.length || 0);
+  }, 0);
+  stats.active = data.value.filter(
+    (item) => item.alert_manager_instances?.length > 0,
+  ).length;
+  stats.groupLabels = data.value.reduce((total, item) => {
+    return total + (item.group_by?.length || 0);
+  }, 0);
+};
+
+// 数据加载
+const fetchAlertManagerPools = async (): Promise<void> => {
+  const request = beginRequest();
+  try {
+    const params: GetAlertManagerPoolListParams = {
+      page: paginationConfig.current,
+      size: paginationConfig.pageSize,
+      search: searchText.value || undefined,
+    };
+
+    const response = await getMonitorAlertManagerPoolListApi(params);
+    if (!request.isCurrent()) return;
+    if (response) {
+      data.value = response.items || [];
+      paginationConfig.total = response.total || 0;
+      updateStats();
+    }
+  } catch (error: any) {
+    if (!request.fail(error, '加载实例池列表失败')) return;
+    data.value = [];
+    paginationConfig.total = 0;
+    updateStats();
+    if (shouldNotifyPageError(error)) message.error(loadError.value);
+  } finally {
+    request.finish();
+  }
+};
+
+// 事件处理
+const handleTableChange = (pagination: any): void => {
+  paginationConfig.current = pagination.current;
+  paginationConfig.pageSize = pagination.pageSize;
+  fetchAlertManagerPools();
+};
+
+const handleSearch = (): void => {
+  paginationConfig.current = 1;
+  fetchAlertManagerPools();
+};
+
+const handleSearchChange = (): void => {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout);
+  }
+  searchTimeout = setTimeout(() => {
+    handleSearch();
+  }, 500);
+};
+
+const handleReset = (): void => {
+  searchText.value = '';
+  paginationConfig.current = 1;
+  fetchAlertManagerPools();
+};
+
+const showAddModal = (): void => {
+  resetAddForm();
+  isAddModalVisible.value = true;
+};
+
+const handleViewPool = async (
+  record: MonitorAlertManagerPool,
+): Promise<void> => {
+  try {
+    if (record.id == null) {
+      message.error('记录ID缺失');
+      return;
+    }
+    const response = await getMonitorAlertManagerPoolApi(record.id);
+    detailDialog.form = response;
+    detailDialogVisible.value = true;
+  } catch (error: any) {
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '获取实例池详情失败');
+  }
+};
+
+const handleMenuClick = (
+  command: string,
+  record: MonitorAlertManagerPool,
+): void => {
+  switch (command) {
+    case 'delete': {
+      confirmDelete(record);
+      break;
+    }
+  }
+};
+
+const confirmDelete = (record: MonitorAlertManagerPool): void => {
+  Modal.confirm({
+    title: '警告',
+    content: `确定要删除实例池 "${record.name}" 吗？`,
+    okText: '删除',
+    okType: 'danger',
+    cancelText: '取消',
+    async onOk() {
+      try {
+        if (record.id == null) {
+          message.error('记录ID缺失');
+          return;
+        }
+        await deleteMonitorAlertManagerPoolApi(record.id);
+        message.success(`实例池 "${record.name}" 已删除`);
+        fetchAlertManagerPools();
+      } catch (error: any) {
+        if (shouldNotifyPageError(error))
+          message.error(error.message || '删除实例池失败');
+      }
+    },
+  });
+};
+
+// 用户选择相关
+const fetchUsers = async () => {
+  userLoading.value = true;
+  try {
+    const params: GetUserListReq = {
+      page: userPagination.current,
+      size: userPagination.pageSize,
+      search: userSearchText.value,
+    };
+    const response = await getUserList(params);
+    if (response) {
+      userList.value = response.items || [];
+      userPagination.total = response.total || 0;
+    }
+  } catch (error: any) {
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '加载用户列表失败');
+  } finally {
+    userLoading.value = false;
+  }
+};
+
+const handleUserTableChange = (pagination: any) => {
+  userPagination.current = pagination.current;
+  fetchUsers();
+};
+
+const handleUserSearch = () => {
+  userPagination.current = 1;
+  fetchUsers();
+};
+
+const showUserModal = (formType: 'add' | 'edit') => {
+  activeForm.value = formType;
+  userPagination.current = 1;
+  userSearchText.value = '';
+  fetchUsers();
+  isUserModalVisible.value = true;
+};
+
+const closeUserModal = () => {
+  isUserModalVisible.value = false;
+};
+
+const handleSelectUser = (user: any) => {
+  if (activeForm.value === 'add') {
+    addForm.receiver = user.username;
+  } else if (activeForm.value === 'edit') {
+    editForm.receiver = user.username;
+  }
+  closeUserModal();
+};
+
+// 表单相关
+const addFormRef = ref();
+const editFormRef = ref();
+
+const resetAddForm = (): void => {
+  Object.assign(addForm, {
+    name: '',
+    alert_manager_instances: [{ value: '', key: Date.now() }],
+    resolve_timeout: '',
+    group_wait: '',
+    group_interval: '',
+    repeat_interval: '',
+    group_by: [{ labelKey: '', labelValue: '', key: Date.now() }],
+    receiver: '',
+  });
+};
+
+const closeAddModal = (): void => {
+  isAddModalVisible.value = false;
+};
+
+const closeEditModal = (): void => {
+  isEditModalVisible.value = false;
+};
+
+const closeDetailDialog = (): void => {
+  detailDialogVisible.value = false;
+};
+
+// 动态表单项操作
+const addAlertManagerInstance = (): void => {
+  addForm.alert_manager_instances.push({
+    value: '',
+    key: Date.now(),
+  });
+};
+
+const removeAlertManagerInstance = (instance: DynamicItem): void => {
+  const index = addForm.alert_manager_instances.indexOf(instance);
+  if (index !== -1) {
+    addForm.alert_manager_instances.splice(index, 1);
+  }
+};
+
+const addLabel = (): void => {
+  addForm.group_by.push({
+    labelKey: '',
+    labelValue: '',
+    key: Date.now(),
+  });
+};
+
+const removeLabel = (label: LabelItem): void => {
+  const index = addForm.group_by.indexOf(label);
+  if (index !== -1) {
+    addForm.group_by.splice(index, 1);
+  }
+};
+
+// 编辑模态框动态表单项操作
+const addEditAlertManagerInstance = (): void => {
+  editForm.alert_manager_instances.push({
+    value: '',
+    key: Date.now(),
+  });
+};
+
+const removeEditAlertManagerInstance = (instance: DynamicItem): void => {
+  const index = editForm.alert_manager_instances.indexOf(instance);
+  if (index !== -1) {
+    editForm.alert_manager_instances.splice(index, 1);
+  }
+};
+
+const addEditLabel = (): void => {
+  editForm.group_by.push({
+    labelKey: '',
+    labelValue: '',
+    key: Date.now(),
+  });
+};
+
+const removeEditLabel = (label: LabelItem): void => {
+  const index = editForm.group_by.indexOf(label);
+  if (index !== -1) {
+    editForm.group_by.splice(index, 1);
+  }
+};
+
+const handleAdd = async (): Promise<void> => {
+  try {
+    await addFormRef.value?.validate();
+    const formData: CreateMonitorAlertManagerPoolReq = {
+      name: addForm.name,
+      alert_manager_instances: addForm.alert_manager_instances
+        .map((item) => item.value)
+        .filter((v) => v.trim() !== ''),
+      resolve_timeout: addForm.resolve_timeout,
+      group_wait: addForm.group_wait,
+      group_interval: addForm.group_interval,
+      repeat_interval: addForm.repeat_interval,
+      group_by: addForm.group_by
+        .filter((item) => item.labelKey && item.labelValue)
+        .map((item) => `${item.labelKey},${item.labelValue}`),
+      receiver: addForm.receiver,
+    };
+    await createMonitorAlertManagerPoolApi(formData);
+    message.success('新增实例池成功');
+    await fetchAlertManagerPools();
+    closeAddModal();
+  } catch (error: any) {
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '新增实例池失败');
+  }
+};
+
+const showEditModal = (record: MonitorAlertManagerPool): void => {
+  if (record.id == null) {
+    message.error('记录ID缺失');
+    return;
+  }
+  editForm.id = record.id;
+  editForm.name = record.name ?? '';
+  editForm.alert_manager_instances = (record.alert_manager_instances ?? []).map(
+    (value) => ({
+      value,
+      key: Date.now() + Math.random(),
+    }),
+  );
+  editForm.resolve_timeout = record.resolve_timeout ?? '';
+  editForm.group_wait = record.group_wait ?? '';
+  editForm.group_interval = record.group_interval ?? '';
+  editForm.repeat_interval = record.repeat_interval ?? '';
+  const groupBy = record.group_by ?? [];
+  if (groupBy.length > 0) {
+    editForm.group_by = groupBy.map((value: string) => {
+      const [labelKey, labelValue] = value.split(',');
+      return {
+        labelKey: labelKey ?? '',
+        labelValue: labelValue ?? '',
+        key: Date.now() + Math.random(),
+      };
+    });
+  } else {
+    editForm.group_by = [{ labelKey: '', labelValue: '', key: Date.now() }];
+  }
+  editForm.receiver = record.receiver ?? '';
+  isEditModalVisible.value = true;
+  detailDialogVisible.value = false;
+};
+
+const handleEdit = async (): Promise<void> => {
+  try {
+    await editFormRef.value?.validate();
+    const formData: UpdateMonitorAlertManagerPoolReq = {
+      id: editForm.id,
+      name: editForm.name,
+      alert_manager_instances: editForm.alert_manager_instances
+        .map((item) => item.value)
+        .filter((v) => v.trim() !== ''),
+      resolve_timeout: editForm.resolve_timeout,
+      group_wait: editForm.group_wait,
+      group_interval: editForm.group_interval,
+      repeat_interval: editForm.repeat_interval,
+      group_by: editForm.group_by
+        .filter((item) => item.labelKey && item.labelValue)
+        .map((item) => `${item.labelKey},${item.labelValue}`),
+      receiver: editForm.receiver,
+    };
+    await updateMonitorAlertManagerPoolApi(formData);
+    message.success('更新实例池成功');
+    await fetchAlertManagerPools();
+    closeEditModal();
+  } catch (error: any) {
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '更新实例池失败');
+  }
+};
+
+// 生命周期钩子
+onMounted(() => {
+  fetchAlertManagerPools();
+});
+</script>
+
 <template>
   <OpsPage
     description="维护 AlertManager 实例、分组与通知策略"
@@ -665,607 +1266,6 @@
     </a-modal>
   </OpsPage>
 </template>
-
-<script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { useListRequest } from './useListRequest';
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
-import { message, Modal } from 'ant-design-vue';
-import {
-  DownOutlined,
-  MinusCircleOutlined,
-  PlusOutlined,
-} from '@ant-design/icons-vue';
-import { Icon } from '@iconify/vue';
-import {
-  createMonitorAlertManagerPoolApi,
-  type CreateMonitorAlertManagerPoolReq,
-  deleteMonitorAlertManagerPoolApi,
-  type GetAlertManagerPoolListParams,
-  getMonitorAlertManagerPoolApi,
-  getMonitorAlertManagerPoolListApi,
-  type MonitorAlertManagerPool,
-  updateMonitorAlertManagerPoolApi,
-  type UpdateMonitorAlertManagerPoolReq,
-} from '#/api/core/prometheus/prometheus_alert_pool';
-
-import { getUserList, type GetUserListReq } from '#/api/core/system/user';
-
-import { usePermission } from '#/utils/permission';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
-
-const { can } = usePermission();
-
-// 动态表单项接口
-interface DynamicItem {
-  value: string;
-  key: number;
-}
-
-interface LabelItem {
-  labelKey: string;
-  labelValue: string;
-  key: number;
-}
-
-// 响应式对话框宽度
-const formDialogWidth = computed(() => {
-  if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
-    if (width < 768) return '95%';
-    if (width < 1024) return '90%';
-    return '900px';
-  }
-  return '900px';
-});
-
-const previewDialogWidth = computed(() => {
-  if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
-    if (width < 768) return '95%';
-    if (width < 1024) return '90%';
-    return '80%';
-  }
-  return '80%';
-});
-
-// 列定义
-const columns = [
-  {
-    title: '实例池名称',
-    dataIndex: 'name',
-    key: 'name',
-    width: 200,
-    fixed: 'left',
-  },
-  {
-    title: 'AlertManager实例',
-    dataIndex: 'alert_manager_instances',
-    key: 'alert_manager_instances',
-    width: 220,
-  },
-  { title: '分组标签', dataIndex: 'group_by', key: 'group_by', width: 180 },
-  {
-    title: '时间配置',
-    dataIndex: 'timing_config',
-    key: 'timing_config',
-    width: 160,
-  },
-  { title: '接收器', dataIndex: 'receiver', key: 'receiver', width: 120 },
-  {
-    title: '创建人',
-    dataIndex: 'create_user_name',
-    key: 'creator',
-    width: 120,
-  },
-  { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
-  {
-    title: '操作',
-    key: 'action',
-    width: 200,
-    align: 'center' as const,
-    fixed: 'right',
-  },
-];
-
-// 状态数据
-const loading = ref(false);
-const { loadError, beginRequest } = useListRequest(loading);
-const searchText = ref('');
-const data = ref<MonitorAlertManagerPool[]>([]);
-
-// 防抖处理
-let searchTimeout: ReturnType<typeof setTimeout> | null = null;
-onBeforeUnmount(() => {
-  if (searchTimeout) clearTimeout(searchTimeout);
-});
-
-// 分页配置
-const paginationConfig = reactive({
-  current: 1,
-  pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
-  showQuickJumper: true,
-  showTotal: (total: number) => `共 ${total} 条记录`,
-  size: 'default' as const,
-});
-
-// 统计数据
-const stats = reactive({
-  total: 0,
-  alertInstances: 0,
-  active: 0,
-  groupLabels: 0,
-});
-
-// 对话框状态
-const isAddModalVisible = ref(false);
-const isEditModalVisible = ref(false);
-const detailDialogVisible = ref(false);
-
-// 表单数据
-const addForm = reactive({
-  name: '',
-  alert_manager_instances: [{ value: '', key: Date.now() }],
-  resolve_timeout: '',
-  group_wait: '',
-  group_interval: '',
-  repeat_interval: '',
-  group_by: [{ labelKey: '', labelValue: '', key: Date.now() }],
-  receiver: '',
-});
-
-const editForm = reactive({
-  id: 0,
-  name: '',
-  alert_manager_instances: [{ value: '', key: Date.now() }],
-  resolve_timeout: '',
-  group_wait: '',
-  group_interval: '',
-  repeat_interval: '',
-  group_by: [{ labelKey: '', labelValue: '', key: Date.now() }],
-  receiver: '',
-});
-
-// 详情对话框数据
-const detailDialog = reactive({
-  form: null as MonitorAlertManagerPool | null,
-});
-
-// 用户选择模态框状态
-const isUserModalVisible = ref(false);
-const userList = ref<any[]>([]);
-const userLoading = ref(false);
-const userPagination = reactive({
-  current: 1,
-  pageSize: 10,
-  total: 0,
-  showSizeChanger: false,
-});
-const userSearchText = ref('');
-const activeForm = ref<'add' | 'edit' | null>(null);
-
-const userColumns = [
-  { title: '用户名', dataIndex: 'username', key: 'username' },
-  { title: '昵称', dataIndex: 'nickname', key: 'nickname' },
-  { title: '邮箱', dataIndex: 'email', key: 'email' },
-  { title: '操作', key: 'action', width: 80, align: 'center' as const },
-];
-
-// 表单验证规则
-const formRules = {
-  name: [
-    { required: true, message: '请输入实例池名称', trigger: 'blur' },
-    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' },
-  ],
-};
-
-const getAvatarColor = (name: string): string => {
-  const colors = [
-    '#1890ff',
-    '#52c41a',
-    '#faad14',
-    '#f5222d',
-    '#722ed1',
-    '#13c2c2',
-    '#eb2f96',
-    '#fa8c16',
-  ];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length]!;
-};
-
-const getInitials = (name: string): string => {
-  if (!name) return '';
-  return name.slice(0, 2).toUpperCase();
-};
-
-const formatDate = (dateString: string): string => {
-  if (!dateString) return '';
-  return new Date(dateString).toLocaleDateString('zh-CN');
-};
-
-const formatTime = (dateString: string): string => {
-  if (!dateString) return '';
-  return new Date(dateString).toLocaleTimeString('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
-const formatFullDateTime = (dateString?: string): string => {
-  if (!dateString) return '';
-  return new Date(dateString).toLocaleString('zh-CN');
-};
-
-// 更新统计数据
-const updateStats = () => {
-  stats.total = paginationConfig.total;
-  stats.alertInstances = data.value.reduce((total, item) => {
-    return total + (item.alert_manager_instances?.length || 0);
-  }, 0);
-  stats.active = data.value.filter(
-    (item) => item.alert_manager_instances?.length > 0,
-  ).length;
-  stats.groupLabels = data.value.reduce((total, item) => {
-    return total + (item.group_by?.length || 0);
-  }, 0);
-};
-
-// 数据加载
-const fetchAlertManagerPools = async (): Promise<void> => {
-  const request = beginRequest();
-  try {
-    const params: GetAlertManagerPoolListParams = {
-      page: paginationConfig.current,
-      size: paginationConfig.pageSize,
-      search: searchText.value || undefined,
-    };
-
-    const response = await getMonitorAlertManagerPoolListApi(params);
-    if (!request.isCurrent()) return;
-    if (response) {
-      data.value = response.items || [];
-      paginationConfig.total = response.total || 0;
-      updateStats();
-    }
-  } catch (error: any) {
-    if (!request.fail(error, '加载实例池列表失败')) return;
-    data.value = [];
-    paginationConfig.total = 0;
-    updateStats();
-    if (shouldNotifyPageError(error)) message.error(loadError.value);
-  } finally {
-    request.finish();
-  }
-};
-
-// 事件处理
-const handleTableChange = (pagination: any): void => {
-  paginationConfig.current = pagination.current;
-  paginationConfig.pageSize = pagination.pageSize;
-  fetchAlertManagerPools();
-};
-
-const handleSearch = (): void => {
-  paginationConfig.current = 1;
-  fetchAlertManagerPools();
-};
-
-const handleSearchChange = (): void => {
-  if (searchTimeout) {
-    clearTimeout(searchTimeout);
-  }
-  searchTimeout = setTimeout(() => {
-    handleSearch();
-  }, 500);
-};
-
-const handleReset = (): void => {
-  searchText.value = '';
-  paginationConfig.current = 1;
-  fetchAlertManagerPools();
-};
-
-const showAddModal = (): void => {
-  resetAddForm();
-  isAddModalVisible.value = true;
-};
-
-const handleViewPool = async (
-  record: MonitorAlertManagerPool,
-): Promise<void> => {
-  try {
-    if (record.id == null) {
-      message.error('记录ID缺失');
-      return;
-    }
-    const response = await getMonitorAlertManagerPoolApi(record.id);
-    detailDialog.form = response;
-    detailDialogVisible.value = true;
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '获取实例池详情失败');
-  }
-};
-
-const handleMenuClick = (
-  command: string,
-  record: MonitorAlertManagerPool,
-): void => {
-  switch (command) {
-    case 'delete': {
-      confirmDelete(record);
-      break;
-    }
-  }
-};
-
-const confirmDelete = (record: MonitorAlertManagerPool): void => {
-  Modal.confirm({
-    title: '警告',
-    content: `确定要删除实例池 "${record.name}" 吗？`,
-    okText: '删除',
-    okType: 'danger',
-    cancelText: '取消',
-    async onOk() {
-      try {
-        if (record.id == null) {
-          message.error('记录ID缺失');
-          return;
-        }
-        await deleteMonitorAlertManagerPoolApi(record.id);
-        message.success(`实例池 "${record.name}" 已删除`);
-        fetchAlertManagerPools();
-      } catch (error: any) {
-        if (shouldNotifyPageError(error))
-          message.error(error.message || '删除实例池失败');
-      }
-    },
-  });
-};
-
-// 用户选择相关
-const fetchUsers = async () => {
-  userLoading.value = true;
-  try {
-    const params: GetUserListReq = {
-      page: userPagination.current,
-      size: userPagination.pageSize,
-      search: userSearchText.value,
-    };
-    const response = await getUserList(params);
-    if (response) {
-      userList.value = response.items || [];
-      userPagination.total = response.total || 0;
-    }
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '加载用户列表失败');
-  } finally {
-    userLoading.value = false;
-  }
-};
-
-const handleUserTableChange = (pagination: any) => {
-  userPagination.current = pagination.current;
-  fetchUsers();
-};
-
-const handleUserSearch = () => {
-  userPagination.current = 1;
-  fetchUsers();
-};
-
-const showUserModal = (formType: 'add' | 'edit') => {
-  activeForm.value = formType;
-  userPagination.current = 1;
-  userSearchText.value = '';
-  fetchUsers();
-  isUserModalVisible.value = true;
-};
-
-const closeUserModal = () => {
-  isUserModalVisible.value = false;
-};
-
-const handleSelectUser = (user: any) => {
-  if (activeForm.value === 'add') {
-    addForm.receiver = user.username;
-  } else if (activeForm.value === 'edit') {
-    editForm.receiver = user.username;
-  }
-  closeUserModal();
-};
-
-// 表单相关
-const addFormRef = ref();
-const editFormRef = ref();
-
-const resetAddForm = (): void => {
-  Object.assign(addForm, {
-    name: '',
-    alert_manager_instances: [{ value: '', key: Date.now() }],
-    resolve_timeout: '',
-    group_wait: '',
-    group_interval: '',
-    repeat_interval: '',
-    group_by: [{ labelKey: '', labelValue: '', key: Date.now() }],
-    receiver: '',
-  });
-};
-
-const closeAddModal = (): void => {
-  isAddModalVisible.value = false;
-};
-
-const closeEditModal = (): void => {
-  isEditModalVisible.value = false;
-};
-
-const closeDetailDialog = (): void => {
-  detailDialogVisible.value = false;
-};
-
-// 动态表单项操作
-const addAlertManagerInstance = (): void => {
-  addForm.alert_manager_instances.push({
-    value: '',
-    key: Date.now(),
-  });
-};
-
-const removeAlertManagerInstance = (instance: DynamicItem): void => {
-  const index = addForm.alert_manager_instances.indexOf(instance);
-  if (index !== -1) {
-    addForm.alert_manager_instances.splice(index, 1);
-  }
-};
-
-const addLabel = (): void => {
-  addForm.group_by.push({
-    labelKey: '',
-    labelValue: '',
-    key: Date.now(),
-  });
-};
-
-const removeLabel = (label: LabelItem): void => {
-  const index = addForm.group_by.indexOf(label);
-  if (index !== -1) {
-    addForm.group_by.splice(index, 1);
-  }
-};
-
-// 编辑模态框动态表单项操作
-const addEditAlertManagerInstance = (): void => {
-  editForm.alert_manager_instances.push({
-    value: '',
-    key: Date.now(),
-  });
-};
-
-const removeEditAlertManagerInstance = (instance: DynamicItem): void => {
-  const index = editForm.alert_manager_instances.indexOf(instance);
-  if (index !== -1) {
-    editForm.alert_manager_instances.splice(index, 1);
-  }
-};
-
-const addEditLabel = (): void => {
-  editForm.group_by.push({
-    labelKey: '',
-    labelValue: '',
-    key: Date.now(),
-  });
-};
-
-const removeEditLabel = (label: LabelItem): void => {
-  const index = editForm.group_by.indexOf(label);
-  if (index !== -1) {
-    editForm.group_by.splice(index, 1);
-  }
-};
-
-const handleAdd = async (): Promise<void> => {
-  try {
-    await addFormRef.value?.validate();
-    const formData: CreateMonitorAlertManagerPoolReq = {
-      name: addForm.name,
-      alert_manager_instances: addForm.alert_manager_instances
-        .map((item) => item.value)
-        .filter((v) => v.trim() !== ''),
-      resolve_timeout: addForm.resolve_timeout,
-      group_wait: addForm.group_wait,
-      group_interval: addForm.group_interval,
-      repeat_interval: addForm.repeat_interval,
-      group_by: addForm.group_by
-        .filter((item) => item.labelKey && item.labelValue)
-        .map((item) => `${item.labelKey},${item.labelValue}`),
-      receiver: addForm.receiver,
-    };
-    await createMonitorAlertManagerPoolApi(formData);
-    message.success('新增实例池成功');
-    await fetchAlertManagerPools();
-    closeAddModal();
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '新增实例池失败');
-  }
-};
-
-const showEditModal = (record: MonitorAlertManagerPool): void => {
-  if (record.id == null) {
-    message.error('记录ID缺失');
-    return;
-  }
-  editForm.id = record.id;
-  editForm.name = record.name ?? '';
-  editForm.alert_manager_instances = (record.alert_manager_instances ?? []).map(
-    (value) => ({
-      value,
-      key: Date.now() + Math.random(),
-    }),
-  );
-  editForm.resolve_timeout = record.resolve_timeout ?? '';
-  editForm.group_wait = record.group_wait ?? '';
-  editForm.group_interval = record.group_interval ?? '';
-  editForm.repeat_interval = record.repeat_interval ?? '';
-  const groupBy = record.group_by ?? [];
-  if (groupBy.length > 0) {
-    editForm.group_by = groupBy.map((value: string) => {
-      const [labelKey, labelValue] = value.split(',');
-      return {
-        labelKey: labelKey ?? '',
-        labelValue: labelValue ?? '',
-        key: Date.now() + Math.random(),
-      };
-    });
-  } else {
-    editForm.group_by = [{ labelKey: '', labelValue: '', key: Date.now() }];
-  }
-  editForm.receiver = record.receiver ?? '';
-  isEditModalVisible.value = true;
-  detailDialogVisible.value = false;
-};
-
-const handleEdit = async (): Promise<void> => {
-  try {
-    await editFormRef.value?.validate();
-    const formData: UpdateMonitorAlertManagerPoolReq = {
-      id: editForm.id,
-      name: editForm.name,
-      alert_manager_instances: editForm.alert_manager_instances
-        .map((item) => item.value)
-        .filter((v) => v.trim() !== ''),
-      resolve_timeout: editForm.resolve_timeout,
-      group_wait: editForm.group_wait,
-      group_interval: editForm.group_interval,
-      repeat_interval: editForm.repeat_interval,
-      group_by: editForm.group_by
-        .filter((item) => item.labelKey && item.labelValue)
-        .map((item) => `${item.labelKey},${item.labelValue}`),
-      receiver: editForm.receiver,
-    };
-    await updateMonitorAlertManagerPoolApi(formData);
-    message.success('更新实例池成功');
-    await fetchAlertManagerPools();
-    closeEditModal();
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '更新实例池失败');
-  }
-};
-
-// 生命周期钩子
-onMounted(() => {
-  fetchAlertManagerPools();
-});
-</script>
 
 <style scoped>
 .search-input {

@@ -1,541 +1,3 @@
-<template>
-  <OpsPage description="维护记录表达式、实例池与启用状态" title="记录规则">
-    <!-- 页面标题 -->
-    <template #actions>
-      <a-button class="btn-create" type="primary" @click="showAddModal">
-        <template #icon>
-          <PlusOutlined />
-        </template>
-        <span class="btn-text">新增记录</span>
-      </a-button>
-    </template>
-    <template #filters>
-      <div class="search-filters">
-        <a-input-search
-          v-model:value="searchText"
-          allow-clear
-          class="search-input"
-          placeholder="搜索记录名称..."
-          @change="handleSearchChange"
-          @search="handleSearch"
-        />
-        <a-select
-          v-model:value="enabledFilter"
-          allow-clear
-          class="filter-select"
-          placeholder="启用状态"
-          @change="handleEnabledFilterChange"
-        >
-          <a-select-option :value="undefined">全部</a-select-option>
-          <a-select-option :value="1">已启用</a-select-option>
-          <a-select-option :value="2">已禁用</a-select-option>
-        </a-select>
-        <a-button class="reset-btn" @click="handleReset"> 重置 </a-button>
-      </div>
-    </template>
-
-    <!-- 统计卡片 -->
-    <template #summary>
-      <div class="stats-row">
-        <a-row :gutter="[16, 16]">
-          <a-col :lg="6" :md="6" :sm="6" :xs="12">
-            <a-card class="stats-card">
-              <a-statistic
-                :value="loadError ? '未知' : stats.total"
-                :value-style="{ color: '#3f8600' }"
-                title="总记录"
-              >
-                <template #prefix>
-                  <Icon icon="carbon:data-table" />
-                </template>
-              </a-statistic>
-            </a-card>
-          </a-col>
-          <a-col :lg="6" :md="6" :sm="6" :xs="12">
-            <a-card class="stats-card">
-              <a-statistic
-                :value="loadError ? '未知' : stats.enabled"
-                :value-style="{ color: '#52c41a' }"
-                title="本页已启用"
-              >
-                <template #prefix>
-                  <Icon icon="carbon:check-mark" />
-                </template>
-              </a-statistic>
-            </a-card>
-          </a-col>
-          <a-col :lg="6" :md="6" :sm="6" :xs="12">
-            <a-card class="stats-card">
-              <a-statistic
-                :value="loadError ? '未知' : stats.disabled"
-                :value-style="{ color: '#faad14' }"
-                title="本页已禁用"
-              >
-                <template #prefix>
-                  <Icon icon="carbon:close-filled" />
-                </template>
-              </a-statistic>
-            </a-card>
-          </a-col>
-          <a-col :lg="6" :md="6" :sm="6" :xs="12">
-            <a-card class="stats-card">
-              <a-statistic
-                :value="loadError ? '未知' : stats.pools"
-                :value-style="{ color: '#cf1322' }"
-                title="本页实例池"
-              >
-                <template #prefix>
-                  <Icon icon="carbon:server" />
-                </template>
-              </a-statistic>
-            </a-card>
-          </a-col>
-        </a-row>
-      </div>
-    </template>
-
-    <a-alert
-      v-if="loadError"
-      :message="loadError"
-      role="alert"
-      show-icon
-      type="error"
-    >
-      <template #action>
-        <a-button :loading="loading" size="small" @click="fetchRecordRules">
-          重试
-        </a-button>
-      </template>
-    </a-alert>
-
-    <!-- 表格容器 -->
-    <div class="table-container">
-      <a-card>
-        <a-table
-          :columns="columns"
-          :data-source="data"
-          :loading="loading"
-          :pagination="paginationConfig"
-          :scroll="{ x: 1500 }"
-          bordered
-          row-key="id"
-          @change="handleTableChange"
-        >
-          <template #bodyCell="{ column, record }">
-            <template v-if="column.key === 'name'">
-              <div class="pool-name-cell">
-                <div
-                  class="pool-badge"
-                  :class="getRecordStatusClass(record)"
-                ></div>
-                <span class="pool-name-text">{{ record.name }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'pool_name'">
-              <div class="tag-container">
-                <a-tag v-if="record.pool_name" class="tech-tag prometheus-tag">
-                  {{ record.pool_name }}
-                </a-tag>
-                <span v-else class="empty-text">无关联池</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'ip_address'">
-              <span>{{ record.ip_address || '' }}</span>
-            </template>
-
-            <template v-if="column.key === 'enable'">
-              <a-tag :color="record.enable === 1 ? 'success' : 'default'">
-                {{ record.enable === 1 ? '启用' : '禁用' }}
-              </a-tag>
-            </template>
-
-            <template v-if="column.key === 'expr'">
-              <div class="expr-content">
-                <span :title="record.expr" class="expr-text">{{
-                  truncateText(record.expr, 50)
-                }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'creator'">
-              <div class="creator-info">
-                <a-avatar
-                  size="small"
-                  :style="{
-                    backgroundColor: getAvatarColor(
-                      record.create_user_name || '',
-                    ),
-                  }"
-                >
-                  {{ getInitials(record.create_user_name) }}
-                </a-avatar>
-                <span class="creator-name">{{ record.create_user_name }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'created_at'">
-              <div class="date-info">
-                <span class="date">{{ formatDate(record.created_at) }}</span>
-                <span class="time">{{ formatTime(record.created_at) }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'action'">
-              <div class="action-buttons">
-                <a-button
-                  size="small"
-                  type="primary"
-                  @click="handleViewRecord(record)"
-                >
-                  查看
-                </a-button>
-                <a-button
-                  size="small"
-                  type="default"
-                  @click="showEditModal(record)"
-                >
-                  编辑
-                </a-button>
-                <a-dropdown>
-                  <template #overlay>
-                    <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
-                      <a-menu-item v-if="record.enable === 2" key="enable">
-                        启用
-                      </a-menu-item>
-                      <a-menu-item v-if="record.enable === 1" key="disable">
-                        禁用
-                      </a-menu-item>
-                      <a-menu-item
-                        v-if="can('monitor.recordRule.delete')"
-                        key="delete"
-                        danger
-                      >
-                        删除
-                      </a-menu-item>
-                    </a-menu>
-                  </template>
-                  <a-button size="small">
-                    更多
-                    <DownOutlined />
-                  </a-button>
-                </a-dropdown>
-              </div>
-            </template>
-          </template>
-        </a-table>
-      </a-card>
-    </div>
-
-    <!-- 新增记录规则模态框 -->
-    <a-modal
-      :confirm-loading="submitLoading"
-      :destroy-on-close="true"
-      :open="isAddModalVisible"
-      :width="formDialogWidth"
-      class="responsive-modal scrape-pool-modal"
-      title="新增记录规则"
-      @cancel="closeAddModal"
-      @ok="handleAdd"
-    >
-      <a-form
-        ref="addFormRef"
-        :model="addForm"
-        :rules="formRules"
-        layout="vertical"
-      >
-        <div class="form-section">
-          <div class="section-title">基本信息</div>
-          <a-row :gutter="16">
-            <a-col :span="24">
-              <a-form-item label="记录名称" name="name">
-                <a-input
-                  v-model:value="addForm.name"
-                  placeholder="请输入记录名称"
-                />
-              </a-form-item>
-            </a-col>
-          </a-row>
-
-          <a-row :gutter="16">
-            <a-col :span="24">
-              <a-form-item label="Prometheus 实例池" name="pool_id">
-                <a-select
-                  v-model:value="addForm.pool_id"
-                  :filter-option="false"
-                  class="full-width"
-                  placeholder="请选择实例池"
-                  show-search
-                  @dropdown-visible-change="handlePoolDropdownChange"
-                  @search="handlePoolSearch"
-                >
-                  <a-select-option
-                    v-for="pool in poolOptions"
-                    :key="pool.id"
-                    :value="pool.id"
-                  >
-                    {{ pool.name }}
-                  </a-select-option>
-                </a-select>
-                <!-- Prometheus实例池分页 -->
-                <div v-if="showPoolPagination" class="pool-pagination">
-                  <a-pagination
-                    v-model:current="poolPagination.current"
-                    v-model:page-size="poolPagination.pageSize"
-                    :total="poolPagination.total"
-                    size="small"
-                    simple
-                    @change="loadPools"
-                  />
-                </div>
-              </a-form-item>
-            </a-col>
-          </a-row>
-
-          <a-row :gutter="16">
-            <a-col :span="24">
-              <a-form-item label="IP地址" name="ip_address">
-                <a-input
-                  v-model:value="addForm.ip_address"
-                  placeholder="例如: 192.168.1.100:9090 或 localhost:9090"
-                />
-              </a-form-item>
-            </a-col>
-          </a-row>
-        </div>
-
-        <div class="form-section">
-          <div class="section-title">规则配置</div>
-          <a-row :gutter="16">
-            <a-col :sm="12" :xs="24">
-              <a-form-item label="是否启用" name="enable">
-                <a-switch
-                  :checked="addForm.enable === 1"
-                  class="tech-switch"
-                  @change="
-                    (checked: boolean) => (addForm.enable = checked ? 1 : 2)
-                  "
-                />
-              </a-form-item>
-            </a-col>
-          </a-row>
-
-          <a-row :gutter="16">
-            <a-col :span="24">
-              <a-form-item label="表达式" name="expr">
-                <a-textarea
-                  v-model:value="addForm.expr"
-                  :rows="3"
-                  placeholder="请输入表达式"
-                />
-              </a-form-item>
-              <a-form-item>
-                <a-button
-                  :loading="validatingExpr"
-                  class="validate-button"
-                  type="primary"
-                  @click="validateAddExpression"
-                >
-                  <template #icon>
-                    <Icon icon="mdi:check-circle-outline" />
-                  </template>
-                  验证表达式
-                </a-button>
-              </a-form-item>
-            </a-col>
-          </a-row>
-        </div>
-      </a-form>
-    </a-modal>
-
-    <!-- 编辑记录规则模态框 -->
-    <a-modal
-      :confirm-loading="submitLoading"
-      :destroy-on-close="true"
-      :open="isEditModalVisible"
-      :width="formDialogWidth"
-      class="responsive-modal scrape-pool-modal"
-      title="编辑记录规则"
-      @cancel="closeEditModal"
-      @ok="handleUpdate"
-    >
-      <a-form
-        ref="editFormRef"
-        :model="editForm"
-        :rules="formRules"
-        layout="vertical"
-      >
-        <div class="form-section">
-          <div class="section-title">基本信息</div>
-          <a-row :gutter="16">
-            <a-col :span="24">
-              <a-form-item label="记录名称" name="name">
-                <a-input
-                  v-model:value="editForm.name"
-                  placeholder="请输入记录名称"
-                />
-              </a-form-item>
-            </a-col>
-          </a-row>
-
-          <a-row :gutter="16">
-            <a-col :span="24">
-              <a-form-item label="Prometheus 实例池" name="pool_id">
-                <a-select
-                  v-model:value="editForm.pool_id"
-                  :filter-option="false"
-                  class="full-width"
-                  placeholder="请选择实例池"
-                  show-search
-                  @dropdown-visible-change="handlePoolDropdownChange"
-                  @search="handlePoolSearch"
-                >
-                  <a-select-option
-                    v-for="pool in poolOptions"
-                    :key="pool.id"
-                    :value="pool.id"
-                  >
-                    {{ pool.name }}
-                  </a-select-option>
-                </a-select>
-                <!-- Prometheus实例池分页 -->
-                <div v-if="showPoolPagination" class="pool-pagination">
-                  <a-pagination
-                    v-model:current="poolPagination.current"
-                    v-model:page-size="poolPagination.pageSize"
-                    :total="poolPagination.total"
-                    size="small"
-                    simple
-                    @change="loadPools"
-                  />
-                </div>
-              </a-form-item>
-            </a-col>
-          </a-row>
-
-          <a-row :gutter="16">
-            <a-col :span="24">
-              <a-form-item label="IP地址" name="ip_address">
-                <a-input
-                  v-model:value="editForm.ip_address"
-                  placeholder="例如: 192.168.1.100:9090 或 localhost:9090"
-                />
-              </a-form-item>
-            </a-col>
-          </a-row>
-        </div>
-
-        <div class="form-section">
-          <div class="section-title">规则配置</div>
-          <a-row :gutter="16">
-            <a-col :sm="12" :xs="24">
-              <a-form-item label="是否启用" name="enable">
-                <a-switch
-                  :checked="editForm.enable === 1"
-                  class="tech-switch"
-                  @change="
-                    (checked: boolean) => (editForm.enable = checked ? 1 : 2)
-                  "
-                />
-              </a-form-item>
-            </a-col>
-          </a-row>
-
-          <a-row :gutter="16">
-            <a-col :span="24">
-              <a-form-item label="表达式" name="expr">
-                <a-textarea
-                  v-model:value="editForm.expr"
-                  :rows="3"
-                  placeholder="请输入表达式"
-                />
-              </a-form-item>
-              <a-form-item>
-                <a-button
-                  :loading="validatingExpr"
-                  class="validate-button"
-                  type="primary"
-                  @click="validateEditExpression"
-                >
-                  <template #icon>
-                    <Icon icon="mdi:check-circle-outline" />
-                  </template>
-                  验证表达式
-                </a-button>
-              </a-form-item>
-            </a-col>
-          </a-row>
-        </div>
-      </a-form>
-    </a-modal>
-
-    <!-- 详情对话框 -->
-    <a-modal
-      :footer="null"
-      :open="detailDialogVisible"
-      :width="previewDialogWidth"
-      class="detail-dialog"
-      title="记录规则详情"
-      @cancel="closeDetailDialog"
-    >
-      <div v-if="detailDialog.form" class="pool-details">
-        <div class="detail-header">
-          <h2>{{ detailDialog.form.name }}</h2>
-          <div class="detail-badges">
-            <a-tag
-              :color="detailDialog.form.enable === 1 ? 'success' : 'default'"
-            >
-              {{ detailDialog.form.enable === 1 ? '已启用' : '已禁用' }}
-            </a-tag>
-          </div>
-        </div>
-
-        <a-descriptions :column="1" :labelStyle="{ width: '150px' }" bordered>
-          <a-descriptions-item label="ID">
-            {{ detailDialog.form.id }}
-          </a-descriptions-item>
-          <a-descriptions-item label="记录名称">
-            {{ detailDialog.form.name }}
-          </a-descriptions-item>
-          <a-descriptions-item label="关联实例池">
-            {{ detailDialog.form.pool_name || '无关联池' }}
-          </a-descriptions-item>
-          <a-descriptions-item label="IP地址">
-            {{ detailDialog.form.ip_address || '' }}
-          </a-descriptions-item>
-          <a-descriptions-item label="是否启用">
-            {{ detailDialog.form.enable === 1 ? '启用' : '禁用' }}
-          </a-descriptions-item>
-          <a-descriptions-item label="表达式">
-            <div class="expr-detail">{{ detailDialog.form.expr }}</div>
-          </a-descriptions-item>
-          <a-descriptions-item label="创建人">
-            {{ detailDialog.form.create_user_name }}
-          </a-descriptions-item>
-          <a-descriptions-item label="创建时间">
-            {{ formatFullDateTime(detailDialog.form?.created_at || '') }}
-          </a-descriptions-item>
-        </a-descriptions>
-
-        <div class="detail-footer">
-          <a-button @click="closeDetailDialog">关闭</a-button>
-          <a-button
-            v-if="detailDialog.form.enable === 2"
-            type="primary"
-            @click="handleEnableRecord(detailDialog.form)"
-          >
-            启用
-          </a-button>
-          <a-button type="primary" @click="showEditModal(detailDialog.form)">
-            编辑
-          </a-button>
-        </div>
-      </div>
-    </a-modal>
-  </OpsPage>
-</template>
-
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
@@ -1136,6 +598,544 @@ onMounted(() => {
   loadPools();
 });
 </script>
+
+<template>
+  <OpsPage description="维护记录表达式、实例池与启用状态" title="记录规则">
+    <!-- 页面标题 -->
+    <template #actions>
+      <a-button class="btn-create" type="primary" @click="showAddModal">
+        <template #icon>
+          <PlusOutlined />
+        </template>
+        <span class="btn-text">新增记录</span>
+      </a-button>
+    </template>
+    <template #filters>
+      <div class="search-filters">
+        <a-input-search
+          v-model:value="searchText"
+          allow-clear
+          class="search-input"
+          placeholder="搜索记录名称..."
+          @change="handleSearchChange"
+          @search="handleSearch"
+        />
+        <a-select
+          v-model:value="enabledFilter"
+          allow-clear
+          class="filter-select"
+          placeholder="启用状态"
+          @change="handleEnabledFilterChange"
+        >
+          <a-select-option :value="undefined">全部</a-select-option>
+          <a-select-option :value="1">已启用</a-select-option>
+          <a-select-option :value="2">已禁用</a-select-option>
+        </a-select>
+        <a-button class="reset-btn" @click="handleReset"> 重置 </a-button>
+      </div>
+    </template>
+
+    <!-- 统计卡片 -->
+    <template #summary>
+      <div class="stats-row">
+        <a-row :gutter="[16, 16]">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
+            <a-card class="stats-card">
+              <a-statistic
+                :value="loadError ? '未知' : stats.total"
+                :value-style="{ color: '#3f8600' }"
+                title="总记录"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:data-table" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
+            <a-card class="stats-card">
+              <a-statistic
+                :value="loadError ? '未知' : stats.enabled"
+                :value-style="{ color: '#52c41a' }"
+                title="本页已启用"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:check-mark" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
+            <a-card class="stats-card">
+              <a-statistic
+                :value="loadError ? '未知' : stats.disabled"
+                :value-style="{ color: '#faad14' }"
+                title="本页已禁用"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:close-filled" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
+            <a-card class="stats-card">
+              <a-statistic
+                :value="loadError ? '未知' : stats.pools"
+                :value-style="{ color: '#cf1322' }"
+                title="本页实例池"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:server" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+        </a-row>
+      </div>
+    </template>
+
+    <a-alert
+      v-if="loadError"
+      :message="loadError"
+      role="alert"
+      show-icon
+      type="error"
+    >
+      <template #action>
+        <a-button :loading="loading" size="small" @click="fetchRecordRules">
+          重试
+        </a-button>
+      </template>
+    </a-alert>
+
+    <!-- 表格容器 -->
+    <div class="table-container">
+      <a-card>
+        <a-table
+          :columns="columns"
+          :data-source="data"
+          :loading="loading"
+          :pagination="paginationConfig"
+          :scroll="{ x: 1500 }"
+          bordered
+          row-key="id"
+          @change="handleTableChange"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'name'">
+              <div class="pool-name-cell">
+                <div
+                  class="pool-badge"
+                  :class="getRecordStatusClass(record)"
+                ></div>
+                <span class="pool-name-text">{{ record.name }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'pool_name'">
+              <div class="tag-container">
+                <a-tag v-if="record.pool_name" class="tech-tag prometheus-tag">
+                  {{ record.pool_name }}
+                </a-tag>
+                <span v-else class="empty-text">无关联池</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'ip_address'">
+              <span>{{ record.ip_address || '' }}</span>
+            </template>
+
+            <template v-if="column.key === 'enable'">
+              <a-tag :color="record.enable === 1 ? 'success' : 'default'">
+                {{ record.enable === 1 ? '启用' : '禁用' }}
+              </a-tag>
+            </template>
+
+            <template v-if="column.key === 'expr'">
+              <div class="expr-content">
+                <span :title="record.expr" class="expr-text">{{
+                  truncateText(record.expr, 50)
+                }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'creator'">
+              <div class="creator-info">
+                <a-avatar
+                  size="small"
+                  :style="{
+                    backgroundColor: getAvatarColor(
+                      record.create_user_name || '',
+                    ),
+                  }"
+                >
+                  {{ getInitials(record.create_user_name) }}
+                </a-avatar>
+                <span class="creator-name">{{ record.create_user_name }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'created_at'">
+              <div class="date-info">
+                <span class="date">{{ formatDate(record.created_at) }}</span>
+                <span class="time">{{ formatTime(record.created_at) }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'action'">
+              <div class="action-buttons">
+                <a-button
+                  size="small"
+                  type="primary"
+                  @click="handleViewRecord(record)"
+                >
+                  查看
+                </a-button>
+                <a-button
+                  size="small"
+                  type="default"
+                  @click="showEditModal(record)"
+                >
+                  编辑
+                </a-button>
+                <a-dropdown>
+                  <template #overlay>
+                    <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
+                      <a-menu-item v-if="record.enable === 2" key="enable">
+                        启用
+                      </a-menu-item>
+                      <a-menu-item v-if="record.enable === 1" key="disable">
+                        禁用
+                      </a-menu-item>
+                      <a-menu-item
+                        v-if="can('monitor.recordRule.delete')"
+                        key="delete"
+                        danger
+                      >
+                        删除
+                      </a-menu-item>
+                    </a-menu>
+                  </template>
+                  <a-button size="small">
+                    更多
+                    <DownOutlined />
+                  </a-button>
+                </a-dropdown>
+              </div>
+            </template>
+          </template>
+        </a-table>
+      </a-card>
+    </div>
+
+    <!-- 新增记录规则模态框 -->
+    <a-modal
+      :confirm-loading="submitLoading"
+      :destroy-on-close="true"
+      :open="isAddModalVisible"
+      :width="formDialogWidth"
+      class="responsive-modal scrape-pool-modal"
+      title="新增记录规则"
+      @cancel="closeAddModal"
+      @ok="handleAdd"
+    >
+      <a-form
+        ref="addFormRef"
+        :model="addForm"
+        :rules="formRules"
+        layout="vertical"
+      >
+        <div class="form-section">
+          <div class="section-title">基本信息</div>
+          <a-row :gutter="16">
+            <a-col :span="24">
+              <a-form-item label="记录名称" name="name">
+                <a-input
+                  v-model:value="addForm.name"
+                  placeholder="请输入记录名称"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+
+          <a-row :gutter="16">
+            <a-col :span="24">
+              <a-form-item label="Prometheus 实例池" name="pool_id">
+                <a-select
+                  v-model:value="addForm.pool_id"
+                  :filter-option="false"
+                  class="full-width"
+                  placeholder="请选择实例池"
+                  show-search
+                  @dropdown-visible-change="handlePoolDropdownChange"
+                  @search="handlePoolSearch"
+                >
+                  <a-select-option
+                    v-for="pool in poolOptions"
+                    :key="pool.id"
+                    :value="pool.id"
+                  >
+                    {{ pool.name }}
+                  </a-select-option>
+                </a-select>
+                <!-- Prometheus实例池分页 -->
+                <div v-if="showPoolPagination" class="pool-pagination">
+                  <a-pagination
+                    v-model:current="poolPagination.current"
+                    v-model:page-size="poolPagination.pageSize"
+                    :total="poolPagination.total"
+                    size="small"
+                    simple
+                    @change="loadPools"
+                  />
+                </div>
+              </a-form-item>
+            </a-col>
+          </a-row>
+
+          <a-row :gutter="16">
+            <a-col :span="24">
+              <a-form-item label="IP地址" name="ip_address">
+                <a-input
+                  v-model:value="addForm.ip_address"
+                  placeholder="例如: 192.168.1.100:9090 或 localhost:9090"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">规则配置</div>
+          <a-row :gutter="16">
+            <a-col :sm="12" :xs="24">
+              <a-form-item label="是否启用" name="enable">
+                <a-switch
+                  :checked="addForm.enable === 1"
+                  class="tech-switch"
+                  @change="
+                    (checked: boolean) => (addForm.enable = checked ? 1 : 2)
+                  "
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+
+          <a-row :gutter="16">
+            <a-col :span="24">
+              <a-form-item label="表达式" name="expr">
+                <a-textarea
+                  v-model:value="addForm.expr"
+                  :rows="3"
+                  placeholder="请输入表达式"
+                />
+              </a-form-item>
+              <a-form-item>
+                <a-button
+                  :loading="validatingExpr"
+                  class="validate-button"
+                  type="primary"
+                  @click="validateAddExpression"
+                >
+                  <template #icon>
+                    <Icon icon="mdi:check-circle-outline" />
+                  </template>
+                  验证表达式
+                </a-button>
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </div>
+      </a-form>
+    </a-modal>
+
+    <!-- 编辑记录规则模态框 -->
+    <a-modal
+      :confirm-loading="submitLoading"
+      :destroy-on-close="true"
+      :open="isEditModalVisible"
+      :width="formDialogWidth"
+      class="responsive-modal scrape-pool-modal"
+      title="编辑记录规则"
+      @cancel="closeEditModal"
+      @ok="handleUpdate"
+    >
+      <a-form
+        ref="editFormRef"
+        :model="editForm"
+        :rules="formRules"
+        layout="vertical"
+      >
+        <div class="form-section">
+          <div class="section-title">基本信息</div>
+          <a-row :gutter="16">
+            <a-col :span="24">
+              <a-form-item label="记录名称" name="name">
+                <a-input
+                  v-model:value="editForm.name"
+                  placeholder="请输入记录名称"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+
+          <a-row :gutter="16">
+            <a-col :span="24">
+              <a-form-item label="Prometheus 实例池" name="pool_id">
+                <a-select
+                  v-model:value="editForm.pool_id"
+                  :filter-option="false"
+                  class="full-width"
+                  placeholder="请选择实例池"
+                  show-search
+                  @dropdown-visible-change="handlePoolDropdownChange"
+                  @search="handlePoolSearch"
+                >
+                  <a-select-option
+                    v-for="pool in poolOptions"
+                    :key="pool.id"
+                    :value="pool.id"
+                  >
+                    {{ pool.name }}
+                  </a-select-option>
+                </a-select>
+                <!-- Prometheus实例池分页 -->
+                <div v-if="showPoolPagination" class="pool-pagination">
+                  <a-pagination
+                    v-model:current="poolPagination.current"
+                    v-model:page-size="poolPagination.pageSize"
+                    :total="poolPagination.total"
+                    size="small"
+                    simple
+                    @change="loadPools"
+                  />
+                </div>
+              </a-form-item>
+            </a-col>
+          </a-row>
+
+          <a-row :gutter="16">
+            <a-col :span="24">
+              <a-form-item label="IP地址" name="ip_address">
+                <a-input
+                  v-model:value="editForm.ip_address"
+                  placeholder="例如: 192.168.1.100:9090 或 localhost:9090"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">规则配置</div>
+          <a-row :gutter="16">
+            <a-col :sm="12" :xs="24">
+              <a-form-item label="是否启用" name="enable">
+                <a-switch
+                  :checked="editForm.enable === 1"
+                  class="tech-switch"
+                  @change="
+                    (checked: boolean) => (editForm.enable = checked ? 1 : 2)
+                  "
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+
+          <a-row :gutter="16">
+            <a-col :span="24">
+              <a-form-item label="表达式" name="expr">
+                <a-textarea
+                  v-model:value="editForm.expr"
+                  :rows="3"
+                  placeholder="请输入表达式"
+                />
+              </a-form-item>
+              <a-form-item>
+                <a-button
+                  :loading="validatingExpr"
+                  class="validate-button"
+                  type="primary"
+                  @click="validateEditExpression"
+                >
+                  <template #icon>
+                    <Icon icon="mdi:check-circle-outline" />
+                  </template>
+                  验证表达式
+                </a-button>
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </div>
+      </a-form>
+    </a-modal>
+
+    <!-- 详情对话框 -->
+    <a-modal
+      :footer="null"
+      :open="detailDialogVisible"
+      :width="previewDialogWidth"
+      class="detail-dialog"
+      title="记录规则详情"
+      @cancel="closeDetailDialog"
+    >
+      <div v-if="detailDialog.form" class="pool-details">
+        <div class="detail-header">
+          <h2>{{ detailDialog.form.name }}</h2>
+          <div class="detail-badges">
+            <a-tag
+              :color="detailDialog.form.enable === 1 ? 'success' : 'default'"
+            >
+              {{ detailDialog.form.enable === 1 ? '已启用' : '已禁用' }}
+            </a-tag>
+          </div>
+        </div>
+
+        <a-descriptions :column="1" :labelStyle="{ width: '150px' }" bordered>
+          <a-descriptions-item label="ID">
+            {{ detailDialog.form.id }}
+          </a-descriptions-item>
+          <a-descriptions-item label="记录名称">
+            {{ detailDialog.form.name }}
+          </a-descriptions-item>
+          <a-descriptions-item label="关联实例池">
+            {{ detailDialog.form.pool_name || '无关联池' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="IP地址">
+            {{ detailDialog.form.ip_address || '' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="是否启用">
+            {{ detailDialog.form.enable === 1 ? '启用' : '禁用' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="表达式">
+            <div class="expr-detail">{{ detailDialog.form.expr }}</div>
+          </a-descriptions-item>
+          <a-descriptions-item label="创建人">
+            {{ detailDialog.form.create_user_name }}
+          </a-descriptions-item>
+          <a-descriptions-item label="创建时间">
+            {{ formatFullDateTime(detailDialog.form?.created_at || '') }}
+          </a-descriptions-item>
+        </a-descriptions>
+
+        <div class="detail-footer">
+          <a-button @click="closeDetailDialog">关闭</a-button>
+          <a-button
+            v-if="detailDialog.form.enable === 2"
+            type="primary"
+            @click="handleEnableRecord(detailDialog.form)"
+          >
+            启用
+          </a-button>
+          <a-button type="primary" @click="showEditModal(detailDialog.form)">
+            编辑
+          </a-button>
+        </div>
+      </div>
+    </a-modal>
+  </OpsPage>
+</template>
 
 <style scoped>
 .search-input {

@@ -1,312 +1,3 @@
-<template>
-  <OpsPage
-    class="session-container"
-    description="查询本人会话与服务端保存的对话；本地列表仅保存会话索引"
-    title="会话管理"
-  >
-    <!-- 页面头部 -->
-    <template #actions>
-      <a-button
-        :disabled="sessionHistory.length === 0"
-        type="primary"
-        @click="clearAllHistory"
-      >
-        <template #icon><DeleteOutlined /></template>
-        清空历史
-      </a-button>
-    </template>
-
-    <div class="session-content">
-      <a-alert
-        v-if="sessionError"
-        :message="sessionError"
-        class="session-error"
-        role="alert"
-        show-icon
-        type="error"
-      />
-      <!-- 会话搜索 -->
-      <a-card class="search-card" title="会话搜索">
-        <div class="search-area">
-          <a-input-group compact>
-            <a-input
-              v-model:value="searchSessionId"
-              placeholder="请输入会话ID进行搜索"
-              style="width: calc(100% - 100px)"
-              @pressEnter="searchSession"
-            />
-            <a-button
-              :loading="searching"
-              type="primary"
-              @click="searchSession"
-            >
-              <template #icon><SearchOutlined /></template>
-              搜索
-            </a-button>
-          </a-input-group>
-        </div>
-      </a-card>
-
-      <!-- 会话详情 -->
-      <a-card
-        v-if="currentSession.session_id"
-        class="session-detail-card"
-        title="会话详情"
-      >
-        <a-descriptions :column="{ xs: 1, sm: 2 }" bordered>
-          <a-descriptions-item label="会话ID">
-            <a-typography-text copyable>
-              {{ currentSession.session_id }}
-            </a-typography-text>
-          </a-descriptions-item>
-          <a-descriptions-item label="会话状态">
-            <a-tag :color="getStatusColor(currentSession.status)">
-              {{ getStatusText(currentSession.status) }}
-            </a-tag>
-          </a-descriptions-item>
-          <a-descriptions-item label="创建时间">
-            {{
-              currentSession.created_time
-                ? formatTime(currentSession.created_time)
-                : '未知'
-            }}
-          </a-descriptions-item>
-          <a-descriptions-item label="最后活动">
-            {{
-              currentSession.last_activity
-                ? formatTime(currentSession.last_activity)
-                : '未知'
-            }}
-          </a-descriptions-item>
-          <a-descriptions-item label="消息数量">
-            <a-badge
-              :count="currentSession.message_count || 0"
-              :number-style="{ backgroundColor: '#52c41a' }"
-            />
-          </a-descriptions-item>
-          <a-descriptions-item label="运行模式">
-            <a-tag :color="getModeColor(currentSession.mode)">
-              {{ getModeText(currentSession.mode) }}
-            </a-tag>
-          </a-descriptions-item>
-        </a-descriptions>
-
-        <a-alert
-          v-if="currentSession.status === 'unknown'"
-          message="上次请求结果未知，请核对下方问题与已有结果；不要盲目重新执行。"
-          show-icon
-          type="warning"
-        />
-        <a-alert
-          v-else-if="currentSession.status === 'running'"
-          message="会话正在处理请求，请稍后刷新状态。"
-          show-icon
-          type="info"
-        />
-        <a-descriptions
-          v-if="currentSession.active_turn_id"
-          :column="1"
-          bordered
-          size="small"
-          title="待核对请求"
-        >
-          <a-descriptions-item label="请求 ID">
-            {{ currentSession.active_turn_id }}
-          </a-descriptions-item>
-          <a-descriptions-item label="请求内容">
-            {{ currentSession.active_question || '未知' }}
-          </a-descriptions-item>
-        </a-descriptions>
-        <div
-          v-if="currentSession.conversation_history?.length"
-          class="durable-history"
-        >
-          <h3>服务端最近对话</h3>
-          <div
-            v-for="(turn, index) in currentSession.conversation_history"
-            :key="index"
-            class="durable-turn"
-          >
-            <p><strong>问题：</strong>{{ turn.q }}</p>
-            <p><strong>回答：</strong>{{ turn.a }}</p>
-          </div>
-        </div>
-
-        <div class="session-actions">
-          <a-space wrap>
-            <a-button :loading="searching" @click="refreshSession">
-              <template #icon><ReloadOutlined /></template>
-              刷新会话
-            </a-button>
-            <a-button type="dashed" @click="addToHistory">
-              <template #icon><PlusOutlined /></template>
-              添加到历史
-            </a-button>
-            <a-button type="default" @click="exportSession">
-              <template #icon><DownloadOutlined /></template>
-              导出会话
-            </a-button>
-          </a-space>
-        </div>
-      </a-card>
-
-      <!-- 会话历史 -->
-      <a-card class="history-card" title="本地会话历史">
-        <div v-if="sessionHistory.length === 0" class="empty-history">
-          <a-empty description="暂无会话历史记录">
-            <template #image>
-              <HistoryOutlined style="font-size: 64px; color: #d9d9d9" />
-            </template>
-          </a-empty>
-        </div>
-        <div v-else class="history-list">
-          <div
-            v-for="(session, index) in sessionHistory"
-            :key="session.session_id"
-            class="history-item"
-            @click="loadHistorySession(session)"
-          >
-            <div class="history-content">
-              <div class="history-header">
-                <div class="session-info">
-                  <span class="session-id"
-                    >{{ session.session_id.slice(0, 8) }}...</span
-                  >
-                  <a-tag :color="getStatusColor(session.status)" size="small">
-                    {{ getStatusText(session.status) }}
-                  </a-tag>
-                  <a-tag :color="getModeColor(session.mode)" size="small">
-                    {{ getModeText(session.mode) }}
-                  </a-tag>
-                </div>
-                <div class="history-actions">
-                  <a-button
-                    danger
-                    size="small"
-                    type="text"
-                    @click.stop="removeFromHistory(index)"
-                  >
-                    <template #icon><DeleteOutlined /></template>
-                  </a-button>
-                </div>
-              </div>
-              <div class="history-meta">
-                <div class="meta-item">
-                  <ClockCircleOutlined />
-                  <span>{{ formatTime(session.last_activity) }}</span>
-                </div>
-                <div class="meta-item">
-                  <MessageOutlined />
-                  <span>{{ session.message_count }} 条消息</span>
-                </div>
-                <div class="meta-item">
-                  <CalendarOutlined />
-                  <span>{{ formatTime(session.created_time) }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </a-card>
-
-      <!-- 快速操作 -->
-      <a-card class="quick-actions-card" title="快速操作">
-        <a-row :gutter="16">
-          <a-col :md="8" :xs="24">
-            <div class="quick-action-item">
-              <div class="action-icon">
-                <PlusCircleOutlined />
-              </div>
-              <div class="action-content">
-                <div class="action-title">创建新会话</div>
-                <div class="action-desc">开始新的对话会话</div>
-                <a-button size="small" type="primary" @click="createNewSession">
-                  立即创建
-                </a-button>
-              </div>
-            </div>
-          </a-col>
-          <a-col :md="8" :xs="24">
-            <div class="quick-action-item">
-              <div class="action-icon">
-                <FileTextOutlined />
-              </div>
-              <div class="action-content">
-                <div class="action-title">批量导出</div>
-                <div class="action-desc">导出所有历史会话</div>
-                <a-button
-                  :disabled="sessionHistory.length === 0"
-                  size="small"
-                  type="default"
-                  @click="exportAllSessions"
-                >
-                  导出全部
-                </a-button>
-              </div>
-            </div>
-          </a-col>
-          <a-col :md="8" :xs="24">
-            <div class="quick-action-item">
-              <div class="action-icon">
-                <BarChartOutlined />
-              </div>
-              <div class="action-content">
-                <div class="action-title">统计分析</div>
-                <div class="action-desc">查看会话使用统计</div>
-                <a-button size="small" type="default" @click="showStatistics">
-                  查看统计
-                </a-button>
-              </div>
-            </div>
-          </a-col>
-        </a-row>
-      </a-card>
-
-      <!-- 统计信息 -->
-      <a-card v-if="showStats" class="statistics-card" title="本地会话统计">
-        <a-row :gutter="16">
-          <a-col :md="6" :xs="12">
-            <a-statistic
-              :value="sessionStats.totalSessions"
-              :value-style="{ color: '#1890ff' }"
-              title="本地会话数"
-            >
-              <template #prefix><MessageOutlined /></template>
-            </a-statistic>
-          </a-col>
-          <a-col :md="6" :xs="12">
-            <a-statistic
-              :value="sessionStats.totalMessages"
-              :value-style="{ color: '#52c41a' }"
-              title="本地消息数"
-            >
-              <template #prefix><CommentOutlined /></template>
-            </a-statistic>
-          </a-col>
-          <a-col :md="6" :xs="12">
-            <a-statistic
-              :value="sessionStats.ragSessions"
-              :value-style="{ color: '#fa8c16' }"
-              title="RAG模式会话"
-            >
-              <template #prefix><DatabaseOutlined /></template>
-            </a-statistic>
-          </a-col>
-          <a-col :md="6" :xs="12">
-            <a-statistic
-              :value="sessionStats.mcpSessions"
-              :value-style="{ color: '#722ed1' }"
-              title="MCP模式会话"
-            >
-              <template #prefix><ApiOutlined /></template>
-            </a-statistic>
-          </a-col>
-        </a-row>
-      </a-card>
-    </div>
-  </OpsPage>
-</template>
-
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
@@ -625,6 +316,315 @@ watch(
 );
 onBeforeUnmount(() => accountScope.invalidate());
 </script>
+
+<template>
+  <OpsPage
+    class="session-container"
+    description="查询本人会话与服务端保存的对话；本地列表仅保存会话索引"
+    title="会话管理"
+  >
+    <!-- 页面头部 -->
+    <template #actions>
+      <a-button
+        :disabled="sessionHistory.length === 0"
+        type="primary"
+        @click="clearAllHistory"
+      >
+        <template #icon><DeleteOutlined /></template>
+        清空历史
+      </a-button>
+    </template>
+
+    <div class="session-content">
+      <a-alert
+        v-if="sessionError"
+        :message="sessionError"
+        class="session-error"
+        role="alert"
+        show-icon
+        type="error"
+      />
+      <!-- 会话搜索 -->
+      <a-card class="search-card" title="会话搜索">
+        <div class="search-area">
+          <a-input-group compact>
+            <a-input
+              v-model:value="searchSessionId"
+              placeholder="请输入会话ID进行搜索"
+              style="width: calc(100% - 100px)"
+              @pressEnter="searchSession"
+            />
+            <a-button
+              :loading="searching"
+              type="primary"
+              @click="searchSession"
+            >
+              <template #icon><SearchOutlined /></template>
+              搜索
+            </a-button>
+          </a-input-group>
+        </div>
+      </a-card>
+
+      <!-- 会话详情 -->
+      <a-card
+        v-if="currentSession.session_id"
+        class="session-detail-card"
+        title="会话详情"
+      >
+        <a-descriptions :column="{ xs: 1, sm: 2 }" bordered>
+          <a-descriptions-item label="会话ID">
+            <a-typography-text copyable>
+              {{ currentSession.session_id }}
+            </a-typography-text>
+          </a-descriptions-item>
+          <a-descriptions-item label="会话状态">
+            <a-tag :color="getStatusColor(currentSession.status)">
+              {{ getStatusText(currentSession.status) }}
+            </a-tag>
+          </a-descriptions-item>
+          <a-descriptions-item label="创建时间">
+            {{
+              currentSession.created_time
+                ? formatTime(currentSession.created_time)
+                : '未知'
+            }}
+          </a-descriptions-item>
+          <a-descriptions-item label="最后活动">
+            {{
+              currentSession.last_activity
+                ? formatTime(currentSession.last_activity)
+                : '未知'
+            }}
+          </a-descriptions-item>
+          <a-descriptions-item label="消息数量">
+            <a-badge
+              :count="currentSession.message_count || 0"
+              :number-style="{ backgroundColor: '#52c41a' }"
+            />
+          </a-descriptions-item>
+          <a-descriptions-item label="运行模式">
+            <a-tag :color="getModeColor(currentSession.mode)">
+              {{ getModeText(currentSession.mode) }}
+            </a-tag>
+          </a-descriptions-item>
+        </a-descriptions>
+
+        <a-alert
+          v-if="currentSession.status === 'unknown'"
+          message="上次请求结果未知，请核对下方问题与已有结果；不要盲目重新执行。"
+          show-icon
+          type="warning"
+        />
+        <a-alert
+          v-else-if="currentSession.status === 'running'"
+          message="会话正在处理请求，请稍后刷新状态。"
+          show-icon
+          type="info"
+        />
+        <a-descriptions
+          v-if="currentSession.active_turn_id"
+          :column="1"
+          bordered
+          size="small"
+          title="待核对请求"
+        >
+          <a-descriptions-item label="请求 ID">
+            {{ currentSession.active_turn_id }}
+          </a-descriptions-item>
+          <a-descriptions-item label="请求内容">
+            {{ currentSession.active_question || '未知' }}
+          </a-descriptions-item>
+        </a-descriptions>
+        <div
+          v-if="currentSession.conversation_history?.length"
+          class="durable-history"
+        >
+          <h3>服务端最近对话</h3>
+          <div
+            v-for="(turn, index) in currentSession.conversation_history"
+            :key="index"
+            class="durable-turn"
+          >
+            <p><strong>问题：</strong>{{ turn.q }}</p>
+            <p><strong>回答：</strong>{{ turn.a }}</p>
+          </div>
+        </div>
+
+        <div class="session-actions">
+          <a-space wrap>
+            <a-button :loading="searching" @click="refreshSession">
+              <template #icon><ReloadOutlined /></template>
+              刷新会话
+            </a-button>
+            <a-button type="dashed" @click="addToHistory">
+              <template #icon><PlusOutlined /></template>
+              添加到历史
+            </a-button>
+            <a-button type="default" @click="exportSession">
+              <template #icon><DownloadOutlined /></template>
+              导出会话
+            </a-button>
+          </a-space>
+        </div>
+      </a-card>
+
+      <!-- 会话历史 -->
+      <a-card class="history-card" title="本地会话历史">
+        <div v-if="sessionHistory.length === 0" class="empty-history">
+          <a-empty description="暂无会话历史记录">
+            <template #image>
+              <HistoryOutlined style="font-size: 64px; color: #d9d9d9" />
+            </template>
+          </a-empty>
+        </div>
+        <div v-else class="history-list">
+          <div
+            v-for="(session, index) in sessionHistory"
+            :key="session.session_id"
+            class="history-item"
+            @click="loadHistorySession(session)"
+          >
+            <div class="history-content">
+              <div class="history-header">
+                <div class="session-info">
+                  <span class="session-id"
+                    >{{ session.session_id.slice(0, 8) }}...</span
+                  >
+                  <a-tag :color="getStatusColor(session.status)" size="small">
+                    {{ getStatusText(session.status) }}
+                  </a-tag>
+                  <a-tag :color="getModeColor(session.mode)" size="small">
+                    {{ getModeText(session.mode) }}
+                  </a-tag>
+                </div>
+                <div class="history-actions">
+                  <a-button
+                    danger
+                    size="small"
+                    type="text"
+                    @click.stop="removeFromHistory(index)"
+                  >
+                    <template #icon><DeleteOutlined /></template>
+                  </a-button>
+                </div>
+              </div>
+              <div class="history-meta">
+                <div class="meta-item">
+                  <ClockCircleOutlined />
+                  <span>{{ formatTime(session.last_activity) }}</span>
+                </div>
+                <div class="meta-item">
+                  <MessageOutlined />
+                  <span>{{ session.message_count }} 条消息</span>
+                </div>
+                <div class="meta-item">
+                  <CalendarOutlined />
+                  <span>{{ formatTime(session.created_time) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </a-card>
+
+      <!-- 快速操作 -->
+      <a-card class="quick-actions-card" title="快速操作">
+        <a-row :gutter="16">
+          <a-col :md="8" :xs="24">
+            <div class="quick-action-item">
+              <div class="action-icon">
+                <PlusCircleOutlined />
+              </div>
+              <div class="action-content">
+                <div class="action-title">创建新会话</div>
+                <div class="action-desc">开始新的对话会话</div>
+                <a-button size="small" type="primary" @click="createNewSession">
+                  立即创建
+                </a-button>
+              </div>
+            </div>
+          </a-col>
+          <a-col :md="8" :xs="24">
+            <div class="quick-action-item">
+              <div class="action-icon">
+                <FileTextOutlined />
+              </div>
+              <div class="action-content">
+                <div class="action-title">批量导出</div>
+                <div class="action-desc">导出所有历史会话</div>
+                <a-button
+                  :disabled="sessionHistory.length === 0"
+                  size="small"
+                  type="default"
+                  @click="exportAllSessions"
+                >
+                  导出全部
+                </a-button>
+              </div>
+            </div>
+          </a-col>
+          <a-col :md="8" :xs="24">
+            <div class="quick-action-item">
+              <div class="action-icon">
+                <BarChartOutlined />
+              </div>
+              <div class="action-content">
+                <div class="action-title">统计分析</div>
+                <div class="action-desc">查看会话使用统计</div>
+                <a-button size="small" type="default" @click="showStatistics">
+                  查看统计
+                </a-button>
+              </div>
+            </div>
+          </a-col>
+        </a-row>
+      </a-card>
+
+      <!-- 统计信息 -->
+      <a-card v-if="showStats" class="statistics-card" title="本地会话统计">
+        <a-row :gutter="16">
+          <a-col :md="6" :xs="12">
+            <a-statistic
+              :value="sessionStats.totalSessions"
+              :value-style="{ color: '#1890ff' }"
+              title="本地会话数"
+            >
+              <template #prefix><MessageOutlined /></template>
+            </a-statistic>
+          </a-col>
+          <a-col :md="6" :xs="12">
+            <a-statistic
+              :value="sessionStats.totalMessages"
+              :value-style="{ color: '#52c41a' }"
+              title="本地消息数"
+            >
+              <template #prefix><CommentOutlined /></template>
+            </a-statistic>
+          </a-col>
+          <a-col :md="6" :xs="12">
+            <a-statistic
+              :value="sessionStats.ragSessions"
+              :value-style="{ color: '#fa8c16' }"
+              title="RAG模式会话"
+            >
+              <template #prefix><DatabaseOutlined /></template>
+            </a-statistic>
+          </a-col>
+          <a-col :md="6" :xs="12">
+            <a-statistic
+              :value="sessionStats.mcpSessions"
+              :value-style="{ color: '#722ed1' }"
+              title="MCP模式会话"
+            >
+              <template #prefix><ApiOutlined /></template>
+            </a-statistic>
+          </a-col>
+        </a-row>
+      </a-card>
+    </div>
+  </OpsPage>
+</template>
 
 <style scoped>
 /* 页面头部 */

@@ -1,315 +1,3 @@
-<template>
-  <OpsPage
-    class="predict-dashboard"
-    description="对输入指标发起预测，各序列按实际时间对齐"
-    title="预测看板"
-  >
-    <!-- 页面头部 -->
-    <template #actions>
-      <a-space wrap>
-        <a-button @click="resetForm"> 重置 </a-button>
-        <a-button
-          :disabled="!isFormValid || loading"
-          :loading="loading"
-          type="primary"
-          @click="refreshAllPredictions"
-        >
-          {{ hasInitialData ? '刷新预测' : '开始预测' }}
-        </a-button>
-      </a-space>
-    </template>
-    <a-alert
-      v-if="predictionError"
-      :message="predictionError"
-      role="alert"
-      show-icon
-      type="error"
-    />
-
-    <!-- 数据输入区域 -->
-    <a-card class="input-card" title="输入当前指标数据">
-      <template #extra>
-        <a-tag v-if="hasInitialData" color="blue">数据已输入</a-tag>
-        <a-tag v-else color="orange">请填写指标数据</a-tag>
-      </template>
-
-      <a-form
-        :label-col="{ span: 6 }"
-        :wrapper-col="{ span: 18 }"
-        layout="horizontal"
-      >
-        <a-row :gutter="[24, 16]">
-          <a-col :md="12" :xs="24">
-            <a-form-item label="当前QPS" required>
-              <a-input-number
-                v-model:value="inputData.currentQps"
-                :max="100000"
-                :min="0"
-                :precision="2"
-                addon-after="/s"
-                placeholder="输入当前QPS值"
-                style="width: 100%"
-              />
-            </a-form-item>
-          </a-col>
-          <a-col :md="12" :xs="24">
-            <a-form-item label="当前CPU使用率" required>
-              <a-input-number
-                v-model:value="inputData.currentCpu"
-                :max="100"
-                :min="0"
-                :precision="2"
-                addon-after="%"
-                placeholder="输入当前CPU使用率"
-                style="width: 100%"
-              />
-            </a-form-item>
-          </a-col>
-          <a-col :md="12" :xs="24">
-            <a-form-item label="当前内存使用率" required>
-              <a-input-number
-                v-model:value="inputData.currentMemory"
-                :max="100"
-                :min="0"
-                :precision="2"
-                addon-after="%"
-                placeholder="输入当前内存使用率"
-                style="width: 100%"
-              />
-            </a-form-item>
-          </a-col>
-          <a-col :md="12" :xs="24">
-            <a-form-item label="当前磁盘使用率" required>
-              <a-input-number
-                v-model:value="inputData.currentDisk"
-                :max="100"
-                :min="0"
-                :precision="2"
-                addon-after="%"
-                placeholder="输入当前磁盘使用率"
-                style="width: 100%"
-              />
-            </a-form-item>
-          </a-col>
-          <a-col :md="12" :xs="24">
-            <a-form-item label="预测时长">
-              <a-select
-                v-model:value="timeRange"
-                style="width: 100%"
-                @change="onTimeRangeChange"
-              >
-                <a-select-option value="1">1小时</a-select-option>
-                <a-select-option value="6">6小时</a-select-option>
-                <a-select-option value="24">24小时</a-select-option>
-                <a-select-option value="72">3天</a-select-option>
-              </a-select>
-            </a-form-item>
-          </a-col>
-          <a-col :md="12" :xs="24">
-            <a-form-item label="AI增强">
-              <a-switch v-model:checked="aiEnhanced" />
-              <span style="margin-left: 8px">启用AI洞察</span>
-            </a-form-item>
-          </a-col>
-        </a-row>
-      </a-form>
-      <p class="request-note">
-        仅点击开始或刷新预测时调用服务；改参数或重置不会取消已发出的请求。
-      </p>
-    </a-card>
-
-    <a-alert
-      v-if="predictionFailures.length"
-      type="warning"
-      :message="`以下预测未完成：${predictionFailures.join('、')}，失败项不展示旧数据。`"
-      show-icon
-      class="mb-4"
-    />
-    <!-- 关键指标卡片 -->
-    <a-row :gutter="[16, 16]" class="metrics-overview">
-      <a-col v-for="metric in metricsData" :key="metric.type" :lg="6" :xs="12">
-        <a-card :class="['metric-card', `metric-${metric.type}`]">
-          <div class="metric-content">
-            <div class="metric-header">
-              <div class="metric-icon">
-                <component :is="metric.icon" />
-              </div>
-              <div class="metric-info">
-                <div class="metric-name">{{ metric.name }}</div>
-                <div class="metric-value">
-                  {{
-                    predictionCache[metric.type]
-                      ? metric.currentValue + metric.unit
-                      : '暂无预测'
-                  }}
-                </div>
-              </div>
-            </div>
-            <PredictionProvenance
-              v-if="predictionCache[metric.type]"
-              :ai-requested="aiEnhanced"
-              :result="predictionCache[metric.type]!"
-            />
-            <div class="metric-trend">
-              <div class="trend-info">
-                <span class="trend-label">预测趋势:</span>
-                <span
-                  v-if="predictionCache[metric.type] && metric.trend !== null"
-                  :class="[
-                    'trend-value',
-                    metric.trend > 0 ? 'trend-up' : 'trend-down',
-                  ]"
-                >
-                  <component
-                    :is="metric.trend > 0 ? ArrowUpOutlined : ArrowDownOutlined"
-                    v-if="metric.trend !== 0"
-                  />
-                  {{
-                    metric.trend === 0
-                      ? '持平'
-                      : Math.abs(metric.trend).toFixed(1) + '%'
-                  }}
-                </span>
-                <span v-else-if="predictionCache[metric.type]"
-                  >无法计算变化率</span
-                >
-              </div>
-              <div class="prediction-time">
-                {{ predictionContext?.hours ?? '未知' }}小时预测
-              </div>
-            </div>
-          </div>
-        </a-card>
-      </a-col>
-    </a-row>
-
-    <!-- 预测图表区域 -->
-    <a-row :gutter="[16, 16]" class="charts-section">
-      <!-- 综合预测趋势图 -->
-      <a-col :lg="16" :xs="24">
-        <a-card class="chart-card" title="综合预测趋势">
-          <template #extra>
-            <a-radio-group
-              v-model:value="chartType"
-              size="small"
-              @change="updateChart"
-            >
-              <a-radio-button value="line">线图</a-radio-button>
-              <a-radio-button value="area">面积图</a-radio-button>
-            </a-radio-group>
-          </template>
-          <div ref="trendChartRef" class="chart-container"></div>
-        </a-card>
-      </a-col>
-
-      <!-- 资源利用率预测 -->
-      <a-col :lg="8" :xs="24">
-        <a-card class="chart-card" title="当前资源利用率">
-          <div ref="utilizationChartRef" class="chart-container-small"></div>
-        </a-card>
-      </a-col>
-    </a-row>
-
-    <!-- 扩缩容建议和AI洞察 -->
-    <a-row :gutter="[16, 16]" class="insights-section">
-      <!-- 扩缩容建议 -->
-      <a-col :lg="12" :xs="24">
-        <a-card class="insights-card" title="扩缩容建议">
-          <template #extra>
-            <a-badge
-              :count="scalingRecommendations.length"
-              status="processing"
-            />
-          </template>
-          <div class="recommendations-list">
-            <div
-              v-for="(rec, index) in scalingRecommendations"
-              :key="index"
-              class="recommendation-item"
-            >
-              <div class="rec-header">
-                <a-tag>{{ rec.source }}</a-tag>
-                <a-tag :color="getActionColor(rec.action)">
-                  {{ getActionText(rec.action) }}
-                </a-tag>
-                <span class="rec-confidence"
-                  >置信度: {{ formatProbability(rec.confidence) }}</span
-                >
-              </div>
-              <div class="rec-content">
-                <div class="rec-time">
-                  触发时间: {{ formatTime(rec.trigger_time) }}
-                </div>
-                <div class="rec-reason">{{ rec.reason }}</div>
-              </div>
-            </div>
-          </div>
-        </a-card>
-      </a-col>
-
-      <!-- AI智能洞察 -->
-      <a-col :lg="12" :xs="24">
-        <a-card class="insights-card" title="AI智能洞察">
-          <template #extra>
-            <a-switch
-              v-model:checked="aiEnhanced"
-              size="small"
-              @change="onAIToggle"
-            />
-          </template>
-          <div class="ai-insights-list">
-            <div
-              v-for="(insight, index) in aiInsights"
-              :key="index"
-              class="insight-item"
-            >
-              <div class="insight-icon">
-                <BulbOutlined />
-              </div>
-              <div class="insight-content">{{ insight }}</div>
-            </div>
-            <a-empty v-if="aiInsights.length === 0" description="暂无AI洞察">
-              <template #image>
-                <RobotOutlined style="font-size: 48px; color: #bfbfbf" />
-              </template>
-            </a-empty>
-          </div>
-        </a-card>
-      </a-col>
-    </a-row>
-
-    <!-- 成本分析 -->
-    <a-row :gutter="[16, 16]" class="cost-section">
-      <a-col :xs="24">
-        <a-card class="cost-card" title="各指标的成本估算">
-          <a-empty
-            v-if="!costEntries.length"
-            description="当前响应未提供成本估算"
-          />
-          <section
-            v-for="entry in costEntries"
-            :key="entry.type"
-            class="cost-entry"
-          >
-            <h3>{{ entry.name }}</h3>
-            <a-descriptions :column="{ xs: 1, md: 3 }" bordered size="small">
-              <a-descriptions-item label="当前每小时成本">
-                {{ formatCost(entry.cost.current_hourly_cost) }}
-              </a-descriptions-item>
-              <a-descriptions-item label="预测每小时成本">
-                {{ formatCost(entry.cost.predicted_hourly_cost) }}
-              </a-descriptions-item>
-              <a-descriptions-item label="潜在节省">
-                {{ formatCost(entry.cost.cost_savings_potential) }}
-              </a-descriptions-item>
-            </a-descriptions>
-          </section>
-        </a-card>
-      </a-col>
-    </a-row>
-  </OpsPage>
-</template>
-
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import PredictionProvenance from './PredictionProvenance.vue';
@@ -848,6 +536,318 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleChartResize);
 });
 </script>
+
+<template>
+  <OpsPage
+    class="predict-dashboard"
+    description="对输入指标发起预测，各序列按实际时间对齐"
+    title="预测看板"
+  >
+    <!-- 页面头部 -->
+    <template #actions>
+      <a-space wrap>
+        <a-button @click="resetForm"> 重置 </a-button>
+        <a-button
+          :disabled="!isFormValid || loading"
+          :loading="loading"
+          type="primary"
+          @click="refreshAllPredictions"
+        >
+          {{ hasInitialData ? '刷新预测' : '开始预测' }}
+        </a-button>
+      </a-space>
+    </template>
+    <a-alert
+      v-if="predictionError"
+      :message="predictionError"
+      role="alert"
+      show-icon
+      type="error"
+    />
+
+    <!-- 数据输入区域 -->
+    <a-card class="input-card" title="输入当前指标数据">
+      <template #extra>
+        <a-tag v-if="hasInitialData" color="blue">数据已输入</a-tag>
+        <a-tag v-else color="orange">请填写指标数据</a-tag>
+      </template>
+
+      <a-form
+        :label-col="{ span: 6 }"
+        :wrapper-col="{ span: 18 }"
+        layout="horizontal"
+      >
+        <a-row :gutter="[24, 16]">
+          <a-col :md="12" :xs="24">
+            <a-form-item label="当前QPS" required>
+              <a-input-number
+                v-model:value="inputData.currentQps"
+                :max="100000"
+                :min="0"
+                :precision="2"
+                addon-after="/s"
+                placeholder="输入当前QPS值"
+                style="width: 100%"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :md="12" :xs="24">
+            <a-form-item label="当前CPU使用率" required>
+              <a-input-number
+                v-model:value="inputData.currentCpu"
+                :max="100"
+                :min="0"
+                :precision="2"
+                addon-after="%"
+                placeholder="输入当前CPU使用率"
+                style="width: 100%"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :md="12" :xs="24">
+            <a-form-item label="当前内存使用率" required>
+              <a-input-number
+                v-model:value="inputData.currentMemory"
+                :max="100"
+                :min="0"
+                :precision="2"
+                addon-after="%"
+                placeholder="输入当前内存使用率"
+                style="width: 100%"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :md="12" :xs="24">
+            <a-form-item label="当前磁盘使用率" required>
+              <a-input-number
+                v-model:value="inputData.currentDisk"
+                :max="100"
+                :min="0"
+                :precision="2"
+                addon-after="%"
+                placeholder="输入当前磁盘使用率"
+                style="width: 100%"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :md="12" :xs="24">
+            <a-form-item label="预测时长">
+              <a-select
+                v-model:value="timeRange"
+                style="width: 100%"
+                @change="onTimeRangeChange"
+              >
+                <a-select-option value="1">1小时</a-select-option>
+                <a-select-option value="6">6小时</a-select-option>
+                <a-select-option value="24">24小时</a-select-option>
+                <a-select-option value="72">3天</a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+          <a-col :md="12" :xs="24">
+            <a-form-item label="AI增强">
+              <a-switch v-model:checked="aiEnhanced" />
+              <span style="margin-left: 8px">启用AI洞察</span>
+            </a-form-item>
+          </a-col>
+        </a-row>
+      </a-form>
+      <p class="request-note">
+        仅点击开始或刷新预测时调用服务；改参数或重置不会取消已发出的请求。
+      </p>
+    </a-card>
+
+    <a-alert
+      v-if="predictionFailures.length"
+      type="warning"
+      :message="`以下预测未完成：${predictionFailures.join('、')}，失败项不展示旧数据。`"
+      show-icon
+      class="mb-4"
+    />
+    <!-- 关键指标卡片 -->
+    <a-row :gutter="[16, 16]" class="metrics-overview">
+      <a-col v-for="metric in metricsData" :key="metric.type" :lg="6" :xs="12">
+        <a-card :class="['metric-card', `metric-${metric.type}`]">
+          <div class="metric-content">
+            <div class="metric-header">
+              <div class="metric-icon">
+                <component :is="metric.icon" />
+              </div>
+              <div class="metric-info">
+                <div class="metric-name">{{ metric.name }}</div>
+                <div class="metric-value">
+                  {{
+                    predictionCache[metric.type]
+                      ? metric.currentValue + metric.unit
+                      : '暂无预测'
+                  }}
+                </div>
+              </div>
+            </div>
+            <PredictionProvenance
+              v-if="predictionCache[metric.type]"
+              :ai-requested="aiEnhanced"
+              :result="predictionCache[metric.type]!"
+            />
+            <div class="metric-trend">
+              <div class="trend-info">
+                <span class="trend-label">预测趋势:</span>
+                <span
+                  v-if="predictionCache[metric.type] && metric.trend !== null"
+                  :class="[
+                    'trend-value',
+                    metric.trend > 0 ? 'trend-up' : 'trend-down',
+                  ]"
+                >
+                  <component
+                    :is="metric.trend > 0 ? ArrowUpOutlined : ArrowDownOutlined"
+                    v-if="metric.trend !== 0"
+                  />
+                  {{
+                    metric.trend === 0
+                      ? '持平'
+                      : Math.abs(metric.trend).toFixed(1) + '%'
+                  }}
+                </span>
+                <span v-else-if="predictionCache[metric.type]"
+                  >无法计算变化率</span
+                >
+              </div>
+              <div class="prediction-time">
+                {{ predictionContext?.hours ?? '未知' }}小时预测
+              </div>
+            </div>
+          </div>
+        </a-card>
+      </a-col>
+    </a-row>
+
+    <!-- 预测图表区域 -->
+    <a-row :gutter="[16, 16]" class="charts-section">
+      <!-- 综合预测趋势图 -->
+      <a-col :lg="16" :xs="24">
+        <a-card class="chart-card" title="综合预测趋势">
+          <template #extra>
+            <a-radio-group
+              v-model:value="chartType"
+              size="small"
+              @change="updateChart"
+            >
+              <a-radio-button value="line">线图</a-radio-button>
+              <a-radio-button value="area">面积图</a-radio-button>
+            </a-radio-group>
+          </template>
+          <div ref="trendChartRef" class="chart-container"></div>
+        </a-card>
+      </a-col>
+
+      <!-- 资源利用率预测 -->
+      <a-col :lg="8" :xs="24">
+        <a-card class="chart-card" title="当前资源利用率">
+          <div ref="utilizationChartRef" class="chart-container-small"></div>
+        </a-card>
+      </a-col>
+    </a-row>
+
+    <!-- 扩缩容建议和AI洞察 -->
+    <a-row :gutter="[16, 16]" class="insights-section">
+      <!-- 扩缩容建议 -->
+      <a-col :lg="12" :xs="24">
+        <a-card class="insights-card" title="扩缩容建议">
+          <template #extra>
+            <a-badge
+              :count="scalingRecommendations.length"
+              status="processing"
+            />
+          </template>
+          <div class="recommendations-list">
+            <div
+              v-for="(rec, index) in scalingRecommendations"
+              :key="index"
+              class="recommendation-item"
+            >
+              <div class="rec-header">
+                <a-tag>{{ rec.source }}</a-tag>
+                <a-tag :color="getActionColor(rec.action)">
+                  {{ getActionText(rec.action) }}
+                </a-tag>
+                <span class="rec-confidence"
+                  >置信度: {{ formatProbability(rec.confidence) }}</span
+                >
+              </div>
+              <div class="rec-content">
+                <div class="rec-time">
+                  触发时间: {{ formatTime(rec.trigger_time) }}
+                </div>
+                <div class="rec-reason">{{ rec.reason }}</div>
+              </div>
+            </div>
+          </div>
+        </a-card>
+      </a-col>
+
+      <!-- AI智能洞察 -->
+      <a-col :lg="12" :xs="24">
+        <a-card class="insights-card" title="AI智能洞察">
+          <template #extra>
+            <a-switch
+              v-model:checked="aiEnhanced"
+              size="small"
+              @change="onAIToggle"
+            />
+          </template>
+          <div class="ai-insights-list">
+            <div
+              v-for="(insight, index) in aiInsights"
+              :key="index"
+              class="insight-item"
+            >
+              <div class="insight-icon">
+                <BulbOutlined />
+              </div>
+              <div class="insight-content">{{ insight }}</div>
+            </div>
+            <a-empty v-if="aiInsights.length === 0" description="暂无AI洞察">
+              <template #image>
+                <RobotOutlined style="font-size: 48px; color: #bfbfbf" />
+              </template>
+            </a-empty>
+          </div>
+        </a-card>
+      </a-col>
+    </a-row>
+
+    <!-- 成本分析 -->
+    <a-row :gutter="[16, 16]" class="cost-section">
+      <a-col :xs="24">
+        <a-card class="cost-card" title="各指标的成本估算">
+          <a-empty
+            v-if="!costEntries.length"
+            description="当前响应未提供成本估算"
+          />
+          <section
+            v-for="entry in costEntries"
+            :key="entry.type"
+            class="cost-entry"
+          >
+            <h3>{{ entry.name }}</h3>
+            <a-descriptions :column="{ xs: 1, md: 3 }" bordered size="small">
+              <a-descriptions-item label="当前每小时成本">
+                {{ formatCost(entry.cost.current_hourly_cost) }}
+              </a-descriptions-item>
+              <a-descriptions-item label="预测每小时成本">
+                {{ formatCost(entry.cost.predicted_hourly_cost) }}
+              </a-descriptions-item>
+              <a-descriptions-item label="潜在节省">
+                {{ formatCost(entry.cost.cost_savings_potential) }}
+              </a-descriptions-item>
+            </a-descriptions>
+          </section>
+        </a-card>
+      </a-col>
+    </a-row>
+  </OpsPage>
+</template>
 
 <style scoped>
 /* 页面头部 */

@@ -1,326 +1,3 @@
-<template>
-  <div>
-    <!-- 时间线对话框 -->
-    <a-modal
-      :footer="null"
-      :open="timelineDialog.visible"
-      :width="previewDialogWidth"
-      centered
-      class="timeline-dialog responsive-modal"
-      title=""
-      @cancel="
-        () => {
-          timelineDialog.visible = false;
-        }
-      "
-    >
-      <template #title>
-        <div class="timeline-dialog-header">
-          <div class="header-info">
-            <div class="header-icon">
-              <IconComponent icon="timeline" />
-            </div>
-            <div class="header-text">
-              <div class="header-title">工单时间线</div>
-              <div class="header-subtitle">跟踪工单的整个生命周期</div>
-            </div>
-          </div>
-          <div class="header-actions">
-            <a-tooltip title="刷新时间线">
-              <a-button size="small" type="text" @click="refreshTimeline">
-                <IconComponent icon="refresh" />
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="筛选操作">
-              <a-dropdown>
-                <a-button size="small" type="text">
-                  <IconComponent icon="filter" />
-                </a-button>
-                <template #overlay>
-                  <a-menu @click="handleFilterChange">
-                    <a-menu-item key="all">全部操作</a-menu-item>
-                    <a-menu-item key="important">重要操作</a-menu-item>
-                    <a-menu-item key="user">用户操作</a-menu-item>
-                    <a-menu-item key="system">系统操作</a-menu-item>
-                  </a-menu>
-                </template>
-              </a-dropdown>
-            </a-tooltip>
-            <a-tooltip title="时间排序">
-              <a-button size="small" type="text" @click="toggleTimeSort">
-                <IconComponent
-                  :icon="timeSortOrder === 'desc' ? 'time-desc' : 'time-asc'"
-                />
-              </a-button>
-            </a-tooltip>
-          </div>
-        </div>
-      </template>
-
-      <div class="timeline-content">
-        <!-- 时间线统计 -->
-        <div class="timeline-stats">
-          <div class="stats-grid">
-            <div class="stat-item">
-              <div class="stat-icon create">
-                <IconComponent icon="create" />
-              </div>
-              <div class="stat-text">
-                <div class="stat-number">{{ getActionCount('create') }}</div>
-                <div class="stat-label">创建操作</div>
-              </div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-icon update">
-                <IconComponent icon="update" />
-              </div>
-              <div class="stat-text">
-                <div class="stat-number">{{ getActionCount('update') }}</div>
-                <div class="stat-label">更新操作</div>
-              </div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-icon approve">
-                <IconComponent icon="approve" />
-              </div>
-              <div class="stat-text">
-                <div class="stat-number">{{ getActionCount('approve') }}</div>
-                <div class="stat-label">审批操作</div>
-              </div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-icon total">
-                <IconComponent icon="total" />
-              </div>
-              <div class="stat-text">
-                <div class="stat-number">{{ timelineList.length }}</div>
-                <div class="stat-label">总操作数</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 加载状态 -->
-        <a-spin :spinning="loading" tip="加载时间线中...">
-          <!-- 时间线列表 -->
-          <div v-if="filteredTimelineList.length > 0" class="timeline-wrapper">
-            <div class="timeline-line"></div>
-            <div class="timeline-list">
-              <div
-                v-for="(item, index) in filteredTimelineList"
-                :key="item.id"
-                class="timeline-item-wrapper"
-                :class="{
-                  'timeline-item-left': index % 2 === 0,
-                  'timeline-item-right': index % 2 === 1,
-                  'timeline-item-highlight': isImportantAction(item.action),
-                }"
-                :style="{ '--delay': index * 0.1 + 's' }"
-              >
-                <!-- 时间线节点 -->
-                <div class="timeline-node" :class="getActionClass(item.action)">
-                  <div class="timeline-node-inner">
-                    <component
-                      :is="getTimelineIcon(item.action)"
-                      class="timeline-node-icon"
-                    />
-                  </div>
-                  <div
-                    class="timeline-node-pulse"
-                    v-if="isImportantAction(item.action)"
-                  ></div>
-                </div>
-
-                <!-- 时间线内容 -->
-                <div class="timeline-card">
-                  <div class="timeline-card-header">
-                    <div class="action-info">
-                      <div
-                        class="action-type-badge"
-                        :class="getActionClass(item.action)"
-                      >
-                        <component
-                          :is="getTimelineIcon(item.action)"
-                          class="action-type-icon"
-                        />
-                        {{ getActionText(item.action) }}
-                      </div>
-                      <div class="action-time">
-                        <IconComponent icon="time" />
-                        {{ formatRelativeTime(item.created_at) }}
-                      </div>
-                    </div>
-                    <div class="card-actions">
-                      <a-tooltip title="查看详情">
-                        <a-button
-                          size="small"
-                          type="text"
-                          @click="showTimelineDetail(item)"
-                        >
-                          <IconComponent icon="detail" />
-                        </a-button>
-                      </a-tooltip>
-                    </div>
-                  </div>
-
-                  <div class="timeline-card-content">
-                    <!-- 操作人信息 -->
-                    <div class="operator-section">
-                      <a-avatar
-                        :size="32"
-                        :style="{
-                          backgroundColor: getAvatarColor(
-                            item.operator_name || '',
-                          ),
-                        }"
-                        class="operator-avatar"
-                      >
-                        {{ getInitials(item.operator_name) }}
-                      </a-avatar>
-                      <div class="operator-info">
-                        <div class="operator-name">
-                          {{ item.operator_name || '未知用户' }}
-                        </div>
-                        <div class="operator-role">操作人</div>
-                      </div>
-                      <div
-                        class="action-status"
-                        :class="getActionStatusClass(item.action)"
-                      >
-                        {{ getActionStatusText(item.action) }}
-                      </div>
-                    </div>
-
-                    <!-- 评论内容 -->
-                    <div v-if="item.comment" class="comment-section">
-                      <div class="comment-label">
-                        <IconComponent icon="comment" />
-                        备注说明
-                      </div>
-                      <div class="comment-content">{{ item.comment }}</div>
-                    </div>
-
-                    <!-- 详细数据 -->
-                    <div
-                      v-if="item.action_detail && showDetails[item.id]"
-                      class="detail-section"
-                    >
-                      <div class="detail-label">
-                        <IconComponent icon="data" />
-                        详细数据
-                      </div>
-                      <div class="detail-content">
-                        <pre class="json-content">{{
-                          formatActionDetail(item.action_detail)
-                        }}</pre>
-                      </div>
-                    </div>
-
-                    <!-- 操作按钮 -->
-                    <div
-                      v-if="item.action_detail"
-                      class="timeline-card-actions"
-                    >
-                      <a-button
-                        class="toggle-detail-btn"
-                        size="small"
-                        type="text"
-                        @click="toggleDetail(item.id)"
-                      >
-                        <IconComponent
-                          :icon="showDetails[item.id] ? 'collapse' : 'expand'"
-                        />
-                        {{ showDetails[item.id] ? '收起详情' : '展开详情' }}
-                      </a-button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 绝对时间 -->
-                <div class="absolute-time">
-                  {{ formatFullDateTime(item.created_at) }}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 空状态 -->
-          <div v-else-if="!loading" class="empty-timeline">
-            <a-empty description="">
-              <template #image>
-                <div class="empty-icon">
-                  <IconComponent icon="empty-timeline" />
-                </div>
-              </template>
-              <template #description>
-                <div class="empty-description">
-                  <div class="empty-title">暂无时间线记录</div>
-                  <div class="empty-subtitle">这个工单还没有操作记录</div>
-                </div>
-              </template>
-            </a-empty>
-          </div>
-        </a-spin>
-      </div>
-    </a-modal>
-
-    <!-- 详情对话框 -->
-    <a-modal
-      :footer="null"
-      :open="detailDialog.visible"
-      :width="600"
-      class="timeline-detail-dialog responsive-modal"
-      title="操作详情"
-      @cancel="
-        () => {
-          detailDialog.visible = false;
-        }
-      "
-    >
-      <div v-if="detailDialog.item" class="timeline-detail-content">
-        <div class="detail-header">
-          <div
-            class="detail-action-badge"
-            :class="getActionClass(detailDialog.item.action)"
-          >
-            <component :is="getTimelineIcon(detailDialog.item.action)" />
-            {{ getActionText(detailDialog.item.action) }}
-          </div>
-          <div class="detail-time">
-            {{ formatFullDateTime(detailDialog.item.created_at) }}
-          </div>
-        </div>
-
-        <a-descriptions :column="1" bordered size="small">
-          <a-descriptions-item label="操作人">
-            {{ detailDialog.item.operator_name }}
-          </a-descriptions-item>
-          <a-descriptions-item label="操作时间">
-            {{ formatFullDateTime(detailDialog.item.created_at) }}
-          </a-descriptions-item>
-          <a-descriptions-item label="操作类型">
-            {{ getActionText(detailDialog.item.action) }}
-          </a-descriptions-item>
-          <a-descriptions-item
-            v-if="detailDialog.item.comment"
-            label="备注说明"
-          >
-            {{ detailDialog.item.comment }}
-          </a-descriptions-item>
-          <a-descriptions-item
-            v-if="detailDialog.item.action_detail"
-            label="详细数据"
-          >
-            <pre class="detail-json">{{
-              formatActionDetail(detailDialog.item.action_detail)
-            }}</pre>
-          </a-descriptions-item>
-        </a-descriptions>
-      </div>
-    </a-modal>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
 import { message } from 'ant-design-vue';
@@ -722,6 +399,329 @@ defineExpose({
   showTimeline,
 });
 </script>
+
+<template>
+  <div>
+    <!-- 时间线对话框 -->
+    <a-modal
+      :footer="null"
+      :open="timelineDialog.visible"
+      :width="previewDialogWidth"
+      centered
+      class="timeline-dialog responsive-modal"
+      title=""
+      @cancel="
+        () => {
+          timelineDialog.visible = false;
+        }
+      "
+    >
+      <template #title>
+        <div class="timeline-dialog-header">
+          <div class="header-info">
+            <div class="header-icon">
+              <IconComponent icon="timeline" />
+            </div>
+            <div class="header-text">
+              <div class="header-title">工单时间线</div>
+              <div class="header-subtitle">跟踪工单的整个生命周期</div>
+            </div>
+          </div>
+          <div class="header-actions">
+            <a-tooltip title="刷新时间线">
+              <a-button size="small" type="text" @click="refreshTimeline">
+                <IconComponent icon="refresh" />
+              </a-button>
+            </a-tooltip>
+            <a-tooltip title="筛选操作">
+              <a-dropdown>
+                <a-button size="small" type="text">
+                  <IconComponent icon="filter" />
+                </a-button>
+                <template #overlay>
+                  <a-menu @click="handleFilterChange">
+                    <a-menu-item key="all">全部操作</a-menu-item>
+                    <a-menu-item key="important">重要操作</a-menu-item>
+                    <a-menu-item key="user">用户操作</a-menu-item>
+                    <a-menu-item key="system">系统操作</a-menu-item>
+                  </a-menu>
+                </template>
+              </a-dropdown>
+            </a-tooltip>
+            <a-tooltip title="时间排序">
+              <a-button size="small" type="text" @click="toggleTimeSort">
+                <IconComponent
+                  :icon="timeSortOrder === 'desc' ? 'time-desc' : 'time-asc'"
+                />
+              </a-button>
+            </a-tooltip>
+          </div>
+        </div>
+      </template>
+
+      <div class="timeline-content">
+        <!-- 时间线统计 -->
+        <div class="timeline-stats">
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-icon create">
+                <IconComponent icon="create" />
+              </div>
+              <div class="stat-text">
+                <div class="stat-number">{{ getActionCount('create') }}</div>
+                <div class="stat-label">创建操作</div>
+              </div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-icon update">
+                <IconComponent icon="update" />
+              </div>
+              <div class="stat-text">
+                <div class="stat-number">{{ getActionCount('update') }}</div>
+                <div class="stat-label">更新操作</div>
+              </div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-icon approve">
+                <IconComponent icon="approve" />
+              </div>
+              <div class="stat-text">
+                <div class="stat-number">{{ getActionCount('approve') }}</div>
+                <div class="stat-label">审批操作</div>
+              </div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-icon total">
+                <IconComponent icon="total" />
+              </div>
+              <div class="stat-text">
+                <div class="stat-number">{{ timelineList.length }}</div>
+                <div class="stat-label">总操作数</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 加载状态 -->
+        <a-spin :spinning="loading" tip="加载时间线中...">
+          <!-- 时间线列表 -->
+          <div v-if="filteredTimelineList.length > 0" class="timeline-wrapper">
+            <div class="timeline-line"></div>
+            <div class="timeline-list">
+              <div
+                v-for="(item, index) in filteredTimelineList"
+                :key="item.id"
+                class="timeline-item-wrapper"
+                :class="{
+                  'timeline-item-left': index % 2 === 0,
+                  'timeline-item-right': index % 2 === 1,
+                  'timeline-item-highlight': isImportantAction(item.action),
+                }"
+                :style="{ '--delay': index * 0.1 + 's' }"
+              >
+                <!-- 时间线节点 -->
+                <div class="timeline-node" :class="getActionClass(item.action)">
+                  <div class="timeline-node-inner">
+                    <component
+                      :is="getTimelineIcon(item.action)"
+                      class="timeline-node-icon"
+                    />
+                  </div>
+                  <div
+                    class="timeline-node-pulse"
+                    v-if="isImportantAction(item.action)"
+                  ></div>
+                </div>
+
+                <!-- 时间线内容 -->
+                <div class="timeline-card">
+                  <div class="timeline-card-header">
+                    <div class="action-info">
+                      <div
+                        class="action-type-badge"
+                        :class="getActionClass(item.action)"
+                      >
+                        <component
+                          :is="getTimelineIcon(item.action)"
+                          class="action-type-icon"
+                        />
+                        {{ getActionText(item.action) }}
+                      </div>
+                      <div class="action-time">
+                        <IconComponent icon="time" />
+                        {{ formatRelativeTime(item.created_at) }}
+                      </div>
+                    </div>
+                    <div class="card-actions">
+                      <a-tooltip title="查看详情">
+                        <a-button
+                          size="small"
+                          type="text"
+                          @click="showTimelineDetail(item)"
+                        >
+                          <IconComponent icon="detail" />
+                        </a-button>
+                      </a-tooltip>
+                    </div>
+                  </div>
+
+                  <div class="timeline-card-content">
+                    <!-- 操作人信息 -->
+                    <div class="operator-section">
+                      <a-avatar
+                        :size="32"
+                        :style="{
+                          backgroundColor: getAvatarColor(
+                            item.operator_name || '',
+                          ),
+                        }"
+                        class="operator-avatar"
+                      >
+                        {{ getInitials(item.operator_name) }}
+                      </a-avatar>
+                      <div class="operator-info">
+                        <div class="operator-name">
+                          {{ item.operator_name || '未知用户' }}
+                        </div>
+                        <div class="operator-role">操作人</div>
+                      </div>
+                      <div
+                        class="action-status"
+                        :class="getActionStatusClass(item.action)"
+                      >
+                        {{ getActionStatusText(item.action) }}
+                      </div>
+                    </div>
+
+                    <!-- 评论内容 -->
+                    <div v-if="item.comment" class="comment-section">
+                      <div class="comment-label">
+                        <IconComponent icon="comment" />
+                        备注说明
+                      </div>
+                      <div class="comment-content">{{ item.comment }}</div>
+                    </div>
+
+                    <!-- 详细数据 -->
+                    <div
+                      v-if="item.action_detail && showDetails[item.id]"
+                      class="detail-section"
+                    >
+                      <div class="detail-label">
+                        <IconComponent icon="data" />
+                        详细数据
+                      </div>
+                      <div class="detail-content">
+                        <pre class="json-content">{{
+                          formatActionDetail(item.action_detail)
+                        }}</pre>
+                      </div>
+                    </div>
+
+                    <!-- 操作按钮 -->
+                    <div
+                      v-if="item.action_detail"
+                      class="timeline-card-actions"
+                    >
+                      <a-button
+                        class="toggle-detail-btn"
+                        size="small"
+                        type="text"
+                        @click="toggleDetail(item.id)"
+                      >
+                        <IconComponent
+                          :icon="showDetails[item.id] ? 'collapse' : 'expand'"
+                        />
+                        {{ showDetails[item.id] ? '收起详情' : '展开详情' }}
+                      </a-button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 绝对时间 -->
+                <div class="absolute-time">
+                  {{ formatFullDateTime(item.created_at) }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 空状态 -->
+          <div v-else-if="!loading" class="empty-timeline">
+            <a-empty description="">
+              <template #image>
+                <div class="empty-icon">
+                  <IconComponent icon="empty-timeline" />
+                </div>
+              </template>
+              <template #description>
+                <div class="empty-description">
+                  <div class="empty-title">暂无时间线记录</div>
+                  <div class="empty-subtitle">这个工单还没有操作记录</div>
+                </div>
+              </template>
+            </a-empty>
+          </div>
+        </a-spin>
+      </div>
+    </a-modal>
+
+    <!-- 详情对话框 -->
+    <a-modal
+      :footer="null"
+      :open="detailDialog.visible"
+      :width="600"
+      class="timeline-detail-dialog responsive-modal"
+      title="操作详情"
+      @cancel="
+        () => {
+          detailDialog.visible = false;
+        }
+      "
+    >
+      <div v-if="detailDialog.item" class="timeline-detail-content">
+        <div class="detail-header">
+          <div
+            class="detail-action-badge"
+            :class="getActionClass(detailDialog.item.action)"
+          >
+            <component :is="getTimelineIcon(detailDialog.item.action)" />
+            {{ getActionText(detailDialog.item.action) }}
+          </div>
+          <div class="detail-time">
+            {{ formatFullDateTime(detailDialog.item.created_at) }}
+          </div>
+        </div>
+
+        <a-descriptions :column="1" bordered size="small">
+          <a-descriptions-item label="操作人">
+            {{ detailDialog.item.operator_name }}
+          </a-descriptions-item>
+          <a-descriptions-item label="操作时间">
+            {{ formatFullDateTime(detailDialog.item.created_at) }}
+          </a-descriptions-item>
+          <a-descriptions-item label="操作类型">
+            {{ getActionText(detailDialog.item.action) }}
+          </a-descriptions-item>
+          <a-descriptions-item
+            v-if="detailDialog.item.comment"
+            label="备注说明"
+          >
+            {{ detailDialog.item.comment }}
+          </a-descriptions-item>
+          <a-descriptions-item
+            v-if="detailDialog.item.action_detail"
+            label="详细数据"
+          >
+            <pre class="detail-json">{{
+              formatActionDetail(detailDialog.item.action_detail)
+            }}</pre>
+          </a-descriptions-item>
+        </a-descriptions>
+      </div>
+    </a-modal>
+  </div>
+</template>
 
 <style scoped>
 /* 时间线对话框样式 */

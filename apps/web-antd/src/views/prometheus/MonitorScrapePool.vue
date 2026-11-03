@@ -1,3 +1,496 @@
+<script setup lang="ts">
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { useListRequest } from './useListRequest';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { message, Modal } from 'ant-design-vue';
+import {
+  DownOutlined,
+  MinusCircleOutlined,
+  PlusOutlined,
+} from '@ant-design/icons-vue';
+import { Icon } from '@iconify/vue';
+import {
+  createMonitorScrapePoolApi,
+  type CreateMonitorScrapePoolReq,
+  deleteMonitorScrapePoolApi,
+  getMonitorScrapePoolDetailApi,
+  getMonitorScrapePoolListApi,
+  type GetMonitorScrapePoolListReq,
+  type MonitorScrapePool,
+  updateMonitorScrapePoolApi,
+  type UpdateMonitorScrapePoolReq,
+} from '#/api/core/prometheus/prometheus_scrape_pool';
+
+import { usePermission } from '#/utils/permission';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
+const { can } = usePermission();
+
+// 动态表单项接口
+interface DynamicItem {
+  value: string;
+  key: number;
+}
+
+const formDialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '900px';
+  }
+  return '900px';
+});
+
+const previewDialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '80%';
+  }
+  return '80%';
+});
+
+// 列定义
+const columns = [
+  {
+    title: '采集池名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 200,
+    fixed: 'left',
+  },
+  {
+    title: 'Prometheus实例',
+    dataIndex: 'prometheus_instances',
+    key: 'prometheus_instances',
+    width: 260,
+  },
+  { title: '标签', dataIndex: 'tags', key: 'tags', width: 200 },
+  {
+    title: '告警支持',
+    dataIndex: 'support_alert',
+    key: 'support_alert',
+    width: 100,
+    align: 'center' as const,
+  },
+  {
+    title: '记录支持',
+    dataIndex: 'support_record',
+    key: 'support_record',
+    width: 100,
+    align: 'center' as const,
+  },
+  {
+    title: '采集配置',
+    dataIndex: 'scrape_config',
+    key: 'scrape_config',
+    width: 140,
+  },
+  {
+    title: '创建人',
+    dataIndex: 'create_user_name',
+    key: 'creator',
+    width: 120,
+  },
+  { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
+  {
+    title: '操作',
+    key: 'action',
+    width: 200,
+    align: 'center' as const,
+    fixed: 'right',
+  },
+];
+
+// 状态数据
+const loading = ref(false);
+const { loadError, beginRequest } = useListRequest(loading);
+const searchQuery = ref('');
+const supportAlertFilter = ref<1 | 2 | undefined>(undefined);
+const supportRecordFilter = ref<1 | 2 | undefined>(undefined);
+const scrapePoolList = ref<MonitorScrapePool[]>([]);
+
+// 防抖处理
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+onBeforeUnmount(() => {
+  if (searchTimeout) clearTimeout(searchTimeout);
+});
+
+// 分页配置
+const paginationConfig = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showSizeChanger: true,
+  showQuickJumper: true,
+  showTotal: (total: number) => `共 ${total} 条记录`,
+  size: 'default' as const,
+});
+
+// 统计数据
+const stats = reactive({
+  total: 0,
+  supportAlert: 0,
+  supportRecord: 0,
+  activeInstances: 0,
+});
+
+// 对话框状态
+const formDialogVisible = ref(false);
+const detailDialogVisible = ref(false);
+
+// 表单对话框数据
+const formDialog = reactive({
+  isEdit: false,
+  form: {
+    id: undefined as number | undefined,
+    name: '',
+    prometheus_instances: [] as DynamicItem[],
+    scrape_interval: 15,
+    scrape_timeout: 10,
+    remote_timeout_seconds: 30,
+    support_alert: false,
+    support_record: false,
+    tags: [] as string[],
+    remote_write_url: '',
+    remote_read_url: '',
+    alert_manager_url: '',
+    rule_file_path: '',
+    record_file_path: '',
+  },
+});
+
+// 详情对话框数据
+const detailDialog = reactive({
+  form: null as MonitorScrapePool | null,
+});
+
+// 表单验证规则
+const formRules = {
+  name: [
+    { required: true, message: '请输入采集池名称', trigger: 'blur' },
+    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' },
+  ],
+  scrape_interval: [
+    { required: true, message: '请输入采集间隔', trigger: 'blur' },
+  ],
+  scrape_timeout: [
+    { required: true, message: '请输入采集超时时间', trigger: 'blur' },
+  ],
+  remote_timeout_seconds: [
+    { required: true, message: '请输入远程超时时间', trigger: 'blur' },
+  ],
+};
+
+const getPoolStatusClass = (record: MonitorScrapePool): string => {
+  if (record.support_alert === 1 && record.support_record === 1)
+    return 'status-full';
+  if (record.support_alert === 1 || record.support_record === 1)
+    return 'status-partial';
+  return 'status-none';
+};
+
+const getAvatarColor = (name: string): string => {
+  const colors = [
+    '#1890ff',
+    '#52c41a',
+    '#faad14',
+    '#f5222d',
+    '#722ed1',
+    '#13c2c2',
+    '#eb2f96',
+    '#fa8c16',
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length]!;
+};
+
+const getInitials = (name: string): string => {
+  if (!name) return '';
+  return name.slice(0, 2).toUpperCase();
+};
+
+const formatDate = (dateString: string): string => {
+  if (!dateString) return '';
+  return new Date(dateString).toLocaleDateString('zh-CN');
+};
+
+const formatTime = (dateString: string): string => {
+  if (!dateString) return '';
+  return new Date(dateString).toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const formatFullDateTime = (dateString: string): string => {
+  if (!dateString) return '';
+  return new Date(dateString).toLocaleString('zh-CN');
+};
+
+// 更新统计数据
+const updateStats = () => {
+  stats.total = paginationConfig.total;
+  stats.supportAlert = scrapePoolList.value.filter(
+    (item) => item.support_alert === 1,
+  ).length;
+  stats.supportRecord = scrapePoolList.value.filter(
+    (item) => item.support_record === 1,
+  ).length;
+  stats.activeInstances = scrapePoolList.value.reduce((total, item) => {
+    return total + (item.prometheus_instances?.length || 0);
+  }, 0);
+};
+
+// 数据加载
+const loadScrapePoolList = async (): Promise<void> => {
+  const request = beginRequest();
+  try {
+    const params: GetMonitorScrapePoolListReq = {
+      page: paginationConfig.current,
+      size: paginationConfig.pageSize,
+      search: searchQuery.value || undefined,
+      support_alert: supportAlertFilter.value,
+      support_record: supportRecordFilter.value,
+    };
+
+    const response = await getMonitorScrapePoolListApi(params);
+    if (!request.isCurrent()) return;
+    if (response) {
+      scrapePoolList.value = response.items || [];
+      paginationConfig.total = response.total || 0;
+      updateStats();
+    }
+  } catch (error: any) {
+    if (!request.fail(error, '加载采集池列表失败')) return;
+    scrapePoolList.value = [];
+    paginationConfig.total = 0;
+    updateStats();
+    if (shouldNotifyPageError(error)) message.error(loadError.value);
+  } finally {
+    request.finish();
+  }
+};
+
+// 事件处理
+const handleTableChange = (pagination: any): void => {
+  paginationConfig.current = pagination.current;
+  paginationConfig.pageSize = pagination.pageSize;
+  loadScrapePoolList();
+};
+
+const handleSearch = (): void => {
+  paginationConfig.current = 1;
+  loadScrapePoolList();
+};
+
+const handleSearchChange = (): void => {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout);
+  }
+  searchTimeout = setTimeout(() => {
+    paginationConfig.current = 1;
+    loadScrapePoolList();
+  }, 500);
+};
+
+const handleSupportAlertChange = (): void => {
+  paginationConfig.current = 1;
+  loadScrapePoolList();
+};
+
+const handleSupportRecordChange = (): void => {
+  paginationConfig.current = 1;
+  loadScrapePoolList();
+};
+
+const handleResetFilters = (): void => {
+  searchQuery.value = '';
+  supportAlertFilter.value = undefined;
+  supportRecordFilter.value = undefined;
+  paginationConfig.current = 1;
+  loadScrapePoolList();
+};
+
+const handleCreateScrapePool = (): void => {
+  formDialog.isEdit = false;
+  resetFormDialog();
+  formDialogVisible.value = true;
+};
+
+const handleEditScrapePool = (record: MonitorScrapePool): void => {
+  formDialog.isEdit = true;
+  formDialog.form = {
+    id: record.id,
+    name: record.name,
+    scrape_interval: record.scrape_interval,
+    scrape_timeout: record.scrape_timeout,
+    remote_timeout_seconds: record.remote_timeout_seconds,
+    support_alert: record.support_alert === 1,
+    support_record: record.support_record === 1,
+    remote_write_url: record.remote_write_url || '',
+    remote_read_url: record.remote_read_url || '',
+    alert_manager_url: record.alert_manager_url || '',
+    rule_file_path: record.rule_file_path || '',
+    record_file_path: record.record_file_path || '',
+    prometheus_instances: record.prometheus_instances?.map((value) => ({
+      value,
+      key: Date.now() + Math.random(),
+    })) || [{ value: '', key: Date.now() }],
+    tags: record.tags ? [...record.tags] : [],
+  };
+  formDialogVisible.value = true;
+  detailDialogVisible.value = false;
+};
+
+const handleViewScrapePool = async (
+  record: MonitorScrapePool,
+): Promise<void> => {
+  try {
+    const response = await getMonitorScrapePoolDetailApi(record.id!);
+    detailDialog.form = response;
+    detailDialogVisible.value = true;
+  } catch (error: any) {
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '获取采集池详情失败');
+  }
+};
+
+const handleMenuClick = (command: string, record: MonitorScrapePool): void => {
+  switch (command) {
+    case 'delete': {
+      confirmDelete(record);
+      break;
+    }
+  }
+};
+
+const confirmDelete = (record: MonitorScrapePool): void => {
+  Modal.confirm({
+    title: '警告',
+    content: `确定要删除采集池 "${record.name}" 吗？`,
+    okText: '删除',
+    okType: 'danger',
+    cancelText: '取消',
+    async onOk() {
+      try {
+        await deleteMonitorScrapePoolApi(record.id!);
+        message.success(`采集池 "${record.name}" 已删除`);
+        loadScrapePoolList();
+      } catch (error: any) {
+        if (shouldNotifyPageError(error))
+          message.error(error.message || '删除采集池失败');
+      }
+    },
+  });
+};
+
+// 表单保存
+const saveScrapePool = async (): Promise<void> => {
+  if (!formDialog.form.name.trim()) {
+    message.error('采集池名称不能为空');
+    return;
+  }
+
+  if (
+    formDialog.form.prometheus_instances.length === 0 ||
+    !formDialog.form.prometheus_instances[0]?.value
+  ) {
+    message.error('请至少添加一个Prometheus实例');
+    return;
+  }
+
+  try {
+    const formData = {
+      ...formDialog.form,
+      user_id: 1, // 这里应该从用户上下文获取
+      prometheus_instances: formDialog.form.prometheus_instances
+        .map((item) => item.value)
+        .filter((v) => v.trim() !== ''),
+      support_alert: formDialog.form.support_alert ? 1 : 2,
+      support_record: formDialog.form.support_record ? 1 : 2,
+      tags: Array.isArray(formDialog.form.tags)
+        ? formDialog.form.tags.filter((t) => String(t).trim() !== '')
+        : [],
+    };
+
+    if (formDialog.isEdit && formDialog.form.id) {
+      const updateData: UpdateMonitorScrapePoolReq = {
+        ...(formData as any),
+        id: formDialog.form.id!,
+      } as UpdateMonitorScrapePoolReq;
+      await updateMonitorScrapePoolApi(updateData);
+      message.success(`采集池 "${formDialog.form.name}" 已更新`);
+    } else {
+      const createData: CreateMonitorScrapePoolReq =
+        formData as CreateMonitorScrapePoolReq;
+      await createMonitorScrapePoolApi(createData);
+      message.success(`采集池 "${formDialog.form.name}" 已创建`);
+    }
+
+    formDialogVisible.value = false;
+    loadScrapePoolList();
+  } catch (error: any) {
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '保存采集池失败');
+  }
+};
+
+// 重置表单对话框
+const resetFormDialog = (): void => {
+  formDialog.form = {
+    id: undefined,
+    name: '',
+    scrape_interval: 15,
+    scrape_timeout: 10,
+    remote_timeout_seconds: 30,
+    support_alert: false,
+    support_record: false,
+    remote_write_url: '',
+    remote_read_url: '',
+    alert_manager_url: '',
+    rule_file_path: '',
+    record_file_path: '',
+    prometheus_instances: [{ value: '', key: Date.now() }],
+    tags: [],
+  };
+};
+
+// 动态表单项操作
+const addPrometheusInstance = (): void => {
+  formDialog.form.prometheus_instances.push({
+    value: '',
+    key: Date.now(),
+  });
+};
+
+const removePrometheusInstance = (item: DynamicItem): void => {
+  const index = formDialog.form.prometheus_instances.indexOf(item);
+  if (index !== -1) {
+    formDialog.form.prometheus_instances.splice(index, 1);
+  }
+};
+
+// 对话框关闭
+const closeFormDialog = (): void => {
+  formDialogVisible.value = false;
+};
+
+const closeDetailDialog = (): void => {
+  detailDialogVisible.value = false;
+};
+
+// 生命周期钩子
+onMounted(() => {
+  loadScrapePoolList();
+});
+</script>
+
 <template>
   <OpsPage description="管理 Prometheus 实例与采集能力" title="采集池">
     <!-- 页面标题 -->
@@ -569,499 +1062,6 @@
     </a-modal>
   </OpsPage>
 </template>
-
-<script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { useListRequest } from './useListRequest';
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
-import { message, Modal } from 'ant-design-vue';
-import {
-  DownOutlined,
-  MinusCircleOutlined,
-  PlusOutlined,
-} from '@ant-design/icons-vue';
-import { Icon } from '@iconify/vue';
-import {
-  createMonitorScrapePoolApi,
-  type CreateMonitorScrapePoolReq,
-  deleteMonitorScrapePoolApi,
-  getMonitorScrapePoolDetailApi,
-  getMonitorScrapePoolListApi,
-  type GetMonitorScrapePoolListReq,
-  type MonitorScrapePool,
-  updateMonitorScrapePoolApi,
-  type UpdateMonitorScrapePoolReq,
-} from '#/api/core/prometheus/prometheus_scrape_pool';
-
-import { usePermission } from '#/utils/permission';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
-
-const { can } = usePermission();
-
-// 动态表单项接口
-interface DynamicItem {
-  value: string;
-  key: number;
-}
-
-const formDialogWidth = computed(() => {
-  if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
-    if (width < 768) return '95%';
-    if (width < 1024) return '90%';
-    return '900px';
-  }
-  return '900px';
-});
-
-const previewDialogWidth = computed(() => {
-  if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
-    if (width < 768) return '95%';
-    if (width < 1024) return '90%';
-    return '80%';
-  }
-  return '80%';
-});
-
-// 列定义
-const columns = [
-  {
-    title: '采集池名称',
-    dataIndex: 'name',
-    key: 'name',
-    width: 200,
-    fixed: 'left',
-  },
-  {
-    title: 'Prometheus实例',
-    dataIndex: 'prometheus_instances',
-    key: 'prometheus_instances',
-    width: 260,
-  },
-  { title: '标签', dataIndex: 'tags', key: 'tags', width: 200 },
-  {
-    title: '告警支持',
-    dataIndex: 'support_alert',
-    key: 'support_alert',
-    width: 100,
-    align: 'center' as const,
-  },
-  {
-    title: '记录支持',
-    dataIndex: 'support_record',
-    key: 'support_record',
-    width: 100,
-    align: 'center' as const,
-  },
-  {
-    title: '采集配置',
-    dataIndex: 'scrape_config',
-    key: 'scrape_config',
-    width: 140,
-  },
-  {
-    title: '创建人',
-    dataIndex: 'create_user_name',
-    key: 'creator',
-    width: 120,
-  },
-  { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
-  {
-    title: '操作',
-    key: 'action',
-    width: 200,
-    align: 'center' as const,
-    fixed: 'right',
-  },
-];
-
-// 状态数据
-const loading = ref(false);
-const { loadError, beginRequest } = useListRequest(loading);
-const searchQuery = ref('');
-const supportAlertFilter = ref<1 | 2 | undefined>(undefined);
-const supportRecordFilter = ref<1 | 2 | undefined>(undefined);
-const scrapePoolList = ref<MonitorScrapePool[]>([]);
-
-// 防抖处理
-let searchTimeout: ReturnType<typeof setTimeout> | null = null;
-onBeforeUnmount(() => {
-  if (searchTimeout) clearTimeout(searchTimeout);
-});
-
-// 分页配置
-const paginationConfig = reactive({
-  current: 1,
-  pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
-  showQuickJumper: true,
-  showTotal: (total: number) => `共 ${total} 条记录`,
-  size: 'default' as const,
-});
-
-// 统计数据
-const stats = reactive({
-  total: 0,
-  supportAlert: 0,
-  supportRecord: 0,
-  activeInstances: 0,
-});
-
-// 对话框状态
-const formDialogVisible = ref(false);
-const detailDialogVisible = ref(false);
-
-// 表单对话框数据
-const formDialog = reactive({
-  isEdit: false,
-  form: {
-    id: undefined as number | undefined,
-    name: '',
-    prometheus_instances: [] as DynamicItem[],
-    scrape_interval: 15,
-    scrape_timeout: 10,
-    remote_timeout_seconds: 30,
-    support_alert: false,
-    support_record: false,
-    tags: [] as string[],
-    remote_write_url: '',
-    remote_read_url: '',
-    alert_manager_url: '',
-    rule_file_path: '',
-    record_file_path: '',
-  },
-});
-
-// 详情对话框数据
-const detailDialog = reactive({
-  form: null as MonitorScrapePool | null,
-});
-
-// 表单验证规则
-const formRules = {
-  name: [
-    { required: true, message: '请输入采集池名称', trigger: 'blur' },
-    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' },
-  ],
-  scrape_interval: [
-    { required: true, message: '请输入采集间隔', trigger: 'blur' },
-  ],
-  scrape_timeout: [
-    { required: true, message: '请输入采集超时时间', trigger: 'blur' },
-  ],
-  remote_timeout_seconds: [
-    { required: true, message: '请输入远程超时时间', trigger: 'blur' },
-  ],
-};
-
-const getPoolStatusClass = (record: MonitorScrapePool): string => {
-  if (record.support_alert === 1 && record.support_record === 1)
-    return 'status-full';
-  if (record.support_alert === 1 || record.support_record === 1)
-    return 'status-partial';
-  return 'status-none';
-};
-
-const getAvatarColor = (name: string): string => {
-  const colors = [
-    '#1890ff',
-    '#52c41a',
-    '#faad14',
-    '#f5222d',
-    '#722ed1',
-    '#13c2c2',
-    '#eb2f96',
-    '#fa8c16',
-  ];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length]!;
-};
-
-const getInitials = (name: string): string => {
-  if (!name) return '';
-  return name.slice(0, 2).toUpperCase();
-};
-
-const formatDate = (dateString: string): string => {
-  if (!dateString) return '';
-  return new Date(dateString).toLocaleDateString('zh-CN');
-};
-
-const formatTime = (dateString: string): string => {
-  if (!dateString) return '';
-  return new Date(dateString).toLocaleTimeString('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
-const formatFullDateTime = (dateString: string): string => {
-  if (!dateString) return '';
-  return new Date(dateString).toLocaleString('zh-CN');
-};
-
-// 更新统计数据
-const updateStats = () => {
-  stats.total = paginationConfig.total;
-  stats.supportAlert = scrapePoolList.value.filter(
-    (item) => item.support_alert === 1,
-  ).length;
-  stats.supportRecord = scrapePoolList.value.filter(
-    (item) => item.support_record === 1,
-  ).length;
-  stats.activeInstances = scrapePoolList.value.reduce((total, item) => {
-    return total + (item.prometheus_instances?.length || 0);
-  }, 0);
-};
-
-// 数据加载
-const loadScrapePoolList = async (): Promise<void> => {
-  const request = beginRequest();
-  try {
-    const params: GetMonitorScrapePoolListReq = {
-      page: paginationConfig.current,
-      size: paginationConfig.pageSize,
-      search: searchQuery.value || undefined,
-      support_alert: supportAlertFilter.value,
-      support_record: supportRecordFilter.value,
-    };
-
-    const response = await getMonitorScrapePoolListApi(params);
-    if (!request.isCurrent()) return;
-    if (response) {
-      scrapePoolList.value = response.items || [];
-      paginationConfig.total = response.total || 0;
-      updateStats();
-    }
-  } catch (error: any) {
-    if (!request.fail(error, '加载采集池列表失败')) return;
-    scrapePoolList.value = [];
-    paginationConfig.total = 0;
-    updateStats();
-    if (shouldNotifyPageError(error)) message.error(loadError.value);
-  } finally {
-    request.finish();
-  }
-};
-
-// 事件处理
-const handleTableChange = (pagination: any): void => {
-  paginationConfig.current = pagination.current;
-  paginationConfig.pageSize = pagination.pageSize;
-  loadScrapePoolList();
-};
-
-const handleSearch = (): void => {
-  paginationConfig.current = 1;
-  loadScrapePoolList();
-};
-
-const handleSearchChange = (): void => {
-  if (searchTimeout) {
-    clearTimeout(searchTimeout);
-  }
-  searchTimeout = setTimeout(() => {
-    paginationConfig.current = 1;
-    loadScrapePoolList();
-  }, 500);
-};
-
-const handleSupportAlertChange = (): void => {
-  paginationConfig.current = 1;
-  loadScrapePoolList();
-};
-
-const handleSupportRecordChange = (): void => {
-  paginationConfig.current = 1;
-  loadScrapePoolList();
-};
-
-const handleResetFilters = (): void => {
-  searchQuery.value = '';
-  supportAlertFilter.value = undefined;
-  supportRecordFilter.value = undefined;
-  paginationConfig.current = 1;
-  loadScrapePoolList();
-};
-
-const handleCreateScrapePool = (): void => {
-  formDialog.isEdit = false;
-  resetFormDialog();
-  formDialogVisible.value = true;
-};
-
-const handleEditScrapePool = (record: MonitorScrapePool): void => {
-  formDialog.isEdit = true;
-  formDialog.form = {
-    id: record.id,
-    name: record.name,
-    scrape_interval: record.scrape_interval,
-    scrape_timeout: record.scrape_timeout,
-    remote_timeout_seconds: record.remote_timeout_seconds,
-    support_alert: record.support_alert === 1,
-    support_record: record.support_record === 1,
-    remote_write_url: record.remote_write_url || '',
-    remote_read_url: record.remote_read_url || '',
-    alert_manager_url: record.alert_manager_url || '',
-    rule_file_path: record.rule_file_path || '',
-    record_file_path: record.record_file_path || '',
-    prometheus_instances: record.prometheus_instances?.map((value) => ({
-      value,
-      key: Date.now() + Math.random(),
-    })) || [{ value: '', key: Date.now() }],
-    tags: record.tags ? [...record.tags] : [],
-  };
-  formDialogVisible.value = true;
-  detailDialogVisible.value = false;
-};
-
-const handleViewScrapePool = async (
-  record: MonitorScrapePool,
-): Promise<void> => {
-  try {
-    const response = await getMonitorScrapePoolDetailApi(record.id!);
-    detailDialog.form = response;
-    detailDialogVisible.value = true;
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '获取采集池详情失败');
-  }
-};
-
-const handleMenuClick = (command: string, record: MonitorScrapePool): void => {
-  switch (command) {
-    case 'delete': {
-      confirmDelete(record);
-      break;
-    }
-  }
-};
-
-const confirmDelete = (record: MonitorScrapePool): void => {
-  Modal.confirm({
-    title: '警告',
-    content: `确定要删除采集池 "${record.name}" 吗？`,
-    okText: '删除',
-    okType: 'danger',
-    cancelText: '取消',
-    async onOk() {
-      try {
-        await deleteMonitorScrapePoolApi(record.id!);
-        message.success(`采集池 "${record.name}" 已删除`);
-        loadScrapePoolList();
-      } catch (error: any) {
-        if (shouldNotifyPageError(error))
-          message.error(error.message || '删除采集池失败');
-      }
-    },
-  });
-};
-
-// 表单保存
-const saveScrapePool = async (): Promise<void> => {
-  if (!formDialog.form.name.trim()) {
-    message.error('采集池名称不能为空');
-    return;
-  }
-
-  if (
-    formDialog.form.prometheus_instances.length === 0 ||
-    !formDialog.form.prometheus_instances[0]?.value
-  ) {
-    message.error('请至少添加一个Prometheus实例');
-    return;
-  }
-
-  try {
-    const formData = {
-      ...formDialog.form,
-      user_id: 1, // 这里应该从用户上下文获取
-      prometheus_instances: formDialog.form.prometheus_instances
-        .map((item) => item.value)
-        .filter((v) => v.trim() !== ''),
-      support_alert: formDialog.form.support_alert ? 1 : 2,
-      support_record: formDialog.form.support_record ? 1 : 2,
-      tags: Array.isArray(formDialog.form.tags)
-        ? formDialog.form.tags.filter((t) => String(t).trim() !== '')
-        : [],
-    };
-
-    if (formDialog.isEdit && formDialog.form.id) {
-      const updateData: UpdateMonitorScrapePoolReq = {
-        ...(formData as any),
-        id: formDialog.form.id!,
-      } as UpdateMonitorScrapePoolReq;
-      await updateMonitorScrapePoolApi(updateData);
-      message.success(`采集池 "${formDialog.form.name}" 已更新`);
-    } else {
-      const createData: CreateMonitorScrapePoolReq =
-        formData as CreateMonitorScrapePoolReq;
-      await createMonitorScrapePoolApi(createData);
-      message.success(`采集池 "${formDialog.form.name}" 已创建`);
-    }
-
-    formDialogVisible.value = false;
-    loadScrapePoolList();
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '保存采集池失败');
-  }
-};
-
-// 重置表单对话框
-const resetFormDialog = (): void => {
-  formDialog.form = {
-    id: undefined,
-    name: '',
-    scrape_interval: 15,
-    scrape_timeout: 10,
-    remote_timeout_seconds: 30,
-    support_alert: false,
-    support_record: false,
-    remote_write_url: '',
-    remote_read_url: '',
-    alert_manager_url: '',
-    rule_file_path: '',
-    record_file_path: '',
-    prometheus_instances: [{ value: '', key: Date.now() }],
-    tags: [],
-  };
-};
-
-// 动态表单项操作
-const addPrometheusInstance = (): void => {
-  formDialog.form.prometheus_instances.push({
-    value: '',
-    key: Date.now(),
-  });
-};
-
-const removePrometheusInstance = (item: DynamicItem): void => {
-  const index = formDialog.form.prometheus_instances.indexOf(item);
-  if (index !== -1) {
-    formDialog.form.prometheus_instances.splice(index, 1);
-  }
-};
-
-// 对话框关闭
-const closeFormDialog = (): void => {
-  formDialogVisible.value = false;
-};
-
-const closeDetailDialog = (): void => {
-  detailDialogVisible.value = false;
-};
-
-// 生命周期钩子
-onMounted(() => {
-  loadScrapePoolList();
-});
-</script>
 
 <style scoped>
 .search-input {

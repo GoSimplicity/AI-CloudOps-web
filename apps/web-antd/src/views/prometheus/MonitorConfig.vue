@@ -1,3 +1,540 @@
+<script setup lang="ts">
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { useListRequest } from './useListRequest';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { message, Modal } from 'ant-design-vue';
+import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
+import { Icon } from '@iconify/vue';
+import {
+  ConfigStatus,
+  ConfigType,
+  createMonitorConfigApi,
+  type CreateMonitorConfigParams,
+  deleteMonitorConfigApi,
+  getMonitorConfigApi,
+  getMonitorConfigListApi,
+  type GetMonitorConfigListParams,
+  type MonitorConfigItem,
+  updateMonitorConfigApi,
+  type UpdateMonitorConfigParams,
+} from '#/api/core/prometheus/prometheus_config';
+
+import {
+  getMonitorScrapePoolListApi,
+  type MonitorScrapePool,
+} from '#/api/core/prometheus/prometheus_scrape_pool';
+
+import { usePermission } from '#/utils/permission';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
+const { can } = usePermission();
+
+// 实例池接口
+type PoolOption = Pick<MonitorScrapePool, 'id' | 'name'>;
+
+// 分页接口
+interface PaginationConfig {
+  current: number;
+  pageSize: number;
+  total: number;
+  showSizeChanger: boolean;
+  showQuickJumper: boolean;
+  showTotal: (total: number) => string;
+  size: 'default' | 'small';
+}
+
+// 统计数据接口
+interface Stats {
+  total: number;
+  active: number;
+  alertRules: number;
+  instances: number;
+}
+
+// 表单数据接口
+interface ConfigForm {
+  id?: number;
+  name: string;
+  pool_id: number | undefined;
+  instance_ip: string;
+  config_type: ConfigType | undefined;
+  config_content: string;
+  status: ConfigStatus;
+}
+
+const formDialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '900px';
+  }
+  return '900px';
+});
+
+const previewDialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '80%';
+  }
+  return '80%';
+});
+
+// 列定义
+const columns = [
+  {
+    title: '配置名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 200,
+    fixed: 'left',
+  },
+  {
+    title: '配置类型',
+    dataIndex: 'config_type',
+    key: 'config_type',
+    width: 150,
+  },
+  {
+    title: '实例信息',
+    dataIndex: 'instance_info',
+    key: 'instance_info',
+    width: 200,
+  },
+  {
+    title: '状态',
+    dataIndex: 'status',
+    key: 'status',
+    width: 100,
+    align: 'center' as const,
+  },
+  {
+    title: '最后生成时间',
+    dataIndex: 'last_generated_time',
+    key: 'last_generated_time',
+    width: 180,
+  },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 180 },
+  {
+    title: '操作',
+    key: 'action',
+    width: 200,
+    align: 'center' as const,
+    fixed: 'right',
+  },
+];
+
+// 实例池数据
+const poolOptions = ref<PoolOption[]>([]);
+
+// 状态数据
+const loading = ref(false);
+const { loadError, beginRequest } = useListRequest(loading);
+const data = ref<MonitorConfigItem[]>([]);
+const searchText = ref('');
+const searchPoolId = ref<number | undefined>(undefined);
+const searchConfigType = ref<ConfigType | undefined>(undefined);
+const searchStatus = ref<ConfigStatus | undefined>(undefined);
+
+// 防抖处理
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+onBeforeUnmount(() => {
+  if (searchTimeout) clearTimeout(searchTimeout);
+});
+
+// 分页配置
+const paginationConfig = reactive<PaginationConfig>({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showSizeChanger: true,
+  showQuickJumper: true,
+  showTotal: (total: number) => `共 ${total} 条记录`,
+  size: 'default',
+});
+
+// 统计数据
+const stats = reactive<Stats>({
+  total: 0,
+  active: 0,
+  alertRules: 0,
+  instances: 0,
+});
+
+// 模态框状态
+const isAddModalVisible = ref(false);
+const isEditModalVisible = ref(false);
+const isPreviewModalVisible = ref(false);
+const isDetailModalVisible = ref(false);
+const previewConfig = ref<MonitorConfigItem | null>(null);
+const detailConfig = ref<MonitorConfigItem | null>(null);
+
+// 表单数据
+const addForm = reactive<ConfigForm>({
+  name: '',
+  pool_id: undefined,
+  instance_ip: '',
+  config_type: undefined,
+  config_content: '',
+  status: ConfigStatus.Active,
+});
+
+const editForm = reactive<ConfigForm>({
+  id: undefined,
+  name: '',
+  pool_id: undefined,
+  instance_ip: '',
+  config_type: undefined,
+  config_content: '',
+  status: ConfigStatus.Active,
+});
+
+// 表单验证规则
+const formRules = {
+  name: [
+    { required: true, message: '请输入配置名称', trigger: 'blur' },
+    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' },
+  ],
+  config_type: [
+    { required: true, message: '请选择配置类型', trigger: 'change' },
+  ],
+  pool_id: [{ required: true, message: '请选择实例池', trigger: 'change' }],
+  instance_ip: [{ required: true, message: '请输入实例IP', trigger: 'blur' }],
+  config_content: [
+    { required: true, message: '请输入配置内容', trigger: 'blur' },
+  ],
+};
+
+const getConfigTypeName = (type: ConfigType): string => {
+  const typeNames: Record<ConfigType, string> = {
+    [ConfigType.Prometheus]: 'Prometheus',
+    [ConfigType.AlertManager]: 'AlertManager',
+    [ConfigType.AlertRule]: '告警规则',
+    [ConfigType.RecordRule]: '预聚合规则',
+    [ConfigType.WebhookFile]: 'Webhook文件',
+  };
+  return typeNames[type] || '未知';
+};
+
+const getConfigTypeColor = (type: ConfigType): string => {
+  const typeColors: Record<ConfigType, string> = {
+    [ConfigType.Prometheus]: 'prometheus-tag',
+    [ConfigType.AlertManager]: 'alert-tag',
+    [ConfigType.AlertRule]: 'rule-tag',
+    [ConfigType.RecordRule]: 'record-tag',
+    [ConfigType.WebhookFile]: 'webhook-tag',
+  };
+  return typeColors[type] || 'default-tag';
+};
+
+const getPoolName = (poolId: number): string => {
+  const pool = poolOptions.value.find((p) => p.id === poolId);
+  return pool?.name || `Pool-${poolId}`;
+};
+
+const formatDate = (input: number | string): string => {
+  if (!input) return '';
+  const date =
+    typeof input === 'number' ? new Date(input * 1000) : new Date(input);
+  if (isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('zh-CN');
+};
+
+const formatTime = (input: number | string): string => {
+  if (!input) return '';
+  const date =
+    typeof input === 'number' ? new Date(input * 1000) : new Date(input);
+  if (isNaN(date.getTime())) return '';
+  return date.toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const formatFullDateTime = (input: number | string): string => {
+  if (!input) return '';
+  const date =
+    typeof input === 'number' ? new Date(input * 1000) : new Date(input);
+  if (isNaN(date.getTime())) return '';
+  return date.toLocaleString('zh-CN');
+};
+
+// 更新统计数据
+const updateStats = (): void => {
+  stats.total = paginationConfig.total;
+  stats.active = data.value.filter(
+    (item: MonitorConfigItem) => item.status === ConfigStatus.Active,
+  ).length;
+  stats.alertRules = data.value.filter(
+    (item: MonitorConfigItem) => item.config_type === ConfigType.AlertRule,
+  ).length;
+  stats.instances = new Set(
+    data.value.map((item: MonitorConfigItem) => item.instance_ip),
+  ).size;
+};
+
+// 数据加载
+const fetchConfigs = async (): Promise<void> => {
+  const request = beginRequest();
+  try {
+    const params: GetMonitorConfigListParams = {
+      page: paginationConfig.current,
+      size: paginationConfig.pageSize,
+      search: searchText.value || undefined,
+      config_type: searchConfigType.value,
+      status: searchStatus.value,
+    };
+
+    const response = await getMonitorConfigListApi(params);
+    if (!request.isCurrent()) return;
+    if (response) {
+      let items: MonitorConfigItem[] = response.items || [];
+      // 客户端按实例池过滤（后端参数未定义）
+      if (searchPoolId.value !== undefined) {
+        items = items.filter(
+          (item: MonitorConfigItem) => item.pool_id === searchPoolId.value,
+        );
+      }
+      data.value = items;
+      paginationConfig.total = (response.total ?? items.length) as number;
+      updateStats();
+    }
+  } catch (error: any) {
+    if (!request.fail(error, '加载配置列表失败')) return;
+    data.value = [];
+    paginationConfig.total = 0;
+    updateStats();
+    if (shouldNotifyPageError(error)) message.error(loadError.value);
+  } finally {
+    request.finish();
+  }
+};
+
+// 加载实例池数据
+const loadPoolOptions = async (): Promise<void> => {
+  try {
+    let allPools: MonitorScrapePool[] = [];
+    let currentPage = 1;
+    const pageSize = 10;
+    let hasMore = true;
+
+    while (hasMore) {
+      const res = await getMonitorScrapePoolListApi({
+        page: currentPage,
+        size: pageSize,
+      });
+
+      if (res?.items && res.items.length > 0) {
+        allPools = allPools.concat(res.items);
+
+        // 检查是否还有更多数据
+        hasMore =
+          res.items.length === pageSize && allPools.length < (res.total || 0);
+        currentPage++;
+      } else {
+        hasMore = false;
+      }
+    }
+
+    poolOptions.value = allPools
+      .filter((item: MonitorScrapePool) => item.id !== undefined)
+      .map((item: MonitorScrapePool) => ({
+        id: item.id!,
+        name: item.name,
+      }));
+  } catch {
+    poolOptions.value = [];
+  }
+};
+
+// 事件处理
+const handleTableChange = (pagination: any): void => {
+  paginationConfig.current = pagination.current;
+  paginationConfig.pageSize = pagination.pageSize;
+  fetchConfigs();
+};
+
+const handleSearch = (): void => {
+  paginationConfig.current = 1;
+  fetchConfigs();
+};
+
+const handleSearchChange = (): void => {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout);
+  }
+  searchTimeout = setTimeout(() => {
+    paginationConfig.current = 1;
+    fetchConfigs();
+  }, 500);
+};
+
+const handleFilterChange = (): void => {
+  paginationConfig.current = 1;
+  fetchConfigs();
+};
+
+const handleReset = (): void => {
+  searchText.value = '';
+  searchPoolId.value = undefined;
+  searchConfigType.value = undefined;
+  searchStatus.value = undefined;
+  paginationConfig.current = 1;
+  fetchConfigs();
+};
+
+const handleMenuClick = (command: string, record: MonitorConfigItem): void => {
+  switch (command) {
+    case 'preview': {
+      showPreviewModal(record);
+      break;
+    }
+    case 'delete': {
+      confirmDelete(record);
+      break;
+    }
+  }
+};
+
+const confirmDelete = (record: MonitorConfigItem): void => {
+  Modal.confirm({
+    title: '警告',
+    content: `确定要删除配置 "${record.name}" 吗？`,
+    okText: '删除',
+    okType: 'danger',
+    cancelText: '取消',
+    async onOk() {
+      try {
+        await deleteMonitorConfigApi({ id: record.id });
+        message.success(`配置 "${record.name}" 已删除`);
+        fetchConfigs();
+      } catch (error: any) {
+        if (shouldNotifyPageError(error))
+          message.error(error.message || '删除配置失败');
+      }
+    },
+  });
+};
+
+// 表单处理
+const resetAddForm = (): void => {
+  Object.assign(addForm, {
+    name: '',
+    pool_id: undefined,
+    instance_ip: '',
+    config_type: undefined,
+    config_content: '',
+    status: ConfigStatus.Active,
+  });
+};
+
+const showAddModal = (): void => {
+  resetAddForm();
+  isAddModalVisible.value = true;
+};
+
+const closeAddModal = (): void => {
+  isAddModalVisible.value = false;
+};
+
+const handleAdd = async (): Promise<void> => {
+  try {
+    const params: CreateMonitorConfigParams = {
+      name: addForm.name,
+      pool_id: addForm.pool_id!,
+      instance_ip: addForm.instance_ip,
+      config_type: addForm.config_type!,
+      config_content: addForm.config_content,
+      status: addForm.status,
+    };
+
+    await createMonitorConfigApi(params);
+    closeAddModal();
+    fetchConfigs();
+    message.success('新增配置成功');
+  } catch (error: any) {
+    if (shouldNotifyPageError(error))
+      message.error('新增配置失败: ' + (error.message || '未知错误'));
+  }
+};
+
+const showEditModal = (record: MonitorConfigItem): void => {
+  editForm.id = record.id;
+  editForm.name = record.name;
+  editForm.pool_id = record.pool_id;
+  editForm.instance_ip = record.instance_ip;
+  editForm.config_type = record.config_type;
+  editForm.config_content = record.config_content;
+  editForm.status = record.status;
+  isEditModalVisible.value = true;
+};
+
+const showEditModalFromDetail = (record: MonitorConfigItem): void => {
+  closeDetailModal();
+  showEditModal(record);
+};
+
+const closeEditModal = (): void => {
+  isEditModalVisible.value = false;
+};
+
+const handleEdit = async (): Promise<void> => {
+  try {
+    const params: UpdateMonitorConfigParams = {
+      id: editForm.id!,
+      name: editForm.name,
+      pool_id: editForm.pool_id!,
+      instance_ip: editForm.instance_ip,
+      config_type: editForm.config_type!,
+      config_content: editForm.config_content,
+      status: editForm.status,
+    };
+
+    await updateMonitorConfigApi(params);
+    closeEditModal();
+    fetchConfigs();
+    message.success('更新配置成功');
+  } catch (error: any) {
+    if (shouldNotifyPageError(error))
+      message.error('更新配置失败: ' + (error.message || '未知错误'));
+  }
+};
+
+const handleViewDetail = async (record: MonitorConfigItem): Promise<void> => {
+  try {
+    const detail = await getMonitorConfigApi({ id: record.id });
+    detailConfig.value = detail;
+    isDetailModalVisible.value = true;
+  } catch (error: any) {
+    if (shouldNotifyPageError(error))
+      message.error('获取配置详情失败: ' + (error.message || '未知错误'));
+  }
+};
+
+const showPreviewModal = (record: MonitorConfigItem): void => {
+  previewConfig.value = record;
+  isPreviewModalVisible.value = true;
+};
+
+const closePreviewModal = (): void => {
+  isPreviewModalVisible.value = false;
+  previewConfig.value = null;
+};
+
+const closeDetailModal = (): void => {
+  isDetailModalVisible.value = false;
+  detailConfig.value = null;
+};
+
+// 生命周期
+onMounted(() => {
+  loadPoolOptions();
+  fetchConfigs();
+});
+</script>
+
 <template>
   <OpsPage description="管理配置版本、实例与生效状态" title="监控配置">
     <!-- 页面标题 -->
@@ -636,543 +1173,6 @@
     </a-modal>
   </OpsPage>
 </template>
-
-<script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { useListRequest } from './useListRequest';
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
-import { message, Modal } from 'ant-design-vue';
-import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
-import { Icon } from '@iconify/vue';
-import {
-  ConfigStatus,
-  ConfigType,
-  createMonitorConfigApi,
-  type CreateMonitorConfigParams,
-  deleteMonitorConfigApi,
-  getMonitorConfigApi,
-  getMonitorConfigListApi,
-  type GetMonitorConfigListParams,
-  type MonitorConfigItem,
-  updateMonitorConfigApi,
-  type UpdateMonitorConfigParams,
-} from '#/api/core/prometheus/prometheus_config';
-
-import {
-  getMonitorScrapePoolListApi,
-  type MonitorScrapePool,
-} from '#/api/core/prometheus/prometheus_scrape_pool';
-
-import { usePermission } from '#/utils/permission';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
-
-const { can } = usePermission();
-
-// 实例池接口
-type PoolOption = Pick<MonitorScrapePool, 'id' | 'name'>;
-
-// 分页接口
-interface PaginationConfig {
-  current: number;
-  pageSize: number;
-  total: number;
-  showSizeChanger: boolean;
-  showQuickJumper: boolean;
-  showTotal: (total: number) => string;
-  size: 'default' | 'small';
-}
-
-// 统计数据接口
-interface Stats {
-  total: number;
-  active: number;
-  alertRules: number;
-  instances: number;
-}
-
-// 表单数据接口
-interface ConfigForm {
-  id?: number;
-  name: string;
-  pool_id: number | undefined;
-  instance_ip: string;
-  config_type: ConfigType | undefined;
-  config_content: string;
-  status: ConfigStatus;
-}
-
-const formDialogWidth = computed(() => {
-  if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
-    if (width < 768) return '95%';
-    if (width < 1024) return '90%';
-    return '900px';
-  }
-  return '900px';
-});
-
-const previewDialogWidth = computed(() => {
-  if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
-    if (width < 768) return '95%';
-    if (width < 1024) return '90%';
-    return '80%';
-  }
-  return '80%';
-});
-
-// 列定义
-const columns = [
-  {
-    title: '配置名称',
-    dataIndex: 'name',
-    key: 'name',
-    width: 200,
-    fixed: 'left',
-  },
-  {
-    title: '配置类型',
-    dataIndex: 'config_type',
-    key: 'config_type',
-    width: 150,
-  },
-  {
-    title: '实例信息',
-    dataIndex: 'instance_info',
-    key: 'instance_info',
-    width: 200,
-  },
-  {
-    title: '状态',
-    dataIndex: 'status',
-    key: 'status',
-    width: 100,
-    align: 'center' as const,
-  },
-  {
-    title: '最后生成时间',
-    dataIndex: 'last_generated_time',
-    key: 'last_generated_time',
-    width: 180,
-  },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 180 },
-  {
-    title: '操作',
-    key: 'action',
-    width: 200,
-    align: 'center' as const,
-    fixed: 'right',
-  },
-];
-
-// 实例池数据
-const poolOptions = ref<PoolOption[]>([]);
-
-// 状态数据
-const loading = ref(false);
-const { loadError, beginRequest } = useListRequest(loading);
-const data = ref<MonitorConfigItem[]>([]);
-const searchText = ref('');
-const searchPoolId = ref<number | undefined>(undefined);
-const searchConfigType = ref<ConfigType | undefined>(undefined);
-const searchStatus = ref<ConfigStatus | undefined>(undefined);
-
-// 防抖处理
-let searchTimeout: ReturnType<typeof setTimeout> | null = null;
-onBeforeUnmount(() => {
-  if (searchTimeout) clearTimeout(searchTimeout);
-});
-
-// 分页配置
-const paginationConfig = reactive<PaginationConfig>({
-  current: 1,
-  pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
-  showQuickJumper: true,
-  showTotal: (total: number) => `共 ${total} 条记录`,
-  size: 'default',
-});
-
-// 统计数据
-const stats = reactive<Stats>({
-  total: 0,
-  active: 0,
-  alertRules: 0,
-  instances: 0,
-});
-
-// 模态框状态
-const isAddModalVisible = ref(false);
-const isEditModalVisible = ref(false);
-const isPreviewModalVisible = ref(false);
-const isDetailModalVisible = ref(false);
-const previewConfig = ref<MonitorConfigItem | null>(null);
-const detailConfig = ref<MonitorConfigItem | null>(null);
-
-// 表单数据
-const addForm = reactive<ConfigForm>({
-  name: '',
-  pool_id: undefined,
-  instance_ip: '',
-  config_type: undefined,
-  config_content: '',
-  status: ConfigStatus.Active,
-});
-
-const editForm = reactive<ConfigForm>({
-  id: undefined,
-  name: '',
-  pool_id: undefined,
-  instance_ip: '',
-  config_type: undefined,
-  config_content: '',
-  status: ConfigStatus.Active,
-});
-
-// 表单验证规则
-const formRules = {
-  name: [
-    { required: true, message: '请输入配置名称', trigger: 'blur' },
-    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' },
-  ],
-  config_type: [
-    { required: true, message: '请选择配置类型', trigger: 'change' },
-  ],
-  pool_id: [{ required: true, message: '请选择实例池', trigger: 'change' }],
-  instance_ip: [{ required: true, message: '请输入实例IP', trigger: 'blur' }],
-  config_content: [
-    { required: true, message: '请输入配置内容', trigger: 'blur' },
-  ],
-};
-
-const getConfigTypeName = (type: ConfigType): string => {
-  const typeNames: Record<ConfigType, string> = {
-    [ConfigType.Prometheus]: 'Prometheus',
-    [ConfigType.AlertManager]: 'AlertManager',
-    [ConfigType.AlertRule]: '告警规则',
-    [ConfigType.RecordRule]: '预聚合规则',
-    [ConfigType.WebhookFile]: 'Webhook文件',
-  };
-  return typeNames[type] || '未知';
-};
-
-const getConfigTypeColor = (type: ConfigType): string => {
-  const typeColors: Record<ConfigType, string> = {
-    [ConfigType.Prometheus]: 'prometheus-tag',
-    [ConfigType.AlertManager]: 'alert-tag',
-    [ConfigType.AlertRule]: 'rule-tag',
-    [ConfigType.RecordRule]: 'record-tag',
-    [ConfigType.WebhookFile]: 'webhook-tag',
-  };
-  return typeColors[type] || 'default-tag';
-};
-
-const getPoolName = (poolId: number): string => {
-  const pool = poolOptions.value.find((p) => p.id === poolId);
-  return pool?.name || `Pool-${poolId}`;
-};
-
-const formatDate = (input: number | string): string => {
-  if (!input) return '';
-  const date =
-    typeof input === 'number' ? new Date(input * 1000) : new Date(input);
-  if (isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('zh-CN');
-};
-
-const formatTime = (input: number | string): string => {
-  if (!input) return '';
-  const date =
-    typeof input === 'number' ? new Date(input * 1000) : new Date(input);
-  if (isNaN(date.getTime())) return '';
-  return date.toLocaleTimeString('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
-const formatFullDateTime = (input: number | string): string => {
-  if (!input) return '';
-  const date =
-    typeof input === 'number' ? new Date(input * 1000) : new Date(input);
-  if (isNaN(date.getTime())) return '';
-  return date.toLocaleString('zh-CN');
-};
-
-// 更新统计数据
-const updateStats = (): void => {
-  stats.total = paginationConfig.total;
-  stats.active = data.value.filter(
-    (item: MonitorConfigItem) => item.status === ConfigStatus.Active,
-  ).length;
-  stats.alertRules = data.value.filter(
-    (item: MonitorConfigItem) => item.config_type === ConfigType.AlertRule,
-  ).length;
-  stats.instances = new Set(
-    data.value.map((item: MonitorConfigItem) => item.instance_ip),
-  ).size;
-};
-
-// 数据加载
-const fetchConfigs = async (): Promise<void> => {
-  const request = beginRequest();
-  try {
-    const params: GetMonitorConfigListParams = {
-      page: paginationConfig.current,
-      size: paginationConfig.pageSize,
-      search: searchText.value || undefined,
-      config_type: searchConfigType.value,
-      status: searchStatus.value,
-    };
-
-    const response = await getMonitorConfigListApi(params);
-    if (!request.isCurrent()) return;
-    if (response) {
-      let items: MonitorConfigItem[] = response.items || [];
-      // 客户端按实例池过滤（后端参数未定义）
-      if (searchPoolId.value !== undefined) {
-        items = items.filter(
-          (item: MonitorConfigItem) => item.pool_id === searchPoolId.value,
-        );
-      }
-      data.value = items;
-      paginationConfig.total = (response.total ?? items.length) as number;
-      updateStats();
-    }
-  } catch (error: any) {
-    if (!request.fail(error, '加载配置列表失败')) return;
-    data.value = [];
-    paginationConfig.total = 0;
-    updateStats();
-    if (shouldNotifyPageError(error)) message.error(loadError.value);
-  } finally {
-    request.finish();
-  }
-};
-
-// 加载实例池数据
-const loadPoolOptions = async (): Promise<void> => {
-  try {
-    let allPools: MonitorScrapePool[] = [];
-    let currentPage = 1;
-    const pageSize = 10;
-    let hasMore = true;
-
-    while (hasMore) {
-      const res = await getMonitorScrapePoolListApi({
-        page: currentPage,
-        size: pageSize,
-      });
-
-      if (res?.items && res.items.length > 0) {
-        allPools = allPools.concat(res.items);
-
-        // 检查是否还有更多数据
-        hasMore =
-          res.items.length === pageSize && allPools.length < (res.total || 0);
-        currentPage++;
-      } else {
-        hasMore = false;
-      }
-    }
-
-    poolOptions.value = allPools
-      .filter((item: MonitorScrapePool) => item.id !== undefined)
-      .map((item: MonitorScrapePool) => ({
-        id: item.id!,
-        name: item.name,
-      }));
-  } catch {
-    poolOptions.value = [];
-  }
-};
-
-// 事件处理
-const handleTableChange = (pagination: any): void => {
-  paginationConfig.current = pagination.current;
-  paginationConfig.pageSize = pagination.pageSize;
-  fetchConfigs();
-};
-
-const handleSearch = (): void => {
-  paginationConfig.current = 1;
-  fetchConfigs();
-};
-
-const handleSearchChange = (): void => {
-  if (searchTimeout) {
-    clearTimeout(searchTimeout);
-  }
-  searchTimeout = setTimeout(() => {
-    paginationConfig.current = 1;
-    fetchConfigs();
-  }, 500);
-};
-
-const handleFilterChange = (): void => {
-  paginationConfig.current = 1;
-  fetchConfigs();
-};
-
-const handleReset = (): void => {
-  searchText.value = '';
-  searchPoolId.value = undefined;
-  searchConfigType.value = undefined;
-  searchStatus.value = undefined;
-  paginationConfig.current = 1;
-  fetchConfigs();
-};
-
-const handleMenuClick = (command: string, record: MonitorConfigItem): void => {
-  switch (command) {
-    case 'preview': {
-      showPreviewModal(record);
-      break;
-    }
-    case 'delete': {
-      confirmDelete(record);
-      break;
-    }
-  }
-};
-
-const confirmDelete = (record: MonitorConfigItem): void => {
-  Modal.confirm({
-    title: '警告',
-    content: `确定要删除配置 "${record.name}" 吗？`,
-    okText: '删除',
-    okType: 'danger',
-    cancelText: '取消',
-    async onOk() {
-      try {
-        await deleteMonitorConfigApi({ id: record.id });
-        message.success(`配置 "${record.name}" 已删除`);
-        fetchConfigs();
-      } catch (error: any) {
-        if (shouldNotifyPageError(error))
-          message.error(error.message || '删除配置失败');
-      }
-    },
-  });
-};
-
-// 表单处理
-const resetAddForm = (): void => {
-  Object.assign(addForm, {
-    name: '',
-    pool_id: undefined,
-    instance_ip: '',
-    config_type: undefined,
-    config_content: '',
-    status: ConfigStatus.Active,
-  });
-};
-
-const showAddModal = (): void => {
-  resetAddForm();
-  isAddModalVisible.value = true;
-};
-
-const closeAddModal = (): void => {
-  isAddModalVisible.value = false;
-};
-
-const handleAdd = async (): Promise<void> => {
-  try {
-    const params: CreateMonitorConfigParams = {
-      name: addForm.name,
-      pool_id: addForm.pool_id!,
-      instance_ip: addForm.instance_ip,
-      config_type: addForm.config_type!,
-      config_content: addForm.config_content,
-      status: addForm.status,
-    };
-
-    await createMonitorConfigApi(params);
-    closeAddModal();
-    fetchConfigs();
-    message.success('新增配置成功');
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error('新增配置失败: ' + (error.message || '未知错误'));
-  }
-};
-
-const showEditModal = (record: MonitorConfigItem): void => {
-  editForm.id = record.id;
-  editForm.name = record.name;
-  editForm.pool_id = record.pool_id;
-  editForm.instance_ip = record.instance_ip;
-  editForm.config_type = record.config_type;
-  editForm.config_content = record.config_content;
-  editForm.status = record.status;
-  isEditModalVisible.value = true;
-};
-
-const showEditModalFromDetail = (record: MonitorConfigItem): void => {
-  closeDetailModal();
-  showEditModal(record);
-};
-
-const closeEditModal = (): void => {
-  isEditModalVisible.value = false;
-};
-
-const handleEdit = async (): Promise<void> => {
-  try {
-    const params: UpdateMonitorConfigParams = {
-      id: editForm.id!,
-      name: editForm.name,
-      pool_id: editForm.pool_id!,
-      instance_ip: editForm.instance_ip,
-      config_type: editForm.config_type!,
-      config_content: editForm.config_content,
-      status: editForm.status,
-    };
-
-    await updateMonitorConfigApi(params);
-    closeEditModal();
-    fetchConfigs();
-    message.success('更新配置成功');
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error('更新配置失败: ' + (error.message || '未知错误'));
-  }
-};
-
-const handleViewDetail = async (record: MonitorConfigItem): Promise<void> => {
-  try {
-    const detail = await getMonitorConfigApi({ id: record.id });
-    detailConfig.value = detail;
-    isDetailModalVisible.value = true;
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error('获取配置详情失败: ' + (error.message || '未知错误'));
-  }
-};
-
-const showPreviewModal = (record: MonitorConfigItem): void => {
-  previewConfig.value = record;
-  isPreviewModalVisible.value = true;
-};
-
-const closePreviewModal = (): void => {
-  isPreviewModalVisible.value = false;
-  previewConfig.value = null;
-};
-
-const closeDetailModal = (): void => {
-  isDetailModalVisible.value = false;
-  detailConfig.value = null;
-};
-
-// 生命周期
-onMounted(() => {
-  loadPoolOptions();
-  fetchConfigs();
-});
-</script>
 
 <style scoped>
 .search-input {

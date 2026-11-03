@@ -1,3 +1,404 @@
+<script lang="ts" setup>
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { namespacedResourceKey } from '../shared/utils';
+import { onMounted, ref } from 'vue';
+import { message, Modal } from 'ant-design-vue';
+import { useDaemonSetPage } from './DaemonSet';
+import { rollbackDaemonSetApi } from '#/api/core/k8s/k8s_daemonset';
+import {
+  formatDateTime,
+  formatK8sTime,
+  getRelativeTime,
+} from '../shared/utils';
+import {
+  AppstoreOutlined,
+  CheckCircleOutlined,
+  ClearOutlined,
+  ContainerOutlined,
+  DeleteOutlined,
+  DeploymentUnitOutlined,
+  EditOutlined,
+  EyeOutlined,
+  FileAddOutlined,
+  FileTextOutlined,
+  FilterOutlined,
+  FormatPainterOutlined,
+  HddOutlined,
+  HistoryOutlined,
+  PlusOutlined,
+  RedoOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  TagsOutlined,
+} from '@ant-design/icons-vue';
+
+import { usePermission } from '#/utils/permission';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
+const { can } = usePermission();
+
+const {
+  // state
+  clusters,
+  namespaces,
+  loading,
+  loadError,
+  clustersError,
+  namespacesError,
+  clustersLoading,
+  namespacesLoading,
+  searchText,
+  filterStatus,
+  filterClusterId,
+  filterNamespace,
+  filterLabels,
+  selectedRows,
+  currentPage,
+  pageSize,
+  total,
+  clustersTotal,
+  namespacesTotal,
+
+  // modal state
+  isCreateModalVisible,
+  isCreateYamlModalVisible,
+  isEditModalVisible,
+  isDetailModalVisible,
+  isYamlModalVisible,
+  isPodModalVisible,
+  isHistoryModalVisible,
+  submitLoading,
+  detailLoading,
+
+  // operation targets
+  currentOperationDaemonSet,
+  currentDaemonSetDetail,
+  daemonSetPods,
+  daemonSetHistory,
+
+  // form models
+  createFormModel,
+  editFormModel,
+  createYamlFormModel,
+  yamlFormModel,
+
+  // form refs
+  formRef,
+  editFormRef,
+  yamlFormRef,
+  createYamlFormRef,
+
+  // form rules
+  createFormRules,
+  yamlFormRules,
+  createYamlFormRules,
+
+  // computed
+  filteredDaemonSets,
+  rowSelection,
+
+  // helpers
+  getEnvText,
+  getStatusText,
+  getStatusColor,
+
+  // operations
+  fetchClusters,
+  fetchNamespaces,
+  fetchDaemonSets,
+  clearDaemonSets,
+  clearNamespaces,
+  loadMoreClusters,
+  loadMoreNamespaces,
+
+  // detail operations
+  showDaemonSetDetail,
+  closeDetailModal,
+
+  // YAML operations
+  showYamlModal,
+  closeYamlModal,
+  submitYamlForm,
+
+  // create operations
+  openCreateModal,
+  closeCreateModal,
+  submitCreateForm,
+  openCreateYamlModal,
+  closeCreateYamlModal,
+  submitCreateYamlForm,
+
+  // daemonSet operations
+  deleteDaemonSet,
+  restartDaemonSet,
+
+  // edit operations
+  openEditModal,
+  closeEditModal,
+  submitEditForm,
+
+  // pod operations
+  showPodModal,
+  closePodModal,
+
+  // history operations
+  showHistoryModal,
+  closeHistoryModal,
+
+  // filter operations
+  addFilterLabel,
+  removeFilterLabel,
+  clearFilterLabels,
+
+  // batch operations
+  batchOperation,
+
+  // pagination operations
+  handlePageChange,
+
+  // form field operations
+  addImageField,
+  removeImageField,
+  removeLabelField,
+  removeAnnotationField,
+  removeEditLabelField,
+  removeEditAnnotationField,
+
+  // yaml operations
+  insertYamlTemplate,
+  formatYaml,
+  validateYaml,
+  clearYaml,
+  formatEditYaml,
+  validateEditYaml,
+
+  // constants
+  K8sDaemonSetStatus,
+} = useDaemonSetPage();
+
+// 添加新标签/注解的方法
+const newLabelKey = ref('');
+const newAnnotationKey = ref('');
+const newEditLabelKey = ref('');
+const newEditAnnotationKey = ref('');
+
+const addNewLabel = () => {
+  if (newLabelKey.value && newLabelKey.value.trim()) {
+    createFormModel.value.labels[newLabelKey.value.trim()] = '';
+    newLabelKey.value = '';
+  }
+};
+
+const addNewAnnotation = () => {
+  if (newAnnotationKey.value && newAnnotationKey.value.trim()) {
+    createFormModel.value.annotations[newAnnotationKey.value.trim()] = '';
+    newAnnotationKey.value = '';
+  }
+};
+
+// 编辑模态框专用的方法
+const addNewEditLabel = () => {
+  if (newEditLabelKey.value && newEditLabelKey.value.trim()) {
+    editFormModel.value.labels[newEditLabelKey.value.trim()] = '';
+    newEditLabelKey.value = '';
+  }
+};
+
+const addNewEditAnnotation = () => {
+  if (newEditAnnotationKey.value && newEditAnnotationKey.value.trim()) {
+    editFormModel.value.annotations[newEditAnnotationKey.value.trim()] = '';
+    newEditAnnotationKey.value = '';
+  }
+};
+
+const onSearch = () => {
+  currentPage.value = 1;
+  fetchDaemonSets();
+};
+
+const handleFilterChange = () => {
+  currentPage.value = 1;
+  fetchDaemonSets();
+};
+
+const handleClusterChange = () => {
+  currentPage.value = 1;
+  clearNamespaces();
+  clearDaemonSets();
+
+  if (filterClusterId.value) {
+    fetchNamespaces(true); // 重置命名空间分页
+    fetchDaemonSets();
+  }
+};
+
+const handleTableChange = (pagination: {
+  current?: number;
+  pageSize?: number;
+}) => {
+  if (pagination) {
+    handlePageChange(
+      pagination.current || currentPage.value,
+      pagination.pageSize,
+    );
+  }
+};
+
+// 处理集群下拉选择的滚动事件
+const handleClusterDropdownScroll = (e: Event) => {
+  const { target } = e;
+  if (
+    target &&
+    'scrollTop' in target &&
+    'scrollHeight' in target &&
+    'clientHeight' in target
+  ) {
+    const scrollTarget = target as HTMLElement;
+    if (
+      scrollTarget.scrollTop + scrollTarget.clientHeight >=
+      scrollTarget.scrollHeight - 5
+    ) {
+      loadMoreClusters();
+    }
+  }
+};
+
+const columns = [
+  {
+    title: '名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 150,
+    ellipsis: true,
+    fixed: 'left',
+  },
+  {
+    title: '命名空间',
+    dataIndex: 'namespace',
+    key: 'namespace',
+    width: 120,
+    ellipsis: true,
+  },
+  {
+    title: '状态',
+    dataIndex: 'status',
+    key: 'status',
+    width: 90,
+    align: 'center',
+  },
+  { title: 'Pod状态', key: 'pods', width: 110, align: 'center' },
+  { title: '可用/不可用', key: 'availability', width: 120, align: 'center' },
+  {
+    title: '更新策略',
+    dataIndex: 'update_strategy',
+    key: 'update_strategy',
+    width: 110,
+    align: 'center',
+  },
+  { title: '镜像', dataIndex: 'images', key: 'images', width: 200 },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
+  { title: '创建时间', key: 'created_at', width: 160 },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 350,
+    fixed: 'right',
+    align: 'center',
+  },
+];
+
+// 标签过滤器状态
+const isLabelsFilterModalVisible = ref(false);
+const newFilterKey = ref('');
+const newFilterValue = ref('');
+
+// 标签过滤器操作
+const openLabelsFilter = () => {
+  isLabelsFilterModalVisible.value = true;
+};
+
+const closeLabelsFilterModal = () => {
+  isLabelsFilterModalVisible.value = false;
+  newFilterKey.value = '';
+  newFilterValue.value = '';
+};
+
+const addNewFilterLabel = () => {
+  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
+    addFilterLabel(newFilterKey.value.trim(), newFilterValue.value.trim());
+    newFilterKey.value = '';
+    newFilterValue.value = '';
+  }
+};
+
+const applyLabelsFilter = () => {
+  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
+    addNewFilterLabel();
+  }
+  closeLabelsFilterModal();
+};
+
+// 重置所有筛选条件
+const resetFilters = () => {
+  filterStatus.value = undefined;
+  searchText.value = '';
+  filterClusterId.value = undefined;
+  filterNamespace.value = undefined;
+  clearFilterLabels();
+  currentPage.value = 1;
+  clearDaemonSets();
+  clearNamespaces();
+};
+
+// 快速回滚到指定版本
+const rollbackToVersion = (revision: number) => {
+  if (!currentOperationDaemonSet.value) return;
+
+  Modal.confirm({
+    title: '回滚确认',
+    content: `确定要将 DaemonSet "${currentOperationDaemonSet.value.name}" 回滚到版本 ${revision} 吗？`,
+    okText: '确认回滚',
+    okType: 'primary',
+    cancelText: '取消',
+    centered: true,
+    onOk: async () => {
+      try {
+        const clusterId =
+          currentOperationDaemonSet.value!.cluster_id || filterClusterId.value;
+        if (!clusterId || clusterId === 0) {
+          message.error('无效的集群ID，请重新选择集群');
+          return;
+        }
+
+        await rollbackDaemonSetApi(
+          clusterId,
+          currentOperationDaemonSet.value!.namespace,
+          currentOperationDaemonSet.value!.name,
+          {
+            cluster_id: clusterId,
+            namespace: currentOperationDaemonSet.value!.namespace,
+            name: currentOperationDaemonSet.value!.name,
+            revision,
+          },
+        );
+        message.success(`DaemonSet 回滚到版本 ${revision} 成功`);
+        closeHistoryModal();
+        await fetchDaemonSets();
+      } catch (error) {
+        if (shouldNotifyPageError(error))
+          message.error(`DaemonSet 回滚到版本 ${revision} 失败`);
+      }
+    },
+  });
+};
+
+onMounted(async () => {
+  await fetchClusters();
+});
+</script>
+
 <template>
   <OpsPage
     description="管理和监控集群中的所有 Kubernetes DaemonSet"
@@ -1525,407 +1926,6 @@
     </a-modal>
   </OpsPage>
 </template>
-
-<script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { namespacedResourceKey } from '../shared/utils';
-import { onMounted, ref } from 'vue';
-import { message, Modal } from 'ant-design-vue';
-import { useDaemonSetPage } from './DaemonSet';
-import { rollbackDaemonSetApi } from '#/api/core/k8s/k8s_daemonset';
-import {
-  formatDateTime,
-  formatK8sTime,
-  getRelativeTime,
-} from '../shared/utils';
-import {
-  AppstoreOutlined,
-  CheckCircleOutlined,
-  ClearOutlined,
-  ContainerOutlined,
-  DeleteOutlined,
-  DeploymentUnitOutlined,
-  EditOutlined,
-  EyeOutlined,
-  FileAddOutlined,
-  FileTextOutlined,
-  FilterOutlined,
-  FormatPainterOutlined,
-  HddOutlined,
-  HistoryOutlined,
-  PlusOutlined,
-  RedoOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-  TagsOutlined,
-} from '@ant-design/icons-vue';
-
-import { usePermission } from '#/utils/permission';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
-
-const { can } = usePermission();
-
-const {
-  // state
-  clusters,
-  namespaces,
-  loading,
-  loadError,
-  clustersError,
-  namespacesError,
-  clustersLoading,
-  namespacesLoading,
-  searchText,
-  filterStatus,
-  filterClusterId,
-  filterNamespace,
-  filterLabels,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
-  clustersTotal,
-  namespacesTotal,
-
-  // modal state
-  isCreateModalVisible,
-  isCreateYamlModalVisible,
-  isEditModalVisible,
-  isDetailModalVisible,
-  isYamlModalVisible,
-  isPodModalVisible,
-  isHistoryModalVisible,
-  submitLoading,
-  detailLoading,
-
-  // operation targets
-  currentOperationDaemonSet,
-  currentDaemonSetDetail,
-  daemonSetPods,
-  daemonSetHistory,
-
-  // form models
-  createFormModel,
-  editFormModel,
-  createYamlFormModel,
-  yamlFormModel,
-
-  // form refs
-  formRef,
-  editFormRef,
-  yamlFormRef,
-  createYamlFormRef,
-
-  // form rules
-  createFormRules,
-  yamlFormRules,
-  createYamlFormRules,
-
-  // computed
-  filteredDaemonSets,
-  rowSelection,
-
-  // helpers
-  getEnvText,
-  getStatusText,
-  getStatusColor,
-
-  // operations
-  fetchClusters,
-  fetchNamespaces,
-  fetchDaemonSets,
-  clearDaemonSets,
-  clearNamespaces,
-  loadMoreClusters,
-  loadMoreNamespaces,
-
-  // detail operations
-  showDaemonSetDetail,
-  closeDetailModal,
-
-  // YAML operations
-  showYamlModal,
-  closeYamlModal,
-  submitYamlForm,
-
-  // create operations
-  openCreateModal,
-  closeCreateModal,
-  submitCreateForm,
-  openCreateYamlModal,
-  closeCreateYamlModal,
-  submitCreateYamlForm,
-
-  // daemonSet operations
-  deleteDaemonSet,
-  restartDaemonSet,
-
-  // edit operations
-  openEditModal,
-  closeEditModal,
-  submitEditForm,
-
-  // pod operations
-  showPodModal,
-  closePodModal,
-
-  // history operations
-  showHistoryModal,
-  closeHistoryModal,
-
-  // filter operations
-  addFilterLabel,
-  removeFilterLabel,
-  clearFilterLabels,
-
-  // batch operations
-  batchOperation,
-
-  // pagination operations
-  handlePageChange,
-
-  // form field operations
-  addImageField,
-  removeImageField,
-  removeLabelField,
-  removeAnnotationField,
-  removeEditLabelField,
-  removeEditAnnotationField,
-
-  // yaml operations
-  insertYamlTemplate,
-  formatYaml,
-  validateYaml,
-  clearYaml,
-  formatEditYaml,
-  validateEditYaml,
-
-  // constants
-  K8sDaemonSetStatus,
-} = useDaemonSetPage();
-
-// 添加新标签/注解的方法
-const newLabelKey = ref('');
-const newAnnotationKey = ref('');
-const newEditLabelKey = ref('');
-const newEditAnnotationKey = ref('');
-
-const addNewLabel = () => {
-  if (newLabelKey.value && newLabelKey.value.trim()) {
-    createFormModel.value.labels[newLabelKey.value.trim()] = '';
-    newLabelKey.value = '';
-  }
-};
-
-const addNewAnnotation = () => {
-  if (newAnnotationKey.value && newAnnotationKey.value.trim()) {
-    createFormModel.value.annotations[newAnnotationKey.value.trim()] = '';
-    newAnnotationKey.value = '';
-  }
-};
-
-// 编辑模态框专用的方法
-const addNewEditLabel = () => {
-  if (newEditLabelKey.value && newEditLabelKey.value.trim()) {
-    editFormModel.value.labels[newEditLabelKey.value.trim()] = '';
-    newEditLabelKey.value = '';
-  }
-};
-
-const addNewEditAnnotation = () => {
-  if (newEditAnnotationKey.value && newEditAnnotationKey.value.trim()) {
-    editFormModel.value.annotations[newEditAnnotationKey.value.trim()] = '';
-    newEditAnnotationKey.value = '';
-  }
-};
-
-const onSearch = () => {
-  currentPage.value = 1;
-  fetchDaemonSets();
-};
-
-const handleFilterChange = () => {
-  currentPage.value = 1;
-  fetchDaemonSets();
-};
-
-const handleClusterChange = () => {
-  currentPage.value = 1;
-  clearNamespaces();
-  clearDaemonSets();
-
-  if (filterClusterId.value) {
-    fetchNamespaces(true); // 重置命名空间分页
-    fetchDaemonSets();
-  }
-};
-
-const handleTableChange = (pagination: {
-  current?: number;
-  pageSize?: number;
-}) => {
-  if (pagination) {
-    handlePageChange(
-      pagination.current || currentPage.value,
-      pagination.pageSize,
-    );
-  }
-};
-
-// 处理集群下拉选择的滚动事件
-const handleClusterDropdownScroll = (e: Event) => {
-  const { target } = e;
-  if (
-    target &&
-    'scrollTop' in target &&
-    'scrollHeight' in target &&
-    'clientHeight' in target
-  ) {
-    const scrollTarget = target as HTMLElement;
-    if (
-      scrollTarget.scrollTop + scrollTarget.clientHeight >=
-      scrollTarget.scrollHeight - 5
-    ) {
-      loadMoreClusters();
-    }
-  }
-};
-
-const columns = [
-  {
-    title: '名称',
-    dataIndex: 'name',
-    key: 'name',
-    width: 150,
-    ellipsis: true,
-    fixed: 'left',
-  },
-  {
-    title: '命名空间',
-    dataIndex: 'namespace',
-    key: 'namespace',
-    width: 120,
-    ellipsis: true,
-  },
-  {
-    title: '状态',
-    dataIndex: 'status',
-    key: 'status',
-    width: 90,
-    align: 'center',
-  },
-  { title: 'Pod状态', key: 'pods', width: 110, align: 'center' },
-  { title: '可用/不可用', key: 'availability', width: 120, align: 'center' },
-  {
-    title: '更新策略',
-    dataIndex: 'update_strategy',
-    key: 'update_strategy',
-    width: 110,
-    align: 'center',
-  },
-  { title: '镜像', dataIndex: 'images', key: 'images', width: 200 },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
-  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
-  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
-  { title: '创建时间', key: 'created_at', width: 160 },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 350,
-    fixed: 'right',
-    align: 'center',
-  },
-];
-
-// 标签过滤器状态
-const isLabelsFilterModalVisible = ref(false);
-const newFilterKey = ref('');
-const newFilterValue = ref('');
-
-// 标签过滤器操作
-const openLabelsFilter = () => {
-  isLabelsFilterModalVisible.value = true;
-};
-
-const closeLabelsFilterModal = () => {
-  isLabelsFilterModalVisible.value = false;
-  newFilterKey.value = '';
-  newFilterValue.value = '';
-};
-
-const addNewFilterLabel = () => {
-  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
-    addFilterLabel(newFilterKey.value.trim(), newFilterValue.value.trim());
-    newFilterKey.value = '';
-    newFilterValue.value = '';
-  }
-};
-
-const applyLabelsFilter = () => {
-  if (newFilterKey.value.trim() && newFilterValue.value.trim()) {
-    addNewFilterLabel();
-  }
-  closeLabelsFilterModal();
-};
-
-// 重置所有筛选条件
-const resetFilters = () => {
-  filterStatus.value = undefined;
-  searchText.value = '';
-  filterClusterId.value = undefined;
-  filterNamespace.value = undefined;
-  clearFilterLabels();
-  currentPage.value = 1;
-  clearDaemonSets();
-  clearNamespaces();
-};
-
-// 快速回滚到指定版本
-const rollbackToVersion = (revision: number) => {
-  if (!currentOperationDaemonSet.value) return;
-
-  Modal.confirm({
-    title: '回滚确认',
-    content: `确定要将 DaemonSet "${currentOperationDaemonSet.value.name}" 回滚到版本 ${revision} 吗？`,
-    okText: '确认回滚',
-    okType: 'primary',
-    cancelText: '取消',
-    centered: true,
-    onOk: async () => {
-      try {
-        const clusterId =
-          currentOperationDaemonSet.value!.cluster_id || filterClusterId.value;
-        if (!clusterId || clusterId === 0) {
-          message.error('无效的集群ID，请重新选择集群');
-          return;
-        }
-
-        await rollbackDaemonSetApi(
-          clusterId,
-          currentOperationDaemonSet.value!.namespace,
-          currentOperationDaemonSet.value!.name,
-          {
-            cluster_id: clusterId,
-            namespace: currentOperationDaemonSet.value!.namespace,
-            name: currentOperationDaemonSet.value!.name,
-            revision,
-          },
-        );
-        message.success(`DaemonSet 回滚到版本 ${revision} 成功`);
-        closeHistoryModal();
-        await fetchDaemonSets();
-      } catch (error) {
-        if (shouldNotifyPageError(error))
-          message.error(`DaemonSet 回滚到版本 ${revision} 失败`);
-      }
-    },
-  });
-};
-
-onMounted(async () => {
-  await fetchClusters();
-});
-</script>
 
 <style scoped>
 @import '../shared/k8s-common.css';

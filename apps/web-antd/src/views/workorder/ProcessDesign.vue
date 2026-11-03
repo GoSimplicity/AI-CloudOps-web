@@ -376,7 +376,7 @@
                     >
                       <template v-if="userLoading" #notFoundContent>
                         <div style="text-align: center">
-                          <a-spin size="small" />
+                          <ASpin size="small" />
                         </div>
                       </template>
                     </a-select>

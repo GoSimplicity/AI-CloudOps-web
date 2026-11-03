@@ -1,3 +1,352 @@
+<script setup lang="ts">
+import { computed, reactive, ref } from 'vue';
+import { message } from 'ant-design-vue';
+import {
+  CheckCircleOutlined,
+  ExclamationCircleOutlined,
+  PlayCircleOutlined,
+  SendOutlined,
+  StopOutlined,
+  UserOutlined,
+} from '@ant-design/icons-vue';
+
+import {
+  FlowAction,
+  listWorkorderInstanceFlow,
+  type ListWorkorderInstanceFlowReq,
+  type WorkorderInstanceFlowItem,
+} from '#/api/core/workorder/workorder_instance_flow';
+
+import { InstanceStatus } from '#/api/core/workorder/workorder_instance';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
+// 图标组件
+const IconComponent = ({ icon }: { icon: string }) => {
+  const iconMap: Record<string, string> = {
+    flow: '🔄',
+    refresh: '🔃',
+    filter: '🔍',
+    list: '📋',
+    timeline: '⏰',
+    approve: '✅',
+    reject: '❌',
+    assign: '👤',
+    total: '📊',
+    time: '⏰',
+    detail: '🔍',
+    system: '⚙️',
+    arrow: '➡️',
+    comment: '💬',
+    'empty-flow': '🌀',
+  };
+  return iconMap[icon] || '';
+};
+
+// 状态数据
+const loading = ref(false);
+const flowList = ref<WorkorderInstanceFlowItem[]>([]);
+const filterType = ref<string>('all');
+const viewMode = ref<'list' | 'timeline'>('timeline');
+
+// 详情对话框
+const detailDialog = reactive({
+  visible: false,
+  item: null as WorkorderInstanceFlowItem | null,
+});
+
+// 流转记录对话框
+const flowDialog = reactive({
+  visible: false,
+  instanceId: 0,
+});
+
+// 响应式对话框宽度
+const previewDialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '80%';
+  }
+  return '80%';
+});
+
+// 工具方法
+const formatFullDateTime = (dateStr: string | undefined) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return d.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+};
+
+const formatRelativeTime = (dateStr: string | undefined) => {
+  if (!dateStr) return '';
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diff = now.getTime() - date.getTime();
+
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
+  if (diff < minute) {
+    return '刚刚';
+  } else if (diff < hour) {
+    return `${Math.floor(diff / minute)}分钟前`;
+  } else if (diff < day) {
+    return `${Math.floor(diff / hour)}小时前`;
+  } else {
+    return `${Math.floor(diff / day)}天前`;
+  }
+};
+
+const formatDate = (dateStr: string | undefined) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('zh-CN');
+};
+
+// 计算属性
+const filteredFlowList = computed(() => {
+  let filtered = [...flowList.value];
+
+  switch (filterType.value) {
+    case 'approve': {
+      filtered = filtered.filter((item) =>
+        [FlowAction.Approve as string, FlowAction.Reject as string].includes(
+          item.action,
+        ),
+      );
+      break;
+    }
+    case 'assign': {
+      filtered = filtered.filter((item) => item.action === FlowAction.Assign);
+      break;
+    }
+    case 'status': {
+      filtered = filtered.filter((item) => item.from_status !== item.to_status);
+      break;
+    }
+  }
+
+  return filtered.sort((a, b) => {
+    const dateA = new Date(a.created_at || '');
+    const dateB = new Date(b.created_at || '');
+    return dateB.getTime() - dateA.getTime();
+  });
+});
+
+// 新增方法
+const isImportantFlow = (action: string): boolean => {
+  return [
+    FlowAction.Approve as string,
+    FlowAction.Reject as string,
+    FlowAction.Submit as string,
+    FlowAction.Complete as string,
+    FlowAction.Cancel as string,
+  ].includes(action);
+};
+
+const getFlowCount = (type: string): number => {
+  switch (type) {
+    case 'approve': {
+      return flowList.value.filter((item) => item.action === FlowAction.Approve)
+        .length;
+    }
+    case 'reject': {
+      return flowList.value.filter((item) => item.action === FlowAction.Reject)
+        .length;
+    }
+    case 'assign': {
+      return flowList.value.filter((item) => item.action === FlowAction.Assign)
+        .length;
+    }
+    default: {
+      return 0;
+    }
+  }
+};
+
+const getFlowActionClass = (action: string): string => {
+  const classMap: Record<string, string> = {
+    [FlowAction.Submit]: 'action-submit',
+    [FlowAction.Approve]: 'action-approve',
+    [FlowAction.Reject]: 'action-reject',
+    [FlowAction.Assign]: 'action-assign',
+    [FlowAction.Cancel]: 'action-cancel',
+    [FlowAction.Complete]: 'action-complete',
+    [FlowAction.Return]: 'action-return',
+  };
+  return classMap[action] || 'action-default';
+};
+
+const getStatusBadgeClass = (status: number): string => {
+  const classMap: Record<number, string> = {
+    [InstanceStatus.Draft]: 'status-draft',
+    [InstanceStatus.Pending]: 'status-pending',
+    [InstanceStatus.Processing]: 'status-processing',
+    [InstanceStatus.Completed]: 'status-completed',
+    [InstanceStatus.Rejected]: 'status-rejected',
+    [InstanceStatus.Cancelled]: 'status-cancelled',
+  };
+  return classMap[status] || 'status-default';
+};
+
+// 交互方法
+const showFlowDetail = (item: WorkorderInstanceFlowItem) => {
+  detailDialog.item = item;
+  detailDialog.visible = true;
+};
+
+const handleFilterChange = ({ key }: { key: string }) => {
+  filterType.value = key;
+};
+
+const toggleViewMode = () => {
+  viewMode.value = viewMode.value === 'timeline' ? 'list' : 'timeline';
+};
+
+const refreshFlow = async () => {
+  if (flowDialog.instanceId) {
+    await loadFlow(flowDialog.instanceId);
+  }
+};
+
+const getInitials = (name: string | undefined) => {
+  if (!name) return '';
+  return name.split('').slice(0, 2).join('').toUpperCase();
+};
+
+const getAvatarColor = (name: string | undefined) => {
+  if (!name) return '#1890ff';
+
+  const colors = [
+    '#1890ff',
+    '#52c41a',
+    '#faad14',
+    '#f5222d',
+    '#722ed1',
+    '#13c2c2',
+    '#eb2f96',
+    '#fa8c16',
+  ];
+
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  return colors[Math.abs(hash) % colors.length];
+};
+
+const getStatusText = (status: number): string => {
+  const textMap = {
+    [InstanceStatus.Draft]: '草稿',
+    [InstanceStatus.Pending]: '待处理',
+    [InstanceStatus.Processing]: '处理中',
+    [InstanceStatus.Completed]: '已完成',
+    [InstanceStatus.Rejected]: '已拒绝',
+    [InstanceStatus.Cancelled]: '已取消',
+  };
+  return textMap[status as keyof typeof textMap] || '未知';
+};
+
+const getFlowActionIcon = (action: string) => {
+  const iconMap: Record<string, any> = {
+    [FlowAction.Submit]: SendOutlined,
+    [FlowAction.Approve]: CheckCircleOutlined,
+    [FlowAction.Reject]: ExclamationCircleOutlined,
+    [FlowAction.Assign]: UserOutlined,
+    [FlowAction.Cancel]: StopOutlined,
+    [FlowAction.Complete]: CheckCircleOutlined,
+    [FlowAction.Return]: ExclamationCircleOutlined,
+  };
+  return iconMap[action] || PlayCircleOutlined;
+};
+
+const getFlowActionText = (action: string): string => {
+  const textMap: Record<string, string> = {
+    [FlowAction.Submit]: '提交工单',
+    [FlowAction.Approve]: '审批通过',
+    [FlowAction.Reject]: '审批拒绝',
+    [FlowAction.Assign]: '指派处理人',
+    [FlowAction.Cancel]: '取消工单',
+    [FlowAction.Complete]: '完成工单',
+    [FlowAction.Return]: '退回工单',
+  };
+  return textMap[action] || action;
+};
+
+// 加载流转记录
+const loadFlow = async (instanceId: number) => {
+  try {
+    loading.value = true;
+
+    let allFlows: any[] = [];
+    let currentPage = 1;
+    const pageSize = 50;
+    let hasMoreData = true;
+
+    while (hasMoreData) {
+      const params: ListWorkorderInstanceFlowReq = {
+        page: currentPage,
+        size: pageSize,
+        instance_id: instanceId,
+      };
+
+      const res = await listWorkorderInstanceFlow(params);
+
+      if (res && res.items && res.items.length > 0) {
+        allFlows = [...allFlows, ...res.items];
+
+        if (
+          res.items.length < pageSize ||
+          allFlows.length >= (res.total || 0)
+        ) {
+          hasMoreData = false;
+        } else {
+          currentPage++;
+        }
+      } else {
+        hasMoreData = false;
+      }
+    }
+
+    if (allFlows.length > 0) {
+      flowList.value = allFlows;
+    } else {
+      flowList.value = [];
+    }
+  } catch (error: any) {
+    if (shouldNotifyPageError(error))
+      message.error(`加载流转记录失败: ${error.message || '未知错误'}`);
+    flowList.value = [];
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 主要方法
+const showFlow = async (instanceId: number) => {
+  flowDialog.instanceId = instanceId;
+  flowDialog.visible = true;
+  filterType.value = 'all';
+  viewMode.value = 'timeline';
+  await loadFlow(instanceId);
+};
+
+// 导出方法供父组件调用
+defineExpose({
+  showFlow,
+});
+</script>
+
 <template>
   <div>
     <!-- 流转记录对话框 -->
@@ -431,355 +780,6 @@
     </a-modal>
   </div>
 </template>
-
-<script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
-import { message } from 'ant-design-vue';
-import {
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
-  PlayCircleOutlined,
-  SendOutlined,
-  StopOutlined,
-  UserOutlined,
-} from '@ant-design/icons-vue';
-
-import {
-  FlowAction,
-  listWorkorderInstanceFlow,
-  type ListWorkorderInstanceFlowReq,
-  type WorkorderInstanceFlowItem,
-} from '#/api/core/workorder/workorder_instance_flow';
-
-import { InstanceStatus } from '#/api/core/workorder/workorder_instance';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
-
-// 图标组件
-const IconComponent = ({ icon }: { icon: string }) => {
-  const iconMap: Record<string, string> = {
-    flow: '🔄',
-    refresh: '🔃',
-    filter: '🔍',
-    list: '📋',
-    timeline: '⏰',
-    approve: '✅',
-    reject: '❌',
-    assign: '👤',
-    total: '📊',
-    time: '⏰',
-    detail: '🔍',
-    system: '⚙️',
-    arrow: '➡️',
-    comment: '💬',
-    'empty-flow': '🌀',
-  };
-  return iconMap[icon] || '';
-};
-
-// 状态数据
-const loading = ref(false);
-const flowList = ref<WorkorderInstanceFlowItem[]>([]);
-const filterType = ref<string>('all');
-const viewMode = ref<'list' | 'timeline'>('timeline');
-
-// 详情对话框
-const detailDialog = reactive({
-  visible: false,
-  item: null as WorkorderInstanceFlowItem | null,
-});
-
-// 流转记录对话框
-const flowDialog = reactive({
-  visible: false,
-  instanceId: 0,
-});
-
-// 响应式对话框宽度
-const previewDialogWidth = computed(() => {
-  if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
-    if (width < 768) return '95%';
-    if (width < 1024) return '90%';
-    return '80%';
-  }
-  return '80%';
-});
-
-// 工具方法
-const formatFullDateTime = (dateStr: string | undefined) => {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-};
-
-const formatRelativeTime = (dateStr: string | undefined) => {
-  if (!dateStr) return '';
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diff = now.getTime() - date.getTime();
-
-  const minute = 60 * 1000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-
-  if (diff < minute) {
-    return '刚刚';
-  } else if (diff < hour) {
-    return `${Math.floor(diff / minute)}分钟前`;
-  } else if (diff < day) {
-    return `${Math.floor(diff / hour)}小时前`;
-  } else {
-    return `${Math.floor(diff / day)}天前`;
-  }
-};
-
-const formatDate = (dateStr: string | undefined) => {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('zh-CN');
-};
-
-// 计算属性
-const filteredFlowList = computed(() => {
-  let filtered = [...flowList.value];
-
-  switch (filterType.value) {
-    case 'approve': {
-      filtered = filtered.filter((item) =>
-        [FlowAction.Approve as string, FlowAction.Reject as string].includes(
-          item.action,
-        ),
-      );
-      break;
-    }
-    case 'assign': {
-      filtered = filtered.filter((item) => item.action === FlowAction.Assign);
-      break;
-    }
-    case 'status': {
-      filtered = filtered.filter((item) => item.from_status !== item.to_status);
-      break;
-    }
-  }
-
-  return filtered.sort((a, b) => {
-    const dateA = new Date(a.created_at || '');
-    const dateB = new Date(b.created_at || '');
-    return dateB.getTime() - dateA.getTime();
-  });
-});
-
-// 新增方法
-const isImportantFlow = (action: string): boolean => {
-  return [
-    FlowAction.Approve as string,
-    FlowAction.Reject as string,
-    FlowAction.Submit as string,
-    FlowAction.Complete as string,
-    FlowAction.Cancel as string,
-  ].includes(action);
-};
-
-const getFlowCount = (type: string): number => {
-  switch (type) {
-    case 'approve': {
-      return flowList.value.filter((item) => item.action === FlowAction.Approve)
-        .length;
-    }
-    case 'reject': {
-      return flowList.value.filter((item) => item.action === FlowAction.Reject)
-        .length;
-    }
-    case 'assign': {
-      return flowList.value.filter((item) => item.action === FlowAction.Assign)
-        .length;
-    }
-    default: {
-      return 0;
-    }
-  }
-};
-
-const getFlowActionClass = (action: string): string => {
-  const classMap: Record<string, string> = {
-    [FlowAction.Submit]: 'action-submit',
-    [FlowAction.Approve]: 'action-approve',
-    [FlowAction.Reject]: 'action-reject',
-    [FlowAction.Assign]: 'action-assign',
-    [FlowAction.Cancel]: 'action-cancel',
-    [FlowAction.Complete]: 'action-complete',
-    [FlowAction.Return]: 'action-return',
-  };
-  return classMap[action] || 'action-default';
-};
-
-const getStatusBadgeClass = (status: number): string => {
-  const classMap: Record<number, string> = {
-    [InstanceStatus.Draft]: 'status-draft',
-    [InstanceStatus.Pending]: 'status-pending',
-    [InstanceStatus.Processing]: 'status-processing',
-    [InstanceStatus.Completed]: 'status-completed',
-    [InstanceStatus.Rejected]: 'status-rejected',
-    [InstanceStatus.Cancelled]: 'status-cancelled',
-  };
-  return classMap[status] || 'status-default';
-};
-
-// 交互方法
-const showFlowDetail = (item: WorkorderInstanceFlowItem) => {
-  detailDialog.item = item;
-  detailDialog.visible = true;
-};
-
-const handleFilterChange = ({ key }: { key: string }) => {
-  filterType.value = key;
-};
-
-const toggleViewMode = () => {
-  viewMode.value = viewMode.value === 'timeline' ? 'list' : 'timeline';
-};
-
-const refreshFlow = async () => {
-  if (flowDialog.instanceId) {
-    await loadFlow(flowDialog.instanceId);
-  }
-};
-
-const getInitials = (name: string | undefined) => {
-  if (!name) return '';
-  return name.split('').slice(0, 2).join('').toUpperCase();
-};
-
-const getAvatarColor = (name: string | undefined) => {
-  if (!name) return '#1890ff';
-
-  const colors = [
-    '#1890ff',
-    '#52c41a',
-    '#faad14',
-    '#f5222d',
-    '#722ed1',
-    '#13c2c2',
-    '#eb2f96',
-    '#fa8c16',
-  ];
-
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  return colors[Math.abs(hash) % colors.length];
-};
-
-const getStatusText = (status: number): string => {
-  const textMap = {
-    [InstanceStatus.Draft]: '草稿',
-    [InstanceStatus.Pending]: '待处理',
-    [InstanceStatus.Processing]: '处理中',
-    [InstanceStatus.Completed]: '已完成',
-    [InstanceStatus.Rejected]: '已拒绝',
-    [InstanceStatus.Cancelled]: '已取消',
-  };
-  return textMap[status as keyof typeof textMap] || '未知';
-};
-
-const getFlowActionIcon = (action: string) => {
-  const iconMap: Record<string, any> = {
-    [FlowAction.Submit]: SendOutlined,
-    [FlowAction.Approve]: CheckCircleOutlined,
-    [FlowAction.Reject]: ExclamationCircleOutlined,
-    [FlowAction.Assign]: UserOutlined,
-    [FlowAction.Cancel]: StopOutlined,
-    [FlowAction.Complete]: CheckCircleOutlined,
-    [FlowAction.Return]: ExclamationCircleOutlined,
-  };
-  return iconMap[action] || PlayCircleOutlined;
-};
-
-const getFlowActionText = (action: string): string => {
-  const textMap: Record<string, string> = {
-    [FlowAction.Submit]: '提交工单',
-    [FlowAction.Approve]: '审批通过',
-    [FlowAction.Reject]: '审批拒绝',
-    [FlowAction.Assign]: '指派处理人',
-    [FlowAction.Cancel]: '取消工单',
-    [FlowAction.Complete]: '完成工单',
-    [FlowAction.Return]: '退回工单',
-  };
-  return textMap[action] || action;
-};
-
-// 加载流转记录
-const loadFlow = async (instanceId: number) => {
-  try {
-    loading.value = true;
-
-    let allFlows: any[] = [];
-    let currentPage = 1;
-    const pageSize = 50;
-    let hasMoreData = true;
-
-    while (hasMoreData) {
-      const params: ListWorkorderInstanceFlowReq = {
-        page: currentPage,
-        size: pageSize,
-        instance_id: instanceId,
-      };
-
-      const res = await listWorkorderInstanceFlow(params);
-
-      if (res && res.items && res.items.length > 0) {
-        allFlows = [...allFlows, ...res.items];
-
-        if (
-          res.items.length < pageSize ||
-          allFlows.length >= (res.total || 0)
-        ) {
-          hasMoreData = false;
-        } else {
-          currentPage++;
-        }
-      } else {
-        hasMoreData = false;
-      }
-    }
-
-    if (allFlows.length > 0) {
-      flowList.value = allFlows;
-    } else {
-      flowList.value = [];
-    }
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(`加载流转记录失败: ${error.message || '未知错误'}`);
-    flowList.value = [];
-  } finally {
-    loading.value = false;
-  }
-};
-
-// 主要方法
-const showFlow = async (instanceId: number) => {
-  flowDialog.instanceId = instanceId;
-  flowDialog.visible = true;
-  filterType.value = 'all';
-  viewMode.value = 'timeline';
-  await loadFlow(instanceId);
-};
-
-// 导出方法供父组件调用
-defineExpose({
-  showFlow,
-});
-</script>
 
 <style scoped>
 /* 流转对话框样式 */

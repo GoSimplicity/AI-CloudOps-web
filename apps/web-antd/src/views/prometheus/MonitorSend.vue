@@ -1,673 +1,3 @@
-<template>
-  <OpsPage description="配置接收对象、通知方式与升级规则" title="发送组">
-    <!-- 页面标题 -->
-    <template #actions>
-      <a-button
-        class="btn-create"
-        type="primary"
-        @click="handleCreateSendGroup"
-      >
-        <template #icon>
-          <PlusOutlined />
-        </template>
-        <span class="btn-text">创建发送组</span>
-      </a-button>
-    </template>
-    <template #filters>
-      <div class="search-filters">
-        <a-input-search
-          v-model:value="searchQuery"
-          allow-clear
-          class="search-input"
-          placeholder="搜索发送组名称..."
-          @change="handleSearchChange"
-          @search="handleSearch"
-        />
-        <a-select
-          v-model:value="enableFilter"
-          allow-clear
-          class="filter-select"
-          placeholder="启用状态"
-          @change="handleEnableChange"
-        >
-          <a-select-option :value="undefined">全部</a-select-option>
-          <a-select-option :value="1">启用</a-select-option>
-          <a-select-option :value="2">禁用</a-select-option>
-        </a-select>
-        <a-select
-          v-model:value="upgradeFilter"
-          allow-clear
-          class="filter-select"
-          placeholder="升级配置"
-          @change="handleUpgradeChange"
-        >
-          <a-select-option :value="undefined">全部</a-select-option>
-          <a-select-option :value="1">需要升级</a-select-option>
-          <a-select-option :value="2">无需升级</a-select-option>
-        </a-select>
-        <a-button class="reset-btn" @click="handleResetFilters">
-          重置
-        </a-button>
-      </div>
-    </template>
-
-    <!-- 统计卡片 -->
-    <template #summary>
-      <div class="stats-row">
-        <a-row :gutter="[16, 16]">
-          <a-col :lg="6" :md="6" :sm="6" :xs="12">
-            <a-card class="stats-card">
-              <a-statistic
-                :value="loadError ? '未知' : stats.total"
-                :value-style="{ color: '#3f8600' }"
-                title="总发送组"
-              >
-                <template #prefix>
-                  <Icon icon="carbon:send" />
-                </template>
-              </a-statistic>
-            </a-card>
-          </a-col>
-          <a-col :lg="6" :md="6" :sm="6" :xs="12">
-            <a-card class="stats-card">
-              <a-statistic
-                :value="loadError ? '未知' : stats.enabled"
-                :value-style="{ color: '#52c41a' }"
-                title="本页启用中"
-              >
-                <template #prefix>
-                  <Icon icon="carbon:checkmark" />
-                </template>
-              </a-statistic>
-            </a-card>
-          </a-col>
-          <a-col :lg="6" :md="6" :sm="6" :xs="12">
-            <a-card class="stats-card">
-              <a-statistic
-                :value="loadError ? '未知' : stats.needUpgrade"
-                :value-style="{ color: '#faad14' }"
-                title="本页配置升级"
-              >
-                <template #prefix>
-                  <Icon icon="carbon:upgrade" />
-                </template>
-              </a-statistic>
-            </a-card>
-          </a-col>
-          <a-col :lg="6" :md="6" :sm="6" :xs="12">
-            <a-card class="stats-card">
-              <a-statistic
-                :value="loadError ? '未知' : stats.associatedPools"
-                :value-style="{ color: '#cf1322' }"
-                title="本页关联池数"
-              >
-                <template #prefix>
-                  <Icon icon="carbon:link" />
-                </template>
-              </a-statistic>
-            </a-card>
-          </a-col>
-        </a-row>
-      </div>
-    </template>
-
-    <a-alert
-      v-if="loadError"
-      :message="loadError"
-      role="alert"
-      show-icon
-      type="error"
-    >
-      <template #action>
-        <a-button :loading="loading" size="small" @click="loadSendGroupList">
-          重试
-        </a-button>
-      </template>
-    </a-alert>
-
-    <!-- 表格容器 -->
-    <div class="table-container">
-      <a-card>
-        <a-table
-          :columns="columns"
-          :data-source="sendGroupList"
-          :loading="loading"
-          :pagination="paginationConfig"
-          :scroll="{ x: 1400 }"
-          bordered
-          row-key="id"
-          @change="handleTableChange"
-        >
-          <template #bodyCell="{ column, record }">
-            <template v-if="column.key === 'name'">
-              <div class="pool-name-cell">
-                <div
-                  class="pool-badge"
-                  :class="getPoolStatusClass(record)"
-                ></div>
-                <span class="pool-name-text">{{ record.name }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'name_zh'">
-              <div class="tag-container">
-                <a-tag class="tech-tag label-tag">
-                  {{ record.name_zh }}
-                </a-tag>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'pool_config'">
-              <div class="tag-container">
-                <a-tag
-                  v-if="getPoolName(record.pool_id)"
-                  class="tech-tag prometheus-tag"
-                >
-                  {{ getPoolName(record.pool_id) }}
-                </a-tag>
-                <a-tag
-                  v-if="getOnDutyGroupName(record.on_duty_group_id)"
-                  class="tech-tag alert-tag"
-                >
-                  {{ getOnDutyGroupName(record.on_duty_group_id) }}
-                </a-tag>
-                <span
-                  v-if="
-                    !getPoolName(record.pool_id) &&
-                    !getOnDutyGroupName(record.on_duty_group_id)
-                  "
-                  class="empty-text"
-                  >无关联</span
-                >
-              </div>
-            </template>
-
-            <template v-if="column.key === 'static_receive_users'">
-              <div class="tag-container">
-                <a-tag
-                  v-for="(user, index) in record.static_receive_users"
-                  :key="user?.id || index"
-                  class="tech-tag label-tag"
-                >
-                  {{
-                    user?.username ||
-                    user?.name ||
-                    (typeof user === 'string' ? user : '未命名用户')
-                  }}
-                </a-tag>
-                <span
-                  v-if="
-                    !record.static_receive_users?.length &&
-                    !record.static_receive_user_names?.length
-                  "
-                  class="empty-text"
-                  >无用户</span
-                >
-                <a-tag
-                  v-for="(name, index) in record.static_receive_user_names"
-                  :key="`name-${index}`"
-                  class="tech-tag label-tag"
-                >
-                  {{ name }}
-                </a-tag>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'notify_methods'">
-              <div class="tag-container">
-                <a-tag
-                  v-for="method in getNotifyMethods(record)"
-                  :key="method"
-                  class="tech-tag alert-tag"
-                >
-                  {{ method }}
-                </a-tag>
-                <span
-                  v-if="!getNotifyMethods(record)?.length"
-                  class="empty-text"
-                  >无通知方式</span
-                >
-              </div>
-            </template>
-
-            <template v-if="column.key === 'enable'">
-              <a-tag :color="record.enable === 1 ? 'success' : 'default'">
-                {{ record.enable === 1 ? '启用' : '禁用' }}
-              </a-tag>
-            </template>
-
-            <template v-if="column.key === 'notification_config'">
-              <div class="config-info">
-                <div class="config-item">
-                  <span class="config-label">重复间隔:</span>
-                  <span class="config-value">{{
-                    record.repeat_interval || '30s'
-                  }}</span>
-                </div>
-                <div class="config-item">
-                  <span class="config-label">发送恢复:</span>
-                  <span class="config-value">{{
-                    record.send_resolved === 1 ? '是' : '否'
-                  }}</span>
-                </div>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'upgrade_config'">
-              <div class="config-info">
-                <div class="config-item">
-                  <span class="config-label">需要升级:</span>
-                  <span class="config-value">{{
-                    record.need_upgrade === 1 ? '是' : '否'
-                  }}</span>
-                </div>
-                <div v-if="record.need_upgrade === 1" class="config-item">
-                  <span class="config-label">升级时间:</span>
-                  <span class="config-value"
-                    >{{ record.upgrade_minutes }}分钟</span
-                  >
-                </div>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'creator'">
-              <div class="creator-info">
-                <a-avatar
-                  size="small"
-                  :style="{
-                    backgroundColor: getAvatarColor(
-                      record.create_user_name || '',
-                    ),
-                  }"
-                >
-                  {{ getInitials(record.create_user_name) }}
-                </a-avatar>
-                <span class="creator-name">{{ record.create_user_name }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'createdAt'">
-              <div class="date-info">
-                <span class="date">{{ formatDate(record.created_at) }}</span>
-                <span class="time">{{ formatTime(record.created_at) }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'action'">
-              <div class="action-buttons">
-                <a-button
-                  size="small"
-                  type="primary"
-                  @click="handleViewSendGroup(record)"
-                >
-                  查看
-                </a-button>
-                <a-button
-                  size="small"
-                  type="default"
-                  @click="handleEditSendGroup(record)"
-                >
-                  编辑
-                </a-button>
-                <a-dropdown v-if="can('monitor.sendGroup.delete')">
-                  <template #overlay>
-                    <a-menu @click="handleDeleteClick(record)">
-                      <a-menu-item key="delete" danger>删除</a-menu-item>
-                    </a-menu>
-                  </template>
-                  <a-button size="small">
-                    更多
-                    <DownOutlined />
-                  </a-button>
-                </a-dropdown>
-              </div>
-            </template>
-          </template>
-        </a-table>
-      </a-card>
-    </div>
-
-    <!-- 创建/编辑发送组对话框 -->
-    <a-modal
-      :destroy-on-close="true"
-      :open="formDialogVisible"
-      :title="formDialog.isEdit ? '编辑发送组' : '创建发送组'"
-      :width="formDialogWidth"
-      class="responsive-modal send-group-modal"
-      @cancel="closeFormDialog"
-      @ok="saveSendGroup"
-    >
-      <a-form
-        ref="formRef"
-        :model="formDialog.form"
-        :rules="formRules"
-        layout="vertical"
-      >
-        <div class="form-section">
-          <div class="section-title">基本信息</div>
-          <a-row :gutter="16">
-            <a-col :sm="12" :xs="24">
-              <a-form-item
-                :rules="[{ required: true, message: '请输入发送组名称' }]"
-                label="发送组名称"
-                name="name"
-              >
-                <a-input
-                  v-model:value="formDialog.form.name"
-                  placeholder="请输入发送组名称"
-                />
-              </a-form-item>
-            </a-col>
-            <a-col :sm="12" :xs="24">
-              <a-form-item
-                :rules="[{ required: true, message: '请输入发送组中文名称' }]"
-                label="发送组中文名称"
-                name="name_zh"
-              >
-                <a-input
-                  v-model:value="formDialog.form.name_zh"
-                  placeholder="请输入发送组中文名称"
-                />
-              </a-form-item>
-            </a-col>
-          </a-row>
-        </div>
-
-        <div class="form-section">
-          <div class="section-title">关联配置</div>
-          <a-row :gutter="16">
-            <a-col :sm="12" :xs="24">
-              <a-form-item label="关联采集池" name="pool_id">
-                <a-select
-                  v-model:value="formDialog.form.pool_id"
-                  :filter-option="false"
-                  :loading="dialogPoolLoading"
-                  allow-clear
-                  class="full-width"
-                  placeholder="请搜索并选择采集池"
-                  show-search
-                  @popupScroll="handleDialogPoolScroll"
-                  @search="handleDialogPoolSearch"
-                >
-                  <a-select-option
-                    v-for="pool in dialogPools"
-                    :key="pool.id"
-                    :value="pool.id"
-                  >
-                    {{ pool.name }}
-                  </a-select-option>
-                </a-select>
-              </a-form-item>
-            </a-col>
-            <a-col :sm="12" :xs="24">
-              <a-form-item label="关联值班组" name="on_duty_group_id">
-                <a-select
-                  v-model:value="formDialog.form.on_duty_group_id"
-                  :filter-option="false"
-                  :loading="dialogOnDutyGroupLoading"
-                  allow-clear
-                  class="full-width"
-                  placeholder="请搜索并选择值班组"
-                  show-search
-                  @popupScroll="handleDialogOnDutyGroupScroll"
-                  @search="handleDialogOnDutyGroupSearch"
-                >
-                  <a-select-option
-                    v-for="group in dialogOnDutyGroups"
-                    :key="group.id"
-                    :value="group.id"
-                  >
-                    {{ group.name }}
-                  </a-select-option>
-                </a-select>
-              </a-form-item>
-            </a-col>
-          </a-row>
-        </div>
-
-        <div class="form-section">
-          <div class="section-title">通知配置</div>
-          <a-row :gutter="16">
-            <a-col :sm="12" :xs="24">
-              <a-form-item label="是否启用" name="enable">
-                <a-switch
-                  v-model:checked="formDialog.form.enable"
-                  class="tech-switch"
-                />
-              </a-form-item>
-            </a-col>
-            <a-col :sm="12" :xs="24">
-              <a-form-item label="发送恢复消息" name="send_resolved">
-                <a-switch
-                  v-model:checked="formDialog.form.send_resolved"
-                  class="tech-switch"
-                />
-              </a-form-item>
-            </a-col>
-          </a-row>
-          <a-row :gutter="16">
-            <a-col :sm="12" :xs="24">
-              <a-form-item label="重复发送间隔" name="repeat_interval">
-                <a-input
-                  v-model:value="formDialog.form.repeat_interval"
-                  placeholder="例如：30s, 5m, 1h"
-                />
-              </a-form-item>
-            </a-col>
-            <a-col :sm="12" :xs="24">
-              <a-form-item label="需要升级" name="need_upgrade">
-                <a-switch
-                  v-model:checked="formDialog.form.need_upgrade"
-                  class="tech-switch"
-                />
-              </a-form-item>
-            </a-col>
-          </a-row>
-          <a-row :gutter="16">
-            <a-col :span="24">
-              <a-form-item
-                label="飞书群机器人Token"
-                name="fei_shu_qun_robot_token"
-              >
-                <a-input
-                  v-model:value="formDialog.form.fei_shu_qun_robot_token"
-                  placeholder="请输入飞书群机器人Token"
-                />
-              </a-form-item>
-            </a-col>
-          </a-row>
-        </div>
-
-        <div v-if="formDialog.form.need_upgrade" class="form-section">
-          <div class="section-title">升级配置</div>
-          <a-row :gutter="16">
-            <a-col :sm="12" :xs="24">
-              <a-form-item label="升级时间间隔(分钟)" name="upgrade_minutes">
-                <a-input-number
-                  v-model:value="formDialog.form.upgrade_minutes"
-                  :min="1"
-                  class="full-width"
-                  placeholder="请输入升级时间间隔"
-                />
-              </a-form-item>
-            </a-col>
-          </a-row>
-        </div>
-
-        <div class="form-section">
-          <div class="section-title">接收用户配置</div>
-          <!-- 静态接收用户 -->
-          <a-form-item label="静态接收用户" name="static_receive_users">
-            <a-select
-              v-model:value="formDialog.form.static_receive_users"
-              :filter-option="false"
-              :loading="dialogUserLoading"
-              :options="dialogUsers"
-              class="full-width"
-              mode="multiple"
-              placeholder="请搜索并选择静态接收用户"
-              show-search
-              @popupScroll="handleDialogUserScroll"
-              @search="handleDialogUserSearch"
-            />
-          </a-form-item>
-
-          <!-- 通知方式 -->
-          <a-form-item label="通知方式" name="notify_methods">
-            <a-select
-              v-model:value="formDialog.form.notify_methods"
-              class="full-width"
-              mode="multiple"
-              placeholder="请选择通知方式"
-            >
-              <a-select-option value="email">邮件</a-select-option>
-              <a-select-option value="sms">短信</a-select-option>
-              <a-select-option value="feishu">飞书</a-select-option>
-              <a-select-option value="webhook">Webhook</a-select-option>
-            </a-select>
-          </a-form-item>
-
-          <!-- 首次升级用户 -->
-          <a-form-item
-            v-if="formDialog.form.need_upgrade"
-            label="首次升级用户"
-            name="first_upgrade_users"
-          >
-            <a-select
-              v-model:value="formDialog.form.first_upgrade_users"
-              :filter-option="false"
-              :loading="dialogUserLoading"
-              :options="dialogUsers"
-              class="full-width"
-              mode="multiple"
-              placeholder="请搜索并选择首次升级用户"
-              show-search
-              @popupScroll="handleDialogUserScroll"
-              @search="handleDialogUserSearch"
-            />
-          </a-form-item>
-
-          <!-- 二次升级用户 -->
-          <a-form-item
-            v-if="formDialog.form.need_upgrade"
-            label="二次升级用户"
-            name="second_upgrade_users"
-          >
-            <a-select
-              v-model:value="formDialog.form.second_upgrade_users"
-              :filter-option="false"
-              :loading="dialogUserLoading"
-              :options="dialogUsers"
-              class="full-width"
-              mode="multiple"
-              placeholder="请搜索并选择二次升级用户"
-              show-search
-              @popupScroll="handleDialogUserScroll"
-              @search="handleDialogUserSearch"
-            />
-          </a-form-item>
-        </div>
-      </a-form>
-    </a-modal>
-
-    <!-- 详情对话框 -->
-    <a-modal
-      :footer="null"
-      :open="detailDialogVisible"
-      :width="previewDialogWidth"
-      class="detail-dialog"
-      title="发送组详情"
-      @cancel="closeDetailDialog"
-    >
-      <div v-if="detailDialog.form" class="pool-details">
-        <div class="detail-header">
-          <h2>{{ detailDialog.form.name_zh || detailDialog.form.name }}</h2>
-          <div class="detail-badges">
-            <a-tag
-              :color="detailDialog.form.enable === 1 ? 'success' : 'default'"
-            >
-              {{ detailDialog.form.enable === 1 ? '启用' : '禁用' }}
-            </a-tag>
-            <a-tag
-              :color="
-                detailDialog.form.need_upgrade === 1 ? 'warning' : 'default'
-              "
-            >
-              {{
-                detailDialog.form.need_upgrade === 1 ? '需要升级' : '无需升级'
-              }}
-            </a-tag>
-            <a-tag
-              :color="
-                detailDialog.form.send_resolved === 1 ? 'success' : 'default'
-              "
-            >
-              {{
-                detailDialog.form.send_resolved === 1
-                  ? '发送恢复'
-                  : '不发送恢复'
-              }}
-            </a-tag>
-          </div>
-        </div>
-
-        <a-descriptions :column="1" :labelStyle="{ width: '150px' }" bordered>
-          <a-descriptions-item label="ID">
-            {{ detailDialog.form.id }}
-          </a-descriptions-item>
-          <a-descriptions-item label="发送组名称">
-            {{ detailDialog.form.name }}
-          </a-descriptions-item>
-          <a-descriptions-item label="中文名称">
-            {{ detailDialog.form.name_zh }}
-          </a-descriptions-item>
-          <a-descriptions-item label="关联采集池">
-            {{ getPoolName(detailDialog.form.pool_id) || '未关联' }}
-          </a-descriptions-item>
-          <a-descriptions-item label="关联值班组">
-            {{
-              getOnDutyGroupName(detailDialog.form.on_duty_group_id) || '未关联'
-            }}
-          </a-descriptions-item>
-          <a-descriptions-item label="重复间隔">
-            {{ detailDialog.form.repeat_interval || '30s' }}
-          </a-descriptions-item>
-          <a-descriptions-item label="升级时间">
-            {{
-              detailDialog.form.need_upgrade === 1
-                ? `${detailDialog.form.upgrade_minutes || 0}分钟`
-                : '无需升级'
-            }}
-          </a-descriptions-item>
-          <a-descriptions-item label="飞书Token">
-            {{
-              detailDialog.form.fei_shu_qun_robot_token
-                ? maskToken(detailDialog.form.fei_shu_qun_robot_token)
-                : '未配置'
-            }}
-          </a-descriptions-item>
-          <a-descriptions-item label="创建人">
-            {{ detailDialog.form.create_user_name }}
-          </a-descriptions-item>
-          <a-descriptions-item label="创建时间">
-            {{ formatFullDateTime(detailDialog.form.created_at) }}
-          </a-descriptions-item>
-        </a-descriptions>
-
-        <div class="detail-footer">
-          <a-button @click="closeDetailDialog">关闭</a-button>
-          <a-button
-            type="primary"
-            @click="handleEditSendGroup(detailDialog.form)"
-          >
-            编辑
-          </a-button>
-        </div>
-      </div>
-    </a-modal>
-  </OpsPage>
-</template>
-
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
@@ -1748,6 +1078,676 @@ onMounted(() => {
   loadSendGroupList();
 });
 </script>
+
+<template>
+  <OpsPage description="配置接收对象、通知方式与升级规则" title="发送组">
+    <!-- 页面标题 -->
+    <template #actions>
+      <a-button
+        class="btn-create"
+        type="primary"
+        @click="handleCreateSendGroup"
+      >
+        <template #icon>
+          <PlusOutlined />
+        </template>
+        <span class="btn-text">创建发送组</span>
+      </a-button>
+    </template>
+    <template #filters>
+      <div class="search-filters">
+        <a-input-search
+          v-model:value="searchQuery"
+          allow-clear
+          class="search-input"
+          placeholder="搜索发送组名称..."
+          @change="handleSearchChange"
+          @search="handleSearch"
+        />
+        <a-select
+          v-model:value="enableFilter"
+          allow-clear
+          class="filter-select"
+          placeholder="启用状态"
+          @change="handleEnableChange"
+        >
+          <a-select-option :value="undefined">全部</a-select-option>
+          <a-select-option :value="1">启用</a-select-option>
+          <a-select-option :value="2">禁用</a-select-option>
+        </a-select>
+        <a-select
+          v-model:value="upgradeFilter"
+          allow-clear
+          class="filter-select"
+          placeholder="升级配置"
+          @change="handleUpgradeChange"
+        >
+          <a-select-option :value="undefined">全部</a-select-option>
+          <a-select-option :value="1">需要升级</a-select-option>
+          <a-select-option :value="2">无需升级</a-select-option>
+        </a-select>
+        <a-button class="reset-btn" @click="handleResetFilters">
+          重置
+        </a-button>
+      </div>
+    </template>
+
+    <!-- 统计卡片 -->
+    <template #summary>
+      <div class="stats-row">
+        <a-row :gutter="[16, 16]">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
+            <a-card class="stats-card">
+              <a-statistic
+                :value="loadError ? '未知' : stats.total"
+                :value-style="{ color: '#3f8600' }"
+                title="总发送组"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:send" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
+            <a-card class="stats-card">
+              <a-statistic
+                :value="loadError ? '未知' : stats.enabled"
+                :value-style="{ color: '#52c41a' }"
+                title="本页启用中"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:checkmark" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
+            <a-card class="stats-card">
+              <a-statistic
+                :value="loadError ? '未知' : stats.needUpgrade"
+                :value-style="{ color: '#faad14' }"
+                title="本页配置升级"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:upgrade" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
+            <a-card class="stats-card">
+              <a-statistic
+                :value="loadError ? '未知' : stats.associatedPools"
+                :value-style="{ color: '#cf1322' }"
+                title="本页关联池数"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:link" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+        </a-row>
+      </div>
+    </template>
+
+    <a-alert
+      v-if="loadError"
+      :message="loadError"
+      role="alert"
+      show-icon
+      type="error"
+    >
+      <template #action>
+        <a-button :loading="loading" size="small" @click="loadSendGroupList">
+          重试
+        </a-button>
+      </template>
+    </a-alert>
+
+    <!-- 表格容器 -->
+    <div class="table-container">
+      <a-card>
+        <a-table
+          :columns="columns"
+          :data-source="sendGroupList"
+          :loading="loading"
+          :pagination="paginationConfig"
+          :scroll="{ x: 1400 }"
+          bordered
+          row-key="id"
+          @change="handleTableChange"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'name'">
+              <div class="pool-name-cell">
+                <div
+                  class="pool-badge"
+                  :class="getPoolStatusClass(record)"
+                ></div>
+                <span class="pool-name-text">{{ record.name }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'name_zh'">
+              <div class="tag-container">
+                <a-tag class="tech-tag label-tag">
+                  {{ record.name_zh }}
+                </a-tag>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'pool_config'">
+              <div class="tag-container">
+                <a-tag
+                  v-if="getPoolName(record.pool_id)"
+                  class="tech-tag prometheus-tag"
+                >
+                  {{ getPoolName(record.pool_id) }}
+                </a-tag>
+                <a-tag
+                  v-if="getOnDutyGroupName(record.on_duty_group_id)"
+                  class="tech-tag alert-tag"
+                >
+                  {{ getOnDutyGroupName(record.on_duty_group_id) }}
+                </a-tag>
+                <span
+                  v-if="
+                    !getPoolName(record.pool_id) &&
+                    !getOnDutyGroupName(record.on_duty_group_id)
+                  "
+                  class="empty-text"
+                  >无关联</span
+                >
+              </div>
+            </template>
+
+            <template v-if="column.key === 'static_receive_users'">
+              <div class="tag-container">
+                <a-tag
+                  v-for="(user, index) in record.static_receive_users"
+                  :key="user?.id || index"
+                  class="tech-tag label-tag"
+                >
+                  {{
+                    user?.username ||
+                    user?.name ||
+                    (typeof user === 'string' ? user : '未命名用户')
+                  }}
+                </a-tag>
+                <span
+                  v-if="
+                    !record.static_receive_users?.length &&
+                    !record.static_receive_user_names?.length
+                  "
+                  class="empty-text"
+                  >无用户</span
+                >
+                <a-tag
+                  v-for="(name, index) in record.static_receive_user_names"
+                  :key="`name-${index}`"
+                  class="tech-tag label-tag"
+                >
+                  {{ name }}
+                </a-tag>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'notify_methods'">
+              <div class="tag-container">
+                <a-tag
+                  v-for="method in getNotifyMethods(record)"
+                  :key="method"
+                  class="tech-tag alert-tag"
+                >
+                  {{ method }}
+                </a-tag>
+                <span
+                  v-if="!getNotifyMethods(record)?.length"
+                  class="empty-text"
+                  >无通知方式</span
+                >
+              </div>
+            </template>
+
+            <template v-if="column.key === 'enable'">
+              <a-tag :color="record.enable === 1 ? 'success' : 'default'">
+                {{ record.enable === 1 ? '启用' : '禁用' }}
+              </a-tag>
+            </template>
+
+            <template v-if="column.key === 'notification_config'">
+              <div class="config-info">
+                <div class="config-item">
+                  <span class="config-label">重复间隔:</span>
+                  <span class="config-value">{{
+                    record.repeat_interval || '30s'
+                  }}</span>
+                </div>
+                <div class="config-item">
+                  <span class="config-label">发送恢复:</span>
+                  <span class="config-value">{{
+                    record.send_resolved === 1 ? '是' : '否'
+                  }}</span>
+                </div>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'upgrade_config'">
+              <div class="config-info">
+                <div class="config-item">
+                  <span class="config-label">需要升级:</span>
+                  <span class="config-value">{{
+                    record.need_upgrade === 1 ? '是' : '否'
+                  }}</span>
+                </div>
+                <div v-if="record.need_upgrade === 1" class="config-item">
+                  <span class="config-label">升级时间:</span>
+                  <span class="config-value"
+                    >{{ record.upgrade_minutes }}分钟</span
+                  >
+                </div>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'creator'">
+              <div class="creator-info">
+                <a-avatar
+                  size="small"
+                  :style="{
+                    backgroundColor: getAvatarColor(
+                      record.create_user_name || '',
+                    ),
+                  }"
+                >
+                  {{ getInitials(record.create_user_name) }}
+                </a-avatar>
+                <span class="creator-name">{{ record.create_user_name }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'createdAt'">
+              <div class="date-info">
+                <span class="date">{{ formatDate(record.created_at) }}</span>
+                <span class="time">{{ formatTime(record.created_at) }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'action'">
+              <div class="action-buttons">
+                <a-button
+                  size="small"
+                  type="primary"
+                  @click="handleViewSendGroup(record)"
+                >
+                  查看
+                </a-button>
+                <a-button
+                  size="small"
+                  type="default"
+                  @click="handleEditSendGroup(record)"
+                >
+                  编辑
+                </a-button>
+                <a-dropdown v-if="can('monitor.sendGroup.delete')">
+                  <template #overlay>
+                    <a-menu @click="handleDeleteClick(record)">
+                      <a-menu-item key="delete" danger>删除</a-menu-item>
+                    </a-menu>
+                  </template>
+                  <a-button size="small">
+                    更多
+                    <DownOutlined />
+                  </a-button>
+                </a-dropdown>
+              </div>
+            </template>
+          </template>
+        </a-table>
+      </a-card>
+    </div>
+
+    <!-- 创建/编辑发送组对话框 -->
+    <a-modal
+      :destroy-on-close="true"
+      :open="formDialogVisible"
+      :title="formDialog.isEdit ? '编辑发送组' : '创建发送组'"
+      :width="formDialogWidth"
+      class="responsive-modal send-group-modal"
+      @cancel="closeFormDialog"
+      @ok="saveSendGroup"
+    >
+      <a-form
+        ref="formRef"
+        :model="formDialog.form"
+        :rules="formRules"
+        layout="vertical"
+      >
+        <div class="form-section">
+          <div class="section-title">基本信息</div>
+          <a-row :gutter="16">
+            <a-col :sm="12" :xs="24">
+              <a-form-item
+                :rules="[{ required: true, message: '请输入发送组名称' }]"
+                label="发送组名称"
+                name="name"
+              >
+                <a-input
+                  v-model:value="formDialog.form.name"
+                  placeholder="请输入发送组名称"
+                />
+              </a-form-item>
+            </a-col>
+            <a-col :sm="12" :xs="24">
+              <a-form-item
+                :rules="[{ required: true, message: '请输入发送组中文名称' }]"
+                label="发送组中文名称"
+                name="name_zh"
+              >
+                <a-input
+                  v-model:value="formDialog.form.name_zh"
+                  placeholder="请输入发送组中文名称"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">关联配置</div>
+          <a-row :gutter="16">
+            <a-col :sm="12" :xs="24">
+              <a-form-item label="关联采集池" name="pool_id">
+                <a-select
+                  v-model:value="formDialog.form.pool_id"
+                  :filter-option="false"
+                  :loading="dialogPoolLoading"
+                  allow-clear
+                  class="full-width"
+                  placeholder="请搜索并选择采集池"
+                  show-search
+                  @popupScroll="handleDialogPoolScroll"
+                  @search="handleDialogPoolSearch"
+                >
+                  <a-select-option
+                    v-for="pool in dialogPools"
+                    :key="pool.id"
+                    :value="pool.id"
+                  >
+                    {{ pool.name }}
+                  </a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+            <a-col :sm="12" :xs="24">
+              <a-form-item label="关联值班组" name="on_duty_group_id">
+                <a-select
+                  v-model:value="formDialog.form.on_duty_group_id"
+                  :filter-option="false"
+                  :loading="dialogOnDutyGroupLoading"
+                  allow-clear
+                  class="full-width"
+                  placeholder="请搜索并选择值班组"
+                  show-search
+                  @popupScroll="handleDialogOnDutyGroupScroll"
+                  @search="handleDialogOnDutyGroupSearch"
+                >
+                  <a-select-option
+                    v-for="group in dialogOnDutyGroups"
+                    :key="group.id"
+                    :value="group.id"
+                  >
+                    {{ group.name }}
+                  </a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">通知配置</div>
+          <a-row :gutter="16">
+            <a-col :sm="12" :xs="24">
+              <a-form-item label="是否启用" name="enable">
+                <a-switch
+                  v-model:checked="formDialog.form.enable"
+                  class="tech-switch"
+                />
+              </a-form-item>
+            </a-col>
+            <a-col :sm="12" :xs="24">
+              <a-form-item label="发送恢复消息" name="send_resolved">
+                <a-switch
+                  v-model:checked="formDialog.form.send_resolved"
+                  class="tech-switch"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+          <a-row :gutter="16">
+            <a-col :sm="12" :xs="24">
+              <a-form-item label="重复发送间隔" name="repeat_interval">
+                <a-input
+                  v-model:value="formDialog.form.repeat_interval"
+                  placeholder="例如：30s, 5m, 1h"
+                />
+              </a-form-item>
+            </a-col>
+            <a-col :sm="12" :xs="24">
+              <a-form-item label="需要升级" name="need_upgrade">
+                <a-switch
+                  v-model:checked="formDialog.form.need_upgrade"
+                  class="tech-switch"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+          <a-row :gutter="16">
+            <a-col :span="24">
+              <a-form-item
+                label="飞书群机器人Token"
+                name="fei_shu_qun_robot_token"
+              >
+                <a-input
+                  v-model:value="formDialog.form.fei_shu_qun_robot_token"
+                  placeholder="请输入飞书群机器人Token"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </div>
+
+        <div v-if="formDialog.form.need_upgrade" class="form-section">
+          <div class="section-title">升级配置</div>
+          <a-row :gutter="16">
+            <a-col :sm="12" :xs="24">
+              <a-form-item label="升级时间间隔(分钟)" name="upgrade_minutes">
+                <a-input-number
+                  v-model:value="formDialog.form.upgrade_minutes"
+                  :min="1"
+                  class="full-width"
+                  placeholder="请输入升级时间间隔"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">接收用户配置</div>
+          <!-- 静态接收用户 -->
+          <a-form-item label="静态接收用户" name="static_receive_users">
+            <a-select
+              v-model:value="formDialog.form.static_receive_users"
+              :filter-option="false"
+              :loading="dialogUserLoading"
+              :options="dialogUsers"
+              class="full-width"
+              mode="multiple"
+              placeholder="请搜索并选择静态接收用户"
+              show-search
+              @popupScroll="handleDialogUserScroll"
+              @search="handleDialogUserSearch"
+            />
+          </a-form-item>
+
+          <!-- 通知方式 -->
+          <a-form-item label="通知方式" name="notify_methods">
+            <a-select
+              v-model:value="formDialog.form.notify_methods"
+              class="full-width"
+              mode="multiple"
+              placeholder="请选择通知方式"
+            >
+              <a-select-option value="email">邮件</a-select-option>
+              <a-select-option value="sms">短信</a-select-option>
+              <a-select-option value="feishu">飞书</a-select-option>
+              <a-select-option value="webhook">Webhook</a-select-option>
+            </a-select>
+          </a-form-item>
+
+          <!-- 首次升级用户 -->
+          <a-form-item
+            v-if="formDialog.form.need_upgrade"
+            label="首次升级用户"
+            name="first_upgrade_users"
+          >
+            <a-select
+              v-model:value="formDialog.form.first_upgrade_users"
+              :filter-option="false"
+              :loading="dialogUserLoading"
+              :options="dialogUsers"
+              class="full-width"
+              mode="multiple"
+              placeholder="请搜索并选择首次升级用户"
+              show-search
+              @popupScroll="handleDialogUserScroll"
+              @search="handleDialogUserSearch"
+            />
+          </a-form-item>
+
+          <!-- 二次升级用户 -->
+          <a-form-item
+            v-if="formDialog.form.need_upgrade"
+            label="二次升级用户"
+            name="second_upgrade_users"
+          >
+            <a-select
+              v-model:value="formDialog.form.second_upgrade_users"
+              :filter-option="false"
+              :loading="dialogUserLoading"
+              :options="dialogUsers"
+              class="full-width"
+              mode="multiple"
+              placeholder="请搜索并选择二次升级用户"
+              show-search
+              @popupScroll="handleDialogUserScroll"
+              @search="handleDialogUserSearch"
+            />
+          </a-form-item>
+        </div>
+      </a-form>
+    </a-modal>
+
+    <!-- 详情对话框 -->
+    <a-modal
+      :footer="null"
+      :open="detailDialogVisible"
+      :width="previewDialogWidth"
+      class="detail-dialog"
+      title="发送组详情"
+      @cancel="closeDetailDialog"
+    >
+      <div v-if="detailDialog.form" class="pool-details">
+        <div class="detail-header">
+          <h2>{{ detailDialog.form.name_zh || detailDialog.form.name }}</h2>
+          <div class="detail-badges">
+            <a-tag
+              :color="detailDialog.form.enable === 1 ? 'success' : 'default'"
+            >
+              {{ detailDialog.form.enable === 1 ? '启用' : '禁用' }}
+            </a-tag>
+            <a-tag
+              :color="
+                detailDialog.form.need_upgrade === 1 ? 'warning' : 'default'
+              "
+            >
+              {{
+                detailDialog.form.need_upgrade === 1 ? '需要升级' : '无需升级'
+              }}
+            </a-tag>
+            <a-tag
+              :color="
+                detailDialog.form.send_resolved === 1 ? 'success' : 'default'
+              "
+            >
+              {{
+                detailDialog.form.send_resolved === 1
+                  ? '发送恢复'
+                  : '不发送恢复'
+              }}
+            </a-tag>
+          </div>
+        </div>
+
+        <a-descriptions :column="1" :labelStyle="{ width: '150px' }" bordered>
+          <a-descriptions-item label="ID">
+            {{ detailDialog.form.id }}
+          </a-descriptions-item>
+          <a-descriptions-item label="发送组名称">
+            {{ detailDialog.form.name }}
+          </a-descriptions-item>
+          <a-descriptions-item label="中文名称">
+            {{ detailDialog.form.name_zh }}
+          </a-descriptions-item>
+          <a-descriptions-item label="关联采集池">
+            {{ getPoolName(detailDialog.form.pool_id) || '未关联' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="关联值班组">
+            {{
+              getOnDutyGroupName(detailDialog.form.on_duty_group_id) || '未关联'
+            }}
+          </a-descriptions-item>
+          <a-descriptions-item label="重复间隔">
+            {{ detailDialog.form.repeat_interval || '30s' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="升级时间">
+            {{
+              detailDialog.form.need_upgrade === 1
+                ? `${detailDialog.form.upgrade_minutes || 0}分钟`
+                : '无需升级'
+            }}
+          </a-descriptions-item>
+          <a-descriptions-item label="飞书Token">
+            {{
+              detailDialog.form.fei_shu_qun_robot_token
+                ? maskToken(detailDialog.form.fei_shu_qun_robot_token)
+                : '未配置'
+            }}
+          </a-descriptions-item>
+          <a-descriptions-item label="创建人">
+            {{ detailDialog.form.create_user_name }}
+          </a-descriptions-item>
+          <a-descriptions-item label="创建时间">
+            {{ formatFullDateTime(detailDialog.form.created_at) }}
+          </a-descriptions-item>
+        </a-descriptions>
+
+        <div class="detail-footer">
+          <a-button @click="closeDetailDialog">关闭</a-button>
+          <a-button
+            type="primary"
+            @click="handleEditSendGroup(detailDialog.form)"
+          >
+            编辑
+          </a-button>
+        </div>
+      </div>
+    </a-modal>
+  </OpsPage>
+</template>
 
 <style scoped>
 .search-input {

@@ -1,847 +1,3 @@
-<template>
-  <OpsPage description="维护采集目标、发现方式与任务状态" title="采集任务">
-    <!-- 页面标题 -->
-    <template #actions>
-      <a-button
-        class="btn-create"
-        type="primary"
-        @click="handleCreateScrapeJob"
-      >
-        <template #icon>
-          <PlusOutlined />
-        </template>
-        <span class="btn-text">创建采集任务</span>
-      </a-button>
-    </template>
-    <template #filters>
-      <div class="search-filters">
-        <a-input-search
-          v-model:value="searchQuery"
-          allow-clear
-          class="search-input"
-          placeholder="搜索采集任务名称..."
-          @change="handleSearchChange"
-          @search="handleSearch"
-        />
-        <a-select
-          v-model:value="enableFilter"
-          allow-clear
-          class="filter-select"
-          placeholder="启用状态"
-          @change="handleEnableChange"
-        >
-          <a-select-option :value="undefined">全部</a-select-option>
-          <a-select-option :value="1">启用</a-select-option>
-          <a-select-option :value="2">禁用</a-select-option>
-        </a-select>
-        <a-select
-          v-model:value="poolFilter"
-          allow-clear
-          class="filter-select"
-          placeholder="采集池"
-          @change="handlePoolChange"
-        >
-          <a-select-option :value="undefined">全部</a-select-option>
-          <a-select-option
-            v-for="pool in pools"
-            :key="pool.id"
-            :value="pool.id"
-          >
-            {{ pool.name }}
-          </a-select-option>
-        </a-select>
-        <a-button class="reset-btn" @click="handleResetFilters">
-          重置
-        </a-button>
-      </div>
-    </template>
-
-    <!-- 统计卡片 -->
-    <template #summary>
-      <div class="stats-row">
-        <a-row :gutter="[16, 16]">
-          <a-col :lg="6" :md="6" :sm="6" :xs="12">
-            <a-card class="stats-card">
-              <a-statistic
-                :value="loadError ? '未知' : stats.total"
-                :value-style="{ color: '#3f8600' }"
-                title="总采集任务"
-              >
-                <template #prefix>
-                  <Icon icon="carbon:task" />
-                </template>
-              </a-statistic>
-            </a-card>
-          </a-col>
-          <a-col :lg="6" :md="6" :sm="6" :xs="12">
-            <a-card class="stats-card">
-              <a-statistic
-                :value="loadError ? '未知' : stats.enabled"
-                :value-style="{ color: '#52c41a' }"
-                title="本页已启用"
-              >
-                <template #prefix>
-                  <Icon icon="carbon:checkmark" />
-                </template>
-              </a-statistic>
-            </a-card>
-          </a-col>
-          <a-col :lg="6" :md="6" :sm="6" :xs="12">
-            <a-card class="stats-card">
-              <a-statistic
-                :value="loadError ? '未知' : stats.k8sJobs"
-                :value-style="{ color: '#faad14' }"
-                title="本页Kubernetes"
-              >
-                <template #prefix>
-                  <Icon icon="carbon:logo-kubernetes" />
-                </template>
-              </a-statistic>
-            </a-card>
-          </a-col>
-          <a-col :lg="6" :md="6" :sm="6" :xs="12">
-            <a-card class="stats-card">
-              <a-statistic
-                :value="loadError ? '未知' : stats.httpJobs"
-                :value-style="{ color: '#cf1322' }"
-                title="本页HTTP任务"
-              >
-                <template #prefix>
-                  <Icon icon="carbon:http" />
-                </template>
-              </a-statistic>
-            </a-card>
-          </a-col>
-        </a-row>
-      </div>
-    </template>
-
-    <a-alert
-      v-if="loadError"
-      :message="loadError"
-      role="alert"
-      show-icon
-      type="error"
-    >
-      <template #action>
-        <a-button :loading="loading" size="small" @click="loadScrapeJobList">
-          重试
-        </a-button>
-      </template>
-    </a-alert>
-
-    <!-- 表格容器 -->
-    <div class="table-container">
-      <a-card>
-        <a-table
-          :columns="columns"
-          :data-source="scrapeJobList"
-          :loading="loading"
-          :pagination="paginationConfig"
-          :scroll="{ x: 1400 }"
-          bordered
-          row-key="id"
-          @change="handleTableChange"
-        >
-          <template #bodyCell="{ column, record }">
-            <template v-if="column.key === 'name'">
-              <div class="job-name-cell">
-                <div class="job-badge" :class="getJobStatusClass(record)"></div>
-                <span class="job-name-text">{{ record.name }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'service_discovery_type'">
-              <a-tag
-                :color="getDiscoveryTypeColor(record.service_discovery_type)"
-                class="tech-tag"
-              >
-                {{ getDiscoveryTypeLabel(record.service_discovery_type) }}
-              </a-tag>
-            </template>
-
-            <template v-if="column.key === 'enable'">
-              <a-tag :color="record.enable === 1 ? 'success' : 'default'">
-                {{ record.enable === 1 ? '启用' : '禁用' }}
-              </a-tag>
-            </template>
-
-            <template v-if="column.key === 'pool_id'">
-              <a-tag class="tech-tag" color="purple">
-                {{ getPoolName(record.pool_id) }}
-              </a-tag>
-            </template>
-
-            <template v-if="column.key === 'target_info'">
-              <div class="target-info">
-                <div class="target-item">
-                  <span class="target-label">地址:</span>
-                  <span class="target-value"
-                    >{{ record.ip_address }}:{{ record.port }}</span
-                  >
-                </div>
-                <div class="target-item">
-                  <span class="target-label">路径:</span>
-                  <span class="target-value">{{ record.metrics_path }}</span>
-                </div>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'scrape_config'">
-              <div class="config-info">
-                <div class="config-item">
-                  <span class="config-label">间隔:</span>
-                  <span class="config-value"
-                    >{{ record.scrape_interval }}s</span
-                  >
-                </div>
-                <div class="config-item">
-                  <span class="config-label">超时:</span>
-                  <span class="config-value">{{ record.scrape_timeout }}s</span>
-                </div>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'creator'">
-              <div class="creator-info">
-                <a-avatar
-                  size="small"
-                  :style="{
-                    backgroundColor: getAvatarColor(
-                      record.create_user_name || '',
-                    ),
-                  }"
-                >
-                  {{ getInitials(record.create_user_name) }}
-                </a-avatar>
-                <span class="creator-name">{{ record.create_user_name }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'createdAt'">
-              <div class="date-info">
-                <span class="date">{{ formatDate(record.created_at) }}</span>
-                <span class="time">{{ formatTime(record.created_at) }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'action'">
-              <div class="action-buttons">
-                <a-button
-                  size="small"
-                  type="primary"
-                  @click="handleViewScrapeJob(record)"
-                >
-                  查看
-                </a-button>
-                <a-button
-                  size="small"
-                  type="default"
-                  @click="handleEditScrapeJob(record)"
-                >
-                  编辑
-                </a-button>
-                <a-dropdown>
-                  <template #overlay>
-                    <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
-                      <a-menu-item key="toggle">
-                        <Icon
-                          :icon="
-                            record.enable === 1 ? 'carbon:pause' : 'carbon:play'
-                          "
-                        />
-                        {{ record.enable === 1 ? '禁用' : '启用' }}
-                      </a-menu-item>
-                      <a-menu-divider v-if="can('monitor.scrapeJob.delete')" />
-                      <a-menu-item
-                        v-if="can('monitor.scrapeJob.delete')"
-                        key="delete"
-                        danger
-                      >
-                        删除
-                      </a-menu-item>
-                    </a-menu>
-                  </template>
-                  <a-button size="small">
-                    更多
-                    <DownOutlined />
-                  </a-button>
-                </a-dropdown>
-              </div>
-            </template>
-          </template>
-        </a-table>
-      </a-card>
-    </div>
-
-    <!-- 创建/编辑采集任务对话框 -->
-    <a-modal
-      :destroy-on-close="true"
-      :open="formDialogVisible"
-      :title="formDialog.isEdit ? '编辑采集任务' : '创建采集任务'"
-      :width="formDialogWidth"
-      class="responsive-modal scrape-job-modal"
-      @cancel="closeFormDialog"
-      @ok="saveScrapeJob"
-    >
-      <a-form
-        ref="formRef"
-        :model="formDialog.form"
-        :rules="formRules"
-        layout="vertical"
-      >
-        <div class="form-section">
-          <div class="section-title">基本信息</div>
-          <a-row :gutter="16">
-            <a-col :sm="12" :xs="24">
-              <a-form-item
-                :rules="[{ required: true, message: '请输入采集任务名称' }]"
-                label="采集任务名称"
-                name="name"
-              >
-                <a-input
-                  v-model:value="formDialog.form.name"
-                  placeholder="请输入采集任务名称"
-                />
-              </a-form-item>
-            </a-col>
-            <a-col :sm="12" :xs="24">
-              <a-form-item label="启用状态" name="enable">
-                <a-switch
-                  v-model:checked="formDialog.form.enableSwitch"
-                  :checked-children="'启用'"
-                  :un-checked-children="'禁用'"
-                  class="tech-switch"
-                />
-              </a-form-item>
-            </a-col>
-          </a-row>
-        </div>
-
-        <div class="form-section">
-          <div class="section-title">服务配置</div>
-          <a-row :gutter="16">
-            <a-col :sm="12" :xs="24">
-              <a-form-item
-                :rules="[{ required: true, message: '请选择服务发现类型' }]"
-                label="服务发现类型"
-                name="service_discovery_type"
-              >
-                <a-select
-                  v-model:value="formDialog.form.service_discovery_type"
-                  placeholder="请选择服务发现类型"
-                >
-                  <a-select-option
-                    v-for="opt in serviceDiscoveryOptions"
-                    :key="opt.value"
-                    :value="opt.value"
-                  >
-                    {{ opt.label }}
-                  </a-select-option>
-                </a-select>
-              </a-form-item>
-            </a-col>
-            <a-col :sm="12" :xs="24">
-              <a-form-item
-                :rules="[{ required: true, message: '请选择协议方案' }]"
-                label="协议方案"
-                name="scheme"
-              >
-                <a-select
-                  v-model:value="formDialog.form.scheme"
-                  placeholder="请选择协议方案"
-                >
-                  <a-select-option value="http">HTTP</a-select-option>
-                  <a-select-option value="https">HTTPS</a-select-option>
-                </a-select>
-              </a-form-item>
-            </a-col>
-          </a-row>
-
-          <a-row :gutter="16">
-            <a-col :sm="12" :xs="24">
-              <a-form-item
-                :rules="[{ required: true, message: '请输入监控采集路径' }]"
-                label="监控采集路径"
-                name="metrics_path"
-              >
-                <a-input
-                  v-model:value="formDialog.form.metrics_path"
-                  placeholder="请输入监控采集路径"
-                />
-              </a-form-item>
-            </a-col>
-            <a-col :sm="12" :xs="24">
-              <a-form-item
-                :rules="[{ required: true, message: '请选择关联采集池' }]"
-                label="关联采集池"
-                name="pool_id"
-              >
-                <a-select
-                  v-model:value="formDialog.form.pool_id"
-                  :filter-option="false"
-                  :loading="dialogPoolLoading"
-                  allow-clear
-                  placeholder="请搜索并选择关联采集池"
-                  show-search
-                  @popupScroll="handleDialogPoolScroll"
-                  @search="handleDialogPoolSearch"
-                >
-                  <a-select-option
-                    v-for="pool in dialogPools"
-                    :key="pool.id"
-                    :value="pool.id"
-                  >
-                    {{ pool.name }}
-                  </a-select-option>
-                </a-select>
-              </a-form-item>
-            </a-col>
-          </a-row>
-        </div>
-
-        <div class="form-section">
-          <div class="section-title">采集配置</div>
-          <a-row :gutter="16">
-            <a-col :sm="12" :xs="24">
-              <a-form-item
-                :rules="[
-                  { required: true, message: '请输入采集间隔' },
-                  { type: 'number', min: 1, message: '采集间隔必须大于0' },
-                ]"
-                label="采集间隔（秒）"
-                name="scrape_interval"
-              >
-                <a-input-number
-                  v-model:value="formDialog.form.scrape_interval"
-                  :min="1"
-                  class="full-width"
-                  placeholder="请输入采集间隔（秒）"
-                />
-              </a-form-item>
-            </a-col>
-            <a-col :sm="12" :xs="24">
-              <a-form-item
-                :rules="[
-                  { required: true, message: '请输入采集超时' },
-                  { type: 'number', min: 1, message: '采集超时必须大于0' },
-                ]"
-                label="采集超时（秒）"
-                name="scrape_timeout"
-              >
-                <a-input-number
-                  v-model:value="formDialog.form.scrape_timeout"
-                  :min="1"
-                  class="full-width"
-                  placeholder="请输入采集超时（秒）"
-                />
-              </a-form-item>
-            </a-col>
-          </a-row>
-
-          <a-row :gutter="16">
-            <a-col :sm="12" :xs="24">
-              <a-form-item
-                :rules="[
-                  { required: true, message: '请输入刷新间隔' },
-                  { type: 'number', min: 1, message: '刷新间隔必须大于0' },
-                ]"
-                label="刷新间隔（秒）"
-                name="refresh_interval"
-              >
-                <a-input-number
-                  v-model:value="formDialog.form.refresh_interval"
-                  :min="1"
-                  class="full-width"
-                  placeholder="请输入刷新间隔（秒）"
-                />
-              </a-form-item>
-            </a-col>
-            <a-col
-              v-if="
-                formDialog.form.service_discovery_type ===
-                ServiceDiscoveryType.Static
-              "
-              :sm="12"
-              :xs="24"
-            >
-              <a-form-item :rules="formRules.port" label="端口" name="port">
-                <a-input-number
-                  v-model:value="formDialog.form.port"
-                  :max="65535"
-                  :min="1"
-                  class="full-width"
-                  placeholder="请输入端口"
-                />
-              </a-form-item>
-            </a-col>
-          </a-row>
-        </div>
-
-        <div
-          v-if="
-            formDialog.form.service_discovery_type ===
-            ServiceDiscoveryType.Static
-          "
-          class="form-section"
-        >
-          <div class="section-title">目标地址配置</div>
-          <a-form-item
-            :rules="formRules.ip_address"
-            label="IP地址"
-            name="ip_address"
-          >
-            <a-input
-              v-model:value="formDialog.form.ip_address"
-              placeholder="请输入IP地址，如：192.168.1.100"
-            />
-            <div class="form-help-text">
-              <Icon icon="ant-design:info-circle-outlined" />
-              请输入单个IP地址，端口配置在上方端口字段
-            </div>
-          </a-form-item>
-        </div>
-
-        <!-- Kubernetes配置（当选择K8s时显示） -->
-        <div
-          v-if="
-            formDialog.form.service_discovery_type === ServiceDiscoveryType.K8s
-          "
-          class="form-section"
-        >
-          <div class="section-title">Kubernetes配置</div>
-          <a-row :gutter="16">
-            <a-col :sm="12" :xs="24">
-              <a-form-item label="Kubernetes角色" name="kubernetes_sd_role">
-                <a-select
-                  v-model:value="formDialog.form.kubernetes_sd_role"
-                  placeholder="请选择Kubernetes角色"
-                >
-                  <a-select-option value="pod">Pod</a-select-option>
-                  <a-select-option value="service">Service</a-select-option>
-                  <a-select-option value="endpoints">Endpoints</a-select-option>
-                  <a-select-option value="node">Node</a-select-option>
-                </a-select>
-              </a-form-item>
-            </a-col>
-            <a-col :sm="12" :xs="24">
-              <a-form-item
-                label="KubeConfig文件路径"
-                name="kube_config_file_path"
-              >
-                <a-input
-                  v-model:value="formDialog.form.kube_config_file_path"
-                  placeholder="请输入KubeConfig文件路径"
-                />
-              </a-form-item>
-            </a-col>
-          </a-row>
-        </div>
-
-        <!-- 安全配置（HTTPS或需要认证时使用） -->
-        <div class="form-section">
-          <div class="section-title">安全配置</div>
-          <a-row :gutter="16">
-            <a-col :sm="12" :xs="24">
-              <a-form-item label="TLS CA文件路径" name="tls_ca_file_path">
-                <a-input
-                  v-model:value="formDialog.form.tls_ca_file_path"
-                  placeholder="请输入TLS CA文件路径"
-                />
-              </a-form-item>
-            </a-col>
-            <a-col :sm="12" :xs="24">
-              <a-form-item label="Bearer Token" name="bearer_token">
-                <a-form-item-rest v-if="formDialog.isEdit">
-                  <p class="credential-status">
-                    {{
-                      hasExistingBearerToken
-                        ? '已有Token已配置，原文不返回'
-                        : '尚未配置Token'
-                    }}
-                  </p>
-                  <a-radio-group
-                    v-model:value="bearerTokenAction"
-                    aria-label="Bearer Token更新方式"
-                  >
-                    <a-radio value="keep">保留现状</a-radio>
-                    <a-radio value="replace">替换Token</a-radio>
-                    <a-radio value="clear">清除已有Token</a-radio>
-                  </a-radio-group>
-                  <p
-                    v-if="bearerTokenAction === 'clear'"
-                    class="credential-status"
-                  >
-                    保存后清除已有Token，可改用文件认证
-                  </p>
-                </a-form-item-rest>
-                <a-input-password
-                  v-if="!formDialog.isEdit || bearerTokenAction === 'replace'"
-                  v-model:value="formDialog.form.bearer_token"
-                  autocomplete="new-password"
-                  placeholder="请输入新的Bearer Token"
-                />
-              </a-form-item>
-            </a-col>
-          </a-row>
-          <a-row :gutter="16">
-            <a-col :sm="12" :xs="24">
-              <a-form-item
-                label="Bearer Token文件路径"
-                name="bearer_token_file"
-              >
-                <a-input
-                  v-model:value="formDialog.form.bearer_token_file"
-                  placeholder="请输入Bearer Token文件路径"
-                />
-              </a-form-item>
-            </a-col>
-            <a-col :sm="12" :xs="24">
-              <a-form-item label="TLS CA内容" name="tls_ca_content">
-                <a-textarea
-                  v-model:value="formDialog.form.tls_ca_content"
-                  :rows="4"
-                  placeholder="请输入TLS CA证书内容"
-                />
-              </a-form-item>
-            </a-col>
-          </a-row>
-        </div>
-
-        <!-- 服务树绑定 -->
-        <div
-          v-if="
-            formDialog.form.service_discovery_type === ServiceDiscoveryType.Http
-          "
-          class="form-section"
-        >
-          <div class="section-title">服务树绑定</div>
-          <a-form-item label="服务树节点" name="tree_node_ids">
-            <a-tree-select
-              v-model:value="(formDialog.form as any).tree_node_ids"
-              :field-names="{
-                children: 'children',
-                label: 'name',
-                value: 'id',
-              }"
-              :tree-data="treeData"
-              allow-clear
-              multiple
-              placeholder="请选择服务树节点"
-              style="width: 100%"
-            />
-          </a-form-item>
-        </div>
-
-        <!-- 标签配置 -->
-        <div class="form-section">
-          <div class="section-title">标签配置</div>
-          <a-form-item label="标签" name="tags">
-            <a-select
-              v-model:value="(formDialog.form as any).tags"
-              :token-separators="[',']"
-              mode="tags"
-              placeholder="输入并回车添加标签"
-              style="width: 100%"
-            />
-          </a-form-item>
-        </div>
-
-        <!-- 高级配置 -->
-        <div class="form-section">
-          <div class="section-title">高级配置</div>
-          <a-form-item
-            label="Relabel配置（YAML）"
-            name="relabel_configs_yaml_string"
-          >
-            <div class="yaml-editor-container">
-              <div class="yaml-toolbar">
-                <a-button
-                  :disabled="!formDialog.form.relabel_configs_yaml_string"
-                  size="small"
-                  @click="formatYaml"
-                >
-                  <template #icon>
-                    <Icon icon="carbon:code" />
-                  </template>
-                  格式化
-                </a-button>
-                <a-button
-                  size="small"
-                  type="dashed"
-                  @click="insertYamlTemplate"
-                >
-                  <template #icon>
-                    <Icon icon="carbon:add" />
-                  </template>
-                  插入模板
-                </a-button>
-                <a-button
-                  :disabled="!formDialog.form.relabel_configs_yaml_string"
-                  size="small"
-                  @click="validateYaml"
-                >
-                  <template #icon>
-                    <Icon icon="carbon:checkmark" />
-                  </template>
-                  验证
-                </a-button>
-              </div>
-              <a-textarea
-                v-model:value="formDialog.form.relabel_configs_yaml_string"
-                :class="{ 'yaml-error': yamlError }"
-                :rows="8"
-                placeholder="请输入Relabel配置（YAML格式）"
-                @blur="validateYamlOnBlur"
-              />
-              <div v-if="yamlError" class="yaml-error-message">
-                <Icon icon="carbon:warning" />
-                {{ yamlError }}
-              </div>
-              <div v-if="yamlSuccess" class="yaml-success-message">
-                <Icon icon="carbon:checkmark" />
-                YAML格式正确
-              </div>
-            </div>
-          </a-form-item>
-        </div>
-      </a-form>
-    </a-modal>
-
-    <!-- 详情对话框 -->
-    <a-modal
-      :footer="null"
-      :open="detailDialogVisible"
-      :width="previewDialogWidth"
-      class="detail-dialog"
-      title="采集任务详情"
-      @cancel="closeDetailDialog"
-    >
-      <a-spin :spinning="detailDialog.loading">
-        <div v-if="detailDialog.form" class="job-details">
-          <div class="detail-header">
-            <h2>{{ detailDialog.form.name }}</h2>
-            <div class="detail-badges">
-              <a-tag
-                :color="detailDialog.form.enable === 1 ? 'success' : 'default'"
-              >
-                {{ detailDialog.form.enable === 1 ? '已启用' : '已禁用' }}
-              </a-tag>
-              <a-tag
-                :color="
-                  getDiscoveryTypeColor(
-                    detailDialog.form.service_discovery_type,
-                  )
-                "
-              >
-                {{
-                  getDiscoveryTypeLabel(
-                    detailDialog.form.service_discovery_type,
-                  )
-                }}
-              </a-tag>
-            </div>
-          </div>
-
-          <a-descriptions :column="1" :labelStyle="{ width: '150px' }" bordered>
-            <a-descriptions-item label="ID">
-              {{ detailDialog.form.id }}
-            </a-descriptions-item>
-            <a-descriptions-item label="服务发现类型">
-              {{
-                getDiscoveryTypeLabel(detailDialog.form.service_discovery_type)
-              }}
-            </a-descriptions-item>
-            <a-descriptions-item label="协议方案">
-              {{ detailDialog.form.scheme }}
-            </a-descriptions-item>
-            <a-descriptions-item label="监控路径">
-              {{ detailDialog.form.metrics_path }}
-            </a-descriptions-item>
-            <a-descriptions-item label="目标地址">
-              {{ detailDialog.form.ip_address }}:{{ detailDialog.form.port }}
-            </a-descriptions-item>
-            <a-descriptions-item label="采集间隔">
-              {{ detailDialog.form.scrape_interval }}秒
-            </a-descriptions-item>
-            <a-descriptions-item label="采集超时">
-              {{ detailDialog.form.scrape_timeout }}秒
-            </a-descriptions-item>
-            <a-descriptions-item label="刷新间隔">
-              {{ detailDialog.form.refresh_interval }}秒
-            </a-descriptions-item>
-            <a-descriptions-item label="关联采集池">
-              {{ getPoolName(detailDialog.form.pool_id) }}
-            </a-descriptions-item>
-            <a-descriptions-item label="创建人">
-              {{ detailDialog.form.create_user_name }}
-            </a-descriptions-item>
-            <a-descriptions-item label="创建时间">
-              {{ formatFullDateTime(detailDialog.form.created_at || '') }}
-            </a-descriptions-item>
-            <a-descriptions-item
-              v-if="detailDialog.form.tags && detailDialog.form.tags.length"
-              label="标签"
-            >
-              {{ (detailDialog.form.tags || []).join(', ') }}
-            </a-descriptions-item>
-            <a-descriptions-item
-              v-if="
-                detailDialog.form.tree_node_ids &&
-                detailDialog.form.tree_node_ids.length
-              "
-              label="服务树节点"
-            >
-              {{
-                mapTreeNodeIdsToNames(
-                  detailDialog.form.tree_node_ids || [],
-                ).join(', ')
-              }}
-            </a-descriptions-item>
-            <a-descriptions-item
-              v-if="
-                detailDialog.form.service_discovery_type ===
-                ServiceDiscoveryType.K8s
-              "
-              label="Kubernetes角色"
-            >
-              {{ detailDialog.form.kubernetes_sd_role || '未配置' }}
-            </a-descriptions-item>
-            <a-descriptions-item
-              v-if="
-                detailDialog.form.service_discovery_type ===
-                ServiceDiscoveryType.K8s
-              "
-              label="KubeConfig路径"
-            >
-              {{ detailDialog.form.kube_config_file_path || '未配置' }}
-            </a-descriptions-item>
-            <a-descriptions-item
-              v-if="detailDialog.form.tls_ca_file_path"
-              label="TLS CA文件"
-            >
-              {{ detailDialog.form.tls_ca_file_path }}
-            </a-descriptions-item>
-            <a-descriptions-item label="Bearer Token">
-              {{ detailDialog.form.has_bearer_token ? '已配置' : '未配置' }}
-            </a-descriptions-item>
-          </a-descriptions>
-
-          <div class="detail-footer">
-            <a-button @click="closeDetailDialog">关闭</a-button>
-            <a-button
-              type="primary"
-              @click="handleEditScrapeJob(detailDialog.form!)"
-            >
-              编辑
-            </a-button>
-          </div>
-        </div>
-      </a-spin>
-    </a-modal>
-  </OpsPage>
-</template>
-
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
@@ -1814,6 +970,850 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
   return idNums.map((id: number) => idToName.get(id) || String(id));
 };
 </script>
+
+<template>
+  <OpsPage description="维护采集目标、发现方式与任务状态" title="采集任务">
+    <!-- 页面标题 -->
+    <template #actions>
+      <a-button
+        class="btn-create"
+        type="primary"
+        @click="handleCreateScrapeJob"
+      >
+        <template #icon>
+          <PlusOutlined />
+        </template>
+        <span class="btn-text">创建采集任务</span>
+      </a-button>
+    </template>
+    <template #filters>
+      <div class="search-filters">
+        <a-input-search
+          v-model:value="searchQuery"
+          allow-clear
+          class="search-input"
+          placeholder="搜索采集任务名称..."
+          @change="handleSearchChange"
+          @search="handleSearch"
+        />
+        <a-select
+          v-model:value="enableFilter"
+          allow-clear
+          class="filter-select"
+          placeholder="启用状态"
+          @change="handleEnableChange"
+        >
+          <a-select-option :value="undefined">全部</a-select-option>
+          <a-select-option :value="1">启用</a-select-option>
+          <a-select-option :value="2">禁用</a-select-option>
+        </a-select>
+        <a-select
+          v-model:value="poolFilter"
+          allow-clear
+          class="filter-select"
+          placeholder="采集池"
+          @change="handlePoolChange"
+        >
+          <a-select-option :value="undefined">全部</a-select-option>
+          <a-select-option
+            v-for="pool in pools"
+            :key="pool.id"
+            :value="pool.id"
+          >
+            {{ pool.name }}
+          </a-select-option>
+        </a-select>
+        <a-button class="reset-btn" @click="handleResetFilters">
+          重置
+        </a-button>
+      </div>
+    </template>
+
+    <!-- 统计卡片 -->
+    <template #summary>
+      <div class="stats-row">
+        <a-row :gutter="[16, 16]">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
+            <a-card class="stats-card">
+              <a-statistic
+                :value="loadError ? '未知' : stats.total"
+                :value-style="{ color: '#3f8600' }"
+                title="总采集任务"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:task" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
+            <a-card class="stats-card">
+              <a-statistic
+                :value="loadError ? '未知' : stats.enabled"
+                :value-style="{ color: '#52c41a' }"
+                title="本页已启用"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:checkmark" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
+            <a-card class="stats-card">
+              <a-statistic
+                :value="loadError ? '未知' : stats.k8sJobs"
+                :value-style="{ color: '#faad14' }"
+                title="本页Kubernetes"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:logo-kubernetes" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
+            <a-card class="stats-card">
+              <a-statistic
+                :value="loadError ? '未知' : stats.httpJobs"
+                :value-style="{ color: '#cf1322' }"
+                title="本页HTTP任务"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:http" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+        </a-row>
+      </div>
+    </template>
+
+    <a-alert
+      v-if="loadError"
+      :message="loadError"
+      role="alert"
+      show-icon
+      type="error"
+    >
+      <template #action>
+        <a-button :loading="loading" size="small" @click="loadScrapeJobList">
+          重试
+        </a-button>
+      </template>
+    </a-alert>
+
+    <!-- 表格容器 -->
+    <div class="table-container">
+      <a-card>
+        <a-table
+          :columns="columns"
+          :data-source="scrapeJobList"
+          :loading="loading"
+          :pagination="paginationConfig"
+          :scroll="{ x: 1400 }"
+          bordered
+          row-key="id"
+          @change="handleTableChange"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'name'">
+              <div class="job-name-cell">
+                <div class="job-badge" :class="getJobStatusClass(record)"></div>
+                <span class="job-name-text">{{ record.name }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'service_discovery_type'">
+              <a-tag
+                :color="getDiscoveryTypeColor(record.service_discovery_type)"
+                class="tech-tag"
+              >
+                {{ getDiscoveryTypeLabel(record.service_discovery_type) }}
+              </a-tag>
+            </template>
+
+            <template v-if="column.key === 'enable'">
+              <a-tag :color="record.enable === 1 ? 'success' : 'default'">
+                {{ record.enable === 1 ? '启用' : '禁用' }}
+              </a-tag>
+            </template>
+
+            <template v-if="column.key === 'pool_id'">
+              <a-tag class="tech-tag" color="purple">
+                {{ getPoolName(record.pool_id) }}
+              </a-tag>
+            </template>
+
+            <template v-if="column.key === 'target_info'">
+              <div class="target-info">
+                <div class="target-item">
+                  <span class="target-label">地址:</span>
+                  <span class="target-value"
+                    >{{ record.ip_address }}:{{ record.port }}</span
+                  >
+                </div>
+                <div class="target-item">
+                  <span class="target-label">路径:</span>
+                  <span class="target-value">{{ record.metrics_path }}</span>
+                </div>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'scrape_config'">
+              <div class="config-info">
+                <div class="config-item">
+                  <span class="config-label">间隔:</span>
+                  <span class="config-value"
+                    >{{ record.scrape_interval }}s</span
+                  >
+                </div>
+                <div class="config-item">
+                  <span class="config-label">超时:</span>
+                  <span class="config-value">{{ record.scrape_timeout }}s</span>
+                </div>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'creator'">
+              <div class="creator-info">
+                <a-avatar
+                  size="small"
+                  :style="{
+                    backgroundColor: getAvatarColor(
+                      record.create_user_name || '',
+                    ),
+                  }"
+                >
+                  {{ getInitials(record.create_user_name) }}
+                </a-avatar>
+                <span class="creator-name">{{ record.create_user_name }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'createdAt'">
+              <div class="date-info">
+                <span class="date">{{ formatDate(record.created_at) }}</span>
+                <span class="time">{{ formatTime(record.created_at) }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'action'">
+              <div class="action-buttons">
+                <a-button
+                  size="small"
+                  type="primary"
+                  @click="handleViewScrapeJob(record)"
+                >
+                  查看
+                </a-button>
+                <a-button
+                  size="small"
+                  type="default"
+                  @click="handleEditScrapeJob(record)"
+                >
+                  编辑
+                </a-button>
+                <a-dropdown>
+                  <template #overlay>
+                    <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
+                      <a-menu-item key="toggle">
+                        <Icon
+                          :icon="
+                            record.enable === 1 ? 'carbon:pause' : 'carbon:play'
+                          "
+                        />
+                        {{ record.enable === 1 ? '禁用' : '启用' }}
+                      </a-menu-item>
+                      <a-menu-divider v-if="can('monitor.scrapeJob.delete')" />
+                      <a-menu-item
+                        v-if="can('monitor.scrapeJob.delete')"
+                        key="delete"
+                        danger
+                      >
+                        删除
+                      </a-menu-item>
+                    </a-menu>
+                  </template>
+                  <a-button size="small">
+                    更多
+                    <DownOutlined />
+                  </a-button>
+                </a-dropdown>
+              </div>
+            </template>
+          </template>
+        </a-table>
+      </a-card>
+    </div>
+
+    <!-- 创建/编辑采集任务对话框 -->
+    <a-modal
+      :destroy-on-close="true"
+      :open="formDialogVisible"
+      :title="formDialog.isEdit ? '编辑采集任务' : '创建采集任务'"
+      :width="formDialogWidth"
+      class="responsive-modal scrape-job-modal"
+      @cancel="closeFormDialog"
+      @ok="saveScrapeJob"
+    >
+      <a-form
+        ref="formRef"
+        :model="formDialog.form"
+        :rules="formRules"
+        layout="vertical"
+      >
+        <div class="form-section">
+          <div class="section-title">基本信息</div>
+          <a-row :gutter="16">
+            <a-col :sm="12" :xs="24">
+              <a-form-item
+                :rules="[{ required: true, message: '请输入采集任务名称' }]"
+                label="采集任务名称"
+                name="name"
+              >
+                <a-input
+                  v-model:value="formDialog.form.name"
+                  placeholder="请输入采集任务名称"
+                />
+              </a-form-item>
+            </a-col>
+            <a-col :sm="12" :xs="24">
+              <a-form-item label="启用状态" name="enable">
+                <a-switch
+                  v-model:checked="formDialog.form.enableSwitch"
+                  :checked-children="'启用'"
+                  :un-checked-children="'禁用'"
+                  class="tech-switch"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">服务配置</div>
+          <a-row :gutter="16">
+            <a-col :sm="12" :xs="24">
+              <a-form-item
+                :rules="[{ required: true, message: '请选择服务发现类型' }]"
+                label="服务发现类型"
+                name="service_discovery_type"
+              >
+                <a-select
+                  v-model:value="formDialog.form.service_discovery_type"
+                  placeholder="请选择服务发现类型"
+                >
+                  <a-select-option
+                    v-for="opt in serviceDiscoveryOptions"
+                    :key="opt.value"
+                    :value="opt.value"
+                  >
+                    {{ opt.label }}
+                  </a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+            <a-col :sm="12" :xs="24">
+              <a-form-item
+                :rules="[{ required: true, message: '请选择协议方案' }]"
+                label="协议方案"
+                name="scheme"
+              >
+                <a-select
+                  v-model:value="formDialog.form.scheme"
+                  placeholder="请选择协议方案"
+                >
+                  <a-select-option value="http">HTTP</a-select-option>
+                  <a-select-option value="https">HTTPS</a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+          </a-row>
+
+          <a-row :gutter="16">
+            <a-col :sm="12" :xs="24">
+              <a-form-item
+                :rules="[{ required: true, message: '请输入监控采集路径' }]"
+                label="监控采集路径"
+                name="metrics_path"
+              >
+                <a-input
+                  v-model:value="formDialog.form.metrics_path"
+                  placeholder="请输入监控采集路径"
+                />
+              </a-form-item>
+            </a-col>
+            <a-col :sm="12" :xs="24">
+              <a-form-item
+                :rules="[{ required: true, message: '请选择关联采集池' }]"
+                label="关联采集池"
+                name="pool_id"
+              >
+                <a-select
+                  v-model:value="formDialog.form.pool_id"
+                  :filter-option="false"
+                  :loading="dialogPoolLoading"
+                  allow-clear
+                  placeholder="请搜索并选择关联采集池"
+                  show-search
+                  @popupScroll="handleDialogPoolScroll"
+                  @search="handleDialogPoolSearch"
+                >
+                  <a-select-option
+                    v-for="pool in dialogPools"
+                    :key="pool.id"
+                    :value="pool.id"
+                  >
+                    {{ pool.name }}
+                  </a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">采集配置</div>
+          <a-row :gutter="16">
+            <a-col :sm="12" :xs="24">
+              <a-form-item
+                :rules="[
+                  { required: true, message: '请输入采集间隔' },
+                  { type: 'number', min: 1, message: '采集间隔必须大于0' },
+                ]"
+                label="采集间隔（秒）"
+                name="scrape_interval"
+              >
+                <a-input-number
+                  v-model:value="formDialog.form.scrape_interval"
+                  :min="1"
+                  class="full-width"
+                  placeholder="请输入采集间隔（秒）"
+                />
+              </a-form-item>
+            </a-col>
+            <a-col :sm="12" :xs="24">
+              <a-form-item
+                :rules="[
+                  { required: true, message: '请输入采集超时' },
+                  { type: 'number', min: 1, message: '采集超时必须大于0' },
+                ]"
+                label="采集超时（秒）"
+                name="scrape_timeout"
+              >
+                <a-input-number
+                  v-model:value="formDialog.form.scrape_timeout"
+                  :min="1"
+                  class="full-width"
+                  placeholder="请输入采集超时（秒）"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+
+          <a-row :gutter="16">
+            <a-col :sm="12" :xs="24">
+              <a-form-item
+                :rules="[
+                  { required: true, message: '请输入刷新间隔' },
+                  { type: 'number', min: 1, message: '刷新间隔必须大于0' },
+                ]"
+                label="刷新间隔（秒）"
+                name="refresh_interval"
+              >
+                <a-input-number
+                  v-model:value="formDialog.form.refresh_interval"
+                  :min="1"
+                  class="full-width"
+                  placeholder="请输入刷新间隔（秒）"
+                />
+              </a-form-item>
+            </a-col>
+            <a-col
+              v-if="
+                formDialog.form.service_discovery_type ===
+                ServiceDiscoveryType.Static
+              "
+              :sm="12"
+              :xs="24"
+            >
+              <a-form-item :rules="formRules.port" label="端口" name="port">
+                <a-input-number
+                  v-model:value="formDialog.form.port"
+                  :max="65535"
+                  :min="1"
+                  class="full-width"
+                  placeholder="请输入端口"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </div>
+
+        <div
+          v-if="
+            formDialog.form.service_discovery_type ===
+            ServiceDiscoveryType.Static
+          "
+          class="form-section"
+        >
+          <div class="section-title">目标地址配置</div>
+          <a-form-item
+            :rules="formRules.ip_address"
+            label="IP地址"
+            name="ip_address"
+          >
+            <a-input
+              v-model:value="formDialog.form.ip_address"
+              placeholder="请输入IP地址，如：192.168.1.100"
+            />
+            <div class="form-help-text">
+              <Icon icon="ant-design:info-circle-outlined" />
+              请输入单个IP地址，端口配置在上方端口字段
+            </div>
+          </a-form-item>
+        </div>
+
+        <!-- Kubernetes配置（当选择K8s时显示） -->
+        <div
+          v-if="
+            formDialog.form.service_discovery_type === ServiceDiscoveryType.K8s
+          "
+          class="form-section"
+        >
+          <div class="section-title">Kubernetes配置</div>
+          <a-row :gutter="16">
+            <a-col :sm="12" :xs="24">
+              <a-form-item label="Kubernetes角色" name="kubernetes_sd_role">
+                <a-select
+                  v-model:value="formDialog.form.kubernetes_sd_role"
+                  placeholder="请选择Kubernetes角色"
+                >
+                  <a-select-option value="pod">Pod</a-select-option>
+                  <a-select-option value="service">Service</a-select-option>
+                  <a-select-option value="endpoints">Endpoints</a-select-option>
+                  <a-select-option value="node">Node</a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+            <a-col :sm="12" :xs="24">
+              <a-form-item
+                label="KubeConfig文件路径"
+                name="kube_config_file_path"
+              >
+                <a-input
+                  v-model:value="formDialog.form.kube_config_file_path"
+                  placeholder="请输入KubeConfig文件路径"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </div>
+
+        <!-- 安全配置（HTTPS或需要认证时使用） -->
+        <div class="form-section">
+          <div class="section-title">安全配置</div>
+          <a-row :gutter="16">
+            <a-col :sm="12" :xs="24">
+              <a-form-item label="TLS CA文件路径" name="tls_ca_file_path">
+                <a-input
+                  v-model:value="formDialog.form.tls_ca_file_path"
+                  placeholder="请输入TLS CA文件路径"
+                />
+              </a-form-item>
+            </a-col>
+            <a-col :sm="12" :xs="24">
+              <a-form-item label="Bearer Token" name="bearer_token">
+                <a-form-item-rest v-if="formDialog.isEdit">
+                  <p class="credential-status">
+                    {{
+                      hasExistingBearerToken
+                        ? '已有Token已配置，原文不返回'
+                        : '尚未配置Token'
+                    }}
+                  </p>
+                  <a-radio-group
+                    v-model:value="bearerTokenAction"
+                    aria-label="Bearer Token更新方式"
+                  >
+                    <a-radio value="keep">保留现状</a-radio>
+                    <a-radio value="replace">替换Token</a-radio>
+                    <a-radio value="clear">清除已有Token</a-radio>
+                  </a-radio-group>
+                  <p
+                    v-if="bearerTokenAction === 'clear'"
+                    class="credential-status"
+                  >
+                    保存后清除已有Token，可改用文件认证
+                  </p>
+                </a-form-item-rest>
+                <a-input-password
+                  v-if="!formDialog.isEdit || bearerTokenAction === 'replace'"
+                  v-model:value="formDialog.form.bearer_token"
+                  autocomplete="new-password"
+                  placeholder="请输入新的Bearer Token"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+          <a-row :gutter="16">
+            <a-col :sm="12" :xs="24">
+              <a-form-item
+                label="Bearer Token文件路径"
+                name="bearer_token_file"
+              >
+                <a-input
+                  v-model:value="formDialog.form.bearer_token_file"
+                  placeholder="请输入Bearer Token文件路径"
+                />
+              </a-form-item>
+            </a-col>
+            <a-col :sm="12" :xs="24">
+              <a-form-item label="TLS CA内容" name="tls_ca_content">
+                <a-textarea
+                  v-model:value="formDialog.form.tls_ca_content"
+                  :rows="4"
+                  placeholder="请输入TLS CA证书内容"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </div>
+
+        <!-- 服务树绑定 -->
+        <div
+          v-if="
+            formDialog.form.service_discovery_type === ServiceDiscoveryType.Http
+          "
+          class="form-section"
+        >
+          <div class="section-title">服务树绑定</div>
+          <a-form-item label="服务树节点" name="tree_node_ids">
+            <a-tree-select
+              v-model:value="(formDialog.form as any).tree_node_ids"
+              :field-names="{
+                children: 'children',
+                label: 'name',
+                value: 'id',
+              }"
+              :tree-data="treeData"
+              allow-clear
+              multiple
+              placeholder="请选择服务树节点"
+              style="width: 100%"
+            />
+          </a-form-item>
+        </div>
+
+        <!-- 标签配置 -->
+        <div class="form-section">
+          <div class="section-title">标签配置</div>
+          <a-form-item label="标签" name="tags">
+            <a-select
+              v-model:value="(formDialog.form as any).tags"
+              :token-separators="[',']"
+              mode="tags"
+              placeholder="输入并回车添加标签"
+              style="width: 100%"
+            />
+          </a-form-item>
+        </div>
+
+        <!-- 高级配置 -->
+        <div class="form-section">
+          <div class="section-title">高级配置</div>
+          <a-form-item
+            label="Relabel配置（YAML）"
+            name="relabel_configs_yaml_string"
+          >
+            <div class="yaml-editor-container">
+              <div class="yaml-toolbar">
+                <a-button
+                  :disabled="!formDialog.form.relabel_configs_yaml_string"
+                  size="small"
+                  @click="formatYaml"
+                >
+                  <template #icon>
+                    <Icon icon="carbon:code" />
+                  </template>
+                  格式化
+                </a-button>
+                <a-button
+                  size="small"
+                  type="dashed"
+                  @click="insertYamlTemplate"
+                >
+                  <template #icon>
+                    <Icon icon="carbon:add" />
+                  </template>
+                  插入模板
+                </a-button>
+                <a-button
+                  :disabled="!formDialog.form.relabel_configs_yaml_string"
+                  size="small"
+                  @click="validateYaml"
+                >
+                  <template #icon>
+                    <Icon icon="carbon:checkmark" />
+                  </template>
+                  验证
+                </a-button>
+              </div>
+              <a-textarea
+                v-model:value="formDialog.form.relabel_configs_yaml_string"
+                :class="{ 'yaml-error': yamlError }"
+                :rows="8"
+                placeholder="请输入Relabel配置（YAML格式）"
+                @blur="validateYamlOnBlur"
+              />
+              <div v-if="yamlError" class="yaml-error-message">
+                <Icon icon="carbon:warning" />
+                {{ yamlError }}
+              </div>
+              <div v-if="yamlSuccess" class="yaml-success-message">
+                <Icon icon="carbon:checkmark" />
+                YAML格式正确
+              </div>
+            </div>
+          </a-form-item>
+        </div>
+      </a-form>
+    </a-modal>
+
+    <!-- 详情对话框 -->
+    <a-modal
+      :footer="null"
+      :open="detailDialogVisible"
+      :width="previewDialogWidth"
+      class="detail-dialog"
+      title="采集任务详情"
+      @cancel="closeDetailDialog"
+    >
+      <a-spin :spinning="detailDialog.loading">
+        <div v-if="detailDialog.form" class="job-details">
+          <div class="detail-header">
+            <h2>{{ detailDialog.form.name }}</h2>
+            <div class="detail-badges">
+              <a-tag
+                :color="detailDialog.form.enable === 1 ? 'success' : 'default'"
+              >
+                {{ detailDialog.form.enable === 1 ? '已启用' : '已禁用' }}
+              </a-tag>
+              <a-tag
+                :color="
+                  getDiscoveryTypeColor(
+                    detailDialog.form.service_discovery_type,
+                  )
+                "
+              >
+                {{
+                  getDiscoveryTypeLabel(
+                    detailDialog.form.service_discovery_type,
+                  )
+                }}
+              </a-tag>
+            </div>
+          </div>
+
+          <a-descriptions :column="1" :labelStyle="{ width: '150px' }" bordered>
+            <a-descriptions-item label="ID">
+              {{ detailDialog.form.id }}
+            </a-descriptions-item>
+            <a-descriptions-item label="服务发现类型">
+              {{
+                getDiscoveryTypeLabel(detailDialog.form.service_discovery_type)
+              }}
+            </a-descriptions-item>
+            <a-descriptions-item label="协议方案">
+              {{ detailDialog.form.scheme }}
+            </a-descriptions-item>
+            <a-descriptions-item label="监控路径">
+              {{ detailDialog.form.metrics_path }}
+            </a-descriptions-item>
+            <a-descriptions-item label="目标地址">
+              {{ detailDialog.form.ip_address }}:{{ detailDialog.form.port }}
+            </a-descriptions-item>
+            <a-descriptions-item label="采集间隔">
+              {{ detailDialog.form.scrape_interval }}秒
+            </a-descriptions-item>
+            <a-descriptions-item label="采集超时">
+              {{ detailDialog.form.scrape_timeout }}秒
+            </a-descriptions-item>
+            <a-descriptions-item label="刷新间隔">
+              {{ detailDialog.form.refresh_interval }}秒
+            </a-descriptions-item>
+            <a-descriptions-item label="关联采集池">
+              {{ getPoolName(detailDialog.form.pool_id) }}
+            </a-descriptions-item>
+            <a-descriptions-item label="创建人">
+              {{ detailDialog.form.create_user_name }}
+            </a-descriptions-item>
+            <a-descriptions-item label="创建时间">
+              {{ formatFullDateTime(detailDialog.form.created_at || '') }}
+            </a-descriptions-item>
+            <a-descriptions-item
+              v-if="detailDialog.form.tags && detailDialog.form.tags.length"
+              label="标签"
+            >
+              {{ (detailDialog.form.tags || []).join(', ') }}
+            </a-descriptions-item>
+            <a-descriptions-item
+              v-if="
+                detailDialog.form.tree_node_ids &&
+                detailDialog.form.tree_node_ids.length
+              "
+              label="服务树节点"
+            >
+              {{
+                mapTreeNodeIdsToNames(
+                  detailDialog.form.tree_node_ids || [],
+                ).join(', ')
+              }}
+            </a-descriptions-item>
+            <a-descriptions-item
+              v-if="
+                detailDialog.form.service_discovery_type ===
+                ServiceDiscoveryType.K8s
+              "
+              label="Kubernetes角色"
+            >
+              {{ detailDialog.form.kubernetes_sd_role || '未配置' }}
+            </a-descriptions-item>
+            <a-descriptions-item
+              v-if="
+                detailDialog.form.service_discovery_type ===
+                ServiceDiscoveryType.K8s
+              "
+              label="KubeConfig路径"
+            >
+              {{ detailDialog.form.kube_config_file_path || '未配置' }}
+            </a-descriptions-item>
+            <a-descriptions-item
+              v-if="detailDialog.form.tls_ca_file_path"
+              label="TLS CA文件"
+            >
+              {{ detailDialog.form.tls_ca_file_path }}
+            </a-descriptions-item>
+            <a-descriptions-item label="Bearer Token">
+              {{ detailDialog.form.has_bearer_token ? '已配置' : '未配置' }}
+            </a-descriptions-item>
+          </a-descriptions>
+
+          <div class="detail-footer">
+            <a-button @click="closeDetailDialog">关闭</a-button>
+            <a-button
+              type="primary"
+              @click="handleEditScrapeJob(detailDialog.form!)"
+            >
+              编辑
+            </a-button>
+          </div>
+        </div>
+      </a-spin>
+    </a-modal>
+  </OpsPage>
+</template>
 
 <style scoped>
 .credential-status {

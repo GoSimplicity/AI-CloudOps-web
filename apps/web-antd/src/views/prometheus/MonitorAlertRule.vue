@@ -1,3 +1,678 @@
+<script setup lang="ts">
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { useListRequest } from './useListRequest';
+
+import { computed, onMounted, reactive, ref } from 'vue';
+import { message, Modal } from 'ant-design-vue';
+import {
+  DownOutlined,
+  MinusCircleOutlined,
+  PlusOutlined,
+} from '@ant-design/icons-vue';
+import { Icon } from '@iconify/vue';
+import { useDebounceFn } from '@vueuse/core';
+import {
+  AlertRuleSeverity,
+  createMonitorAlertRuleApi,
+  type CreateMonitorAlertRuleReq,
+  deleteMonitorAlertRuleApi,
+  getMonitorAlertRuleListApi,
+  type GetMonitorAlertRuleListReq,
+  type MonitorAlertRule,
+  promqlExprCheckApi,
+  updateMonitorAlertRuleApi,
+  type UpdateMonitorAlertRuleReq,
+} from '#/api/core/prometheus/prometheus_alert_rule';
+import {
+  getMonitorAlertManagerPoolApi,
+  getMonitorAlertManagerPoolListApi,
+  type MonitorAlertManagerPool,
+} from '#/api/core/prometheus/prometheus_alert_pool';
+import {
+  getMonitorSendGroupDetailApi,
+  getMonitorSendGroupListApi,
+  type MonitorSendGroup,
+} from '#/api/core/prometheus/prometheus_send_group';
+
+import { usePermission } from '#/utils/permission';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
+const { can } = usePermission();
+
+const ENABLE_STATUS = {
+  ENABLED: 1,
+  DISABLED: 2,
+} as const;
+
+// --- 类型定义 ---
+interface LabelOrAnnotationItem {
+  key: number;
+  labelKey: string;
+  labelValue: string;
+}
+
+// --- 分页状态 ---
+const poolPagination = reactive({
+  current: 1,
+  pageSize: 20,
+  total: 0,
+});
+
+const sendGroupPagination = reactive({
+  current: 1,
+  pageSize: 20,
+  total: 0,
+});
+
+const poolLoading = ref(false);
+const sendGroupLoading = ref(false);
+
+const createInitialForm = () => ({
+  name: '',
+  pool_id: undefined as number | undefined,
+  send_group_id: undefined as number | undefined,
+  ip: '',
+  port: '',
+  expr: '',
+  severity: undefined as AlertRuleSeverity | undefined,
+  for_time: '10s',
+  labels: [
+    { key: Date.now(), labelKey: '', labelValue: '' },
+  ] as LabelOrAnnotationItem[],
+  annotations: [
+    { key: Date.now(), labelKey: '', labelValue: '' },
+  ] as LabelOrAnnotationItem[],
+  grafana_link: '',
+});
+
+const handleApiError = (error: any, defaultMessage: string) => {
+  const errorMessage =
+    error?.response?.data?.message || error.message || defaultMessage;
+  // 请求层已提示（403、业务错误、HTTP / 网络错误）或取消类：页面不再提示（FE-02b）
+  if (!shouldNotifyPageError(error)) return;
+  message.error(errorMessage);
+};
+
+// --- 响应式状态 ---
+const loading = ref(false);
+const { loadError, beginRequest } = useListRequest(loading);
+const data = ref<MonitorAlertRule[]>([]);
+const scrapePools = ref<MonitorAlertManagerPool[]>([]);
+const sendGroups = ref<MonitorSendGroup[]>([]);
+const addFormRef = ref();
+const editFormRef = ref();
+const currentRecord = ref<MonitorAlertRule | null>(null);
+
+// --- 筛选与分页 ---
+const searchParams = reactive({
+  search: '',
+  severity: undefined as AlertRuleSeverity | undefined,
+  enable: undefined as number | undefined,
+});
+
+const paginationConfig = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showSizeChanger: true,
+  showQuickJumper: true,
+  showTotal: (total: number) => `共 ${total} 条记录`,
+  size: 'default' as const,
+});
+
+// --- 统计数据 ---
+const stats = computed(() => ({
+  total: paginationConfig.total,
+  critical: data.value.filter(
+    (item) => item.severity === AlertRuleSeverity.Critical,
+  ).length,
+  warning: data.value.filter(
+    (item) => item.severity === AlertRuleSeverity.Warning,
+  ).length,
+  enabled: data.value.filter((item) => item.enable === ENABLE_STATUS.ENABLED)
+    .length,
+}));
+
+// --- 模态框状态 ---
+const isAddModalVisible = ref(false);
+const isEditModalVisible = ref(false);
+const detailModalVisible = ref(false);
+
+// --- 表单 ---
+const addForm = reactive(createInitialForm());
+
+const editForm = reactive({
+  id: 0,
+  name: '',
+  pool_id: undefined as number | undefined,
+  send_group_id: undefined as number | undefined,
+  ip: '',
+  port: '',
+  enableSwitch: true,
+  expr: '',
+  severity: undefined as AlertRuleSeverity | undefined,
+  for_time: '',
+  labels: [] as LabelOrAnnotationItem[],
+  annotations: [] as LabelOrAnnotationItem[],
+  grafana_link: '',
+});
+
+const formRules = {
+  name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
+  pool_id: [{ required: true, message: '请选择所属实例池', trigger: 'change' }],
+  ip_address: [
+    {
+      required: true,
+      validator: () => {
+        const form = isEditModalVisible.value ? editForm : addForm;
+        if (!form.ip || !form.port) {
+          return Promise.reject('请输入IP地址和端口');
+        }
+        return Promise.resolve();
+      },
+      trigger: 'blur',
+    },
+  ],
+  expr: [{ required: true, message: '请输入PromQL表达式', trigger: 'blur' }],
+  severity: [{ required: true, message: '请选择严重性', trigger: 'change' }],
+  for_time: [{ required: true, message: '请输入持续时间', trigger: 'blur' }],
+};
+
+// --- 响应式布局 ---
+const formDialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '900px';
+  }
+  return '900px';
+});
+
+const previewDialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '80%';
+  }
+  return '80%';
+});
+
+// --- 列定义 ---
+const columns = [
+  {
+    title: 'AlertRule名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 200,
+    fixed: 'left',
+  },
+  {
+    title: '表达式',
+    dataIndex: 'expr',
+    key: 'expr',
+    width: 250,
+    ellipsis: true,
+  },
+  {
+    title: '严重性',
+    dataIndex: 'severity',
+    key: 'severity',
+    width: 100,
+    align: 'center' as const,
+  },
+  {
+    title: '启用状态',
+    dataIndex: 'enable',
+    key: 'enable',
+    width: 100,
+    align: 'center' as const,
+  },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 220 },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 220 },
+  { title: '实例配置', key: 'pool_config', width: 180 },
+  {
+    title: '创建人',
+    dataIndex: 'create_user_name',
+    key: 'creator',
+    width: 120,
+  },
+  { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
+  {
+    title: '操作',
+    key: 'action',
+    width: 200,
+    align: 'center' as const,
+    fixed: 'right',
+  },
+];
+
+// --- 标签显示函数 ---
+const getDisplayLabels = (labels: string[]) => {
+  if (!labels || labels.length === 0 || labels[0] === '') return [];
+  return labels.slice(0, 2);
+};
+
+const getDisplayAnnotations = (annotations: string[]) => {
+  if (!annotations || annotations.length === 0 || annotations[0] === '')
+    return [];
+  return annotations.slice(0, 2);
+};
+
+// --- API 调用 ---
+const fetchAlertRules = async () => {
+  const request = beginRequest();
+  try {
+    const params: GetMonitorAlertRuleListReq = {
+      page: paginationConfig.current,
+      size: paginationConfig.pageSize,
+      search: searchParams.search || undefined,
+      severity: searchParams.severity,
+      enable: searchParams.enable,
+    };
+    const response = await getMonitorAlertRuleListApi(params);
+    if (!request.isCurrent()) return;
+    data.value = response.items || [];
+    paginationConfig.total = response.total || 0;
+  } catch (error: any) {
+    if (!request.fail(error, '加载告警规则列表失败')) return;
+    data.value = [];
+    paginationConfig.total = 0;
+    if (shouldNotifyPageError(error)) message.error(loadError.value);
+  } finally {
+    request.finish();
+  }
+};
+
+const fetchScrapePools = async (page = 1, size = 20) => {
+  poolLoading.value = true;
+  try {
+    const response = await getMonitorAlertManagerPoolListApi({ page, size });
+    const items = response.items || [];
+    if (page === 1) {
+      scrapePools.value = items;
+    } else {
+      scrapePools.value.push(...items);
+    }
+    poolPagination.total = response.total || 0;
+    poolPagination.current = page;
+  } catch (error: any) {
+    handleApiError(error, '获取实例池数据失败');
+  } finally {
+    poolLoading.value = false;
+  }
+};
+
+const fetchSendGroups = async (page = 1, size = 20) => {
+  sendGroupLoading.value = true;
+  try {
+    const response = await getMonitorSendGroupListApi({ page, size });
+    const items = response.items || [];
+    if (page === 1) {
+      sendGroups.value = items;
+    } else {
+      sendGroups.value.push(...items);
+    }
+    sendGroupPagination.total = response.total || 0;
+    sendGroupPagination.current = page;
+  } catch (error: any) {
+    handleApiError(error, '获取发送组数据失败');
+  } finally {
+    sendGroupLoading.value = false;
+  }
+};
+
+// --- 分页处理 ---
+const handlePoolScroll = (e: any) => {
+  const { scrollTop, scrollHeight, clientHeight } = e.target;
+  if (
+    scrollTop + clientHeight >= scrollHeight - 10 &&
+    !poolLoading.value &&
+    scrapePools.value.length < poolPagination.total
+  ) {
+    fetchScrapePools(poolPagination.current + 1, poolPagination.pageSize);
+  }
+};
+
+const handleSendGroupScroll = (e: any) => {
+  const { scrollTop, scrollHeight, clientHeight } = e.target;
+  if (
+    scrollTop + clientHeight >= scrollHeight - 10 &&
+    !sendGroupLoading.value &&
+    sendGroups.value.length < sendGroupPagination.total
+  ) {
+    fetchSendGroups(
+      sendGroupPagination.current + 1,
+      sendGroupPagination.pageSize,
+    );
+  }
+};
+
+const onPoolDropdownChange = (open: boolean) => {
+  if (open && scrapePools.value.length === 0) {
+    fetchScrapePools(1, poolPagination.pageSize);
+  }
+};
+
+const onSendGroupDropdownChange = (open: boolean) => {
+  if (open && sendGroups.value.length === 0) {
+    fetchSendGroups(1, sendGroupPagination.pageSize);
+  }
+};
+
+// --- 事件处理 ---
+const handleTableChange = (pagination: {
+  current: number;
+  pageSize: number;
+}) => {
+  paginationConfig.current = pagination.current;
+  paginationConfig.pageSize = pagination.pageSize;
+  fetchAlertRules();
+};
+
+const handleSearch = useDebounceFn(() => {
+  paginationConfig.current = 1;
+  fetchAlertRules();
+}, 300);
+
+const handleReset = () => {
+  searchParams.search = '';
+  searchParams.severity = undefined;
+  searchParams.enable = undefined;
+  paginationConfig.current = 1;
+  fetchAlertRules();
+};
+
+const handleMenuClick = (key: string, record: MonitorAlertRule) => {
+  if (key === 'delete' && record.id != null) {
+    handleDelete(record.id);
+  }
+};
+
+const handleDelete = (id: number) => {
+  Modal.confirm({
+    title: '确认删除',
+    content: '您确定要删除这条告警规则吗？此操作不可撤销。',
+    okText: '确认',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        await deleteMonitorAlertRuleApi(id);
+        message.success('删除成功');
+        fetchAlertRules();
+      } catch (error: any) {
+        handleApiError(error, '删除失败');
+      }
+    },
+  });
+};
+
+// --- 模态框操作 ---
+const showAddModal = () => {
+  resetAddForm();
+  isAddModalVisible.value = true;
+};
+
+const closeAddModal = () => {
+  isAddModalVisible.value = false;
+};
+
+const showEditModal = async (record: MonitorAlertRule) => {
+  // --- 确保关联数据显示 ---
+  // 确保关联的实例池在选项列表中，以便正确显示名称
+  if (
+    record.pool_id &&
+    !scrapePools.value.some((p) => p.id === record.pool_id)
+  ) {
+    try {
+      const pool = await getMonitorAlertManagerPoolApi(record.pool_id);
+      if (pool) {
+        // 使用 unshift 将其添加到列表开头，以便用户能立即看到
+        scrapePools.value.unshift(pool);
+      }
+    } catch (error) {
+      handleApiError(error, `加载实例池 ${record.pool_id} 详情失败`);
+    }
+  }
+
+  // 确保关联的发送组在选项列表中
+  if (
+    record.send_group_id &&
+    !sendGroups.value.some((g) => g.id === record.send_group_id)
+  ) {
+    try {
+      const group = await getMonitorSendGroupDetailApi(record.send_group_id);
+      if (group) {
+        sendGroups.value.unshift(group);
+      }
+    } catch (error) {
+      handleApiError(error, `加载发送组 ${record.send_group_id} 详情失败`);
+    }
+  }
+
+  const [ip, port] = record.ip_address?.split(':') || ['', ''];
+  const parseItems = (items: string[] | undefined) =>
+    items?.length && items[0] !== ''
+      ? items.map((item) => {
+          const [labelKey, labelValue] = item.split(',');
+          return { key: Date.now() + Math.random(), labelKey, labelValue };
+        })
+      : [{ key: Date.now(), labelKey: '', labelValue: '' }];
+
+  Object.assign(editForm, {
+    id: record.id,
+    name: record.name,
+    pool_id: record.pool_id,
+    send_group_id: record.send_group_id,
+    ip,
+    port,
+    enableSwitch: record.enable === ENABLE_STATUS.ENABLED,
+    expr: record.expr,
+    severity: record.severity,
+    for_time: record.for_time,
+    labels: parseItems(record.labels),
+    annotations: parseItems(record.annotations),
+    grafana_link: record.grafana_link || '',
+  });
+  isEditModalVisible.value = true;
+  detailModalVisible.value = false;
+};
+
+const closeEditModal = () => {
+  isEditModalVisible.value = false;
+};
+
+const showDetailModal = (record: MonitorAlertRule) => {
+  currentRecord.value = record;
+  detailModalVisible.value = true;
+};
+
+const closeDetailModal = () => {
+  detailModalVisible.value = false;
+  currentRecord.value = null;
+};
+
+// --- 表单操作 ---
+const resetAddForm = () => {
+  Object.assign(addForm, createInitialForm());
+};
+
+const formatItemsForApi = (items: LabelOrAnnotationItem[]) => {
+  return items
+    .filter((item) => item.labelKey && item.labelValue)
+    .map((item) => `${item.labelKey},${item.labelValue}`);
+};
+
+const handleAdd = async () => {
+  try {
+    await addFormRef.value?.validate();
+    const apiData: CreateMonitorAlertRuleReq = {
+      ...addForm,
+      ip_address: `${addForm.ip}:${addForm.port}`,
+      pool_id: addForm.pool_id!,
+      send_group_id: addForm.send_group_id!,
+      severity: addForm.severity!,
+      labels: formatItemsForApi(addForm.labels),
+      annotations: formatItemsForApi(addForm.annotations),
+      grafana_link: addForm.grafana_link,
+    };
+    await createMonitorAlertRuleApi(apiData);
+    message.success('新增成功');
+    closeAddModal();
+    fetchAlertRules();
+  } catch (error: any) {
+    handleApiError(error, '操作失败');
+  }
+};
+
+const handleEdit = async () => {
+  try {
+    await editFormRef.value?.validate();
+    const apiData: UpdateMonitorAlertRuleReq = {
+      ...editForm,
+      ip_address: `${editForm.ip}:${editForm.port}`,
+      enable: editForm.enableSwitch
+        ? ENABLE_STATUS.ENABLED
+        : ENABLE_STATUS.DISABLED,
+      pool_id: editForm.pool_id!,
+      send_group_id: editForm.send_group_id!,
+      severity: editForm.severity!,
+      labels: formatItemsForApi(editForm.labels),
+      annotations: formatItemsForApi(editForm.annotations),
+      grafana_link: editForm.grafana_link,
+    };
+    await updateMonitorAlertRuleApi(apiData);
+    message.success('更新成功');
+    closeEditModal();
+    fetchAlertRules();
+  } catch (error: any) {
+    handleApiError(error, '操作失败');
+  }
+};
+
+const validateExpression = async (expr: string) => {
+  if (!expr) {
+    message.warning('请输入表达式');
+    return;
+  }
+  try {
+    await promqlExprCheckApi({ promql_expr: expr });
+    message.success('表达式验证通过');
+  } catch (error: any) {
+    handleApiError(error, '表达式验证失败');
+  }
+};
+
+// --- 动态表单项 ---
+const addLabel = () =>
+  addForm.labels.push({ key: Date.now(), labelKey: '', labelValue: '' });
+const removeLabel = (item: LabelOrAnnotationItem) => {
+  const index = addForm.labels.indexOf(item);
+  if (index !== -1) addForm.labels.splice(index, 1);
+};
+const addAnnotation = () =>
+  addForm.annotations.push({ key: Date.now(), labelKey: '', labelValue: '' });
+const removeAnnotation = (item: LabelOrAnnotationItem) => {
+  const index = addForm.annotations.indexOf(item);
+  if (index !== -1) addForm.annotations.splice(index, 1);
+};
+const addEditLabel = () =>
+  editForm.labels.push({ key: Date.now(), labelKey: '', labelValue: '' });
+const removeEditLabel = (item: LabelOrAnnotationItem) => {
+  const index = editForm.labels.indexOf(item);
+  if (index !== -1) editForm.labels.splice(index, 1);
+};
+const addEditAnnotation = () =>
+  editForm.annotations.push({ key: Date.now(), labelKey: '', labelValue: '' });
+const removeEditAnnotation = (item: LabelOrAnnotationItem) => {
+  const index = editForm.annotations.indexOf(item);
+  if (index !== -1) editForm.annotations.splice(index, 1);
+};
+
+const severityText = (
+  severity: AlertRuleSeverity | undefined,
+): 'critical' | 'info' | 'warning' => {
+  if (severity === AlertRuleSeverity.Critical) return 'critical';
+  if (severity === AlertRuleSeverity.Warning) return 'warning';
+  return 'info';
+};
+
+const severityLabel = (severity: AlertRuleSeverity | undefined): string => {
+  const text = severityText(severity);
+  if (text === 'critical') return 'Critical';
+  if (text === 'warning') return 'Warning';
+  return 'Info';
+};
+
+const getAlertStatusClass = (record: MonitorAlertRule): string => {
+  if (
+    record.enable === ENABLE_STATUS.ENABLED &&
+    record.severity === AlertRuleSeverity.Critical
+  )
+    return 'status-critical';
+  if (
+    record.enable === ENABLE_STATUS.ENABLED &&
+    record.severity === AlertRuleSeverity.Warning
+  )
+    return 'status-warning';
+  if (record.enable === ENABLE_STATUS.ENABLED) return 'status-enabled';
+  return 'status-disabled';
+};
+
+const getPoolName = (poolId?: number) =>
+  scrapePools.value.find((p) => p.id === poolId)?.name || `ID: ${poolId}`;
+
+const getSendGroupName = (groupId?: number) =>
+  sendGroups.value.find((g) => g.id === groupId)?.name || `ID: ${groupId}`;
+
+const getAvatarColor = (name: string): string => {
+  const colors = [
+    '#1890ff',
+    '#52c41a',
+    '#faad14',
+    '#f5222d',
+    '#722ed1',
+    '#13c2c2',
+    '#eb2f96',
+    '#fa8c16',
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length]!;
+};
+
+const getInitials = (name?: string): string => {
+  if (!name) return '';
+  return name.slice(0, 2).toUpperCase();
+};
+
+const formatDate = (dateString: string): string => {
+  if (!dateString) return '';
+  return new Date(dateString).toLocaleDateString('zh-CN');
+};
+
+const formatTime = (dateString: string): string => {
+  if (!dateString) return '';
+  return new Date(dateString).toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const formatFullDateTime = (dateString?: string): string => {
+  if (!dateString) return '';
+  return new Date(dateString).toLocaleString('zh-CN');
+};
+
+// --- 生命周期 ---
+onMounted(() => {
+  fetchAlertRules();
+});
+</script>
+
 <template>
   <OpsPage description="维护告警表达式、严重性与通知分组" title="告警规则">
     <!-- 页面标题 -->
@@ -858,681 +1533,6 @@
     </a-modal>
   </OpsPage>
 </template>
-
-<script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { useListRequest } from './useListRequest';
-
-import { computed, onMounted, reactive, ref } from 'vue';
-import { message, Modal } from 'ant-design-vue';
-import {
-  DownOutlined,
-  MinusCircleOutlined,
-  PlusOutlined,
-} from '@ant-design/icons-vue';
-import { Icon } from '@iconify/vue';
-import { useDebounceFn } from '@vueuse/core';
-import {
-  AlertRuleSeverity,
-  createMonitorAlertRuleApi,
-  type CreateMonitorAlertRuleReq,
-  deleteMonitorAlertRuleApi,
-  getMonitorAlertRuleListApi,
-  type GetMonitorAlertRuleListReq,
-  type MonitorAlertRule,
-  promqlExprCheckApi,
-  updateMonitorAlertRuleApi,
-  type UpdateMonitorAlertRuleReq,
-} from '#/api/core/prometheus/prometheus_alert_rule';
-import {
-  getMonitorAlertManagerPoolApi,
-  getMonitorAlertManagerPoolListApi,
-  type MonitorAlertManagerPool,
-} from '#/api/core/prometheus/prometheus_alert_pool';
-import {
-  getMonitorSendGroupDetailApi,
-  getMonitorSendGroupListApi,
-  type MonitorSendGroup,
-} from '#/api/core/prometheus/prometheus_send_group';
-
-import { usePermission } from '#/utils/permission';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
-
-const { can } = usePermission();
-
-const ENABLE_STATUS = {
-  ENABLED: 1,
-  DISABLED: 2,
-} as const;
-
-// --- 类型定义 ---
-interface LabelOrAnnotationItem {
-  key: number;
-  labelKey: string;
-  labelValue: string;
-}
-
-// --- 分页状态 ---
-const poolPagination = reactive({
-  current: 1,
-  pageSize: 20,
-  total: 0,
-});
-
-const sendGroupPagination = reactive({
-  current: 1,
-  pageSize: 20,
-  total: 0,
-});
-
-const poolLoading = ref(false);
-const sendGroupLoading = ref(false);
-
-const createInitialForm = () => ({
-  name: '',
-  pool_id: undefined as number | undefined,
-  send_group_id: undefined as number | undefined,
-  ip: '',
-  port: '',
-  expr: '',
-  severity: undefined as AlertRuleSeverity | undefined,
-  for_time: '10s',
-  labels: [
-    { key: Date.now(), labelKey: '', labelValue: '' },
-  ] as LabelOrAnnotationItem[],
-  annotations: [
-    { key: Date.now(), labelKey: '', labelValue: '' },
-  ] as LabelOrAnnotationItem[],
-  grafana_link: '',
-});
-
-const handleApiError = (error: any, defaultMessage: string) => {
-  const errorMessage =
-    error?.response?.data?.message || error.message || defaultMessage;
-  // 请求层已提示（403、业务错误、HTTP / 网络错误）或取消类：页面不再提示（FE-02b）
-  if (!shouldNotifyPageError(error)) return;
-  message.error(errorMessage);
-};
-
-// --- 响应式状态 ---
-const loading = ref(false);
-const { loadError, beginRequest } = useListRequest(loading);
-const data = ref<MonitorAlertRule[]>([]);
-const scrapePools = ref<MonitorAlertManagerPool[]>([]);
-const sendGroups = ref<MonitorSendGroup[]>([]);
-const addFormRef = ref();
-const editFormRef = ref();
-const currentRecord = ref<MonitorAlertRule | null>(null);
-
-// --- 筛选与分页 ---
-const searchParams = reactive({
-  search: '',
-  severity: undefined as AlertRuleSeverity | undefined,
-  enable: undefined as number | undefined,
-});
-
-const paginationConfig = reactive({
-  current: 1,
-  pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
-  showQuickJumper: true,
-  showTotal: (total: number) => `共 ${total} 条记录`,
-  size: 'default' as const,
-});
-
-// --- 统计数据 ---
-const stats = computed(() => ({
-  total: paginationConfig.total,
-  critical: data.value.filter(
-    (item) => item.severity === AlertRuleSeverity.Critical,
-  ).length,
-  warning: data.value.filter(
-    (item) => item.severity === AlertRuleSeverity.Warning,
-  ).length,
-  enabled: data.value.filter((item) => item.enable === ENABLE_STATUS.ENABLED)
-    .length,
-}));
-
-// --- 模态框状态 ---
-const isAddModalVisible = ref(false);
-const isEditModalVisible = ref(false);
-const detailModalVisible = ref(false);
-
-// --- 表单 ---
-const addForm = reactive(createInitialForm());
-
-const editForm = reactive({
-  id: 0,
-  name: '',
-  pool_id: undefined as number | undefined,
-  send_group_id: undefined as number | undefined,
-  ip: '',
-  port: '',
-  enableSwitch: true,
-  expr: '',
-  severity: undefined as AlertRuleSeverity | undefined,
-  for_time: '',
-  labels: [] as LabelOrAnnotationItem[],
-  annotations: [] as LabelOrAnnotationItem[],
-  grafana_link: '',
-});
-
-const formRules = {
-  name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
-  pool_id: [{ required: true, message: '请选择所属实例池', trigger: 'change' }],
-  ip_address: [
-    {
-      required: true,
-      validator: () => {
-        const form = isEditModalVisible.value ? editForm : addForm;
-        if (!form.ip || !form.port) {
-          return Promise.reject('请输入IP地址和端口');
-        }
-        return Promise.resolve();
-      },
-      trigger: 'blur',
-    },
-  ],
-  expr: [{ required: true, message: '请输入PromQL表达式', trigger: 'blur' }],
-  severity: [{ required: true, message: '请选择严重性', trigger: 'change' }],
-  for_time: [{ required: true, message: '请输入持续时间', trigger: 'blur' }],
-};
-
-// --- 响应式布局 ---
-const formDialogWidth = computed(() => {
-  if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
-    if (width < 768) return '95%';
-    if (width < 1024) return '90%';
-    return '900px';
-  }
-  return '900px';
-});
-
-const previewDialogWidth = computed(() => {
-  if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
-    if (width < 768) return '95%';
-    if (width < 1024) return '90%';
-    return '80%';
-  }
-  return '80%';
-});
-
-// --- 列定义 ---
-const columns = [
-  {
-    title: 'AlertRule名称',
-    dataIndex: 'name',
-    key: 'name',
-    width: 200,
-    fixed: 'left',
-  },
-  {
-    title: '表达式',
-    dataIndex: 'expr',
-    key: 'expr',
-    width: 250,
-    ellipsis: true,
-  },
-  {
-    title: '严重性',
-    dataIndex: 'severity',
-    key: 'severity',
-    width: 100,
-    align: 'center' as const,
-  },
-  {
-    title: '启用状态',
-    dataIndex: 'enable',
-    key: 'enable',
-    width: 100,
-    align: 'center' as const,
-  },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: 220 },
-  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 220 },
-  { title: '实例配置', key: 'pool_config', width: 180 },
-  {
-    title: '创建人',
-    dataIndex: 'create_user_name',
-    key: 'creator',
-    width: 120,
-  },
-  { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
-  {
-    title: '操作',
-    key: 'action',
-    width: 200,
-    align: 'center' as const,
-    fixed: 'right',
-  },
-];
-
-// --- 标签显示函数 ---
-const getDisplayLabels = (labels: string[]) => {
-  if (!labels || labels.length === 0 || labels[0] === '') return [];
-  return labels.slice(0, 2);
-};
-
-const getDisplayAnnotations = (annotations: string[]) => {
-  if (!annotations || annotations.length === 0 || annotations[0] === '')
-    return [];
-  return annotations.slice(0, 2);
-};
-
-// --- API 调用 ---
-const fetchAlertRules = async () => {
-  const request = beginRequest();
-  try {
-    const params: GetMonitorAlertRuleListReq = {
-      page: paginationConfig.current,
-      size: paginationConfig.pageSize,
-      search: searchParams.search || undefined,
-      severity: searchParams.severity,
-      enable: searchParams.enable,
-    };
-    const response = await getMonitorAlertRuleListApi(params);
-    if (!request.isCurrent()) return;
-    data.value = response.items || [];
-    paginationConfig.total = response.total || 0;
-  } catch (error: any) {
-    if (!request.fail(error, '加载告警规则列表失败')) return;
-    data.value = [];
-    paginationConfig.total = 0;
-    if (shouldNotifyPageError(error)) message.error(loadError.value);
-  } finally {
-    request.finish();
-  }
-};
-
-const fetchScrapePools = async (page = 1, size = 20) => {
-  poolLoading.value = true;
-  try {
-    const response = await getMonitorAlertManagerPoolListApi({ page, size });
-    const items = response.items || [];
-    if (page === 1) {
-      scrapePools.value = items;
-    } else {
-      scrapePools.value.push(...items);
-    }
-    poolPagination.total = response.total || 0;
-    poolPagination.current = page;
-  } catch (error: any) {
-    handleApiError(error, '获取实例池数据失败');
-  } finally {
-    poolLoading.value = false;
-  }
-};
-
-const fetchSendGroups = async (page = 1, size = 20) => {
-  sendGroupLoading.value = true;
-  try {
-    const response = await getMonitorSendGroupListApi({ page, size });
-    const items = response.items || [];
-    if (page === 1) {
-      sendGroups.value = items;
-    } else {
-      sendGroups.value.push(...items);
-    }
-    sendGroupPagination.total = response.total || 0;
-    sendGroupPagination.current = page;
-  } catch (error: any) {
-    handleApiError(error, '获取发送组数据失败');
-  } finally {
-    sendGroupLoading.value = false;
-  }
-};
-
-// --- 分页处理 ---
-const handlePoolScroll = (e: any) => {
-  const { scrollTop, scrollHeight, clientHeight } = e.target;
-  if (
-    scrollTop + clientHeight >= scrollHeight - 10 &&
-    !poolLoading.value &&
-    scrapePools.value.length < poolPagination.total
-  ) {
-    fetchScrapePools(poolPagination.current + 1, poolPagination.pageSize);
-  }
-};
-
-const handleSendGroupScroll = (e: any) => {
-  const { scrollTop, scrollHeight, clientHeight } = e.target;
-  if (
-    scrollTop + clientHeight >= scrollHeight - 10 &&
-    !sendGroupLoading.value &&
-    sendGroups.value.length < sendGroupPagination.total
-  ) {
-    fetchSendGroups(
-      sendGroupPagination.current + 1,
-      sendGroupPagination.pageSize,
-    );
-  }
-};
-
-const onPoolDropdownChange = (open: boolean) => {
-  if (open && scrapePools.value.length === 0) {
-    fetchScrapePools(1, poolPagination.pageSize);
-  }
-};
-
-const onSendGroupDropdownChange = (open: boolean) => {
-  if (open && sendGroups.value.length === 0) {
-    fetchSendGroups(1, sendGroupPagination.pageSize);
-  }
-};
-
-// --- 事件处理 ---
-const handleTableChange = (pagination: {
-  current: number;
-  pageSize: number;
-}) => {
-  paginationConfig.current = pagination.current;
-  paginationConfig.pageSize = pagination.pageSize;
-  fetchAlertRules();
-};
-
-const handleSearch = useDebounceFn(() => {
-  paginationConfig.current = 1;
-  fetchAlertRules();
-}, 300);
-
-const handleReset = () => {
-  searchParams.search = '';
-  searchParams.severity = undefined;
-  searchParams.enable = undefined;
-  paginationConfig.current = 1;
-  fetchAlertRules();
-};
-
-const handleMenuClick = (key: string, record: MonitorAlertRule) => {
-  if (key === 'delete' && record.id != null) {
-    handleDelete(record.id);
-  }
-};
-
-const handleDelete = (id: number) => {
-  Modal.confirm({
-    title: '确认删除',
-    content: '您确定要删除这条告警规则吗？此操作不可撤销。',
-    okText: '确认',
-    cancelText: '取消',
-    onOk: async () => {
-      try {
-        await deleteMonitorAlertRuleApi(id);
-        message.success('删除成功');
-        fetchAlertRules();
-      } catch (error: any) {
-        handleApiError(error, '删除失败');
-      }
-    },
-  });
-};
-
-// --- 模态框操作 ---
-const showAddModal = () => {
-  resetAddForm();
-  isAddModalVisible.value = true;
-};
-
-const closeAddModal = () => {
-  isAddModalVisible.value = false;
-};
-
-const showEditModal = async (record: MonitorAlertRule) => {
-  // --- 确保关联数据显示 ---
-  // 确保关联的实例池在选项列表中，以便正确显示名称
-  if (
-    record.pool_id &&
-    !scrapePools.value.some((p) => p.id === record.pool_id)
-  ) {
-    try {
-      const pool = await getMonitorAlertManagerPoolApi(record.pool_id);
-      if (pool) {
-        // 使用 unshift 将其添加到列表开头，以便用户能立即看到
-        scrapePools.value.unshift(pool);
-      }
-    } catch (error) {
-      handleApiError(error, `加载实例池 ${record.pool_id} 详情失败`);
-    }
-  }
-
-  // 确保关联的发送组在选项列表中
-  if (
-    record.send_group_id &&
-    !sendGroups.value.some((g) => g.id === record.send_group_id)
-  ) {
-    try {
-      const group = await getMonitorSendGroupDetailApi(record.send_group_id);
-      if (group) {
-        sendGroups.value.unshift(group);
-      }
-    } catch (error) {
-      handleApiError(error, `加载发送组 ${record.send_group_id} 详情失败`);
-    }
-  }
-
-  const [ip, port] = record.ip_address?.split(':') || ['', ''];
-  const parseItems = (items: string[] | undefined) =>
-    items?.length && items[0] !== ''
-      ? items.map((item) => {
-          const [labelKey, labelValue] = item.split(',');
-          return { key: Date.now() + Math.random(), labelKey, labelValue };
-        })
-      : [{ key: Date.now(), labelKey: '', labelValue: '' }];
-
-  Object.assign(editForm, {
-    id: record.id,
-    name: record.name,
-    pool_id: record.pool_id,
-    send_group_id: record.send_group_id,
-    ip,
-    port,
-    enableSwitch: record.enable === ENABLE_STATUS.ENABLED,
-    expr: record.expr,
-    severity: record.severity,
-    for_time: record.for_time,
-    labels: parseItems(record.labels),
-    annotations: parseItems(record.annotations),
-    grafana_link: record.grafana_link || '',
-  });
-  isEditModalVisible.value = true;
-  detailModalVisible.value = false;
-};
-
-const closeEditModal = () => {
-  isEditModalVisible.value = false;
-};
-
-const showDetailModal = (record: MonitorAlertRule) => {
-  currentRecord.value = record;
-  detailModalVisible.value = true;
-};
-
-const closeDetailModal = () => {
-  detailModalVisible.value = false;
-  currentRecord.value = null;
-};
-
-// --- 表单操作 ---
-const resetAddForm = () => {
-  Object.assign(addForm, createInitialForm());
-};
-
-const formatItemsForApi = (items: LabelOrAnnotationItem[]) => {
-  return items
-    .filter((item) => item.labelKey && item.labelValue)
-    .map((item) => `${item.labelKey},${item.labelValue}`);
-};
-
-const handleAdd = async () => {
-  try {
-    await addFormRef.value?.validate();
-    const apiData: CreateMonitorAlertRuleReq = {
-      ...addForm,
-      ip_address: `${addForm.ip}:${addForm.port}`,
-      pool_id: addForm.pool_id!,
-      send_group_id: addForm.send_group_id!,
-      severity: addForm.severity!,
-      labels: formatItemsForApi(addForm.labels),
-      annotations: formatItemsForApi(addForm.annotations),
-      grafana_link: addForm.grafana_link,
-    };
-    await createMonitorAlertRuleApi(apiData);
-    message.success('新增成功');
-    closeAddModal();
-    fetchAlertRules();
-  } catch (error: any) {
-    handleApiError(error, '操作失败');
-  }
-};
-
-const handleEdit = async () => {
-  try {
-    await editFormRef.value?.validate();
-    const apiData: UpdateMonitorAlertRuleReq = {
-      ...editForm,
-      ip_address: `${editForm.ip}:${editForm.port}`,
-      enable: editForm.enableSwitch
-        ? ENABLE_STATUS.ENABLED
-        : ENABLE_STATUS.DISABLED,
-      pool_id: editForm.pool_id!,
-      send_group_id: editForm.send_group_id!,
-      severity: editForm.severity!,
-      labels: formatItemsForApi(editForm.labels),
-      annotations: formatItemsForApi(editForm.annotations),
-      grafana_link: editForm.grafana_link,
-    };
-    await updateMonitorAlertRuleApi(apiData);
-    message.success('更新成功');
-    closeEditModal();
-    fetchAlertRules();
-  } catch (error: any) {
-    handleApiError(error, '操作失败');
-  }
-};
-
-const validateExpression = async (expr: string) => {
-  if (!expr) {
-    message.warning('请输入表达式');
-    return;
-  }
-  try {
-    await promqlExprCheckApi({ promql_expr: expr });
-    message.success('表达式验证通过');
-  } catch (error: any) {
-    handleApiError(error, '表达式验证失败');
-  }
-};
-
-// --- 动态表单项 ---
-const addLabel = () =>
-  addForm.labels.push({ key: Date.now(), labelKey: '', labelValue: '' });
-const removeLabel = (item: LabelOrAnnotationItem) => {
-  const index = addForm.labels.indexOf(item);
-  if (index !== -1) addForm.labels.splice(index, 1);
-};
-const addAnnotation = () =>
-  addForm.annotations.push({ key: Date.now(), labelKey: '', labelValue: '' });
-const removeAnnotation = (item: LabelOrAnnotationItem) => {
-  const index = addForm.annotations.indexOf(item);
-  if (index !== -1) addForm.annotations.splice(index, 1);
-};
-const addEditLabel = () =>
-  editForm.labels.push({ key: Date.now(), labelKey: '', labelValue: '' });
-const removeEditLabel = (item: LabelOrAnnotationItem) => {
-  const index = editForm.labels.indexOf(item);
-  if (index !== -1) editForm.labels.splice(index, 1);
-};
-const addEditAnnotation = () =>
-  editForm.annotations.push({ key: Date.now(), labelKey: '', labelValue: '' });
-const removeEditAnnotation = (item: LabelOrAnnotationItem) => {
-  const index = editForm.annotations.indexOf(item);
-  if (index !== -1) editForm.annotations.splice(index, 1);
-};
-
-const severityText = (
-  severity: AlertRuleSeverity | undefined,
-): 'critical' | 'info' | 'warning' => {
-  if (severity === AlertRuleSeverity.Critical) return 'critical';
-  if (severity === AlertRuleSeverity.Warning) return 'warning';
-  return 'info';
-};
-
-const severityLabel = (severity: AlertRuleSeverity | undefined): string => {
-  const text = severityText(severity);
-  if (text === 'critical') return 'Critical';
-  if (text === 'warning') return 'Warning';
-  return 'Info';
-};
-
-const getAlertStatusClass = (record: MonitorAlertRule): string => {
-  if (
-    record.enable === ENABLE_STATUS.ENABLED &&
-    record.severity === AlertRuleSeverity.Critical
-  )
-    return 'status-critical';
-  if (
-    record.enable === ENABLE_STATUS.ENABLED &&
-    record.severity === AlertRuleSeverity.Warning
-  )
-    return 'status-warning';
-  if (record.enable === ENABLE_STATUS.ENABLED) return 'status-enabled';
-  return 'status-disabled';
-};
-
-const getPoolName = (poolId?: number) =>
-  scrapePools.value.find((p) => p.id === poolId)?.name || `ID: ${poolId}`;
-
-const getSendGroupName = (groupId?: number) =>
-  sendGroups.value.find((g) => g.id === groupId)?.name || `ID: ${groupId}`;
-
-const getAvatarColor = (name: string): string => {
-  const colors = [
-    '#1890ff',
-    '#52c41a',
-    '#faad14',
-    '#f5222d',
-    '#722ed1',
-    '#13c2c2',
-    '#eb2f96',
-    '#fa8c16',
-  ];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length]!;
-};
-
-const getInitials = (name?: string): string => {
-  if (!name) return '';
-  return name.slice(0, 2).toUpperCase();
-};
-
-const formatDate = (dateString: string): string => {
-  if (!dateString) return '';
-  return new Date(dateString).toLocaleDateString('zh-CN');
-};
-
-const formatTime = (dateString: string): string => {
-  if (!dateString) return '';
-  return new Date(dateString).toLocaleTimeString('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
-const formatFullDateTime = (dateString?: string): string => {
-  if (!dateString) return '';
-  return new Date(dateString).toLocaleString('zh-CN');
-};
-
-// --- 生命周期 ---
-onMounted(() => {
-  fetchAlertRules();
-});
-</script>
 
 <style scoped>
 .search-filters {
