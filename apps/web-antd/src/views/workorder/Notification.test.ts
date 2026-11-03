@@ -2,6 +2,7 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import Antd, { message, Modal } from 'ant-design-vue';
 import { markRequestLayerNotice } from '#/utils/permission/request-notice';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createDeferred } from '../../../../../internal/test-utils/deferred';
 import Notification from './Notification.vue';
 
 function required<T>(value: null | T | undefined): T {
@@ -120,7 +121,7 @@ describe('通知配置真实控件', () => {
   });
   it('迟到查询不能覆盖新筛选', async () => {
     await flushPromises();
-    const pending = Promise.withResolvers<any>();
+    const pending = createDeferred<any>();
     client.get.mockReturnValueOnce(pending.promise);
     await query();
     client.get.mockResolvedValueOnce({
@@ -183,7 +184,7 @@ describe('通知配置真实控件', () => {
   it('测试发送只提交明确渠道与地址，处理中连续确认不会重复发送', async () => {
     await flushPromises();
     await menu('测试发送');
-    const pending = Promise.withResolvers<any>();
+    const pending = createDeferred<any>();
     client.post.mockReturnValueOnce(pending.promise);
     const input = required(
       document.querySelector<HTMLInputElement>(

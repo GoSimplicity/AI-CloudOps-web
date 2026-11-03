@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  shallowReactive,
+  watch,
+} from 'vue';
 
 import { useUserStore } from '@vben/stores';
 import OpsPage from '#/components/ops/OpsPage.vue';
@@ -80,10 +88,11 @@ import {
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
 
-const { can } = usePermission();
+const { can, hasPerm } = usePermission();
 
 // 表单ref
 const formRef = ref<FormInstance>();
+const manualSendFormRef = ref<FormInstance>();
 
 const { width: viewportWidth } = useWindowSize();
 
@@ -204,6 +213,22 @@ let formEpoch = 0;
 let formOwner: string | undefined;
 let formValidationEpoch: number | undefined;
 let disposed = false;
+let testSendEpoch = 0;
+let testSendOwner: string | undefined;
+let testSendTarget: Notification | undefined;
+let testSendListEpoch = 0;
+let manualSendEpoch = 0;
+let manualSendOwner: string | undefined;
+let manualValidationEpoch: number | undefined;
+const statusTickets = shallowReactive(
+  new Map<number, { record: { statusLoading?: boolean } & Notification }>(),
+);
+
+function clearStatusTickets(): void {
+  for (const ticket of statusTickets.values())
+    ticket.record.statusLoading = false;
+  statusTickets.clear();
+}
 
 const validNotificationId = (id: unknown): id is number =>
   typeof id === 'number' && Number.isSafeInteger(id) && id > 0;
@@ -1116,27 +1141,56 @@ const handleStatusToggle = async (
   record: Notification & { statusLoading?: boolean },
   checked: boolean,
 ): Promise<void> => {
-  if (!record.id) {
-    message.error('通知配置ID不存在');
+  const id = record.id;
+  const owner = notificationOwner();
+  if (
+    disposed ||
+    !owner ||
+    !hasPerm('/api/workorder/notification/update/:id') ||
+    typeof checked !== 'boolean'
+  )
+    return;
+  if (!validNotificationId(id)) {
+    message.error('通知配置ID不存在或无效');
     return;
   }
-
+  if (statusTickets.has(id)) return;
+  const ticket = { record };
+  const listEpoch = listRequest;
+  const details = detailRequest;
+  const fromDetail =
+    detailDialogVisible.value && detailDialog.notification === record;
+  const isCurrent = () =>
+    !disposed &&
+    notificationOwner() === owner &&
+    statusTickets.get(id) === ticket &&
+    record.id === id &&
+    listRequest === listEpoch &&
+    detailRequest === details &&
+    hasPerm('/api/workorder/notification/update/:id') &&
+    (!fromDetail ||
+      (detailDialogVisible.value && detailDialog.notification === record));
+  statusTickets.set(id, ticket);
   record.statusLoading = true;
   const newStatus = checked
     ? NotificationStatus.Enabled
     : NotificationStatus.Disabled;
-
   try {
-    await updateNotificationStatus(record.id, newStatus);
+    await updateNotificationStatus(id, newStatus);
+    if (!isCurrent()) return;
     record.status = newStatus;
-    await loadNotifications();
     const statusText =
       newStatus === NotificationStatus.Enabled ? '启用' : '禁用';
     message.success(`通知配置已${statusText}`);
-  } catch (error) {
-    if (shouldNotifyPageError(error)) message.error('更新状态失败');
+    await loadNotifications();
+  } catch (error: unknown) {
+    if (isCurrent() && shouldNotifyPageError(error))
+      message.error('更新状态失败');
   } finally {
-    record.statusLoading = false;
+    if (statusTickets.get(id) === ticket) {
+      statusTickets.delete(id);
+      record.statusLoading = false;
+    }
   }
 };
 
@@ -1174,66 +1228,136 @@ const testSendDialog = reactive({
   recipient: '',
   error: '',
 });
+function invalidateTestSend(): void {
+  ++testSendEpoch;
+  testSendOwner = undefined;
+  testSendTarget = undefined;
+  testSendDialog.visible = false;
+  testSendDialog.sending = false;
+  testSendDialog.notificationId = 0;
+  testSendDialog.channels = [];
+  testSendDialog.channel = '';
+  testSendDialog.recipient = '';
+  testSendDialog.error = '';
+}
+
 const handleTestSend = (record: Notification): void => {
-  if (
-    !record.channels.some((channel) => ['email', 'feishu'].includes(channel))
-  ) {
+  const owner = notificationOwner();
+  if (disposed || !owner || !can('workorder.notification.testSend')) return;
+  if (!validNotificationId(record.id)) {
+    message.error('通知配置ID不存在或无效');
+    return;
+  }
+  const channels = Array.isArray(record.channels)
+    ? record.channels.filter((channel) => ['email', 'feishu'].includes(channel))
+    : [];
+  if (channels.length === 0) {
     message.info('站内消息通过工单事件投递，暂不支持试发');
     return;
   }
+  invalidateTestSend();
+  testSendOwner = owner;
+  testSendTarget = record;
+  testSendListEpoch = listRequest;
   testSendDialog.notificationId = record.id;
-  testSendDialog.channels = record.channels.filter((channel) =>
-    ['email', 'feishu'].includes(channel),
-  );
-  testSendDialog.channel = testSendDialog.channels[0] || '';
-  testSendDialog.recipient = '';
-  testSendDialog.error = '';
+  testSendDialog.channels = channels;
+  testSendDialog.channel = channels[0] || '';
   testSendDialog.visible = true;
 };
-const closeTestSend = () => {
+const closeTestSend = (): void => {
   if (testSendDialog.sending) return;
-  testSendDialog.visible = false;
-  testSendDialog.recipient = '';
+  invalidateTestSend();
 };
-const confirmTestSend = async () => {
+const confirmTestSend = async (): Promise<void> => {
+  if (disposed || testSendDialog.sending || !testSendDialog.visible) return;
+  const owner = testSendOwner;
+  const target = testSendTarget;
+  const id = testSendDialog.notificationId;
+  const channel = testSendDialog.channel;
+  const recipient = testSendDialog.recipient;
   if (
-    testSendDialog.sending ||
-    !testSendDialog.channel ||
-    !testSendDialog.recipient.trim()
+    !owner ||
+    owner !== notificationOwner() ||
+    !target ||
+    target.id !== id ||
+    !validNotificationId(id) ||
+    testSendListEpoch !== listRequest ||
+    !can('workorder.notification.testSend')
   )
     return;
+  if (
+    typeof channel !== 'string' ||
+    typeof recipient !== 'string' ||
+    !['email', 'feishu'].includes(channel) ||
+    !testSendDialog.channels.includes(channel) ||
+    !Array.isArray(target.channels) ||
+    !target.channels.includes(channel) ||
+    !recipient.trim()
+  )
+    return;
+  const epoch = testSendEpoch;
+  const isCurrent = () =>
+    !disposed &&
+    testSendDialog.visible &&
+    testSendEpoch === epoch &&
+    testSendOwner === owner &&
+    notificationOwner() === owner &&
+    testSendTarget === target &&
+    target.id === id &&
+    testSendDialog.notificationId === id &&
+    testSendListEpoch === listRequest &&
+    testSendDialog.channel === channel &&
+    testSendDialog.recipient === recipient &&
+    Array.isArray(target.channels) &&
+    target.channels.includes(channel) &&
+    can('workorder.notification.testSend');
   testSendDialog.sending = true;
   testSendDialog.error = '';
   try {
     await testSendNotification({
-      notification_id: testSendDialog.notificationId,
-      channel: testSendDialog.channel,
-      recipient: testSendDialog.recipient.trim(),
+      notification_id: id,
+      channel,
+      recipient: recipient.trim(),
     });
+    if (!isCurrent()) return;
     message.success('测试通知发送成功');
-    testSendDialog.visible = false;
-    testSendDialog.recipient = '';
-  } catch (error) {
-    if (shouldRecordPageError(error))
+    invalidateTestSend();
+  } catch (error: unknown) {
+    if (isCurrent() && shouldRecordPageError(error))
       testSendDialog.error = '测试发送失败，请核对渠道配置与接收地址';
   } finally {
-    testSendDialog.sending = false;
+    if (testSendEpoch === epoch) testSendDialog.sending = false;
   }
 };
 
-const handleManualSend = (record: Notification): void => {
-  // 重置表单数据
+function invalidateManualSend(): void {
+  ++manualSendEpoch;
+  manualSendOwner = undefined;
+  manualSendDialogVisible.value = false;
   manualSendDialog.saving = false;
   manualSendDialog.form = {
-    channels: (record.channels || []).filter((channel) =>
-      ['email', 'feishu'].includes(channel),
-    ),
+    channels: [],
+    recipient: '',
+    subject: '',
+    content: '',
+  };
+}
+
+const handleManualSend = (record: Notification): void => {
+  const owner = notificationOwner();
+  if (disposed || !owner || !can('workorder.notification.manualSend')) return;
+  invalidateManualSend();
+  manualSendOwner = owner;
+  manualSendDialog.form = {
+    channels: Array.isArray(record.channels)
+      ? record.channels.filter((channel) =>
+          ['email', 'feishu'].includes(channel),
+        )
+      : [],
     recipient: '',
     subject: record.subject_template || 'AI-CloudOps 工单通知',
     content: record.message_template || '',
   };
-
-  // 显示对话框
   manualSendDialogVisible.value = true;
 };
 
@@ -1600,92 +1724,146 @@ const closeLogsDialog = (): void => {
 };
 
 const closeManualSendDialog = (): void => {
-  manualSendDialogVisible.value = false;
-  manualSendDialog.form = {
-    channels: [],
-    recipient: '',
-    subject: '',
-    content: '',
-  };
+  invalidateManualSend();
 };
 
 const saveManualSend = async (): Promise<void> => {
-  if (manualSendDialog.saving) return;
-  if (manualSendDialog.form.channels.length === 0) {
-    message.error('请选择至少一个通知渠道');
+  if (
+    disposed ||
+    manualSendDialog.saving ||
+    manualValidationEpoch === manualSendEpoch ||
+    !manualSendDialogVisible.value
+  )
+    return;
+  const owner = manualSendOwner;
+  const form = manualSendFormRef.value;
+  const model = manualSendDialog.form;
+  if (
+    !owner ||
+    owner !== notificationOwner() ||
+    !can('workorder.notification.manualSend')
+  )
+    return;
+  if (!form || typeof form.validate !== 'function') {
+    message.warning('发送表单尚未就绪，请稍后重试');
     return;
   }
-
-  if (!manualSendDialog.form.recipient.trim()) {
+  const epoch = manualSendEpoch;
+  const fingerprint = JSON.stringify(model);
+  const isCurrent = () =>
+    !disposed &&
+    manualSendDialogVisible.value &&
+    manualSendEpoch === epoch &&
+    manualSendOwner === owner &&
+    notificationOwner() === owner &&
+    manualSendDialog.form === model &&
+    JSON.stringify(model) === fingerprint &&
+    can('workorder.notification.manualSend');
+  manualValidationEpoch = epoch;
+  try {
+    await form.validate();
+  } catch {
+    return;
+  } finally {
+    if (manualValidationEpoch === epoch) manualValidationEpoch = undefined;
+  }
+  if (!isCurrent() || manualSendDialog.saving) return;
+  if (
+    !Array.isArray(model.channels) ||
+    model.channels.length === 0 ||
+    model.channels.some((channel) => !['email', 'feishu'].includes(channel))
+  ) {
+    message.error('请选择邮件或飞书通知渠道');
+    return;
+  }
+  if (typeof model.recipient !== 'string' || !model.recipient.trim()) {
     message.error('请输入接收人地址');
     return;
   }
-
-  if (!manualSendDialog.form.subject.trim()) {
+  if (typeof model.subject !== 'string' || !model.subject.trim()) {
     message.error('请输入通知主题');
     return;
   }
-
-  if (!manualSendDialog.form.content.trim()) {
+  if (typeof model.content !== 'string' || !model.content.trim()) {
     message.error('请输入通知内容');
     return;
   }
-
+  const sendData: ManualSendNotificationReq = {
+    channels: [...model.channels],
+    recipient: model.recipient.trim(),
+    subject: model.subject.trim(),
+    content: model.content.trim(),
+  };
   manualSendDialog.saving = true;
-
   try {
-    const sendData: ManualSendNotificationReq = {
-      channels: manualSendDialog.form.channels,
-      recipient: manualSendDialog.form.recipient.trim(),
-      subject: manualSendDialog.form.subject.trim(),
-      content: manualSendDialog.form.content.trim(),
-    };
     await sendNotificationManually(sendData);
-
+    if (!isCurrent()) return;
     message.success('通知发送成功');
-    manualSendDialogVisible.value = false;
-
-    // 重置表单
-    manualSendDialog.form = {
-      channels: [],
-      recipient: '',
-      subject: '',
-      content: '',
-    };
-  } catch (error: any) {
-    let errorMessage = '发送失败';
-    if (error.message) {
-      if (error.message.includes('timeout') || error.message.includes('超时')) {
+    invalidateManualSend();
+  } catch (error: unknown) {
+    if (isCurrent() && shouldNotifyPageError(error)) {
+      const detail =
+        error &&
+        typeof error === 'object' &&
+        'message' in error &&
+        typeof error.message === 'string'
+          ? error.message
+          : '';
+      let errorMessage = '发送失败';
+      if (detail.includes('timeout') || detail.includes('超时'))
         errorMessage = '发送超时，请检查网络连接或稍后重试';
-      } else if (
-        error.message.includes('network') ||
-        error.message.includes('网络')
-      ) {
+      else if (detail.includes('network') || detail.includes('网络'))
         errorMessage = '网络连接异常，请检查网络后重试';
-      } else if (error.message.includes('403')) {
-        errorMessage = '没有权限执行此操作';
-      } else if (error.message.includes('500')) {
+      else if (detail.includes('403')) errorMessage = '没有权限执行此操作';
+      else if (detail.includes('500'))
         errorMessage = '服务器内部错误，请联系管理员';
-      } else if (
-        error.message.includes('validation') ||
-        error.message.includes('验证')
-      ) {
+      else if (detail.includes('validation') || detail.includes('验证'))
         errorMessage = '数据验证失败，请检查输入内容';
-      } else {
-        errorMessage = `发送失败: ${error.message}`;
-      }
+      else if (detail) errorMessage = `发送失败: ${detail}`;
+      message.error(errorMessage);
     }
-
-    // 请求层已提示（403、已弹原文的业务错误、HTTP / 网络错误）与取消类不再弹；其余错误弹上面拼出的具体原因（incr3：基线写法收口到 shouldNotifyPageError）
-    if (shouldNotifyPageError(error)) message.error(errorMessage);
   } finally {
-    manualSendDialog.saving = false;
+    if (manualSendEpoch === epoch) manualSendDialog.saving = false;
   }
 };
+
+watch(
+  notificationOwner,
+  () => {
+    invalidateTestSend();
+    invalidateManualSend();
+    clearStatusTickets();
+  },
+  { flush: 'sync' },
+);
+watch(
+  () => can('workorder.notification.testSend'),
+  (allowed) => {
+    if (!allowed) invalidateTestSend();
+  },
+  { flush: 'sync' },
+);
+watch(
+  () => can('workorder.notification.manualSend'),
+  (allowed) => {
+    if (!allowed) invalidateManualSend();
+  },
+  { flush: 'sync' },
+);
+watch(
+  () => hasPerm('/api/workorder/notification/update/:id'),
+  (allowed) => {
+    if (!allowed) clearStatusTickets();
+  },
+  { flush: 'sync' },
+);
 
 // 生命周期
 onBeforeUnmount(() => {
   disposed = true;
+  invalidateTestSend();
+  invalidateManualSend();
+  clearStatusTickets();
   formOwner = undefined;
   ++listRequest;
   ++logsRequest;
@@ -1908,7 +2086,8 @@ onMounted(() => {
             <template v-if="column.key === 'status'">
               <a-switch
                 :checked="record.status === NotificationStatus.Enabled"
-                :loading="record.statusLoading"
+                :disabled="!hasPerm('/api/workorder/notification/update/:id')"
+                :loading="statusTickets.has(record.id)"
                 @change="
                   (checked: boolean) => handleStatusToggle(record, checked)
                 "
@@ -1958,10 +2137,16 @@ onMounted(() => {
                 <a-dropdown :trigger="['click']">
                   <template #overlay>
                     <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
-                      <a-menu-item key="test">
+                      <a-menu-item
+                        v-if="can('workorder.notification.testSend')"
+                        key="test"
+                      >
                         <SendOutlined /> 测试发送
                       </a-menu-item>
-                      <a-menu-item key="manual">
+                      <a-menu-item
+                        v-if="can('workorder.notification.manualSend')"
+                        key="manual"
+                      >
                         <MailOutlined /> 手动发送
                       </a-menu-item>
                       <a-menu-item key="logs">
@@ -2740,6 +2925,8 @@ onMounted(() => {
             :checked="
               detailDialog.notification.status === NotificationStatus.Enabled
             "
+            :disabled="!hasPerm('/api/workorder/notification/update/:id')"
+            :loading="statusTickets.has(detailDialog.notification.id)"
             @change="
               (checked: boolean) =>
                 detailDialog.notification &&
@@ -2950,6 +3137,7 @@ onMounted(() => {
         <a-form-item label="发送渠道" required>
           <a-select
             v-model:value="testSendDialog.channel"
+            :disabled="testSendDialog.sending"
             aria-label="测试发送渠道"
           >
             <a-select-option
@@ -2988,6 +3176,7 @@ onMounted(() => {
         type="info"
       />
       <a-form
+        ref="manualSendFormRef"
         :model="manualSendDialog.form"
         :rules="manualSendRules"
         layout="vertical"

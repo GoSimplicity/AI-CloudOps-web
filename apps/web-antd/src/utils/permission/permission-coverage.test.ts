@@ -105,8 +105,6 @@ describe('权限码门禁覆盖（静态）', () => {
         "k8s.statefulset.restart",
         "system.role.revokeApi",
         "system.user.revokeRole",
-        "workorder.notification.manualSend",
-        "workorder.notification.testSend",
       ]
     `);
   });
