@@ -11,8 +11,8 @@ import {
   useTabbarStore,
   useUserStore,
 } from '@vben/stores';
-
 import { resetStaticRoutes } from '@vben/utils';
+
 import { routes } from '#/router/routes';
 
 import { notification } from 'ant-design-vue';

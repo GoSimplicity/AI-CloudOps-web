@@ -3,6 +3,7 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, relative, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+
 import ts from 'typescript';
 
 const root = fileURLToPath(new URL('..', import.meta.url));

@@ -3,6 +3,7 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { reactive } from 'vue';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import AiAssistant from './ai.vue';
 import axios, { AxiosError } from 'axios';
 

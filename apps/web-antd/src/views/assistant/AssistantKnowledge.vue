@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { onMounted, reactive, ref } from 'vue';
+
 import { message, Upload, type UploadProps } from 'ant-design-vue';
 import {
   CheckCircleOutlined,
@@ -12,6 +13,7 @@ import {
   NodeIndexOutlined,
   ReloadOutlined,
 } from '@ant-design/icons-vue';
+
 import {
   addDocument as addDocumentAPI,
   type AddDocumentRequest,

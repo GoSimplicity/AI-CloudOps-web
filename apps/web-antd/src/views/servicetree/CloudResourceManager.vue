@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
+
 import CloudManagedResources from './CloudManagedResources.vue';
 import { onBeforeUnmount } from 'vue';
-
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
+
 import { Empty, message, Modal } from 'ant-design-vue';
 import {
   ApartmentOutlined,
@@ -82,7 +83,6 @@ import {
   updateTreeCloudResourceApi,
   type UpdateTreeCloudResourceReq,
 } from '#/api/core/tree/tree_cloud';
-
 import {
   type CloudAccount,
   type CloudAccountRegion,
@@ -91,8 +91,8 @@ import {
   getCloudAccountDetailApi,
   getCloudAccountListApi,
 } from '#/api/core/tree/tree_account';
-
 import { getTreeList } from '#/api/core/tree/tree_node';
+
 import { isSupportedAccountProvider } from './cloudaccountmanagement/provider';
 import type { TreeNode } from '#/api/core/tree/tree_local';
 

@@ -20,6 +20,7 @@ import {
 import { type FormInstance, message, Modal } from 'ant-design-vue';
 import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
+
 import {
   createMonitorScrapeJobApi,
   deleteMonitorScrapeJobApi,
@@ -35,7 +36,6 @@ import { getMonitorScrapePoolListApi } from '#/api/core/prometheus/prometheus_sc
 import { getTreeList, type TreeNode } from '#/api/core/tree/tree_node';
 import { useAuthStore } from '#/store';
 import { getAvatarColor } from '#/utils/avatar-color';
-
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 

@@ -1,7 +1,9 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import Antd from 'ant-design-vue';
 import { reactive, ref } from 'vue';
+
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+
 import PredictionBacktest from './PredictionBacktest.vue';
 
 const fixtures = vi.hoisted(() => ({

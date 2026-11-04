@@ -8,7 +8,9 @@ import {
   toRefs,
 } from 'vue';
 import { createMemoryHistory, createRouter } from 'vue-router';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import LayoutContent from './content.vue';
 
 const state = vi.hoisted(() => ({

@@ -12,12 +12,15 @@ import {
 } from 'vue';
 
 import { useUserStore } from '@vben/stores';
+
 import OpsPage from '#/components/ops/OpsPage.vue';
+
 import NotificationEvents from './NotificationEvents.vue';
 import { useWindowSize } from '@vueuse/core';
 import { message, Modal } from 'ant-design-vue';
 import { debounce } from 'lodash-es';
 import dayjs from 'dayjs';
+
 import {
   buildNotificationSchedule,
   notificationScheduleFingerprint,
@@ -37,6 +40,7 @@ import {
   SendOutlined,
   StopOutlined,
 } from '@ant-design/icons-vue';
+
 import {
   createNotification,
   type CreateNotificationReq,
@@ -81,7 +85,6 @@ import {
   type WorkorderCategoryItem,
 } from '#/api/core/workorder/workorder_category';
 import { getUserList, type User } from '#/api/core/system/user';
-
 import { useAuthStore } from '#/store';
 import { isBasicNotificationEmail } from '#/utils/notification-email';
 import { usePermission } from '#/utils/permission';

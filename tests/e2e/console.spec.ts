@@ -1,6 +1,7 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+
 import ts from 'typescript';
 
 import { requireFixtureValue } from '../../internal/test-utils/required-fixture-value';

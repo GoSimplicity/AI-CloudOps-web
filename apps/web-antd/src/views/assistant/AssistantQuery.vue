@@ -7,7 +7,6 @@ import type {
 
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
-
 import { useRouter } from 'vue-router';
 
 import { message } from 'ant-design-vue';
@@ -16,6 +15,7 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
 import { useAccessStore, useUserStore } from '@vben/stores';
+
 import {
   assistantOwner,
   createAssistantAccountScope,

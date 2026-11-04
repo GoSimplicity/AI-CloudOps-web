@@ -1,4 +1,5 @@
 import { defineConfig } from '@vben/vite-config';
+
 import { loadEnv, type ProxyOptions } from 'vite';
 import process from 'node:process';
 import path from 'path'; // 引入 path 模块

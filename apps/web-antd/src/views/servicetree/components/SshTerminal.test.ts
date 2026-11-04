@@ -1,6 +1,7 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 
 import { reactive } from 'vue';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import SshTerminal from './SshTerminal.vue';

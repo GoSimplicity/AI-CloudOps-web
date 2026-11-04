@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
+
 import CollectionSummary from './CollectionSummary.vue';
 import { analysisStatus } from './collection';
 import { useAiRequestScope } from '../assistant/useAiRequestScope';
@@ -35,6 +36,7 @@ import type {
   QuickDiagnosisResponse,
   RCAAnalysisResponse,
 } from '#/api/core/aiops/rca';
+
 import {
   analyzeRootCause,
   getErrorSummary,

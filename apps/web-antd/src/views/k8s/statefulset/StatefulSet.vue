@@ -1,10 +1,14 @@
 <script lang="ts" setup>
 import OpsPage from '#/components/ops/OpsPage.vue';
+
 import { namespacedResourceKey } from '../shared/utils';
 import { onMounted, ref } from 'vue';
+
 import { message, Modal } from 'ant-design-vue';
+
 import { useStatefulSetPage } from './StatefulSet';
 import { rollbackStatefulSetApi } from '#/api/core/k8s/k8s_statefulset';
+
 import { formatDateTime, getRelativeTime } from '../shared/utils';
 import {
   ApiOutlined,

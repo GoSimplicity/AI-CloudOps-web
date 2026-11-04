@@ -1,7 +1,9 @@
 <script lang="ts" setup>
 import OpsPage from '#/components/ops/OpsPage.vue';
+
 import { namespacedResourceKey } from '../shared/utils';
 import { onMounted, ref, watch } from 'vue';
+
 import { useRolePage } from './Role';
 import { formatDateTime, getRelativeTime } from '../shared/utils';
 import {

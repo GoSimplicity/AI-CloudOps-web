@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
+
 import PredictionProvenance from './PredictionProvenance.vue';
 import { formatProbability } from './prediction-display';
 import { useAiRequestScope } from '../assistant/useAiRequestScope';

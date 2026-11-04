@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
+
 import { message, Modal } from 'ant-design-vue';
 import {
   CodeOutlined,
@@ -16,6 +17,7 @@ import {
   UploadOutlined,
   UpOutlined,
 } from '@ant-design/icons-vue';
+
 import FieldConfig from './components/FieldConfig.vue';
 import DynamicForm from './components/DynamicForm.vue';
 import {
@@ -30,6 +32,7 @@ import type {
   ListWorkorderCategoryReq,
   WorkorderCategoryItem,
 } from '#/api/core/workorder/workorder_category';
+
 import { listWorkorderCategory } from '#/api/core/workorder/workorder_category';
 import {
   shouldNotifyPageError,

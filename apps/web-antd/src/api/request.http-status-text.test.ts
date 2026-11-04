@@ -62,7 +62,6 @@ vi.mock('#/store', () => ({
 vi.mock('./core', () => ({ refreshTokenApi }));
 
 import { BUSINESS_ERROR_MESSAGE_KEY_PREFIX } from '#/utils/permission/business-error';
-
 import * as sharedMessages from '#/constants/http-error-messages';
 import {
   getRequestLayerNoticeKey,

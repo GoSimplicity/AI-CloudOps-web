@@ -2,6 +2,7 @@
 import { useUserStore } from '@vben/stores';
 
 import OpsPage from '#/components/ops/OpsPage.vue';
+
 import AccountRegionsEditor from './cloudaccountmanagement/AccountRegionsEditor.vue';
 import {
   CLOUD_ACCOUNT_PERMISSIONS,
@@ -9,8 +10,8 @@ import {
   isSupportedAccountProvider,
 } from './cloudaccountmanagement/provider';
 import { onBeforeUnmount } from 'vue';
-
 import { computed, onMounted, reactive, ref, watch } from 'vue';
+
 import { type FormInstance, message, Modal } from 'ant-design-vue';
 import {
   CheckCircleOutlined,
@@ -54,7 +55,6 @@ import {
 } from '#/api/core/tree/tree_account';
 import { useAuthStore } from '#/store';
 import { downloadCsv } from '#/utils/export-csv';
-
 import { usePermission } from '#/utils/permission';
 import {
   shouldNotifyPageError,

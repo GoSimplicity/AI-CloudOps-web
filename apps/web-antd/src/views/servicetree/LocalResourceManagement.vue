@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { onBeforeUnmount } from 'vue';
-
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
@@ -39,7 +38,6 @@ import {
   updateTreeLocal,
 } from '#/api/core/tree/tree_local';
 import { getTreeList } from '#/api/core/tree/tree_node';
-
 import { useAuthStore } from '#/store';
 import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';

@@ -35,12 +35,10 @@ import {
   updateWorkorderProcess,
   type WorkorderProcessItem,
 } from '#/api/core/workorder/workorder_process';
-
 import {
   listWorkorderCategory,
   type WorkorderCategoryItem,
 } from '#/api/core/workorder/workorder_category';
-
 import {
   FormDesignStatus,
   listWorkorderFormDesign,

@@ -9,15 +9,17 @@ import {
   onScopeDispose,
   ref,
 } from 'vue';
-import { message, Modal } from 'ant-design-vue';
 
+import { message, Modal } from 'ant-design-vue';
 import yaml from 'js-yaml';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
+
 import 'xterm/css/xterm.css';
 import { useAccessStore } from '@vben/stores';
 import { useAppConfig } from '@vben/hooks';
+
 import { websocketProtocols, websocketUrl } from '#/utils/websocket-url';
 import {
   notifyStreamLoginExpired,

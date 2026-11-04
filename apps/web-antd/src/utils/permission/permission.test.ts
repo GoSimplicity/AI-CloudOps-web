@@ -1,5 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia';
 import { useAccessStore, useUserStore } from '@vben/stores';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /** U3 开关：默认取常量文件的真实值，个别用例临时打开以验证「获批后」状态 */

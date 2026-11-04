@@ -1,6 +1,7 @@
 import { shallowMount } from '@vue/test-utils';
 
 import { reactive } from 'vue';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import PredictDashboard from './PredictDashboard.vue';

@@ -26,8 +26,8 @@ import {
   resolveManagedHistory,
   syncManagedResources,
 } from '#/api/core/tree/tree_cloud';
-import CloudManagedOperationsList from './CloudManagedOperationsList.vue';
 
+import CloudManagedOperationsList from './CloudManagedOperationsList.vue';
 import CloudManagedOperationRecovery from './CloudManagedOperationRecovery.vue';
 import {
   type ManagedOperationMarker,

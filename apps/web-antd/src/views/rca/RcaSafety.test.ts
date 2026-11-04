@@ -6,7 +6,9 @@ import {
 } from '@vue/test-utils';
 import Antd, { message } from 'ant-design-vue';
 import { nextTick, reactive } from 'vue';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import RCAAnalysis from './RCAAnalysis.vue';
 import RCADiagnosis from './RCADiagnosis.vue';
 import RCACache from './RCACache.vue';

@@ -12,8 +12,11 @@ import {
   ref,
   watch,
 } from 'vue';
+
 import { useAccessStore } from '@vben/stores';
+
 import { useWindowSize } from '@vueuse/core';
+
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { message, Modal } from 'ant-design-vue';
 import {
@@ -90,7 +93,6 @@ import {
   type ProcessStep,
   type WorkorderProcessItem,
 } from '#/api/core/workorder/workorder_process';
-
 import {
   detailWorkorderFormDesign,
   type DetailWorkorderFormDesignReq,
@@ -98,7 +100,6 @@ import {
   FormFieldType,
   type WorkorderFormDesignItem,
 } from '#/api/core/workorder/workorder_form_design';
-
 import {
   detailWorkorderTemplate,
   listWorkorderTemplate,

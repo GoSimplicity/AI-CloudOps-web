@@ -2,6 +2,7 @@
 import type { FormInstance } from 'ant-design-vue';
 
 import OpsPage from '#/components/ops/OpsPage.vue';
+
 import { useListRequest } from './useListRequest';
 import {
   computed,
@@ -17,6 +18,7 @@ import { useUserStore } from '@vben/stores';
 import { message, Modal } from 'ant-design-vue';
 import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
+
 import {
   createMonitorRecordRuleApi,
   deleteMonitorRecordRuleApi,
@@ -27,7 +29,6 @@ import {
 } from '#/api/core/prometheus/prometheus_alert_record';
 import { getMonitorScrapePoolListApi } from '#/api/core/prometheus/prometheus_scrape_pool';
 import { promqlExprCheckApi } from '#/api/core/prometheus/prometheus_alert_rule';
-
 import { useAuthStore } from '#/store';
 import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';

@@ -1,6 +1,8 @@
 import { createPinia, setActivePinia } from 'pinia';
 import { effectScope, reactive, ref, watch } from 'vue';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { useAuthStore } from './auth';
 import { resetAllStores } from '@vben/stores';
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
+
 import { useListRequest } from './useListRequest';
 
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
@@ -14,6 +15,7 @@ import {
 } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import { useDebounceFn } from '@vueuse/core';
+
 import {
   AlertRuleSeverity,
   createMonitorAlertRuleApi,
@@ -36,7 +38,6 @@ import {
   getMonitorSendGroupListApi,
   type MonitorSendGroup,
 } from '#/api/core/prometheus/prometheus_send_group';
-
 import { useAuthStore } from '#/store';
 import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';

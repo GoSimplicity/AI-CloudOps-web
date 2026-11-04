@@ -931,3 +931,15 @@ MonitorConfig的Name统一为1..255、InstanceKey（历史API字段instance_ip�
 - 原局部方法名变更仍有零净减的首次readonly断言失败与排除记录均保留；最终6文件actual lint442→429 errors，原有v-html warning1→1，逐文件各规则无新增。没有为清规则改变pattern、escape、flags或replacement。
 - 相关consumer与全部K8s回归35文件1418项通过，涵盖评论格式化、AI/account/session、SecretData/Secret、Cloud现有用例；全Web167文件3692项单元测试及应用类型检查通过。ConfigMap模块没有独立命名用例，按约定以既有全K8s与全unit覆盖范围验收，不冒称新增了单项业务测试。
 - 未修改测试逻辑、CI、规则、依赖、lock、MonitorConfig或backend，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。本阶段仅报告目标复扫，不以净减推算新的全仓实扫总量。
+
+## 阶段九十三：保持全部声明原序的import间隔空白
+
+当前定向实扫145文件确认495条sort-imports：147条声明顺序、165条group顺序、148条缺少空行与35条多余空行。wholly import type共有39个声明，仅3个相关group-order命中；保runtime声明原文/相对次序、排注释/指令/region歧义的132个类型提案实际净减仍0，本阶段没有强行移动类型声明或将mixed runtime声明当成type-only。
+
+- 改用严格更窄的空白合同：94文件仅调整179个相邻ImportDeclaration之间的一/两换行，生产63文件141处、测试31文件38处。原183个spacing命中排除MonitorConfig的4处，所有纳入gap均只有空白，不越过comment、ts/eslint指令、region或任何非import语句。包括vite.config.mts与本地layout-inventory工具的import空白，不改变其配置/CI逻辑。
+- 每个import声明（type-only、mixed、value、side-effect）及其specifier、alias、module文字原样，全部statement raw序列和相对次序保持，没有移动运行时模块求值。其它范围字节、全部comment raw序列、测试逻辑/fixture/断言保持；仅原空白区间被替换，没有全文件format或调整规则。
+- source完整TS AST保持。辅助比较使用TypeScript transpileModule固定target/module为ESNext、verbatimModuleSyntax:true、removeComments:true、jsx:Preserve（Vue输入使用proof.ts文件名），在该编译设置下擦除类型后的JS字节及实际SFC编译script经同设置输出的JS字节一致；raw注释序列另行验证。这不是对真实production bundle、产物hash、sourceMap、源位置或所有compiler选项下字节相同的承诺。
+- 所有SFC binding、模板/style和DOM/SSR输出保持；全354个SFC的dev/prod共708组对照使用保存before overlay与实际after磁盘，清除transitive类型/parse缓存，运行JS AST/DOM/SSR均0差异、两侧0错误，真实导入Boolean/String危险control仍能检出。55个编辑SFC本身被读取，另经类型宏实际读取AutoFixWorkflow TS模块；其它38个当前无宏消费，未把直接业务import冒称type宏使用。
+- 落盘前与actualHEAD 5f5bc8f逐文件before完全一致，磁盘与冻结proposal精确匹配。proof的forEachChild callback全部void，非首个第三statement语义mutation必须检出。没有出现静态源码raw比对测试失败，也没有更改任何断言或snapshot消红。
+- actual94文件lint4204→4025 errors，既有warnings5→5，逐文件各规则无新增，目标净减179；全Web167文件3692项单元测试、app类型检查及真实tsconfig.node检查通过。按现有CI命令pnpm build:antd构建11个任务全部成功（10个缓存、应用实际构建）；不以构建成功推断bundle/hash字节保持。本阶段没有重扫全仓或用179减法宣称新的全局总量。
+- 未修改workflow、规则、依赖、lock、MonitorConfig或backend，没有新增镜像测试；未操作preview、数据库、凭据、真实集群或业务API，未上线。

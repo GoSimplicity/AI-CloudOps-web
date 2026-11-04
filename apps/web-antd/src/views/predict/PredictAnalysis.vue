@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
+
 import PredictionProvenance from './PredictionProvenance.vue';
 import PredictionBacktest from './PredictionBacktest.vue';
 import { formatProbability } from './prediction-display';
@@ -53,6 +54,7 @@ import {
   HddOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons-vue';
+
 import {
   type CpuPredictionRequest,
   type DiskPredictionRequest,

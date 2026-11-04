@@ -39,6 +39,7 @@ import {
   NodeIndexOutlined,
   PartitionOutlined,
 } from '@ant-design/icons-vue';
+
 import {
   analyzeRootCause,
   getAllPrometheusMetrics,

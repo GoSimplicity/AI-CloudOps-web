@@ -5,6 +5,7 @@ import { namespacedResourceKey } from '../shared/utils';
 import { onMounted, ref } from 'vue';
 
 import { message, Modal } from 'ant-design-vue';
+
 import { useDeploymentPage } from './Deployment';
 import { rollbackDeploymentApi } from '#/api/core/k8s/k8s_deployment';
 import {
@@ -33,6 +34,7 @@ import {
 
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
 import { useWorkloadRollbackScope } from '../shared/use-workload-rollback-scope';
 
 const { can } = usePermission();

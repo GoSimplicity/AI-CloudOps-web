@@ -1,7 +1,9 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { nextTick, reactive } from 'vue';
+
 import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import AssistantQuery from './AssistantQuery.vue';
 import AssistantSession from './AssistantSession.vue';
 import { createAssistantAccountScope } from '#/utils/assistant-account-scope';

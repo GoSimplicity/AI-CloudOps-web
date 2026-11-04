@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
+
 import { useListRequest } from './useListRequest';
 import {
   computed,
@@ -17,6 +18,7 @@ import { cloneDeep } from '@vben/utils';
 import { type FormInstance, message, Modal } from 'ant-design-vue';
 import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
+
 import {
   createMonitorSendGroupApi,
   type CreateMonitorSendGroupReq,
@@ -38,7 +40,6 @@ import {
   getMonitorOnDutyGroupListApi,
   type MonitorOnDutyGroup,
 } from '#/api/core/prometheus/prometheus_onduty';
-
 import { useAuthStore } from '#/store';
 import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';

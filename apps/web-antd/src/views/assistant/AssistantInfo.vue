@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+
 import { message } from 'ant-design-vue';
 import {
   CalendarOutlined,
@@ -11,6 +12,7 @@ import {
   ReloadOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons-vue';
+
 import {
   clearAssistantCache,
   type ClearCacheResponse,
@@ -21,6 +23,7 @@ import {
 } from '#/api/core/aiops/assistant';
 import { getOwnLookupValue } from '#/utils/own-lookup';
 import { usePermission } from '#/utils/permission';
+
 import { useAiRequestScope } from './useAiRequestScope';
 import {
   shouldNotifyPageError,
