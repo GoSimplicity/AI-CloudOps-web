@@ -2395,11 +2395,10 @@ const saveApproval = async () => {
       if (detailDialog.currentStep?.type === 'end') {
         // 如果是结束步骤，确认是否要完成工单
         Modal.confirm({
-          title: '审批确认',
+          cancelText: '取消',
           content:
             '当前是最后一个审批步骤，审批通过后将完成工单。确定要继续吗？',
           okText: '确定审批并完成',
-          cancelText: '取消',
           onOk: async () => {
             try {
               const params: ApproveWorkorderInstanceReq = {
@@ -2418,6 +2417,7 @@ const saveApproval = async () => {
                 message.error(`审批失败: ${error.message || '未知错误'}`);
             }
           },
+          title: '审批确认',
         });
         return; // 等待用户确认，不继续执行后面的代码
       } else {

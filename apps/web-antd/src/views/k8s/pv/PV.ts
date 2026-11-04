@@ -1078,15 +1078,15 @@ export function usePVPage() {
       createYamlFormModel.value.yaml.trim()
     ) {
       Modal.confirm({
-        title: '确认操作',
-        content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
-        okText: '确认',
         cancelText: '取消',
         centered: true,
+        content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
+        okText: '确认',
         onOk: () => {
           createYamlFormModel.value.yaml = PV_YAML_TEMPLATE;
           message.success('模板已插入');
         },
+        title: '确认操作',
       });
     } else {
       createYamlFormModel.value.yaml = PV_YAML_TEMPLATE;
@@ -1158,7 +1158,7 @@ export function usePVPage() {
 
       if (issues.length > 0) {
         Modal.warning({
-          title: 'YAML 格式检查警告',
+          centered: true,
           content: () =>
             h('div', [
               h('p', 'YAML 语法正确，但发现以下问题：'),
@@ -1168,15 +1168,15 @@ export function usePVPage() {
                 issues.map((issue) => h('li', issue)),
               ),
             ]),
+          title: 'YAML 格式检查警告',
           width: 500,
-          centered: true,
         });
       } else {
         message.success('YAML 格式检查通过，所有必需字段完整');
       }
     } catch (error: any) {
       Modal.error({
-        title: 'YAML 格式检查失败',
+        centered: true,
         content: () =>
           h('div', [
             h(
@@ -1195,8 +1195,8 @@ export function usePVPage() {
               error.message || '未知错误',
             ),
           ]),
+        title: 'YAML 格式检查失败',
         width: 600,
-        centered: true,
       });
     }
   };
@@ -1207,16 +1207,16 @@ export function usePVPage() {
       createYamlFormModel.value.yaml.trim()
     ) {
       Modal.confirm({
-        title: '确认清空',
+        cancelText: '取消',
+        centered: true,
         content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
         okText: '确认清空',
         okType: 'danger',
-        cancelText: '取消',
-        centered: true,
         onOk: () => {
           createYamlFormModel.value.yaml = '';
           message.success('YAML 内容已清空');
         },
+        title: '确认清空',
       });
     } else {
       message.info('YAML 内容已为空');
@@ -1288,7 +1288,7 @@ export function usePVPage() {
 
       if (issues.length > 0) {
         Modal.warning({
-          title: 'YAML 格式检查警告',
+          centered: true,
           content: () =>
             h('div', [
               h('p', 'YAML 语法正确，但发现以下问题：'),
@@ -1298,15 +1298,15 @@ export function usePVPage() {
                 issues.map((issue) => h('li', issue)),
               ),
             ]),
+          title: 'YAML 格式检查警告',
           width: 500,
-          centered: true,
         });
       } else {
         message.success('YAML 格式检查通过，所有必需字段完整');
       }
     } catch (error: any) {
       Modal.error({
-        title: 'YAML 格式检查失败',
+        centered: true,
         content: () =>
           h('div', [
             h(
@@ -1325,8 +1325,8 @@ export function usePVPage() {
               error.message || '未知错误',
             ),
           ]),
+        title: 'YAML 格式检查失败',
         width: 600,
-        centered: true,
       });
     }
   };

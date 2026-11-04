@@ -563,10 +563,9 @@ const handleDelete = (record: MonitorAlertRule): void => {
     !disposed && record.id === id && operationOwner() === owner;
   let confirmationConsumed = false;
   Modal.confirm({
-    title: '确认删除',
+    cancelText: '取消',
     content: '您确定要删除这条告警规则吗？此操作不可撤销。',
     okText: '确认',
-    cancelText: '取消',
     onOk: async () => {
       if (confirmationConsumed || !isCurrent()) return;
       confirmationConsumed = true;
@@ -579,6 +578,7 @@ const handleDelete = (record: MonitorAlertRule): void => {
         if (isCurrent()) handleApiError(error, '删除失败');
       }
     },
+    title: '确认删除',
   });
 };
 

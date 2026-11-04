@@ -772,3 +772,12 @@ SystemRole、Secret、MonitorOnDutyGroup和MonitorScrapeJob四个SFC各搬移一
 - 使用verbatimModuleSyntax=true擦除类型后，对完整JavaScript AST全部子节点逐一比较，结构、token和literal保持；25个SFC再经真实compileScript后的JavaScript AST、binding分类及生产DOM/SSR render一致，模板/style字节保持。类型导入跨越运行时声明不产生新的运行时模块读取或初始化。
 - 65文件sort-imports 280→171，净减109；该范围总lint3918→3809 errors，5 warnings保持，逐文件各规则无新增。其余既有导入顺序诊断继续保留，没有宣称604条全部修复，也没有修改规则、ignore、CI或lock。
 - 全Web现有166文件3619项测试、应用类型检查通过；测试文件仅导入排版，正文statement保持，没有新增镜像测试或更改业务断言。本阶段按约定未重复构建，没有真实外部API、云、集群或凭据操作，未上线。
+
+## 阶段七十八：AntD Modal具名配置的静态属性顺序
+
+19个文件（6个SFC、13个TS）仅整理73个直接Modal.confirm/warning/error配置的属性顺序，净减149条sort-objects。TypeScript真实scope/symbol确认Modal来自ant-design-vue命名导入，配置只含title/content/centered/width/okText/cancelText/onOk/okType/onCancel九种已声明字段；值仅为primitive、无插值template或完整函数表达式，排除member读取、call、spread、computed/getter、赋值、重复字段及__proto__。
+
+- 已安装AntD4.2.6的index/confirm/ConfirmDialog/ActionButton链先复制配置，再按固定具名props读取和调用content、onOk/onCancel。排序改变输入字典的插入序，九个具名字段映射和消费者回调位置保持，不把该结论泛化到其它对象。所有完整property及函数体原文multiset保持，数组、业务调用与其它AST顺序不变；73配置无property外部注释归属歧义或directive，回调内部注释随完整原文保持。
+- 落盘前在两个独立fresh JS process/JSDOM及库module graph中，以九字段原序/排序各运行10个实际Modal DOM场景，包含每次content render的完整trace一致。标题、正文、按钮文字、危险类型、宽度、居中、ok/cancel/程序关闭，以及Promise resolve关闭和reject保留窗口的行为保持；拒绝路径仅按精确Fake Error身份记录SDK预期事件，未知错误仍使探针失败。使用Fake回调，不执行业务API。
+- 全树AST仅对限定配置的property顺序规范化后相同，真实符号及值分类再次核对；6个SFC binding、模板/style和生产DOM/SSR render保持。19文件lint2284→2135 errors，0 warnings，逐文件各规则无新增；未混入Table.columns、菜单、CSS、校验或参与遍历/哈希的数据。
+- 全Web现有166文件3619项测试及应用类型检查通过，保留原有确认/取消、权限、异步归属及失败回归；未修改测试逻辑、断言、fixture、规则、ignore、CI或lock，没有新增镜像测试或重复构建。没有真实集群、通知、云或外部API操作，未上线。

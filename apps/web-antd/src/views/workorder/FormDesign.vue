@@ -351,16 +351,16 @@ const clearForm = () => {
   }
 
   clearDialog = Modal.confirm({
-    title: '清空表单字段',
+    cancelText: '取消',
     content: '将移除当前所有字段，基础信息保留。未保存的字段无法恢复。',
     okText: '清空字段',
-    cancelText: '取消',
     okType: 'danger',
     onOk: () => {
       formSchema.fields = [];
       formData.value = {};
       importRequest++;
     },
+    title: '清空表单字段',
   });
 };
 

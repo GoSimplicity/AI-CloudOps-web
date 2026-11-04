@@ -143,12 +143,12 @@ function confirmAcknowledge() {
   const operationId = currentOperationId.value;
   const planId = currentPlanId.value;
   Modal.confirm({
-    title: '确认已核对实际状态',
+    cancelText: '取消',
     content:
       '原操作可能已经产生副作用。请先核对目标资源和操作历史；确认后才开始新的操作。',
     okText: '已核对',
-    cancelText: '取消',
     onOk: () => acknowledgeUncertain(owner, operationId, planId),
+    title: '确认已核对实际状态',
   });
 }
 const normalizedResult = computed(() =>

@@ -361,7 +361,8 @@ export function useClusterPage() {
   const showDangerousOperationConfirm = (): Promise<boolean> => {
     return new Promise((resolve) => {
       Modal.confirm({
-        title: '危险操作确认',
+        cancelText: '取消操作',
+        centered: true,
         content: `
           您正在修改集群的关键配置，这可能会影响集群的性能和安全性。
           
@@ -374,12 +375,11 @@ export function useClusterPage() {
           是否继续执行此操作？
         `,
         okText: '确认执行',
-        cancelText: '取消操作',
         okType: 'danger',
-        centered: true,
-        width: 520,
-        onOk: () => resolve(true),
         onCancel: () => resolve(false),
+        onOk: () => resolve(true),
+        title: '危险操作确认',
+        width: 520,
       });
     });
   };

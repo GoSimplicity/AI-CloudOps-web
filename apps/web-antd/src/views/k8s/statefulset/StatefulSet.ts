@@ -1262,15 +1262,15 @@ export function useStatefulSetPage() {
       createYamlFormModel.value.yaml.trim()
     ) {
       Modal.confirm({
-        title: '确认操作',
-        content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
-        okText: '确认',
         cancelText: '取消',
         centered: true,
+        content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
+        okText: '确认',
         onOk: () => {
           createYamlFormModel.value.yaml = STATEFULSET_YAML_TEMPLATE;
           message.success('模板已插入');
         },
+        title: '确认操作',
       });
     } else {
       createYamlFormModel.value.yaml = STATEFULSET_YAML_TEMPLATE;
@@ -1364,16 +1364,16 @@ export function useStatefulSetPage() {
       createYamlFormModel.value.yaml.trim()
     ) {
       Modal.confirm({
-        title: '确认清空',
+        cancelText: '取消',
+        centered: true,
         content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
         okText: '确认清空',
         okType: 'danger',
-        cancelText: '取消',
-        centered: true,
         onOk: () => {
           createYamlFormModel.value.yaml = '';
           message.success('YAML 内容已清空');
         },
+        title: '确认清空',
       });
     } else {
       message.info('YAML 内容已为空');
