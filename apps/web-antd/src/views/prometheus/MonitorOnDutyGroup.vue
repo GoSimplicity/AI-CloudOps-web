@@ -1039,14 +1039,6 @@ const handleViewHistoryFromDetail = async (): Promise<void> => {
   }
 };
 
-// 从详情页面编辑
-const handleEditFromDetail = (): void => {
-  if (detailDialog.data) {
-    showEditModal(detailDialog.data);
-    detailDialogVisible.value = false;
-  }
-};
-
 // 排班计划筛选处理
 const handlePlanDateChange = (): void => {
   planPaginationConfig.current = 1;
@@ -1294,6 +1286,14 @@ const showEditModal = (record: MonitorOnDutyGroup): void => {
   });
 
   isEditModalVisible.value = true;
+};
+
+// 从详情页面编辑
+const handleEditFromDetail = (): void => {
+  if (detailDialog.data) {
+    showEditModal(detailDialog.data);
+    detailDialogVisible.value = false;
+  }
 };
 
 const closeEditModal = (): void => {

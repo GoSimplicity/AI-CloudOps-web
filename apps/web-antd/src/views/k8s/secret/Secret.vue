@@ -195,6 +195,31 @@ const addNewEditData = () => {
   }
 };
 
+// 注意：时间格式化函数已移至 shared/utils.ts，使用 formatK8sTime 和 formatK8sAge
+
+// 复制到剪贴板
+const copyToClipboard = async (text: string) => {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      message.success('内容已复制到剪贴板');
+    } else {
+      // 降级方案
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      message.success('内容已复制到剪贴板');
+    }
+  } catch (error) {
+    if (shouldNotifyPageError(error)) message.error('复制失败，请手动复制');
+  }
+};
+
 /** 复制明文：经 reveal 取值，二进制内容不复制 */
 const copySecretKey = async (key: string) => {
   const value = await getPlainValueForCopy(key);
@@ -275,31 +300,6 @@ const getSecretTypeClass = (type: string) => {
     Opaque: 'secret-type-opaque',
   };
   return getOwnLookupValue(typeClassMap, type) || 'secret-type-default';
-};
-
-// 注意：时间格式化函数已移至 shared/utils.ts，使用 formatK8sTime 和 formatK8sAge
-
-// 复制到剪贴板
-const copyToClipboard = async (text: string) => {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-      message.success('内容已复制到剪贴板');
-    } else {
-      // 降级方案
-      const textArea = document.createElement('textarea');
-      textArea.value = text;
-      textArea.style.position = 'fixed';
-      textArea.style.opacity = '0';
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      message.success('内容已复制到剪贴板');
-    }
-  } catch (error) {
-    if (shouldNotifyPageError(error)) message.error('复制失败，请手动复制');
-  }
 };
 
 const onSearch = () => {

@@ -164,6 +164,11 @@ const availableApis = computed(() => {
   return apiList.value.filter((api) => !assignedIds.includes(api.id));
 });
 
+// API选择相关函数
+const isApiSelected = (apiId: number): boolean => {
+  return selectedApis.value.some((api) => api.id === apiId);
+};
+
 const currentPageApis = computed(() => {
   return modalApiList.value.filter((api) => !isApiSelected(api.id));
 });
@@ -188,11 +193,6 @@ const getMethodClass = (method: any): string => {
   return ['get', 'post', 'put', 'delete', 'patch'].includes(methodStr)
     ? methodStr
     : 'unknown';
-};
-
-// API选择相关函数
-const isApiSelected = (apiId: number): boolean => {
-  return selectedApis.value.some((api) => api.id === apiId);
 };
 
 const updateFormApiIds = () => {

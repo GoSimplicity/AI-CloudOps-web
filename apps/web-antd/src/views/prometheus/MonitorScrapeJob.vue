@@ -1310,18 +1310,6 @@ watch(
   { flush: 'sync' },
 );
 
-// 生命周期钩子
-onMounted(() => {
-  // 初始化分页
-  paginationConfig.current = 1;
-  paginationConfig.pageSize = 10;
-
-  // 加载数据
-  loadScrapeJobList();
-  loadPools();
-  loadTreeData();
-});
-
 // 加载服务树数据
 const loadTreeData = async (): Promise<void> => {
   const owner = operationOwner();
@@ -1342,6 +1330,18 @@ const loadTreeData = async (): Promise<void> => {
     treeData.value = [];
   }
 };
+
+// 生命周期钩子
+onMounted(() => {
+  // 初始化分页
+  paginationConfig.current = 1;
+  paginationConfig.pageSize = 10;
+
+  // 加载数据
+  loadScrapeJobList();
+  loadPools();
+  loadTreeData();
+});
 
 // 将节点ID映射为名称
 const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {

@@ -745,3 +745,12 @@ PredictAnalysis将账户变化与表单变化中相同的五步清理提取为�
 - 另外仅按依赖搬移getCurrentValueMax和图表初始化闭环的六段完整const-arrow，保留kind、函数体与捕获binding。共享函数的五步展开回两个call点后，其它statement原文顺序保持；模板/style、原binding分类与生产DOM/SSR render一致，新binding仅为该私有清理函数。单文件no-use-before-define 3→0、总lint85→82 errors，0 warnings，逐规则无新增。
 - 落盘前原源码与离线内存提案均通过全部预测目录现有5文件35项测试，确认Vite实际加载提案。落盘后同套35项及应用类型检查通过，没有新增镜像测试或修改断言、规则及ignore，也没有重复全仓构建。
 - 原/新实际编译setup使用真实Vue、useAiRequestScope和主题监听，以及Fake模型/图表，成功、失败、类型切换迟到和owner切换迟到四组轨迹相同：factory/mount无模型请求，lane操作次数/票据、错误清理、图表配置数据、释放/重建、主题刷新与resize保持。此为setup/受控生命周期探针，不替代真实DOM测试；没有真实模型、云或网络调用，未上线。
+
+## 阶段七十五：剩余SFC叶回调的声明顺序
+
+SystemRole、Secret、MonitorOnDutyGroup和MonitorScrapeJob四个SFC各搬移一段完整const-arrow，分别将API选择判定和剪贴板函数放到首次回调引用前，将详情转编辑回调延后到编辑入口后，将服务树读取声明放到原onMounted注册前。四个组件各自no-use-before-define 1→0，没有改变函数kind、名称、函数体、作用域或捕获binding。
+
+- 状态、computed/watch、生命周期注册与其它副作用初始化保持原文顺序，模板和style字节保持；角色判定依赖的selectedApis已初始化，剪贴板函数创建不操作浏览器，详情编辑回调仅延后创建，服务树读取仍由原mounted回调触发。没有移动状态或hook来凑数，也未触及Secret编码器的正则/schema初始化。
+- 磁盘源码与提案逐字匹配，四段完整statement与其它statement顺序、真实compileScript binding分类及生产DOM/SSR render一致。四文件lint328→324 errors、0 warnings，逐文件各规则无新增，其余既有诊断保留。
+- 原/新实际编译角色、值班组和采集任务setup，在Fake API成功/失败六组轨迹中保持factory零请求、真实computed角色选择、详情转编辑及mounted树/列表读取和失败处理一致。该探针为受控setup/生命周期调用，实际DOM行为由现有挂载回归覆盖。
+- 角色、Secret目录、值班CRUD/调班、采集安全/凭据、Prometheus列表、权限按钮与表格等现有19文件754项测试及应用类型检查通过；没有新增镜像测试、修改断言、规则或ignore，也没有重复全仓测试和构建。没有真实集群、凭据、通知或外部API操作，未上线。
