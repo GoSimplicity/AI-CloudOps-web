@@ -31,7 +31,9 @@ import { useAuthStore } from '#/store';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
-const { can } = usePermission();
+const { can, hasPerm } = usePermission();
+const CREATE_CONFIG_PERMISSION = '/api/monitor/configs/create';
+const UPDATE_CONFIG_PERMISSION = '/api/monitor/configs/update/:id';
 
 let disposed = false;
 let addRevision = 0;
@@ -226,13 +228,16 @@ const editForm = reactive<ConfigForm>({
 const formRules = {
   name: [
     { required: true, message: '请输入配置名称', trigger: 'blur' },
-    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' },
+    { min: 1, max: 255, message: '长度应为1到255个字符', trigger: 'blur' },
   ],
   config_type: [
     { required: true, message: '请选择配置类型', trigger: 'change' },
   ],
   pool_id: [{ required: true, message: '请选择实例池', trigger: 'change' }],
-  instance_ip: [{ required: true, message: '请输入实例IP', trigger: 'blur' }],
+  instance_ip: [
+    { required: true, message: '请输入实例IP', trigger: 'blur' },
+    { max: 128, message: '长度应为1到128个字符', min: 1, trigger: 'blur' },
+  ],
   config_content: [
     { required: true, message: '请输入配置内容', trigger: 'blur' },
   ],
@@ -525,6 +530,10 @@ const closeDetailModal = (): void => {
 };
 
 const showAddModal = (): void => {
+  if (!hasPerm(CREATE_CONFIG_PERMISSION)) {
+    message.warning('没有新增配置权限');
+    return;
+  }
   const owner = operationOwner();
   if (disposed || !owner) return;
   closeDetailModal();
@@ -545,6 +554,10 @@ const closeAddModal = (): void => {
 
 const handleAdd = async (): Promise<void> => {
   if (disposed || addSubmitting.value || !isAddModalVisible.value) return;
+  if (!hasPerm(CREATE_CONFIG_PERMISSION)) {
+    message.warning('没有新增配置权限');
+    return;
+  }
   const owner = addOwner;
   const form = addFormRef.value;
   if (!owner || operationOwner() !== owner) return;
@@ -556,6 +569,7 @@ const handleAdd = async (): Promise<void> => {
   const fingerprint = JSON.stringify(addForm);
   const isCurrent = () =>
     !disposed &&
+    hasPerm(CREATE_CONFIG_PERMISSION) &&
     isAddModalVisible.value &&
     addRevision === ticket &&
     addOwner === owner &&
@@ -598,6 +612,10 @@ const handleAdd = async (): Promise<void> => {
 };
 
 const showEditModal = (record: MonitorConfigItem): void => {
+  if (!hasPerm(UPDATE_CONFIG_PERMISSION)) {
+    message.warning('没有编辑配置权限');
+    return;
+  }
   const owner = operationOwner();
   if (disposed || !owner || !validPositiveId(record.id)) {
     message.warning('配置或账号标识无效，请刷新后重试');
@@ -633,6 +651,10 @@ const closeEditModal = (): void => {
 
 const handleEdit = async (): Promise<void> => {
   if (disposed || editSubmitting.value || !isEditModalVisible.value) return;
+  if (!hasPerm(UPDATE_CONFIG_PERMISSION)) {
+    message.warning('没有编辑配置权限');
+    return;
+  }
   const owner = editOwner;
   const form = editFormRef.value;
   const record = editTarget;
@@ -653,6 +675,7 @@ const handleEdit = async (): Promise<void> => {
   const fingerprint = JSON.stringify(editForm);
   const isCurrent = () =>
     !disposed &&
+    hasPerm(UPDATE_CONFIG_PERMISSION) &&
     isEditModalVisible.value &&
     editRevision === ticket &&
     editOwner === owner &&
@@ -739,7 +762,12 @@ onMounted(() => {
   <OpsPage description="管理配置版本、实例与生效状态" title="监控配置">
     <!-- 页面标题 -->
     <template #actions>
-      <a-button class="btn-create" type="primary" @click="showAddModal">
+      <a-button
+        v-if="hasPerm(CREATE_CONFIG_PERMISSION)"
+        class="btn-create"
+        type="primary"
+        @click="showAddModal"
+      >
         <template #icon>
           <PlusOutlined />
         </template>
@@ -973,6 +1001,7 @@ onMounted(() => {
                   查看
                 </a-button>
                 <a-button
+                  v-if="hasPerm(UPDATE_CONFIG_PERMISSION)"
                   size="small"
                   type="default"
                   @click="showEditModal(record)"
@@ -1025,11 +1054,7 @@ onMounted(() => {
           <div class="section-title">基本信息</div>
           <a-row :gutter="16">
             <a-col :sm="12" :xs="24">
-              <a-form-item
-                :rules="[{ required: true, message: '请输入配置名称' }]"
-                label="配置名称"
-                name="name"
-              >
+              <a-form-item label="配置名称" name="name">
                 <a-input
                   v-model:value="addForm.name"
                   placeholder="请输入配置名称"
@@ -1087,11 +1112,7 @@ onMounted(() => {
               </a-form-item>
             </a-col>
             <a-col :sm="12" :xs="24">
-              <a-form-item
-                :rules="[{ required: true, message: '请输入实例IP' }]"
-                label="实例IP"
-                name="instance_ip"
-              >
+              <a-form-item label="实例IP" name="instance_ip">
                 <a-input
                   v-model:value="addForm.instance_ip"
                   placeholder="请输入实例IP"
@@ -1153,11 +1174,7 @@ onMounted(() => {
           <div class="section-title">基本信息</div>
           <a-row :gutter="16">
             <a-col :sm="12" :xs="24">
-              <a-form-item
-                :rules="[{ required: true, message: '请输入配置名称' }]"
-                label="配置名称"
-                name="name"
-              >
+              <a-form-item label="配置名称" name="name">
                 <a-input
                   v-model:value="editForm.name"
                   placeholder="请输入配置名称"
@@ -1215,11 +1232,7 @@ onMounted(() => {
               </a-form-item>
             </a-col>
             <a-col :sm="12" :xs="24">
-              <a-form-item
-                :rules="[{ required: true, message: '请输入实例IP' }]"
-                label="实例IP"
-                name="instance_ip"
-              >
+              <a-form-item label="实例IP" name="instance_ip">
                 <a-input
                   v-model:value="editForm.instance_ip"
                   placeholder="请输入实例IP"
@@ -1365,6 +1378,7 @@ onMounted(() => {
         <div class="detail-footer">
           <a-button @click="closeDetailModal">关闭</a-button>
           <a-button
+            v-if="hasPerm(UPDATE_CONFIG_PERMISSION)"
             type="primary"
             @click="showEditModalFromDetail(detailConfig)"
           >

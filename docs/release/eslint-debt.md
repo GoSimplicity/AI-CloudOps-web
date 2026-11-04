@@ -820,3 +820,14 @@ AutoFix六个公开formatter及NotificationEvents的eventsNames、states共八�
 - 落盘前两个fresh进程使用实际AntD4.2.6 Table运行15组配置：原/排序DOM文本、inline样式与类名、分页、实际count sorter和customRender调用轨迹一致。customRender实际调用原RCA formatter代码，覆盖长文本截断及无效时间fallback；只验证JSDOM DOM/style/class合同，不冒称像素视觉。消费探针通过后按约定复用，未因落盘重复运行。
 - 磁盘源码精确匹配提案，全script AST仅限定列对象property顺序变化，数组每元素及其它AST保持，完整props/回调raw bags及未审项保持；12个SFC binding、模板/style和生产DOM/SSR输出一致。RCA的truncateText与formatShortTime整段声明（含原注释）字节一致，属性外注释归属歧义和directive均0。
 - 12文件lint1117→1042 errors，0 warnings，逐文件各规则无新增；全Web现有166文件3649项测试及应用类型检查通过。未新增镜像测试、改测试逻辑、CI、规则、ignore或lock，也未构建；未操作preview、数据库、真实集群、凭据或业务API，未上线。
+
+## 阶段八十三：监控配置宽度与真实表单权限闭环
+
+MonitorConfig的Name统一为1..255、InstanceKey（历史API字段instance_ip）为1..128个Unicode codepoints，对齐后端V4合同。保留页面原required、Update payload及后端空值省略合同；不做trim/normalize/truncate，不添加maxlength或IP-only规则，合法type5复合键和自定义SQL键原值传给API。
+
+- 已安装AntD4.2.6 FormItem优先使用selfRules，原add/edit字段required-only覆盖共享formRules，导致Name范围实际上未执行。仅移除name/instance_ip四处覆盖，使实际Form.validate继承共享范围；其它字段规则、pool/type/status校验及提交顺序保持。async-validator原生range以surrogate pair计数修正支持codepoints，没有自造Unicode validator。
+- 同页真实create/update入口缺少权限门禁，现三个创建/编辑按钮、两个入口及两个submit初始检查服从既有hasPerm，使用实际Go路由对应的/api/monitor/configs/create与/api/monitor/configs/update/:id。两个isCurrent同时覆盖validate后和API回执后的实时授权，保留原UID/authGeneration、target、revision及fingerprint；提交前未知或撤权不外发API，拒绝入口不关闭其它窗口，回执撤权不关闭当前窗口或展示success。已外发操作仅隔离回执，不声称撤销后端效果；详情仍可只读，未改全局admin/通配/精确码政策或后端授权。
+- 新增43项真实Form回归：Name106/124/174/255、emoji255及1char，key47/65/128及emoji128正向、Name256/key129与空值拒绝、raw whitespace/Unicode/type5键精确payload；验证期间owner/epoch变化、权限撤销、stale入口、API回执后撤权及只读详情按钮均覆盖。旧源码42项中15红/27通过，详情按钮另有单独红例；修复后全部43通过。
+- Modal/Table仅为隔离外壳，Form/FormItem/Input/Select与async-validator均为实际AntD；合法选择通过控件update:value事件提供，没有validate替身。Fake API仅验证前端提交边界，不冒称SQL/迁移或浏览器像素验收。旧PrometheusFormSafety只补同principal的hasPerm授权替身，原断言与fixture保持。
+- 静态复核确认仅宽度规则、四处规则继承及权限检查变化，原API body、owner/fingerprint/顺序、其它validators和style保持；生产文件既有lint54条未增加，旧测试lint0保持，新width测试lint0，没有规则或ignore豁免。
+- 最终全Web167文件3692项测试及应用类型检查通过。没有改Go/schema、CI、lock或其它页，没有调用真实API、通知、凭据、preview或数据库，未上线。
