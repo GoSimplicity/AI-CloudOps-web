@@ -1161,7 +1161,7 @@ const exportToExcel = (data: CloudAccount[]) => {
   // 导出文件
   const timestamp = new Date()
     .toISOString()
-    .replace(/[.:]/g, '-')
+    .replaceAll(/[.:]/g, '-')
     .substring(0, 19);
   const filename = `云账户列表_${timestamp}.csv`;
   const firstRow = exportData[0];

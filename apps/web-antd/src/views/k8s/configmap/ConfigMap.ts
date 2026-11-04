@@ -679,7 +679,7 @@ export function useConfigMapPage() {
           if (trimmedValue === '') {
             result[key] = '';
           } else {
-            const cleanValue = trimmedValue.replace(/\s/g, '');
+            const cleanValue = trimmedValue.replaceAll(/\s/g, '');
             if (/^[A-Za-z0-9+/]*={0,2}$/.test(cleanValue)) {
               if (cleanValue.length % 4 === 0) {
                 result[key] = cleanValue;

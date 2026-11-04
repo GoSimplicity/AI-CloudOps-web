@@ -7,6 +7,6 @@ export function formatCommentContent(content: string): string {
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;')
     .replace(/\n/g, '<br>')
-    .replace(/@(\w+)/g, '<span class="mention">@$1</span>')
-    .replace(/#(\w+)/g, '<span class="hashtag">#$1</span>');
+    .replaceAll(/@(\w+)/g, '<span class="mention">@$1</span>')
+    .replaceAll(/#(\w+)/g, '<span class="hashtag">#$1</span>');
 }

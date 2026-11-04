@@ -422,7 +422,7 @@ export const processSecretYaml = (yamlContent: string): string => {
   try {
     const inData = createDataSectionLocator(yamlContent);
     // incr7：缩进只认 [ \t]*（原来 ^(\s*) 跨行吞空行，60k 空行约 3.4s，平方级）；冒号后至少一个空格（与编码器同口径）
-    return yamlContent.replace(
+    return yamlContent.replaceAll(
       /^([ \t]*)([\w\-.]+):[ \t]+([A-Za-z0-9+/]+=*)[ \t]*$/gm,
       (match, indent: string, key: string, value: string, offset: number) => {
         if (!inData(offset)) return match;
@@ -532,7 +532,7 @@ export const encodeSecretYamlForSubmission = (yamlContent: string): string => {
       ) => {
         if (!quotedInData(offset)) return match;
         // 只还原 \\ 与 \"（单次扫描），与展示时的转义对称；其他转义原样保留并由格式检查拦截
-        const unescapedValue = value.replace(/\\(["\\])/g, '$1');
+        const unescapedValue = value.replaceAll(/\\(["\\])/g, '$1');
         return `${indent}${key}: ${encodeUtf8ToBase64(unescapedValue)}${rest}`;
       },
     );
@@ -755,7 +755,7 @@ export function getYamlDataFormatError(yamlText: string): null | string {
 
 /** 规范化后（Go 的 base64 解码忽略 \r \n）判断一个 base64 串是否解码为占位符；不是严格 base64 返回 undefined */
 function decodesToRedacted(encoded: string): boolean | undefined {
-  const compact = encoded.replace(/[\n\r]/g, '');
+  const compact = encoded.replaceAll(/[\n\r]/g, '');
   if (!STRICT_BASE64_PATTERN.test(compact)) return undefined;
   const decoded = decodeBase64Utf8(compact);
   return decoded !== undefined && isRedactedText(decoded);

@@ -919,3 +919,15 @@ MonitorConfig的Name统一为1..255、InstanceKey（历史API字段instance_ip�
 - actual HEAD before与磁盘proposal逐字核对，固定24个literal范围外bytes不变；完整TS及实际SFC编译script AST仅允许已验证的regex leaf变化，其它节点、Vue binding、模板/style及DOM/SSR输出保持。proof的forEachChild callback全部返回void，非首个第三statement语义mutation必须检出；原失败lint及正负control证据均保留。
 - 指定重点回归21文件779项通过，其中SecretData全部4组282项，覆盖YAML编码、占位符与脱敏；CSV、request敏感路径、Cloud及Cron现有用例同时通过。全Web167文件3692项单元测试、应用类型检查通过。7文件actual lint419→395 errors，0 warnings，逐文件各规则无新增。
 - 未修改测试逻辑、CI、规则、ignore、依赖、lock、MonitorConfig或backend，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。
+
+## 阶段九十二：保留fresh全局正则的String方法名替换
+
+6个生产文件仅将13处replace方法名改为replaceAll，原RegExp literal、g/gm flags、capture/backreference、replacement及其它字节保持。64条规则命中中44条测试/spec不纳；20个生产命中排除receiver为any的request一处，以及两个共享ENCODER_*正则变量。其余17处中，4个单字符pattern若只改方法名仍被规则要求转为字符串，故保留原文，未接受整体fix的匹配策略或source变化。
+
+- 实际Vue虚拟TS/Volar源映射和TypeScript checker确认primitive string receiver及builtin String.replace库签名；只纳恰好2个普通参数、无optional/spread、首参数为fresh native且原flags含g的literal。最终replacement为12个原StringLiteral和1个原ArrowFunction，参数创建只取原值或分配闭包，没有在创建阶段调用业务代码。没有为纳入request的any强化或改写现有业务校验。
+- 正常未覆盖String/RegExp intrinsics的realm中，replaceAll对这个fresh literal校验g后，委托与原replace相同的native RegExp@@replace；不会把正则改为字符串，也不改变捕获/$编号、matching策略或callback参数。该合同不泛化到自定义receiver、共享/改写过的正则或任意prototype monkeypatch；非g、覆写共享regex.flags getter及非string自定义方法的反例已明确验证并排除。
+- 隔离Node透明记录原native@@replace，13个pattern共936组对照、166次callback调用，receiver→replacement initializer→native委托的source/flags/lastIndex→callback或抛错轨迹、输出与错误identity一致。探针不执行业务callback，仅用于补充原生消费合同；实际业务函数体和参数原文另由完整AST/范围外byte证明保持。
+- 本轮在实际HEAD a7fd8ff（上一阶段后独立CI quote提交）逐文件重核before完全一致后落盘，没有依赖旧审计HEAD直接覆盖。实际磁盘与proposal精确匹配，全源码仅13个方法名范围变化；完整source及实际SFC编译script AST只允许这些method identifier变化，receiver树内的已审链式改名之外，其它表达式/语句顺序与参数均保持。Vue binding、模板/style及DOM/SSR保持，forEachChild callback均void，非首个第三statement语义mutation必检出。
+- 原局部方法名变更仍有零净减的首次readonly断言失败与排除记录均保留；最终6文件actual lint442→429 errors，原有v-html warning1→1，逐文件各规则无新增。没有为清规则改变pattern、escape、flags或replacement。
+- 相关consumer与全部K8s回归35文件1418项通过，涵盖评论格式化、AI/account/session、SecretData/Secret、Cloud现有用例；全Web167文件3692项单元测试及应用类型检查通过。ConfigMap模块没有独立命名用例，按约定以既有全K8s与全unit覆盖范围验收，不冒称新增了单项业务测试。
+- 未修改测试逻辑、CI、规则、依赖、lock、MonitorConfig或backend，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。本阶段仅报告目标复扫，不以净减推算新的全仓实扫总量。

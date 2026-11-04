@@ -1197,28 +1197,28 @@ const highlightCode = (code, lang) => {
   }
 
   // 高亮字符串
-  highlightedCode = highlightedCode.replace(
+  highlightedCode = highlightedCode.replaceAll(
     /(["'])((?:\\.|(?!\1)[^\\])*?)\1/g,
     '<span class="code-string">$1$2$1</span>',
   );
 
   // 高亮注释
   if (lang === 'javascript' || lang === 'java' || lang === 'cpp') {
-    highlightedCode = highlightedCode.replace(
+    highlightedCode = highlightedCode.replaceAll(
       /(\/\/.*$)/gm,
       '<span class="code-comment">$1</span>',
     );
-    highlightedCode = highlightedCode.replace(
+    highlightedCode = highlightedCode.replaceAll(
       /(\/\*[\s\S]*?\*\/)/g,
       '<span class="code-comment">$1</span>',
     );
   } else if (lang === 'python' || lang === 'bash') {
-    highlightedCode = highlightedCode.replace(
+    highlightedCode = highlightedCode.replaceAll(
       /(#.*$)/gm,
       '<span class="code-comment">$1</span>',
     );
   } else if (lang === 'sql') {
-    highlightedCode = highlightedCode.replace(
+    highlightedCode = highlightedCode.replaceAll(
       /(--.*$)/gm,
       '<span class="code-comment">$1</span>',
     );
