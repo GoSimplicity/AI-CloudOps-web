@@ -1,3 +1,5 @@
+import process from 'node:process';
+
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';

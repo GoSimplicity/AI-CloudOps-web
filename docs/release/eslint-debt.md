@@ -967,3 +967,16 @@ MonitorConfig的Name统一为1..255、InstanceKey（历史API字段instance_ip�
 - 全354个SFC的dev/prod共708组before快照/实际after磁盘对照无额外差异、两侧0错误，真实Boolean/String危险control检出。scoped canonical只接受选中文件对应的fresh primitive.includes literal预期排列，不忽略任意数组、RuntimeCtorArray或emits事件数组的顺序；4个编辑SFC本身与AutoFix类型模块实际被读取，另2个当前无宏消费，未扩大为全部类型都被宏使用。binding、模板/style和DOM/SSR保持。
 - actual7文件lint322→303 errors，0 warnings，逐文件各规则无新增；相关Autofix、Cloud管理、SystemRole、Notification、CMDB现有回归30文件687项通过，全Web167文件3692项单元测试、app及node配置类型检查通过。首次target CLI因不存在的Workorder*.test.ts触发zsh NOMATCH、测试未开始，单独保留命令失败收据；改用确有目录筛选后实际exit0，没有改断言或snapshot消红。
 - 未修改CI/workflow、规则、依赖、lock、MonitorConfig、backend或其它string union，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。只报告目标复扫，不用19减法宣称新的全仓实扫总量。
+
+## 阶段九十六：Node-only Playwright模块显式process singleton
+
+10个模块仅各增加一条default import process from 'node:process'，清理74条n/prefer-global/process：playwright.config.ts及9个E2E spec。没有把apps浏览器bundle模块改为Node import，没有引入process polyfill；配置/spec本身已依赖Node-only Playwright等模块。
+
+- 当前定向实际74个引用全部是process.env读取，无process binding写入；逐引用AST检查evaluate/evaluateHandle/addInitScript/waitForFunction等browser执行域无命中，项目中没有这10个模块的process global替换、node:process mock或VM fake-process执行证据。demo自身vite/server的VM fake环境不在该范围，不能据此纳入未知fake消费者。
+- 使用default Node process对象，不使用named env导出或解构env快照。实际Node中default import、globalThis.process与getBuiltinModule为同一singleton，env key晚修改及整个env对象晚替换后读取一致；替换global process的负控明确产生差异，因此只保证普通Node Playwright runner、未替换global process及未mock该builtin的realm，不泛化到任意VM/fake或未知host环境。
+- 原所有runtime import声明raw与相对执行次序保持，仅在头部增加已初始化Node builtin依赖；全statement逻辑AST去掉该新增import后完整一致。没有改变env读取时点、变量、selector、测试函数体/断言或任何浏览器回调。actualHEAD 892816e source before与磁盘exact proposal逐字核对；完整AST的forEachChild callback均void，非首个第三statement语义mutation必须检出。
+- 实际Node singleton与Playwright defineConfig私有配置对照覆盖5个preview/CI/url/channel矩阵，before快照与实际after磁盘结果一致；只求值配置对象，不执行其中的webServer命令。env矩阵仅在隔离Node进程替换与恢复，没有打印或读取host凭据内容。
+- 真实Playwright CLI在独立temporary before/after源码副本执行test --list，两侧实际exit0、29 specs/29 tests。after来自实际磁盘，child env经过精简不提供凭据，net/http/https/fetch调用全部deny，未启动browser/webServer或执行真实E2E业务。完整config仅映射明确temporary根路径后相同；全部spec metadata（id/title/tags/options/annotation/status/results）相同，逐文件验证新增import造成的预期+2行且column相同。源位置/临时路径变化不当作测试逻辑变化，未盲删其它差异。
+- 原readonly CLI collector曾在两个CLI均成功后因before/after临时路径的原始字符串比较失败，该记录保留；独立严格path/line映射比较通过，本轮磁盘复验亦通过。没有以旧aggregate exit0掩盖失败或改snapshot消红。
+- actual10文件lint442→368 errors，0 warnings，逐文件各规则无新增；全Web167文件3692项单元测试、app及node配置类型检查通过。这两个既有tsconfig不冒称完整静态覆盖所有E2E spec；Node-only配置/spec另由实际CLI transform/collection、完整AST和普通Node singleton对照验收，未执行带业务动作的E2E。
+- 未修改CI/workflow、规则、依赖、lock、MonitorConfig或backend，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。Root随后实际全仓boundary扫描确认1130文件/7109 errors/5 warnings，protected与parser均0、directive audit41；该数字来自本轮完整执行日志，不是74减法推导。

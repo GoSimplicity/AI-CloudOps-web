@@ -1,3 +1,5 @@
+import process from 'node:process';
+
 import { withFixtureCleanup } from '../../internal/test-utils/fixture-cleanup';
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
