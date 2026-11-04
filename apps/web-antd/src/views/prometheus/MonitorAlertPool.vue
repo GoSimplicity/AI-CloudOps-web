@@ -98,39 +98,39 @@ const previewDialogWidth = computed(() => {
 // 列定义
 const columns = [
   {
-    title: '实例池名称',
     dataIndex: 'name',
-    key: 'name',
-    width: 200,
     fixed: 'left',
+    key: 'name',
+    title: '实例池名称',
+    width: 200,
   },
   {
-    title: 'AlertManager实例',
     dataIndex: 'alert_manager_instances',
     key: 'alert_manager_instances',
+    title: 'AlertManager实例',
     width: 220,
   },
-  { title: '分组标签', dataIndex: 'group_by', key: 'group_by', width: 180 },
+  { dataIndex: 'group_by', key: 'group_by', title: '分组标签', width: 180 },
   {
-    title: '时间配置',
     dataIndex: 'timing_config',
     key: 'timing_config',
+    title: '时间配置',
     width: 160,
   },
-  { title: '接收器', dataIndex: 'receiver', key: 'receiver', width: 120 },
+  { dataIndex: 'receiver', key: 'receiver', title: '接收器', width: 120 },
   {
-    title: '创建人',
     dataIndex: 'create_user_name',
     key: 'creator',
+    title: '创建人',
     width: 120,
   },
-  { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
+  { dataIndex: 'created_at', key: 'createdAt', title: '创建时间', width: 180 },
   {
-    title: '操作',
-    key: 'action',
-    width: 200,
     align: 'center' as const,
     fixed: 'right',
+    key: 'action',
+    title: '操作',
+    width: 200,
   },
 ];
 

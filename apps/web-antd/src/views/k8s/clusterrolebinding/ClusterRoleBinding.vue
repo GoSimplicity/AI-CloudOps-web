@@ -283,47 +283,47 @@ const getSubjectColor = (kind?: null | string) => {
 
 const columns = [
   {
-    title: '名称',
     dataIndex: 'name',
+    ellipsis: true,
     key: 'name',
-    width: '18%',
-    ellipsis: true,
     sorter: (a: any, b: any) => a.name.localeCompare(b.name),
+    title: '名称',
+    width: '18%',
   },
   {
-    title: '角色引用',
+    ellipsis: true,
     key: 'roleRef',
+    title: '角色引用',
     width: '22%',
-    ellipsis: true,
   },
   {
-    title: '主体',
+    ellipsis: true,
     key: 'subjects',
+    title: '主体',
     width: '25%',
-    ellipsis: true,
   },
   {
-    title: '标签',
     dataIndex: 'labels',
-    key: 'labels',
-    width: '15%',
     ellipsis: true,
+    key: 'labels',
+    title: '标签',
+    width: '15%',
   },
   {
-    title: '创建时间',
     key: 'created_at',
-    width: '12%',
     sorter: (a: any, b: any) => {
       const timeA = new Date(a.created_at).getTime();
       const timeB = new Date(b.created_at).getTime();
       return timeA - timeB;
     },
+    title: '创建时间',
+    width: '12%',
   },
   {
-    title: '操作',
-    key: 'actions',
-    width: '8%',
     fixed: 'right',
+    key: 'actions',
+    title: '操作',
+    width: '8%',
   },
 ];
 

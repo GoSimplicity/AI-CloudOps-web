@@ -96,30 +96,30 @@ const previewDialogWidth = computed(() => {
 
 // 列定义
 const columns = [
-  { title: 'ID', dataIndex: 'id', key: 'id', width: 80, fixed: 'left' },
-  { title: '值班组名称', dataIndex: 'name', key: 'name', width: 200 },
-  { title: '值班信息', dataIndex: 'shift_info', key: 'shift_info', width: 150 },
-  { title: '成员列表', dataIndex: 'users', key: 'users', width: 200 },
+  { dataIndex: 'id', fixed: 'left', key: 'id', title: 'ID', width: 80 },
+  { dataIndex: 'name', key: 'name', title: '值班组名称', width: 200 },
+  { dataIndex: 'shift_info', key: 'shift_info', title: '值班信息', width: 150 },
+  { dataIndex: 'users', key: 'users', title: '成员列表', width: 200 },
   {
-    title: '值班状态',
     dataIndex: 'duty_status',
     key: 'duty_status',
+    title: '值班状态',
     width: 200,
   },
-  { title: '启用状态', dataIndex: 'enable', key: 'enable', width: 100 },
+  { dataIndex: 'enable', key: 'enable', title: '启用状态', width: 100 },
   {
-    title: '创建人',
     dataIndex: 'create_user_name',
     key: 'creator',
+    title: '创建人',
     width: 120,
   },
-  { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
+  { dataIndex: 'created_at', key: 'createdAt', title: '创建时间', width: 180 },
   {
-    title: '操作',
-    key: 'action',
-    width: 240,
     align: 'center' as const,
     fixed: 'right',
+    key: 'action',
+    title: '操作',
+    width: 240,
   },
 ];
 

@@ -84,35 +84,35 @@ const previewDialogWidth = computed(() => {
 // 列定义
 const columns = [
   {
-    title: '记录名称',
     dataIndex: 'name',
-    key: 'name',
-    width: 200,
     fixed: 'left',
+    key: 'name',
+    title: '记录名称',
+    width: 200,
   },
-  { title: '关联实例池', dataIndex: 'pool_name', key: 'pool_name', width: 180 },
-  { title: 'IP地址', dataIndex: 'ip_address', key: 'ip_address', width: 200 },
+  { dataIndex: 'pool_name', key: 'pool_name', title: '关联实例池', width: 180 },
+  { dataIndex: 'ip_address', key: 'ip_address', title: 'IP地址', width: 200 },
   {
-    title: '是否启用',
+    align: 'center' as const,
     dataIndex: 'enable',
     key: 'enable',
+    title: '是否启用',
     width: 100,
-    align: 'center' as const,
   },
-  { title: '表达式', dataIndex: 'expr', key: 'expr', width: 250 },
+  { dataIndex: 'expr', key: 'expr', title: '表达式', width: 250 },
   {
-    title: '创建人',
     dataIndex: 'create_user_name',
     key: 'creator',
+    title: '创建人',
     width: 120,
   },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 180 },
+  { dataIndex: 'created_at', key: 'created_at', title: '创建时间', width: 180 },
   {
-    title: '操作',
-    key: 'action',
-    width: 200,
     align: 'center' as const,
     fixed: 'right',
+    key: 'action',
+    title: '操作',
+    width: 200,
   },
 ];
 

@@ -114,44 +114,44 @@ const previewDialogWidth = computed(() => {
 // 列定义
 const columns = [
   {
-    title: '配置名称',
     dataIndex: 'name',
-    key: 'name',
-    width: 200,
     fixed: 'left',
+    key: 'name',
+    title: '配置名称',
+    width: 200,
   },
   {
-    title: '配置类型',
     dataIndex: 'config_type',
     key: 'config_type',
+    title: '配置类型',
     width: 150,
   },
   {
-    title: '实例信息',
     dataIndex: 'instance_info',
     key: 'instance_info',
+    title: '实例信息',
     width: 200,
   },
   {
-    title: '状态',
+    align: 'center' as const,
     dataIndex: 'status',
     key: 'status',
+    title: '状态',
     width: 100,
-    align: 'center' as const,
   },
   {
-    title: '最后生成时间',
     dataIndex: 'last_generated_time',
     key: 'last_generated_time',
+    title: '最后生成时间',
     width: 180,
   },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 180 },
+  { dataIndex: 'created_at', key: 'created_at', title: '创建时间', width: 180 },
   {
-    title: '操作',
-    key: 'action',
-    width: 200,
     align: 'center' as const,
     fixed: 'right',
+    key: 'action',
+    title: '操作',
+    width: 200,
   },
 ];
 

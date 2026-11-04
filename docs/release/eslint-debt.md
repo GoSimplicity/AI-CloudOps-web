@@ -802,3 +802,12 @@ AutoFix六个公开formatter及NotificationEvents的eventsNames、states共八�
 - 全仓354个真实SFC逐个比较开发/生产，共708组before/after：两侧编译错误均0，完整compiled JavaScript AST、bindings及DOM/SSR输出差异0。编译器实际读取5个编辑TS：api/core下的aiops/predict.ts、aiops/rca.ts、cron/cron.ts、tree/tree_cloud.ts，以及views/servicetree/managed-operation-marker.ts；每个读取的before/after内容digest分别核对快照/磁盘且不同。
 - 其余24个编辑文件标记“当前无SFC consumer”，仅指本次SFC宏类型解析未读取，不代表业务组件没有value import；这些文件自身的完整emit JavaScript AST已另行验证。没有宣称全29文件都被SFC类型消费者读取，也不跳过无法证明的消费者。
 - 29文件定向lint净减58条sort-union-types，逐文件各规则无新增；全Web现有166文件3649项测试及应用类型检查通过。manifest内RcaSafety.test.ts仅一处type annotation顺序，测试逻辑、断言及fixture不变；未改规则、ignore、CI或lock，没有新增镜像测试或重复构建，没有真实外部API或凭据操作，未上线。
+
+## 阶段八十一：静态Table列配置的具名属性顺序
+
+13个SFC仅整理125个静态columns对象，净减187条sort-objects。字段限定title/key/width/dataIndex/align/fixed/ellipsis/sorter八种；值仅为literal或完整函数创建，两段实际sorter函数原文保持，不纳dynamic/reference/value-call、computed/getter/spread或其它列配置。columns数组每个元素原位及全部完整property/callback原文multiset保持。
+
+- 真实scope/symbol追踪确认脚本没有columns整数组逃逸，模板消费者为bootstrap实际注册的a-table；slot只按名读column.key，未发现whole-column、别名/rest/default、components/customHeaderRow/transformColumns等额外消费者。change回调仅使用分页参数，声明的额外filters/sorter没有读取。已安装AntD4.2.6的Header/Body/getColumnsKey/ColGroup/useSorter按数组索引及字段名消费，不将“对象无序”作为通用理由。
+- 落盘前在两个fresh JS process/JSDOM和实际Table库中分别使用原序/排序后的125个实际配置。13组header/cell文本、key/dataIndex取值、col inline宽度、align/fixed/ellipsis类名、两实际sorter的完整调用轨迹、排序与第二页分页回调/结果一致。仅验证DOM/style/class合同，不冒称浏览器像素视觉，不触发任何业务API。
+- 落盘源码精确匹配提案，全script AST仅上述静态property顺序变化，数组顺序、完整函数及其它AST保持；13个SFC binding、模板/style和生产DOM/SSR render保持。Root独立使用真实HEAD-before与磁盘源码复核同样通过，无属性外注释归属歧义或directive。
+- 13文件lint1002→815 errors，0 warnings，逐文件各规则无新增，其余列与既有诊断保留。全Web现有166文件3649项测试及应用类型检查通过；没有新增镜像测试、修改测试逻辑、规则、ignore、CI或lock，没有因落盘重复已通过的消费探针，本阶段未构建。没有操作preview、数据库、真实集群、凭据或外部API，未上线。
