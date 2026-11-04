@@ -736,3 +736,12 @@ LocalResourceManagement仅将fetchLocalResourcesForScope、fetchLocalResources�
 - 三段声明kind、函数体、同一作用域与捕获binding，以及其它fixed statement原文顺序、data/computed/watch/call初始化位置、模板/style保持。磁盘源码与提案逐字匹配，compileScript binding分类及生产DOM/SSR render一致；单文件lint84→82 errors，0 warnings，逐规则无新增。
 - 原/新实际编译setup以真实Vue和Fake API比对成功/失败两组轨迹：factory零请求，受控mounted读取树及列表的顺序相同，实际paginationConfig的onChange(3,20)及onShowSizeChange(1,50)产生相同params、filter、rows、loading和错误清理。这是setup/受控生命周期探针，不替代真实DOM挂载测试。
 - LocalResource.contract、LocalResourceSafety、LocalResourceBindingSafety及CMDBLists现有4文件141项测试和应用类型检查通过，保留既有账户隔离、窗口/请求竞态、绑定及失败回归；未新增镜像测试、改断言、规则或ignore，未重复全仓测试和构建。该单模块闭环不代表其它域的前引全部完成，没有真实资源、SSH或网络操作，未上线。
+
+## 阶段七十四：预测分析的共享清理职责
+
+PredictAnalysis将账户变化与表单变化中相同的五步清理提取为私有clearAnalysisResult函数：作废analysisLane、清analyzing、清错误、清结果、释放图表。函数定义在lane创建之后，两个原回调仍在原调用点执行；owner回调的currentValue清空仍最后，并保留因此触发同步formData watcher的重复清理，没有删减invalidate次数或依赖generation省略操作。
+
+- 这是有实际状态清理责任的复用函数，不是空thunk。具名函数没有this/arguments/super/new.target、构造或反射观察，只在两个原回调中直接调用；真实useAiRequestScope的owner watch非immediate，scope/lane初始化没有提前执行清理。共享scope、其它预测/RCA页面、data/watch/chartAppearance及业务调用初始化位置未改。
+- 另外仅按依赖搬移getCurrentValueMax和图表初始化闭环的六段完整const-arrow，保留kind、函数体与捕获binding。共享函数的五步展开回两个call点后，其它statement原文顺序保持；模板/style、原binding分类与生产DOM/SSR render一致，新binding仅为该私有清理函数。单文件no-use-before-define 3→0、总lint85→82 errors，0 warnings，逐规则无新增。
+- 落盘前原源码与离线内存提案均通过全部预测目录现有5文件35项测试，确认Vite实际加载提案。落盘后同套35项及应用类型检查通过，没有新增镜像测试或修改断言、规则及ignore，也没有重复全仓构建。
+- 原/新实际编译setup使用真实Vue、useAiRequestScope和主题监听，以及Fake模型/图表，成功、失败、类型切换迟到和owner切换迟到四组轨迹相同：factory/mount无模型请求，lane操作次数/票据、错误清理、图表配置数据、释放/重建、主题刷新与resize保持。此为setup/受控生命周期探针，不替代真实DOM测试；没有真实模型、云或网络调用，未上线。

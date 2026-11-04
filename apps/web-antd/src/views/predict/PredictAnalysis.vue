@@ -100,53 +100,24 @@ const formData = reactive({
 });
 
 const scope = useAiRequestScope(() => {
+  clearAnalysisResult();
+  formData.currentValue = null;
+});
+const analysisLane = scope.createLane();
+function clearAnalysisResult() {
   analysisLane.invalidate();
   analyzing.value = false;
   predictionError.value = '';
   predictionResult.value = null;
   disposeCharts();
-  formData.currentValue = null;
-});
-const analysisLane = scope.createLane();
+}
 watch(
   formData,
   () => {
-    analysisLane.invalidate();
-    analyzing.value = false;
-    predictionError.value = '';
-    predictionResult.value = null;
-    disposeCharts();
+    clearAnalysisResult();
   },
   { flush: 'sync' },
 );
-useChartAppearance(() => {
-  if (predictionResult.value) initCharts();
-});
-function disposeCharts() {
-  trendChart?.dispose();
-  confidenceChart?.dispose();
-  trendChart = null;
-  confidenceChart = null;
-}
-
-const timeMarks = {
-  1: '1h',
-  6: '6h',
-  24: '1d',
-  72: '3d',
-  168: '1w',
-};
-
-// 表单验证
-const isFormValid = computed(() => {
-  return (
-    !!scope.owner.value &&
-    Number.isFinite(formData.currentValue) &&
-    formData.currentValue !== null &&
-    formData.currentValue >= 0 &&
-    formData.currentValue <= getCurrentValueMax()
-  );
-});
 
 const getCurrentValueLabel = () => {
   switch (formData.predictionType) {
@@ -166,47 +137,6 @@ const getCurrentValueLabel = () => {
       return '当前值';
     }
   }
-};
-
-const getCurrentValueUnit = () => {
-  switch (formData.predictionType) {
-    case 'qps': {
-      return '/s';
-    }
-    case 'cpu':
-    case 'memory':
-    case 'disk':
-      return '%';
-    default: {
-      return '';
-    }
-  }
-};
-
-const getCurrentValueMax = () => {
-  switch (formData.predictionType) {
-    case 'qps': {
-      return 10_000;
-    }
-    case 'cpu':
-    case 'memory':
-    case 'disk':
-      return 100;
-    default: {
-      return 100;
-    }
-  }
-};
-
-const onPredictionTypeChange = () => {
-  analysisLane.invalidate();
-  analyzing.value = false;
-  predictionError.value = '';
-  disposeCharts();
-  // 清空当前值，让用户重新填写
-  formData.currentValue = null;
-  // 清空之前的预测结果
-  predictionResult.value = null;
 };
 const formatTimeForChart = (timestamp: string | Date) =>
   formatPredictionTime(timestamp, true);
@@ -351,6 +281,75 @@ const initCharts = () => {
   if (formData.includeConfidence) {
     initConfidenceChart();
   }
+};
+useChartAppearance(() => {
+  if (predictionResult.value) initCharts();
+});
+function disposeCharts() {
+  trendChart?.dispose();
+  confidenceChart?.dispose();
+  trendChart = null;
+  confidenceChart = null;
+}
+
+const timeMarks = {
+  1: '1h',
+  6: '6h',
+  24: '1d',
+  72: '3d',
+  168: '1w',
+};
+
+const getCurrentValueMax = () => {
+  switch (formData.predictionType) {
+    case 'qps': {
+      return 10_000;
+    }
+    case 'cpu':
+    case 'memory':
+    case 'disk':
+      return 100;
+    default: {
+      return 100;
+    }
+  }
+};
+
+// 表单验证
+const isFormValid = computed(() => {
+  return (
+    !!scope.owner.value &&
+    Number.isFinite(formData.currentValue) &&
+    formData.currentValue !== null &&
+    formData.currentValue >= 0 &&
+    formData.currentValue <= getCurrentValueMax()
+  );
+});
+
+const getCurrentValueUnit = () => {
+  switch (formData.predictionType) {
+    case 'qps': {
+      return '/s';
+    }
+    case 'cpu':
+    case 'memory':
+    case 'disk':
+      return '%';
+    default: {
+      return '';
+    }
+  }
+};
+
+const onPredictionTypeChange = () => {
+  analysisLane.invalidate();
+  analyzing.value = false;
+  predictionError.value = '';
+  disposeCharts();
+  // 清空当前值，让用户重新填写
+  formData.currentValue = null;
+  // 清空之前的预测结果
+  predictionResult.value = null;
 };
 
 const startAnalysis = async () => {
