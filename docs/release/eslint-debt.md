@@ -955,3 +955,15 @@ MonitorConfig的Name统一为1..255、InstanceKey（历史API字段instance_ip�
 - before与actualHEAD ceb1cbec逐文件精确核对，disk与冻结proposal一致。完整source AST只允许91个已审nullable union成员排列，固定范围外字节与nonnull atom原文保持；forEachChild callback全部void，非首个第三statement语义mutation必须检出。固定TS transpileModule设置target/module ESNext、verbatimModuleSyntax:true、removeComments:true、jsx:Preserve下，源脚本及实际SFC编译script的擦除JS字节一致；该说法不包括production bundle/hash/sourceMap或任意compiler选项。
 - actual62文件lint2678→2587 errors，原有warnings4→4，逐文件各规则无新增。全Web167文件3692项单元测试、app及真实node配置类型检查通过；按既有pnpm build:antd执行11个构建任务全部成功（本轮0缓存）。没有通过改测试expected或snapshot处理静态源码比对失败。
 - 未修改workflow、runtime/CI逻辑、规则、依赖、lock、MonitorConfig或backend，没有新增镜像测试；未操作preview、数据库、凭据、真实集群或业务API，未上线。只报告目标复扫，不以91减法宣称新的全仓总量。
+
+## 阶段九十五：fresh primitive array.includes成员集合排列
+
+本轮先只读审查剩余string literal union：当前75文件实际47条union诊断，22个纯string节点的整批提案虽可净减32且宏未变化，但21个真实resolved成员text顺序发生变化，严格门禁拒绝。实际imported defineEmits事件数组换序与LastOf推导变化负控均检出，不能以“都string”或708宏无差异替代类型order保证；该组及其原失败证据保留，源码原文未动。
+
+- 改选独立的runtime membership合同：当前13文件31条sort-array-includes中，仅7文件13个fresh dense primitive literal数组纳入，目标净减19。实际元素全是string literal；12个enum/member或nonce template等未建立纯值合同的命中保留。含CMDBLists.test一处primitive按钮名称membership，未改变测试assertion/fixture/流程或DOM数组本身；菜单及任何已保存数组不排序。
+- receiver必须是直接ArrayLiteralExpression.includes，唯一普通search参数，无optional、fromIndex、holes、spread、call/getter/member元素或存储逃逸。actual Vue虚拟TypeScript checker确认13个ordinary string[]、builtin lib.es2016.array.include签名与boolean结果；只改变raw literal元素排列，原重复多重集、search表达式、guard及其它AST/语句保持。
+- 标准Array.prototype.includes下，dense自有primitive数据元素的布尔结果是从0开始按SameValueZero判断存在性，成员raw多重集恒等即全域membership结果恒等，不涉及对搜索值的coercion或元素getter。808组私有补充对照记录guard、至多一次search求值、抛错及true/false分支轨迹，hostile搜索对象无coerce。NaN、+0/-0及重复值控制符合SameValueZero；非零fromIndex、accessor、holes/spread/副作用和保存数组join次序等不在纳入合同，不能泛化为任意数组无序。
+- before与actualHEAD 93393935逐字核对后按exact proposal落盘。固定范围外bytes不变，原/新全部literal raw多重集相同，search和短路上下文保持；完整source及实际SFC编译script AST仅允许这些已审fresh includes数组排列，所有string union类型节点原样。forEachChild callback均void，非首个第三statement语义mutation必须检出。
+- 全354个SFC的dev/prod共708组before快照/实际after磁盘对照无额外差异、两侧0错误，真实Boolean/String危险control检出。scoped canonical只接受选中文件对应的fresh primitive.includes literal预期排列，不忽略任意数组、RuntimeCtorArray或emits事件数组的顺序；4个编辑SFC本身与AutoFix类型模块实际被读取，另2个当前无宏消费，未扩大为全部类型都被宏使用。binding、模板/style和DOM/SSR保持。
+- actual7文件lint322→303 errors，0 warnings，逐文件各规则无新增；相关Autofix、Cloud管理、SystemRole、Notification、CMDB现有回归30文件687项通过，全Web167文件3692项单元测试、app及node配置类型检查通过。首次target CLI因不存在的Workorder*.test.ts触发zsh NOMATCH、测试未开始，单独保留命令失败收据；改用确有目录筛选后实际exit0，没有改断言或snapshot消红。
+- 未修改CI/workflow、规则、依赖、lock、MonitorConfig、backend或其它string union，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。只报告目标复扫，不用19减法宣称新的全仓实扫总量。

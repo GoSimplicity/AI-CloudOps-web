@@ -206,7 +206,7 @@ for (const page of pages) {
       const cancel = [
         ...document.querySelectorAll<HTMLButtonElement>('.ant-modal button'),
       ].find((element) =>
-        ['取消', 'Cancel'].includes(
+        ['Cancel', '取消'].includes(
           element.textContent?.replace(/\s/g, '') ?? '',
         ),
       );

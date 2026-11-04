@@ -1500,7 +1500,7 @@ const saveNotification = async (): Promise<void> => {
   if (
     formData.channels.includes('in_app') &&
     !formData.recipientTypes.some((type) =>
-      ['creator', 'assignee', 'user', 'role', 'dept'].includes(type),
+      ['assignee', 'creator', 'dept', 'role', 'user'].includes(type),
     )
   ) {
     message.error('站内消息必须选择系统用户、创建人、处理人、角色或部门');

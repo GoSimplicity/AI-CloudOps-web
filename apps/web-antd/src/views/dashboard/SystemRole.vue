@@ -189,7 +189,7 @@ const formatMethod = (method: any): string => {
 
 const getMethodClass = (method: any): string => {
   const methodStr = formatMethod(method).toLowerCase();
-  return ['get', 'post', 'put', 'delete', 'patch'].includes(methodStr)
+  return ['delete', 'get', 'patch', 'post', 'put'].includes(methodStr)
     ? methodStr
     : 'unknown';
 };

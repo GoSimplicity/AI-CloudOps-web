@@ -163,7 +163,7 @@ function openAction(kind: Action, event: NotificationEvent, delivery?: Notificat
   if (!allowed(code) || !safeId(event.id) || submitting.value) return;
   if (kind === 'cancel' && (!safeId(event.parent_event_id) || event.status !== 'pending')) return;
   if (kind === 'retry' && event.status !== 'failed') return;
-  if ((kind === 'delivered' || kind === 'redeliver') && (!delivery || !safeId(delivery.id) || !['failed', 'uncertain'].includes(event.status) || !['failed', 'uncertain', 'sending'].includes(delivery.status))) return;
+  if ((kind === 'delivered' || kind === 'redeliver') && (!delivery || !safeId(delivery.id) || !['failed', 'uncertain'].includes(event.status) || !['failed', 'sending', 'uncertain'].includes(delivery.status))) return;
   actionGeneration++;
   action.value = kind;
   actionEvent.value = event;

@@ -14,7 +14,7 @@ export function validManagedResult(
   if (
     !result ||
     result.operation_id !== operationID ||
-    !['success', 'failed', 'cancelled', 'unknown'].includes(result.status) ||
+    !['cancelled', 'failed', 'success', 'unknown'].includes(result.status) ||
     typeof result.retry_safe !== 'boolean' ||
     ![result.count, result.new_count, result.update_count].every(
       (n) => Number.isSafeInteger(n) && n >= 0 && n <= 100,
@@ -39,8 +39,8 @@ export function validManagedOperation(record: ManagedCloudOperation): boolean {
     !positive(record.owner_id) ||
     !positive(record.cloud_account_id) ||
     !positive(record.cloud_account_region_id) ||
-    !['rds', 'clb', 'cache'].includes(record.kind) ||
-    !['running', 'unknown', 'completed', 'reviewed'].includes(record.state) ||
+    !['cache', 'clb', 'rds'].includes(record.kind) ||
+    !['completed', 'reviewed', 'running', 'unknown'].includes(record.state) ||
     !Array.isArray(record.resource_ids) ||
     record.resource_ids.length > 100 ||
     record.resource_ids.some(
@@ -59,7 +59,7 @@ export function validManagedOperation(record: ManagedCloudOperation): boolean {
       typeof record.review_reason === 'string' &&
       [...record.review_reason.trim()].length >= 10 &&
       [...record.review_reason.trim()].length <= 1000 &&
-      ['not_recorded', 'running', 'completed'].includes(
+      ['completed', 'not_recorded', 'running'].includes(
         record.previous_state ?? '',
       ) &&
       (!record.result || validManagedResult(record.result, record.operation_id))

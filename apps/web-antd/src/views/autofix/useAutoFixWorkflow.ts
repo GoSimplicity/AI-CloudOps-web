@@ -113,7 +113,7 @@ export function useAutoFixWorkflow() {
   );
   const canStartWorkflow = computed(
     () =>
-      !['unverified', 'running', 'uncertain'].includes(operationState.value),
+      !['running', 'uncertain', 'unverified'].includes(operationState.value),
   );
   const canReadHistory = computed(() =>
     hasPerm('/api/v1/autofix/workflow/history'),
@@ -425,7 +425,7 @@ export function useAutoFixWorkflow() {
   }
   function canOpenHistory(item: AutoFixOperation) {
     if (!canReadPlan.value || busy.value) return false;
-    if (!['unverified', 'running', 'uncertain'].includes(operationState.value))
+    if (!['running', 'uncertain', 'unverified'].includes(operationState.value))
       return true;
     return !!(
       (currentOperationId.value &&

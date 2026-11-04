@@ -487,7 +487,7 @@ async function loadHistory() {
             item.cloud_account_id !== target.cloud_account_id ||
             item.cloud_account_region_id !== target.cloud_account_region_id ||
             item.kind !== target.kind ||
-            !['running', 'success', 'failed', 'cancelled', 'unknown'].includes(
+            !['cancelled', 'failed', 'running', 'success', 'unknown'].includes(
               item.status,
             ) ||
             (item.retry_safe !== undefined &&
@@ -509,7 +509,7 @@ async function loadHistory() {
             (item.status === 'unknown' ||
               item.status === 'running' ||
               item.retry_safe === false ||
-              (['failed', 'cancelled'].includes(item.status) &&
+              (['cancelled', 'failed'].includes(item.status) &&
                 item.retry_safe !== true)),
         );
         clearReviewedMarker(target, all);
@@ -659,7 +659,7 @@ async function sync() {
     if (
       !response ||
       response.operation_id !== marker.operation_id ||
-      !['success', 'failed', 'cancelled', 'unknown'].includes(
+      !['cancelled', 'failed', 'success', 'unknown'].includes(
         response.status,
       ) ||
       typeof response.retry_safe !== 'boolean' ||
