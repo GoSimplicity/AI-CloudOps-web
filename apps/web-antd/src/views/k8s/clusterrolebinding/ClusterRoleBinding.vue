@@ -266,14 +266,14 @@ const getSubjectColor = (kind?: null | string) => {
   if (!kind) return 'default';
 
   switch (kind) {
-    case 'User': {
-      return 'blue';
-    }
     case 'Group': {
       return 'green';
     }
     case 'ServiceAccount': {
       return 'orange';
+    }
+    case 'User': {
+      return 'blue';
     }
     default: {
       return 'default';

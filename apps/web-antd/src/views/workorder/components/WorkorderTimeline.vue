@@ -178,12 +178,12 @@ const filteredTimelineList = computed(() => {
         filtered = filtered.filter((item) => isImportantAction(item.action));
         break;
       }
-      case 'user': {
-        filtered = filtered.filter((item) => !isSystemAction(item.action));
-        break;
-      }
       case 'system': {
         filtered = filtered.filter((item) => isSystemAction(item.action));
+        break;
+      }
+      case 'user': {
+        filtered = filtered.filter((item) => !isSystemAction(item.action));
         break;
       }
     }
@@ -203,6 +203,14 @@ const filteredTimelineList = computed(() => {
 
 const getActionCount = (type: string): number => {
   switch (type) {
+    case 'approve': {
+      return timelineList.value.filter((item) =>
+        [
+          TimelineAction.Approve as string,
+          TimelineAction.Reject as string,
+        ].includes(item.action),
+      ).length;
+    }
     case 'create': {
       return timelineList.value.filter(
         (item) => item.action === TimelineAction.Create,
@@ -211,14 +219,6 @@ const getActionCount = (type: string): number => {
     case 'update': {
       return timelineList.value.filter(
         (item) => item.action === TimelineAction.Update,
-      ).length;
-    }
-    case 'approve': {
-      return timelineList.value.filter((item) =>
-        [
-          TimelineAction.Approve as string,
-          TimelineAction.Reject as string,
-        ].includes(item.action),
       ).length;
     }
     default: {

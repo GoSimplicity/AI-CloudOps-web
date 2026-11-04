@@ -492,23 +492,23 @@ const handleMenuClick = async (
   record: TreeNodeWithRelations,
 ): Promise<void> => {
   switch (command) {
-    case 'members': {
-      break;
-    }
-    case 'resources': {
-      handleBindResource();
-      break;
-    }
-    case 'move': {
-      handleMoveNodeDialog(record);
-      break;
-    }
     case 'children': {
       handleCreateChildNode(record);
       break;
     }
     case 'delete': {
       confirmDelete(record);
+      break;
+    }
+    case 'members': {
+      break;
+    }
+    case 'move': {
+      handleMoveNodeDialog(record);
+      break;
+    }
+    case 'resources': {
+      handleBindResource();
       break;
     }
   }

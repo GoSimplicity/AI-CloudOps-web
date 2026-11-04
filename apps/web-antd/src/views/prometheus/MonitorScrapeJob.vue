@@ -939,12 +939,12 @@ const confirmDelete = (record: MonitorScrapeJob): void => {
 
 const handleMenuClick = (command: string, record: MonitorScrapeJob): void => {
   switch (command) {
-    case 'toggle': {
-      toggleJobStatus(record);
-      break;
-    }
     case 'delete': {
       confirmDelete(record);
+      break;
+    }
+    case 'toggle': {
+      toggleJobStatus(record);
       break;
     }
   }

@@ -160,12 +160,12 @@ const getFlowCount = (type: string): number => {
       return flowList.value.filter((item) => item.action === FlowAction.Approve)
         .length;
     }
-    case 'reject': {
-      return flowList.value.filter((item) => item.action === FlowAction.Reject)
-        .length;
-    }
     case 'assign': {
       return flowList.value.filter((item) => item.action === FlowAction.Assign)
+        .length;
+    }
+    case 'reject': {
+      return flowList.value.filter((item) => item.action === FlowAction.Reject)
         .length;
     }
     default: {

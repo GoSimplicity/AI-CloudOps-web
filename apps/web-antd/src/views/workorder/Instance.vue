@@ -2044,56 +2044,56 @@ const confirmDelete = (instance: WorkorderInstanceItem) => {
 
 const handleCommand = async (command: string, row: WorkorderInstanceItem) => {
   switch (command) {
-    case 'notification_logs': {
-      handleViewNotificationLogs(row);
-      break;
-    }
-    case 'comment': {
-      showCommentDialog(row);
-      break;
-    }
-    case 'timeline': {
-      await handleViewTimeline(row);
-      break;
-    }
-    case 'flow': {
-      await handleViewFlow(row);
-      break;
-    }
-    case 'edit': {
-      await handleActionEdit(row);
-      break;
-    }
-    case 'submit': {
-      await handleActionSubmit(row);
+    case 'approve': {
+      await handleActionApprove(row);
       break;
     }
     case 'assign': {
       await handleActionAssign(row);
       break;
     }
-    case 'approve': {
-      await handleActionApprove(row);
+    case 'cancel': {
+      await handleActionCancel(row);
       break;
     }
-    case 'reject': {
-      await handleActionReject(row);
+    case 'comment': {
+      showCommentDialog(row);
       break;
     }
     case 'complete': {
       await handleActionComplete(row);
       break;
     }
+    case 'delete': {
+      confirmDelete(row);
+      break;
+    }
+    case 'edit': {
+      await handleActionEdit(row);
+      break;
+    }
+    case 'flow': {
+      await handleViewFlow(row);
+      break;
+    }
+    case 'notification_logs': {
+      handleViewNotificationLogs(row);
+      break;
+    }
+    case 'reject': {
+      await handleActionReject(row);
+      break;
+    }
     case 'return': {
       await handleActionReturn(row);
       break;
     }
-    case 'cancel': {
-      await handleActionCancel(row);
+    case 'submit': {
+      await handleActionSubmit(row);
       break;
     }
-    case 'delete': {
-      confirmDelete(row);
+    case 'timeline': {
+      await handleViewTimeline(row);
       break;
     }
   }
@@ -2226,20 +2226,20 @@ const getActionCommentLabel = (): string => {
 // 获取步骤状态颜色
 const getStepStatusColor = (stepType: string): string => {
   switch (stepType) {
-    case 'start': {
-      return 'green';
+    case 'approval': {
+      return 'orange';
+    }
+    case 'condition': {
+      return 'cyan';
     }
     case 'end': {
       return 'purple';
     }
-    case 'approval': {
-      return 'orange';
+    case 'start': {
+      return 'green';
     }
     case 'task': {
       return 'blue';
-    }
-    case 'condition': {
-      return 'cyan';
     }
     default: {
       return 'default';
@@ -2250,20 +2250,20 @@ const getStepStatusColor = (stepType: string): string => {
 // 获取步骤类型文本
 const getStepTypeText = (stepType: string): string => {
   switch (stepType) {
-    case 'start': {
-      return '开始步骤';
+    case 'approval': {
+      return '审批步骤';
+    }
+    case 'condition': {
+      return '条件步骤';
     }
     case 'end': {
       return '结束步骤';
     }
-    case 'approval': {
-      return '审批步骤';
+    case 'start': {
+      return '开始步骤';
     }
     case 'task': {
       return '任务步骤';
-    }
-    case 'condition': {
-      return '条件步骤';
     }
     default: {
       return stepType || '未知类型';

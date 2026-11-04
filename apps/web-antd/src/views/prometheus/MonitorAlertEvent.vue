@@ -425,12 +425,12 @@ const handleCancelSilence = (record: MonitorAlertEvent): void => {
 
 const handleMenuClick = (command: string, record: MonitorAlertEvent): void => {
   switch (command) {
-    case 'unsilence': {
-      handleCancelSilence(record);
-      break;
-    }
     case 'detail': {
       showDetailDialog(record);
+      break;
+    }
+    case 'unsilence': {
+      handleCancelSilence(record);
       break;
     }
   }

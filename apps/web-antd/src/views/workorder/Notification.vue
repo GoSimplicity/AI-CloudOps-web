@@ -1425,24 +1425,24 @@ const handleManualSend = (record: Notification): void => {
 
 const handleMenuClick = (command: string, record: Notification): void => {
   switch (command) {
-    case 'test': {
-      handleTestSend(record);
-      break;
-    }
-    case 'manual': {
-      handleManualSend(record);
-      break;
-    }
-    case 'logs': {
-      handleViewLogs(record);
+    case 'delete': {
+      handleDeleteNotification(record);
       break;
     }
     case 'duplicate': {
       handleDuplicateNotification(record);
       break;
     }
-    case 'delete': {
-      handleDeleteNotification(record);
+    case 'logs': {
+      handleViewLogs(record);
+      break;
+    }
+    case 'manual': {
+      handleManualSend(record);
+      break;
+    }
+    case 'test': {
+      handleTestSend(record);
       break;
     }
   }

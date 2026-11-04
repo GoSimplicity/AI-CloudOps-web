@@ -239,14 +239,14 @@ const handleClusterDropdownScroll = (e: Event) => {
 // 获取主体类型对应的颜色
 const getSubjectColor = (kind: string) => {
   switch (kind) {
-    case 'User': {
-      return 'blue';
-    }
     case 'Group': {
       return 'green';
     }
     case 'ServiceAccount': {
       return 'orange';
+    }
+    case 'User': {
+      return 'blue';
     }
     default: {
       return 'default';

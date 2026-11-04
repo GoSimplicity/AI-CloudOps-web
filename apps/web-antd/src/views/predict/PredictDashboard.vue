@@ -473,14 +473,14 @@ const initUtilizationChart = () => {
 
 const getActionColor = (action: string) => {
   switch (action) {
-    case 'scale_up': {
-      return 'red';
+    case 'maintain': {
+      return 'blue';
     }
     case 'scale_down': {
       return 'green';
     }
-    case 'maintain': {
-      return 'blue';
+    case 'scale_up': {
+      return 'red';
     }
     default: {
       return 'default';
@@ -490,14 +490,14 @@ const getActionColor = (action: string) => {
 
 const getActionText = (action: string) => {
   switch (action) {
-    case 'scale_up': {
-      return '扩容';
+    case 'maintain': {
+      return '保持';
     }
     case 'scale_down': {
       return '缩容';
     }
-    case 'maintain': {
-      return '保持';
+    case 'scale_up': {
+      return '扩容';
     }
     default: {
       return '未知';

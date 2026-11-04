@@ -882,3 +882,14 @@ MonitorConfig的Name统一为1..255、InstanceKey（历史API字段instance_ip�
 - 私有语言探针对最终98项做882组对照，含长度0/1/多个元素/1000000稀疏数组以及空/普通/Unicode/大字符串。实际数组及boxed string使用只记录读取并原样Reflect.get的Proxy，布尔结果、receiver和length读取次数、&&/||短路与三元分支副作用轨迹相同。等价域是符合原Array/string合同的非负整数长度；另以负数、NaN及恶意Proxy返回非法长度作反例，明确不声称类型检查能验证任意恶意Proxy或违背API类型的运行时值。这是私有消费证明，不冒称浏览器业务验收。
 - 57文件实际lint3415→3317 errors，既有v-html warning1→1（总messages3416→3318），逐文件各规则无新增；目标净减98。本阶段未重新全仓扫描，不宣称新的全局总数。全Web现有167文件3692项单元测试及应用类型检查通过。
 - 没有修改测试逻辑、CI、规则、ignore、lock、MonitorConfig、全局helper或backend，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。
+
+## 阶段八十九：唯一字面量switch的完整终止分支顺序
+
+最近一次完整实扫基线仍为1130文件/7771 errors/5 warnings；本阶段仅复扫目标文件，不以阶段净减推算新的全局总数。93条sort-switch-case命中分布于51个switch；初筛33个switch的65条诊断满足条件，最终21文件只整体移动149个完整分支组，净减63条。PredictAnalysis的两个cpu→memory→disk空label组内部次序原样保留，各留1条内部排序诊断，没有为了清零拆组或重写body。
+
+- 当前选中case全部是唯一primitive string literal。分类器按JS严格相等规范化字面量，另有7对十六进制/十进制、数字分隔符、+0/-0、字符串escape及BigInt等价canary；BigInt与number保持区分，RegExp、object、call、member/getter、undefined与NaN标识符均排除。未将const enum/member仅凭名字视为literal。
+- 各非空分支末尾须有明确的无条件终止，允许空labels与其唯一body组成完整组；实际149组为94 return、54无label break、1 throw。条件退出、implicit结束、未归属的between-case注释、共享case-scope function declaration等未建立合同的组均不动，MonitorConfig按范围明确排除。default及其相邻空labels只能随完整body组移动，所有case/body原文、组内labels、注释和词法声明原样保持，所在switch及其祖先作用域、退出目标不变。
+- 分组间比较使用实际已安装规则的comparator及原配置，但只生成经过上述语义审查的完整组排列，没有运行整体autofix。只有这些case组的范围发生次序变化，范围外源码逐字保持；全script AST及SFC编译script AST只允许已审CaseBlock次序变化，其它节点保持，Vue binding、模板/style原文及DOM/SSR模板编译输出保持。
+- 私有分派探针保留真实discriminant源码和原primitive case表达式，只把整body替换为唯一组标记及对应退出；fixture own getter记录判别式读取，不执行业务body。33个switch、149组共597种输入覆盖每个合法key、未知值、null/undefined/NaN、number/BigInt、Symbol及拒绝coerce的对象；旧/新分派、读取次数、标记轨迹和return/throw/break选择一致，未知值/default行为一致。该证据仅验证分派与终止选择，不冒称运行了真实await分支、模型请求、通知或业务API；原完整body与作用域的静态等价另行核对。
+- 目标21文件实际lint1114→1051 errors，0 warnings，逐文件各规则无新增；其中sort-switch-case83→20，保留同文件未审组及两个组内顺序命中，没有声称全部93条已清零。全Web现有167文件3692项单元测试及应用类型检查通过。
+- no-await-expression-member的90条实际全部在单元测试或E2E spec，本阶段没有混入该类别。未修改测试逻辑、CI、规则、ignore、lock、MonitorConfig、全局helper或backend，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。

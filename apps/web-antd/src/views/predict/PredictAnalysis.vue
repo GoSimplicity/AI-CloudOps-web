@@ -121,17 +121,17 @@ watch(
 
 const getCurrentValueLabel = () => {
   switch (formData.predictionType) {
-    case 'qps': {
-      return 'QPS';
-    }
     case 'cpu': {
       return 'CPU使用率';
+    }
+    case 'disk': {
+      return '磁盘使用率';
     }
     case 'memory': {
       return '内存使用率';
     }
-    case 'disk': {
-      return '磁盘使用率';
+    case 'qps': {
+      return 'QPS';
     }
     default: {
       return '当前值';
@@ -302,13 +302,13 @@ const timeMarks = {
 
 const getCurrentValueMax = () => {
   switch (formData.predictionType) {
-    case 'qps': {
-      return 10_000;
-    }
     case 'cpu':
     case 'memory':
     case 'disk':
       return 100;
+    case 'qps': {
+      return 10_000;
+    }
     default: {
       return 100;
     }
@@ -328,13 +328,13 @@ const isFormValid = computed(() => {
 
 const getCurrentValueUnit = () => {
   switch (formData.predictionType) {
-    case 'qps': {
-      return '/s';
-    }
     case 'cpu':
     case 'memory':
     case 'disk':
       return '%';
+    case 'qps': {
+      return '/s';
+    }
     default: {
       return '';
     }
@@ -378,18 +378,18 @@ const startAnalysis = async () => {
     };
 
     switch (formData.predictionType) {
-      case 'qps': {
-        response = await predictQps({
-          ...baseRequest,
-          current_qps: formData.currentValue,
-        } as QpsPredictionRequest);
-        break;
-      }
       case 'cpu': {
         response = await predictCpu({
           ...baseRequest,
           current_cpu_percent: formData.currentValue,
         } as CpuPredictionRequest);
+        break;
+      }
+      case 'disk': {
+        response = await predictDisk({
+          ...baseRequest,
+          current_disk_percent: formData.currentValue,
+        } as DiskPredictionRequest);
         break;
       }
       case 'memory': {
@@ -399,11 +399,11 @@ const startAnalysis = async () => {
         } as MemoryPredictionRequest);
         break;
       }
-      case 'disk': {
-        response = await predictDisk({
+      case 'qps': {
+        response = await predictQps({
           ...baseRequest,
-          current_disk_percent: formData.currentValue,
-        } as DiskPredictionRequest);
+          current_qps: formData.currentValue,
+        } as QpsPredictionRequest);
         break;
       }
       default: {
@@ -449,12 +449,12 @@ const onChartTabChange = (key: string) => {
     )
       return;
     switch (key) {
-      case 'trend': {
-        initTrendChart();
-        break;
-      }
       case 'confidence': {
         initConfidenceChart();
+        break;
+      }
+      case 'trend': {
+        initTrendChart();
         break;
       }
     }
@@ -476,14 +476,14 @@ const getAccuracyColor = (accuracy?: null | number) => {
 
 const getActionColor = (action: string) => {
   switch (action) {
-    case 'scale_up': {
-      return 'red';
+    case 'maintain': {
+      return 'blue';
     }
     case 'scale_down': {
       return 'green';
     }
-    case 'maintain': {
-      return 'blue';
+    case 'scale_up': {
+      return 'red';
     }
     default: {
       return 'default';
@@ -493,14 +493,14 @@ const getActionColor = (action: string) => {
 
 const getActionText = (action: string) => {
   switch (action) {
-    case 'scale_up': {
-      return '扩容';
+    case 'maintain': {
+      return '保持';
     }
     case 'scale_down': {
       return '缩容';
     }
-    case 'maintain': {
-      return '保持';
+    case 'scale_up': {
+      return '扩容';
     }
     default: {
       return '未知';
@@ -510,14 +510,14 @@ const getActionText = (action: string) => {
 
 const getActionIcon = (action: string) => {
   switch (action) {
-    case 'scale_up': {
-      return 'ArrowUpOutlined';
+    case 'maintain': {
+      return 'MinusOutlined';
     }
     case 'scale_down': {
       return 'ArrowDownOutlined';
     }
-    case 'maintain': {
-      return 'MinusOutlined';
+    case 'scale_up': {
+      return 'ArrowUpOutlined';
     }
     default: {
       return 'MinusOutlined';

@@ -654,16 +654,16 @@ const handleDelete = (record: MonitorRecordRule): void => {
 // 菜单点击处理
 const handleMenuClick = (command: string, record: MonitorRecordRule): void => {
   switch (command) {
-    case 'enable': {
-      handleEnableRecord(record);
+    case 'delete': {
+      handleDelete(record);
       break;
     }
     case 'disable': {
       handleDisableRecord(record);
       break;
     }
-    case 'delete': {
-      handleDelete(record);
+    case 'enable': {
+      handleEnableRecord(record);
       break;
     }
   }

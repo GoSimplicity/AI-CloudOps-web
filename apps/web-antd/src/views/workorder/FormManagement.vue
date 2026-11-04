@@ -1011,6 +1011,14 @@ const handleMenuClick = (
   record: WorkorderFormDesignItem,
 ): void => {
   switch (command) {
+    case 'archive': {
+      archiveForm(record);
+      break;
+    }
+    case 'delete': {
+      confirmDelete(record);
+      break;
+    }
     case 'preview': {
       handlePreviewForm(record);
       break;
@@ -1019,16 +1027,8 @@ const handleMenuClick = (
       publishForm(record);
       break;
     }
-    case 'archive': {
-      archiveForm(record);
-      break;
-    }
     case 'unarchive': {
       unarchiveForm(record);
-      break;
-    }
-    case 'delete': {
-      confirmDelete(record);
       break;
     }
   }

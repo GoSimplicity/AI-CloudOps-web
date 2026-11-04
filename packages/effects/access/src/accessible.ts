@@ -49,16 +49,16 @@ async function generateRoutes(
 
   let resultRoutes: RouteRecordRaw[] = routes;
   switch (mode) {
+    case 'backend': {
+      resultRoutes = await generateRoutesByBackend(options);
+      break;
+    }
     case 'frontend': {
       resultRoutes = await generateRoutesByFrontend(
         routes,
         roles || [],
         forbiddenComponent,
       );
-      break;
-    }
-    case 'backend': {
-      resultRoutes = await generateRoutesByBackend(options);
       break;
     }
   }

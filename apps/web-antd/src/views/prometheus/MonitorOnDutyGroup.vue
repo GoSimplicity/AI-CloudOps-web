@@ -1595,20 +1595,20 @@ const confirmDelete = (record: MonitorOnDutyGroup): void => {
 
 const handleMenuClick = (command: string, record: MonitorOnDutyGroup): void => {
   switch (command) {
-    case 'edit': {
-      showEditModal(record);
-      break;
-    }
-    case 'history': {
-      handleViewHistory(record);
-      break;
-    }
     case 'change': {
       handleViewChange(record);
       break;
     }
     case 'delete': {
       confirmDelete(record);
+      break;
+    }
+    case 'edit': {
+      showEditModal(record);
+      break;
+    }
+    case 'history': {
+      handleViewHistory(record);
       break;
     }
   }

@@ -509,12 +509,12 @@ const handleDelete = (record: WorkorderCategoryItem): void => {
 
 const handleMenuAction = (key: string, record: WorkorderCategoryItem): void => {
   switch (key) {
-    case 'toggleStatus': {
-      handleToggleStatus(record);
-      break;
-    }
     case 'delete': {
       handleDelete(record);
+      break;
+    }
+    case 'toggleStatus': {
+      handleToggleStatus(record);
       break;
     }
   }

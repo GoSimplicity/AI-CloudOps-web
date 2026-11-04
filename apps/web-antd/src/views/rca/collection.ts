@@ -45,17 +45,17 @@ export function coverageText(collection?: RCACollection) {
 
 export function sourceText(status?: string) {
   switch (status) {
-    case 'success': {
-      return '采集成功';
-    }
     case 'empty': {
       return '采集成功，数据为空';
+    }
+    case 'failed': {
+      return '采集失败';
     }
     case 'partial': {
       return '部分采集失败';
     }
-    case 'failed': {
-      return '采集失败';
+    case 'success': {
+      return '采集成功';
     }
     default: {
       return '状态未知';

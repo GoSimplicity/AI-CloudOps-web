@@ -71,12 +71,12 @@ async function loadDayjsLocale(lang: SupportedLanguagesType) {
  */
 async function loadAntdLocale(lang: SupportedLanguagesType) {
   switch (lang) {
-    case 'zh-CN': {
-      antdLocale.value = antdDefaultLocale;
-      break;
-    }
     case 'en-US': {
       antdLocale.value = antdEnLocale;
+      break;
+    }
+    case 'zh-CN': {
+      antdLocale.value = antdDefaultLocale;
       break;
     }
   }
