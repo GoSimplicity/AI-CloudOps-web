@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
+
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
+
 import {
   CheckCircleOutlined,
   DownOutlined,
@@ -10,7 +12,6 @@ import {
   PlusOutlined,
   StopOutlined,
 } from '@ant-design/icons-vue';
-
 import {
   createWorkorderTemplate,
   type CreateWorkorderTemplateReq,
@@ -25,22 +26,18 @@ import {
   type UpdateWorkorderTemplateReq,
   type WorkorderTemplateItem,
 } from '#/api/core/workorder/workorder_template';
-
 import {
   listWorkorderCategory,
   type WorkorderCategoryItem,
 } from '#/api/core/workorder/workorder_category';
-
 import {
   listWorkorderProcess,
   type WorkorderProcessItem,
 } from '#/api/core/workorder/workorder_process';
-
 import {
   listWorkorderFormDesign,
   type WorkorderFormDesignItem,
 } from '#/api/core/workorder/workorder_form_design';
-
 import { usePermission } from '#/utils/permission';
 import {
   shouldNotifyPageError,

@@ -4,12 +4,14 @@ import { registerAccessDirective } from '@vben/access';
 import { initStores } from '@vben/stores';
 import '@vben/styles';
 import '@vben/styles/antd';
+
 import './styles/console.css';
 
 import { setupI18n } from '#/locales';
 
 import App from './app.vue';
 import { router } from './router';
+
 import Antd from 'ant-design-vue';
 
 async function bootstrap(namespace: string) {

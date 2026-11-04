@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
+
 import { useAccessStore, useUserStore } from '@vben/stores';
+
 import { message } from 'ant-design-vue';
+
 import {
   type CloudAccount,
   type CloudAccountRegion,
@@ -24,6 +27,7 @@ import {
   syncManagedResources,
 } from '#/api/core/tree/tree_cloud';
 import CloudManagedOperationsList from './CloudManagedOperationsList.vue';
+
 import CloudManagedOperationRecovery from './CloudManagedOperationRecovery.vue';
 import {
   type ManagedOperationMarker,

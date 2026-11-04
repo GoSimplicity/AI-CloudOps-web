@@ -6,8 +6,11 @@ import {
   ref,
   watch,
 } from 'vue';
+
 import { useAccessStore } from '@vben/stores';
+
 import { usePermission } from '#/utils/permission';
+
 import { message } from 'ant-design-vue';
 import {
   type AutoFixAction,
@@ -24,6 +27,7 @@ import {
   getAutoFixPlan,
   getAutoFixReady,
 } from '#/api/core/aiops/autofix';
+
 import { useAiRequestScope } from '../assistant/useAiRequestScope';
 import { reportAutoFixOutcomeUncertain } from './autofix-errors';
 import {

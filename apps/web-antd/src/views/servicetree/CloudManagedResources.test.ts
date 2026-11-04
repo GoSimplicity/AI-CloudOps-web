@@ -4,9 +4,11 @@ import {
   mount,
   type VueWrapper,
 } from '@vue/test-utils';
+
 import { reactive } from 'vue';
 import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+
 import CloudManagedResources from './CloudManagedResources.vue';
 
 /** 必须存在的页面、DOM 和调用缺失时立即失败，保留原非空断言的测试前提。 */

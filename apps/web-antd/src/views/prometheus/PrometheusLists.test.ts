@@ -1,7 +1,8 @@
+import type { Component } from 'vue';
+
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Component } from 'vue';
 
 import MonitorScrapePool from './MonitorScrapePool.vue';
 import MonitorScrapeJob from './MonitorScrapeJob.vue';

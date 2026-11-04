@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { filterNodeTree, flattenNodeTree } from './node-tree';
 
 const child = { id: 2, name: 'Payments', children: [] };

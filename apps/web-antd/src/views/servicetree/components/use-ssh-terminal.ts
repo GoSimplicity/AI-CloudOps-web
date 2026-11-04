@@ -1,8 +1,11 @@
 import { onBeforeUnmount, onMounted, ref, type Ref, watch } from 'vue';
+
 import { useAccessStore } from '@vben/stores';
 import { useAppConfig } from '@vben/hooks';
+
 import { type IDisposable, Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
+
 import { websocketProtocols, websocketUrl } from '#/utils/websocket-url';
 
 export type SshConnectionState =

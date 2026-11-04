@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
 import { describe, expect, it } from 'vitest';
+
 import {
   buildNotificationSchedule,
   notificationScheduleFingerprint,

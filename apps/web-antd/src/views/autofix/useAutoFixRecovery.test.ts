@@ -1,6 +1,8 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+
 import { defineComponent, h, reactive } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { useAutoFixWorkflow } from './useAutoFixWorkflow';
 
 function required<T>(value: null | T | undefined): T {

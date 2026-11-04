@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
+
 import {
   listManagedOperations,
   type ManagedCloudOperation,
   type ManagedCloudScope,
 } from '#/api/core/tree/tree_cloud';
+
 import CloudManagedOperationRecovery from './CloudManagedOperationRecovery.vue';
 import {
   type ManagedOperationMarker,

@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import type { WorkorderCategoryItem } from '#/api/core/workorder/workorder_category';
+
 import OpsPage from '#/components/ops/OpsPage.vue';
+
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
@@ -11,6 +14,7 @@ import {
   PlusOutlined,
   StopOutlined,
 } from '@ant-design/icons-vue';
+
 import { Icon } from '@iconify/vue';
 import {
   createWorkorderFormDesign,
@@ -27,9 +31,7 @@ import {
   type UpdateWorkorderFormDesignReq,
   type WorkorderFormDesignItem,
 } from '#/api/core/workorder/workorder_form_design';
-import type { WorkorderCategoryItem } from '#/api/core/workorder/workorder_category';
 import { listWorkorderCategory } from '#/api/core/workorder/workorder_category';
-
 import { getAvatarColor } from '#/utils/avatar-color';
 import { getOwnLookupValue } from '#/utils/own-lookup';
 import { usePermission } from '#/utils/permission';

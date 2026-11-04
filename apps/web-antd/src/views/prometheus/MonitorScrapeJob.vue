@@ -2,6 +2,7 @@
 import { useUserStore } from '@vben/stores';
 
 import OpsPage from '#/components/ops/OpsPage.vue';
+
 import { useListRequest } from './useListRequest';
 import {
   type BearerTokenAction,
@@ -15,6 +16,7 @@ import {
   ref,
   watch,
 } from 'vue';
+
 import { type FormInstance, message, Modal } from 'ant-design-vue';
 import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
@@ -33,6 +35,7 @@ import { getMonitorScrapePoolListApi } from '#/api/core/prometheus/prometheus_sc
 import { getTreeList, type TreeNode } from '#/api/core/tree/tree_node';
 import { useAuthStore } from '#/store';
 import { getAvatarColor } from '#/utils/avatar-color';
+
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 

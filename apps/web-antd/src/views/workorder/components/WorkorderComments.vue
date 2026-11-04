@@ -2,7 +2,9 @@
 import type { WorkorderInstanceItem } from '#/api/core/workorder/workorder_instance';
 
 import { formatCommentContent } from '#/utils/comment-content';
+
 import { computed, nextTick, reactive, ref } from 'vue';
+
 import { message } from 'ant-design-vue';
 import {
   createWorkorderInstanceComment,
@@ -11,7 +13,6 @@ import {
   type GetInstanceCommentsTreeReq,
   type WorkorderInstanceCommentItem,
 } from '#/api/core/workorder/workorder_instance_comment';
-
 import { getOwnLookupValue } from '#/utils/own-lookup';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import * as echarts from 'echarts/core';
 import { SVGRenderer } from 'echarts/renderers';
 import { shallowMount } from '@vue/test-utils';
+
 import RCAAnalysis from './RCAAnalysis.vue';
 import RCADiagnosis from './RCADiagnosis.vue';
 

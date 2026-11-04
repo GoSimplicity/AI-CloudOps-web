@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { filterNodeTree, flattenNodeTree } from './shared/node-tree';
-import { onBeforeUnmount } from 'vue';
 
+import { onBeforeUnmount } from 'vue';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { message, Modal } from 'ant-design-vue';
+
 import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import {
@@ -25,7 +26,6 @@ import {
   updateNode,
   type UpdateTreeNodeReq,
 } from '#/api/core/tree/tree_node';
-
 import { getUserList, type GetUserListReq } from '#/api/core/system/user';
 import {
   getTreeLocalList,
@@ -33,9 +33,9 @@ import {
   ResourceStatus,
   type TreeLocalResource,
 } from '#/api/core/tree/tree_local';
-
 import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
+
 import {
   shouldNotifyPageError,
   shouldRecordPageError,

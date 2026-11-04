@@ -1,8 +1,11 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+
 import { reactive } from 'vue';
 import Antd from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import AssistantSession from './AssistantSession.vue';
+
 import { createAssistantAccountScope } from '#/utils/assistant-account-scope';
 
 function required<T>(value: null | T | undefined): T {

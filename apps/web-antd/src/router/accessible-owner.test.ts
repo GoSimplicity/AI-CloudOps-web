@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+
 import { createMemoryHistory, createRouter } from 'vue-router';
+
 import { createDeferred } from '../../../../internal/test-utils/deferred';
 import { generateAccessible } from '../../../../packages/effects/access/src/accessible';
 

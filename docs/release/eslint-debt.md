@@ -763,3 +763,12 @@ SystemRole、Secret、MonitorOnDutyGroup和MonitorScrapeJob四个SFC各搬移一
 - 磁盘源码逐字匹配已审提案；其它源码仅有该规则的精确fix，9个SFC模板/style字节、compileScript binding分类和生产DOM/SSR render保持。Root另用HEAD-before及磁盘源码独立重建canonical AST和模板/style复核通过。
 - 23文件定向lint2742→2689 errors，1 warning保持；该规则53→0，逐文件各规则无新增。其余既有诊断保留，没有修改规则、ignore、测试或lock，也没有随手格式化。
 - 全Web现有166文件3619项测试及应用类型检查通过，覆盖K8s、Cron、AI、云账户、工单等原有异步隔离与失败回归；没有新增镜像测试，本阶段按约定未重复构建。没有真实外部API、集群、云或凭据操作，未上线。
+
+## 阶段七十七：保留模块求值顺序的类型导入整理
+
+65个文件（25个SFC、40个TS，其中23个测试文件）仅整理显式type import位置及导入间空行。运行时value和side-effect import的每条完整声明原文、相对顺序保持，全部import声明的完整原文multiset保持；所有非import statement及测试逻辑、断言、fixture保持，没有重排会影响模块求值顺序的导入。
+
+- 从604条sort-imports中筛选，先采用原规则排序提案，再恢复value/side-effect声明原序，仅保留实际净减且逐规则无新增的文件。其余71个无净减或会产生新诊断的提案，以及13个注释归属需要另审的保守排除文件未改；独立逐import检查包含leading、内部及同一行trailing注释，最终65文件的导入区域无注释或directive，不以类型擦除掩盖指令作用域变化。
+- 使用verbatimModuleSyntax=true擦除类型后，对完整JavaScript AST全部子节点逐一比较，结构、token和literal保持；25个SFC再经真实compileScript后的JavaScript AST、binding分类及生产DOM/SSR render一致，模板/style字节保持。类型导入跨越运行时声明不产生新的运行时模块读取或初始化。
+- 65文件sort-imports 280→171，净减109；该范围总lint3918→3809 errors，5 warnings保持，逐文件各规则无新增。其余既有导入顺序诊断继续保留，没有宣称604条全部修复，也没有修改规则、ignore、CI或lock。
+- 全Web现有166文件3619项测试、应用类型检查通过；测试文件仅导入排版，正文statement保持，没有新增镜像测试或更改业务断言。本阶段按约定未重复构建，没有真实外部API、云、集群或凭据操作，未上线。

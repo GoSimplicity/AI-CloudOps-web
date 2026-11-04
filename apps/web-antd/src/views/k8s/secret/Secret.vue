@@ -1,7 +1,9 @@
 <script lang="ts" setup>
 import OpsPage from '#/components/ops/OpsPage.vue';
+
 import { namespacedResourceKey } from '../shared/utils';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
+
 import { message } from 'ant-design-vue';
 import { useSecretPage } from './Secret';
 import { BINARY_VALUE_NOTICE } from './secret-data';

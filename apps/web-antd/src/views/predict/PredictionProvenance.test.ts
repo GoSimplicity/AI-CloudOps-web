@@ -1,6 +1,8 @@
+import type { PredictionResponse } from '#/api/core/aiops/predict';
+
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import type { PredictionResponse } from '#/api/core/aiops/predict';
+
 import PredictionProvenance from './PredictionProvenance.vue';
 import { formatProbability } from './prediction-display';
 

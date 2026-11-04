@@ -8,6 +8,7 @@ import {
   ref,
   watch,
 } from 'vue';
+
 import {
   AlertCircle,
   Bot,
@@ -33,10 +34,12 @@ import {
   X,
   Zap,
 } from 'lucide-vue-next';
+
 import { message } from 'ant-design-vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { useAccessStore, useUserStore } from '@vben/stores';
+
 import {
   assistantOwner,
   createAssistantAccountScope,

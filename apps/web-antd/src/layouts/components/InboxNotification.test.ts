@@ -1,7 +1,9 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+
 import { reactive } from 'vue';
 import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+
 import InboxNotification from './InboxNotification.vue';
 
 function required<T>(value: null | T | undefined): T {

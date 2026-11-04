@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
+
 import { message } from 'ant-design-vue';
+
 import { useRouter } from 'vue-router';
 import { useAccessStore, useUserStore } from '@vben/stores';
+
 import {
   assistantOwner,
   createAssistantAccountScope,

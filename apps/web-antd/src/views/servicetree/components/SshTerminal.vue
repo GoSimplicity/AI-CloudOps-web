@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Alert, Badge, Button } from 'ant-design-vue';
+
 import {
   ArrowLeftOutlined,
   DisconnectOutlined,
   ReloadOutlined,
 } from '@ant-design/icons-vue';
 import { useRouter } from 'vue-router';
+
 import { useSshTerminal } from './use-ssh-terminal';
+
 import 'xterm/css/xterm.css';
 
 const props = defineProps<{ kind: 'cloud' | 'local'; resourceId: string }>();

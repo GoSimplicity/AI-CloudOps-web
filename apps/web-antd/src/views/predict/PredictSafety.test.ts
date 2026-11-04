@@ -4,9 +4,11 @@ import {
   shallowMount,
   type VueWrapper,
 } from '@vue/test-utils';
+
 import { reactive } from 'vue';
 import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import PredictAnalysis from './PredictAnalysis.vue';
 import PredictDashboard from './PredictDashboard.vue';
 

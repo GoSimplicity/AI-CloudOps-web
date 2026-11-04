@@ -1,7 +1,9 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+
 import { defineComponent, ref } from 'vue';
 import Antd from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import Welcome from './SystemWelcome.vue';
 
 /** 必须存在的页面、DOM 或调用缺失时立即失败，保留原测试前提。 */

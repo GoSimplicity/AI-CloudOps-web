@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import type { EChartsType } from 'echarts/core';
+
+import type { System } from '#/api/core/system/system';
+
 import {
   computed,
   nextTick,
@@ -8,8 +12,8 @@ import {
   onMounted,
   ref,
 } from 'vue';
+
 import * as echarts from 'echarts/core';
-import type { EChartsType } from 'echarts/core';
 import { BarChart, LineChart } from 'echarts/charts';
 import {
   GridComponent,
@@ -18,12 +22,12 @@ import {
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { InfoCircleOutlined, WarningOutlined } from '@ant-design/icons-vue';
+
 import OpsPage from '#/components/ops/OpsPage.vue';
 import {
   getSystemInfoApi,
   getSystemMetricsApi,
 } from '#/api/core/system/system';
-import type { System } from '#/api/core/system/system';
 
 // 所有数值来自一次实际读取；本页历史仅保留激活期间最近30次采样
 const definitions = [

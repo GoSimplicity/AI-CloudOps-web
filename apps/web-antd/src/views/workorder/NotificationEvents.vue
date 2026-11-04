@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
+
 import { useAccessStore, useUserStore } from '@vben/stores';
+
 import { message } from 'ant-design-vue';
+
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 import {
   cancelNotificationEvent,
