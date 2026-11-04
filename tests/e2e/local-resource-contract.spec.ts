@@ -64,7 +64,8 @@ test('local resource metadata preserves credentials and persists structured tags
         (response) => new URL(response.url()).pathname === '/api/user/login',
       );
       await page.getByRole('button', { exact: true, name: '登录' }).click();
-      const authentication = await (await login).json();
+      const loginResponse = await login;
+      const authentication = await loginResponse.json();
       if (authentication.code !== 0)
         throw new Error('Private local authentication failed');
       token = authentication.data.accessToken;
@@ -84,9 +85,10 @@ test('local resource metadata preserves credentials and persists structured tags
         },
         'POST',
       );
-      const rows = (
-        await api(`/tree/local/list?page=1&size=10&search=${nonce}`)
-      ).items;
+      const rowsResponse = await api(
+        `/tree/local/list?page=1&size=10&search=${nonce}`,
+      );
+      const rows = rowsResponse.items;
       const owned = rows.filter((row: { name: string }) => row.name === nonce);
       expect(owned).toHaveLength(1);
       id = owned[0].id;

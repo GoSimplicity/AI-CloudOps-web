@@ -114,7 +114,8 @@ test('disabled HTTP cron persists create and execution-field edits without runni
         ))
           input.value = '';
       });
-      const authentication = await (await login).json();
+      const loginResponse = await login;
+      const authentication = await loginResponse.json();
       if (authentication.code !== 0)
         throw new Error('Private local authentication failed');
       token = authentication.data.accessToken;

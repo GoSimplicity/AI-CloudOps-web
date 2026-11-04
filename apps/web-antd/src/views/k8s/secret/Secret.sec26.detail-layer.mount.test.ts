@@ -71,7 +71,8 @@ function setSubject(userInfo: Record<string, unknown>, codes: string[]) {
 }
 
 async function mountSecret() {
-  const component = (await import('./Secret.vue')).default;
+  const secretModule = await import('./Secret.vue');
+  const component = secretModule.default;
   wrapper = mount(component, {
     attachTo: document.body,
     global: { plugins: [Antd], stubs: { Icon: true } },

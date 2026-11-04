@@ -112,7 +112,8 @@ test('cloud account local CRUD preserves regions and never auto-verifies', async
         ))
           input.value = '';
       });
-      const authentication = await (await login).json();
+      const loginResponse = await login;
+      const authentication = await loginResponse.json();
       if (authentication.code !== 0)
         throw new Error('Private local authentication failed');
       token = authentication.data.accessToken;
@@ -187,9 +188,10 @@ test('cloud account local CRUD preserves regions and never auto-verifies', async
         expect(createResponse.request().postDataJSON().status).toBe(2);
         expect((await createResponse.json()).code).toBe(0);
         await expect(dialog).not.toBeVisible();
-        const rows = (
-          await api(`/tree/cloud/account/list?page=1&size=100&search=${name}`)
-        ).items;
+        const rowsResponse = await api(
+          `/tree/cloud/account/list?page=1&size=100&search=${name}`,
+        );
+        const rows = rowsResponse.items;
         const saved = rows.find((row: { name: string }) => row.name === name);
         expect(!!saved?.id).toBe(true);
         item.id = saved.id;
@@ -240,11 +242,10 @@ test('cloud account local CRUD preserves regions and never auto-verifies', async
     async () => {
       if (token) {
         for (const item of [...owned].reverse()) {
-          const rows = (
-            await api(
-              `/tree/cloud/account/list?page=1&size=100&search=${item.name}`,
-            )
-          ).items;
+          const rowsResponse = await api(
+            `/tree/cloud/account/list?page=1&size=100&search=${item.name}`,
+          );
+          const rows = rowsResponse.items;
           const matches = rows.filter(
             (row: { id: number; name: string; provider: number }) =>
               (item.id === 0 || row.id === item.id) &&

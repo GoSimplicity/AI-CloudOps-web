@@ -59,7 +59,8 @@ test('welcome displays local metrics, read-only refresh and compact themed mobil
   await page.goto(route('/system_welcome'));
   const response = await measured;
   expect(response.status()).toBe(200);
-  const snapshot = (await response.json()).data;
+  const snapshotBody = await response.json();
+  const snapshot = snapshotBody.data;
   expect(typeof snapshot.cpu_usage).toBe('number');
   expect(typeof snapshot.network_in).toBe('number');
   await expect(page.locator('.sample-status')).not.toHaveText('正在读取采样');

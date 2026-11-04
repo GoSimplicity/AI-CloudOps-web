@@ -96,7 +96,8 @@ describe('命名空间查询作用域', () => {
   });
 
   it('fE-02b：HTTP 错误、网络错误已由请求层提示，页面只保留错误状态；取消类静默且不写错误状态', async () => {
-    const axios = (await import('axios')).default;
+    const axiosModule = await import('axios');
+    const axios = axiosModule.default;
     const { AxiosError } = await import('axios');
     const { message } = await import('ant-design-vue');
     const page = useNamespacePage();

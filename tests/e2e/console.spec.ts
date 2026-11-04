@@ -472,7 +472,9 @@ test('account menu reflects profile API and notifications have an honest empty s
     if (input) input.value = '';
   });
   await expect(page).not.toHaveURL(/auth\/login/, { timeout: 30_000 });
-  const profile = (await (await profileResponse).json()).data;
+  const resolvedProfileResponse = await profileResponse;
+  const profileBody = await resolvedProfileResponse.json();
+  const profile = profileBody.data;
   await page.getByRole('button', { exact: true, name: '账户菜单' }).click();
   const menu = page.locator('[role="menu"][data-state="open"]');
   await expect(menu).toBeVisible();
@@ -830,7 +832,9 @@ test('assistant rejects unowned legacy cache and uses the profile UID', async ({
     (response) => new URL(response.url()).pathname === '/api/user/profile',
   );
   await acceptanceLogin(page);
-  const profile = (await (await profileResponse).json()).data;
+  const resolvedProfileResponse = await profileResponse;
+  const profileBody = await resolvedProfileResponse.json();
+  const profile = profileBody.data;
   expect(Number.isSafeInteger(profile.id) && profile.id > 0).toBe(true);
   await page.locator('.assistant-float-button').click();
   await expect(page.locator('.ai-float-window')).not.toContainText(
@@ -883,7 +887,9 @@ test('assistant clears an invalid owned session and permits a fresh question', a
     (response) => new URL(response.url()).pathname === '/api/user/profile',
   );
   await acceptanceLogin(page);
-  const profile = (await (await profileResponse).json()).data;
+  const resolvedProfileResponse = await profileResponse;
+  const profileBody = await resolvedProfileResponse.json();
+  const profile = profileBody.data;
   const invalidSid = 'cloudops-ui-unknown-owner-session';
   await page.evaluate(
     ({ owner, invalidSid }) => {
@@ -1278,8 +1284,12 @@ test('on-duty calendar reads an isolated real group and supports month navigatio
     (response) => new URL(response.url()).pathname === '/api/user/profile',
   );
   await acceptanceLogin(page);
-  const token = (await (await login).json()).data.accessToken;
-  const profile = (await (await profileResponse).json()).data;
+  const loginResponse = await login;
+  const tokenBody = await loginResponse.json();
+  const token = tokenBody.data.accessToken;
+  const resolvedProfileResponse = await profileResponse;
+  const profileBody = await resolvedProfileResponse.json();
+  const profile = profileBody.data;
   const headers = { Authorization: `Bearer ${token}` };
   const name = `ui-calendar-${Date.now()}`;
   let groupId = 0;
@@ -1302,7 +1312,8 @@ test('on-duty calendar reads an isolated real group and supports month navigatio
       headers,
       params: { page: 1, size: 10, search: name },
     });
-    const matches = (await listed.json()).data.items.filter(
+    const matchesBody = await listed.json();
+    const matches = matchesBody.data.items.filter(
       (item: { name: string }) => item.name === name,
     );
     expect(matches.length).toBe(1);
@@ -1476,7 +1487,9 @@ test('YAML templates and tasks complete a real isolated dry-run without creating
     (response) => new URL(response.url()).pathname === '/api/user/login',
   );
   await acceptanceLogin(page);
-  const token = (await (await login).json()).data.accessToken;
+  const loginResponse = await login;
+  const tokenBody = await loginResponse.json();
+  const token = tokenBody.data.accessToken;
   const headers = { Authorization: `Bearer ${token}` };
   const resourceName = `ui-yaml-${Date.now()}`;
   const templateName = `${resourceName}-template`;
@@ -1756,7 +1769,9 @@ test('notification configuration uses real pagination, logs and safe responsive 
       response.request().method() === 'POST',
   );
   await acceptanceLogin(page);
-  const token = (await (await login).json()).data.accessToken;
+  const loginResponse = await login;
+  const tokenBody = await loginResponse.json();
+  const token = tokenBody.data.accessToken;
   expect(typeof token === 'string' && token.length > 0).toBe(true);
   const nonce = `cloudops-ui-notification-${Date.now()}`;
   const names = [`${nonce}-email`, `${nonce}-feishu`];
@@ -2018,7 +2033,9 @@ test('workorder instance completes a real template draft submit and approval lif
       response.request().method() === 'POST',
   );
   await acceptanceLogin(page);
-  const account = (await (await login).json()).data;
+  const loginResponse = await login;
+  const accountBody = await loginResponse.json();
+  const account = accountBody.data;
   const token = account.accessToken;
   const uid = Number(account.id);
   expect(

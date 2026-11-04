@@ -980,3 +980,15 @@ MonitorConfig的Name统一为1..255、InstanceKey（历史API字段instance_ip�
 - 原readonly CLI collector曾在两个CLI均成功后因before/after临时路径的原始字符串比较失败，该记录保留；独立严格path/line映射比较通过，本轮磁盘复验亦通过。没有以旧aggregate exit0掩盖失败或改snapshot消红。
 - actual10文件lint442→368 errors，0 warnings，逐文件各规则无新增；全Web167文件3692项单元测试、app及node配置类型检查通过。这两个既有tsconfig不冒称完整静态覆盖所有E2E spec；Node-only配置/spec另由实际CLI transform/collection、完整AST和普通Node singleton对照验收，未执行带业务动作的E2E。
 - 未修改CI/workflow、规则、依赖、lock、MonitorConfig或backend，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。Root随后实际全仓boundary扫描确认1130文件/7109 errors/5 warnings，protected与parser均0、directive audit41；该数字来自本轮完整执行日志，不是74减法推导。
+
+## 阶段九十七：等待结果的具名中间变量
+
+当前13文件定向实际确认90条unicorn/no-await-expression-member，均在单测或E2E spec，本轮没有该规则的生产代码候选。选择11文件28个完整单const初始化语句，增加37个对应等待结果变量：16处直接member、21处仅沿receiver→member/callee→外层await的首求值链。其余53处参数、binary、for-of、new与concise arrow等上下文保留，未从已经读取callee或兄弟表达式之后的参数位置外提await。
+
+- 每个新增变量与原语句在同一block，原嵌套await按inner→outer顺序拆分，没有新增或删除await，也没有移动browser callback外部、改变方法this或提前求值任何参数。名称与原block内标识符无冲突；原最终const的初始化仍在同一等待链之后。没有改断言、fixture、selector、业务callback逻辑或新建helper；只在这些语句组内进行必要换行。
+- before与actualHEAD 841a313逐文件精确核对后按冻结proposal落盘。实际磁盘11文件完全匹配提案；从磁盘重新定位28个语句组，组外字节完全相同。完整TS AST将新增const的初始化表达式逐层反向展开后，与原完整语句相同，所有forEachChild callback均void；非首个第三statement语义mutation及错误call-argument外提负控均被检出。
+- 直接从实际磁盘提取这些语句进行364组原/新私有对照，覆盖native Promise、thenable的then getter/settle、receiver的data/items/json与find/filter getter、方法this、完整参数/callback执行顺序、错误identity与微任务轨迹。两侧结果及完整trace一致；探针全Fake，不执行实际import、HTTP、模型或业务API。该有限动态对照补充首求值链的静态证明，不泛化为任意await都可外提。
+- 隔离before源码来自该HEAD，after来自实际磁盘；真实Playwright CLI两侧test --list均exit0，29 specs/29 tests。全部config与suite/spec/test metadata保持，仅映射明确temporary根路径及源码位置；按实际28组插入范围逐个映射29个registration位置，其中16个发生行变化，没有使用统一+2或盲删line/column。registration anchor原文逐个相同，错误column负控被检出。精简child env无凭据、net/http/https/fetch全部deny，未启动browser/webServer或执行真实E2E业务。
+- 首次CLI比较器将文件suite的合成line0/column0当成真实源码位置而失败；保留失败记录，修正为原样保留该sentinel后完整比较实际exit0。只修/tmp验证工具，未改测试metadata或snapshot。此前readonly探针的非async snippet解析与遗漏item fixture错误也已保留，修正后分别独立执行成功；不以末命令成功掩盖前序失败。
+- actual11文件lint391→354 errors，0 warnings，净减37，逐文件各规则无新增。3个相关Namespace/Secret现有测试文件22项通过；全Web167文件3692项单测、app及真实node配置类型检查均exit0。这两个既有tsconfig不冒称完整静态覆盖全部E2E spec，后者另由实际CLI transform/collection与完整AST验收，没有运行真实业务E2E。
+- 未修改CI/workflow、规则、依赖、lock、MonitorConfig、backend或53个排除项，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。Root随后实际执行完整boundary扫描，确认1130文件7072 errors/5 warnings、protected/parser均0、directive audit41；结果来自/tmp/cloudops-stage97-root-boundaries.log，不是目标净减的减法推导。

@@ -59,7 +59,9 @@ test('notification department and explicit addresses persist disabled and preser
     ))
       input.value = '';
   });
-  const token = (await (await login).json()).data.accessToken;
+  const loginResponse = await login;
+  const tokenBody = await loginResponse.json();
+  const token = tokenBody.data.accessToken;
   const api = async (path: string, method = 'GET', data?: unknown) => {
     const response = await page.request.fetch(`/api/${path}`, {
       method,

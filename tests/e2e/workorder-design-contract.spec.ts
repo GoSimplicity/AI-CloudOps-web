@@ -76,7 +76,8 @@ test('workorder local form and process design save round-trip and cancel', async
       (response) => new URL(response.url()).pathname === '/api/user/login',
     );
     await page.getByRole('button', { exact: true, name: '登录' }).click();
-    const authentication = await (await login).json();
+    const loginResponse = await login;
+    const authentication = await loginResponse.json();
     if (authentication.code !== 0)
       throw new Error('Private local authentication failed');
     token = authentication.data.accessToken;
@@ -130,9 +131,12 @@ test('workorder local form and process design save round-trip and cancel', async
     );
     await page.getByRole('button', { exact: true, name: '保存设计' }).click();
     expect((await (await savedForm).json()).code).toBe(0);
-    const forms = (
-      await api(`/workorder/form-design/list?page=1&size=10&search=${nonce}`)
-    ).items.filter((item: { name: string }) => item.name === nonce);
+    const formsResponse = await api(
+      `/workorder/form-design/list?page=1&size=10&search=${nonce}`,
+    );
+    const forms = formsResponse.items.filter(
+      (item: { name: string }) => item.name === nonce,
+    );
     expect(forms).toHaveLength(1);
     formId = forms[0].id;
     const form = await api(`/workorder/form-design/detail/${formId}`);
@@ -228,9 +232,12 @@ test('workorder local form and process design save round-trip and cancel', async
     );
     await page.getByRole('button', { exact: true, name: '保存流程' }).click();
     expect((await (await savedProcess).json()).code).toBe(0);
-    const processes = (
-      await api(`/workorder/process/list?page=1&size=10&search=${nonce}`)
-    ).items.filter((item: { name: string }) => item.name === nonce);
+    const processesResponse = await api(
+      `/workorder/process/list?page=1&size=10&search=${nonce}`,
+    );
+    const processes = processesResponse.items.filter(
+      (item: { name: string }) => item.name === nonce,
+    );
     expect(processes).toHaveLength(1);
     processId = processes[0].id;
     const processDetail = await api(`/workorder/process/detail/${processId}`);
@@ -250,9 +257,10 @@ test('workorder local form and process design save round-trip and cancel', async
     expect(errors).toEqual([]);
   } finally {
     if (token) {
-      const processes = (
-        await api(`/workorder/process/list?page=1&size=100&search=${nonce}`)
-      ).items.filter(
+      const processesResponse = await api(
+        `/workorder/process/list?page=1&size=100&search=${nonce}`,
+      );
+      const processes = processesResponse.items.filter(
         (item: { id: number; name: string }) =>
           item.name === nonce && (processId === 0 || item.id === processId),
       );
@@ -260,9 +268,10 @@ test('workorder local form and process design save round-trip and cancel', async
         await api(`/workorder/process/update/${item.id}`, { status: 3 }, 'PUT');
         await api(`/workorder/process/delete/${item.id}`, undefined, 'DELETE');
       }
-      const forms = (
-        await api(`/workorder/form-design/list?page=1&size=100&search=${nonce}`)
-      ).items.filter(
+      const formsResponse = await api(
+        `/workorder/form-design/list?page=1&size=100&search=${nonce}`,
+      );
+      const forms = formsResponse.items.filter(
         (item: { id: number; name: string }) =>
           item.name === nonce && (formId === 0 || item.id === formId),
       );

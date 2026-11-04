@@ -76,7 +76,8 @@ test('cloud resource sync selection uses local regions and cancellation never ca
         (response) => new URL(response.url()).pathname === '/api/user/login',
       );
       await page.getByRole('button', { exact: true, name: '登录' }).click();
-      const authentication = await (await login).json();
+      const loginResponse = await login;
+      const authentication = await loginResponse.json();
       if (authentication.code !== 0)
         throw new Error('Private local authentication failed');
       token = authentication.data.accessToken;
@@ -95,9 +96,12 @@ test('cloud resource sync selection uses local regions and cancellation never ca
         },
         'POST',
       );
-      const own = (
-        await api(`/tree/cloud/account/list?page=1&size=10&search=${nonce}`)
-      ).items.find((item: { name: string }) => item.name === nonce);
+      const ownResponse = await api(
+        `/tree/cloud/account/list?page=1&size=10&search=${nonce}`,
+      );
+      const own = ownResponse.items.find(
+        (item: { name: string }) => item.name === nonce,
+      );
       if (!own) throw new Error('Owned fixture missing');
       id = own.id;
       await page.goto(route('/cloud_resource_management'));
@@ -185,9 +189,10 @@ test('cloud resource sync selection uses local regions and cancellation never ca
     },
     async () => {
       if (token) {
-        const owned = (
-          await api(`/tree/cloud/account/list?page=1&size=100&search=${nonce}`)
-        ).items.filter(
+        const ownedResponse = await api(
+          `/tree/cloud/account/list?page=1&size=100&search=${nonce}`,
+        );
+        const owned = ownedResponse.items.filter(
           (row: { id: number; name: string }) =>
             (id === 0 || row.id === id) &&
             [nonce, `${nonce}-updated`].includes(row.name),
