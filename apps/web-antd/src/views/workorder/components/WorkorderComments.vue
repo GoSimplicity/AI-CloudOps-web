@@ -17,6 +17,8 @@ import {
 import { getOwnLookupValue } from '#/utils/own-lookup';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
+import { flattenCommentReplies } from './comment-thread';
+
 withDefaults(defineProps<Props>(), {
   instance: undefined,
 });
@@ -59,6 +61,7 @@ const commentsList = ref<WorkorderInstanceCommentItem[]>([]);
 const quickCommenting = ref(false);
 const quickCommentText = ref('');
 const highlightCommentId = ref<null | number>(null);
+const commentsContentRef = ref<HTMLElement>();
 const sortOrder = ref<'newest' | 'oldest'>('newest');
 
 // 回复相关状态
@@ -182,6 +185,28 @@ const sortedComments = computed(() => {
   });
   return sorted;
 });
+
+const replyThreads = computed(
+  () =>
+    new Map(
+      commentsList.value.map((comment) => [
+        comment.id,
+        flattenCommentReplies(comment),
+      ]),
+    ),
+);
+
+const focusComment = (commentId: number) => {
+  const element = [
+    ...(commentsContentRef.value?.querySelectorAll<HTMLElement>(
+      '[data-comment-id]',
+    ) ?? []),
+  ].find((item) => item.dataset.commentId === String(commentId));
+  if (!element) return;
+  highlightCommentId.value = commentId;
+  element.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+  element.focus({ preventScroll: true });
+};
 
 // 主要方法
 const showCommentDialog = (instanceId: number) => {
@@ -589,7 +614,7 @@ defineExpose({
         </div>
       </template>
 
-      <div class="comments-content">
+      <div ref="commentsContentRef" class="comments-content">
         <!-- 快速评论输入框 -->
         <div class="quick-comment-section">
           <!-- 引用预览卡片 -->
@@ -648,7 +673,7 @@ defineExpose({
           v-if="commentsList.length === 0 && !loading"
           class="empty-comments"
         >
-          <a-empty description="">
+          <a-empty>
             <template #image>
               <div class="empty-icon">
                 <IconComponent icon="empty-comment" />
@@ -668,10 +693,12 @@ defineExpose({
             <div
               v-for="(comment, index) in sortedComments"
               :key="comment.id"
+              :data-comment-id="comment.id"
               class="comment-item"
               :class="{
                 'comment-highlight': comment.id === highlightCommentId,
               }"
+              tabindex="-1"
             >
               <div class="comment-wrapper">
                 <div class="comment-avatar">
@@ -790,12 +817,14 @@ defineExpose({
 
                   <!-- 回复列表 -->
                   <div
-                    v-if="comment.children && comment.children.length > 0"
+                    v-if="(replyThreads.get(comment.id)?.length ?? 0) > 0"
                     class="comment-replies"
                   >
                     <div class="replies-header">
                       <IconComponent icon="replies" />
-                      <span>{{ comment.children.length }} 条回复</span>
+                      <span
+                        >{{ replyThreads.get(comment.id)?.length }} 条回复</span
+                      >
                       <a-button
                         size="small"
                         type="text"
@@ -810,9 +839,16 @@ defineExpose({
                       class="replies-list"
                     >
                       <div
-                        v-for="reply in comment.children"
+                        v-for="{ comment: reply, parent } in replyThreads.get(
+                          comment.id,
+                        ) ?? []"
                         :key="reply.id"
+                        :class="{
+                          'comment-highlight': reply.id === highlightCommentId,
+                        }"
+                        :data-comment-id="reply.id"
                         class="reply-item"
+                        tabindex="-1"
                       >
                         <div class="reply-avatar">
                           <a-avatar
@@ -835,10 +871,61 @@ defineExpose({
                               formatRelativeTime(reply.created_at)
                             }}</span>
                           </div>
+                          <a-button
+                            :aria-label="`定位父评论 #${parent.id}`"
+                            class="reply-parent-link"
+                            size="small"
+                            type="link"
+                            @click="focusComment(parent.id)"
+                          >
+                            回复 @{{ parent.operator_name || '匿名用户' }} · #{{
+                              parent.id
+                            }}
+                          </a-button>
                           <div
                             class="reply-content"
                             v-html="formatCommentContent(reply.content)"
                           ></div>
+                          <div class="comment-actions">
+                            <a-button
+                              class="action-btn"
+                              size="small"
+                              type="text"
+                              @click="showReplyInput(reply.id)"
+                            >
+                              <IconComponent icon="reply" /> 回复
+                            </a-button>
+                          </div>
+                          <div
+                            v-if="replyInputVisible[reply.id]"
+                            class="reply-input-section"
+                          >
+                            <div class="reply-input-wrapper">
+                              <a-textarea
+                                v-model:value="replyText[reply.id]"
+                                :placeholder="`回复 ${reply.operator_name}...`"
+                                :rows="3"
+                                class="reply-textarea"
+                                @keydown.ctrl.enter="submitReply(reply.id)"
+                              />
+                              <div class="reply-actions">
+                                <a-button
+                                  size="small"
+                                  @click="cancelReply(reply.id)"
+                                >
+                                  <span>取消</span>
+                                </a-button>
+                                <a-button
+                                  :loading="replySubmitting[reply.id]"
+                                  size="small"
+                                  type="primary"
+                                  @click="submitReply(reply.id)"
+                                >
+                                  <span>回复</span>
+                                </a-button>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1415,6 +1502,16 @@ defineExpose({
   line-height: 1.6;
   color: #495057;
   font-size: 14px;
+}
+
+.reply-parent-link {
+  max-width: 100%;
+  height: auto;
+  padding: 0;
+  margin-bottom: 8px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
 }
 
 /* 空状态 */
