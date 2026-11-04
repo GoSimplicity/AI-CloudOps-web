@@ -114,7 +114,7 @@ const columns = [
 
 // 状态数据
 const loading = ref(false);
-const { loadError, beginRequest } = useListRequest(loading);
+const { beginRequest, loadError } = useListRequest(loading);
 const searchText = ref('');
 const statusFilter = ref<string | undefined>(undefined);
 const eventTimesFilter = ref<number | undefined>(undefined);

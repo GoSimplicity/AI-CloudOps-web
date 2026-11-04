@@ -12,21 +12,21 @@ import { usePermission } from '#/utils/permission';
 
 const { can } = usePermission();
 const {
-  loadingStats,
-  clearingCache,
-  clearAllModalVisible,
   cacheStats,
-  statsError,
-  operationError,
+  clearAllModalVisible,
+  clearHistory,
+  clearingCache,
   clearNamespaceForm,
   clearOperationForm,
-  operationHistory,
-  refreshCacheStats,
+  confirmClearAllCache,
   handleClearNamespaceCache,
   handleClearOperationCache,
+  loadingStats,
+  operationError,
+  operationHistory,
+  refreshCacheStats,
   showClearAllModal,
-  confirmClearAllCache,
-  clearHistory,
+  statsError,
 } = useRcaCache();
 
 // 格式化命中率

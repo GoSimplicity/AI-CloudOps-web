@@ -119,9 +119,9 @@ const columns = [
 // 状态数据
 const loading = ref(false);
 const {
-  loadError,
   beginRequest,
   invalidate: invalidateList,
+  loadError,
 } = useListRequest(loading);
 const submitLoading = ref(false);
 const validatingExpr = ref(false);

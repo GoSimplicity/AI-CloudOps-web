@@ -28,28 +28,28 @@ const { can } = usePermission();
 // 使用组合式函数
 const {
   // 响应式状态
-  loading,
-  submitLoading,
-  detailLoading,
-  error,
-  sshResourcesLoading,
-  searchText,
-  filterStatus,
-  filterJobType,
-  currentPage,
-  pageSize,
-  total,
-  selectedRows,
-  isCreateModalVisible,
-  isEditModalVisible,
-  isDetailModalVisible,
-  currentJobDetail,
   createFormModel,
+  currentJobDetail,
+  currentPage,
+  detailLoading,
   editFormModel,
+  error,
+  filterJobType,
+  filterStatus,
+  isCreateModalVisible,
+  isDetailModalVisible,
+  isEditModalVisible,
+  loading,
+  pageSize,
+  searchText,
+  selectedRows,
+  sshResourcesLoading,
+  submitLoading,
+  total,
 
   // 表单引用
-  formRef,
   clearPage,
+  formRef,
 
   // 计算属性
   filteredCronJobs,
@@ -60,14 +60,14 @@ const {
   editFormRules,
 
   // 工具函数
-  getStatusText,
-  getStatusColor,
-  getJobTypeText,
-  getJobTypeColor,
-  getLastRunStatusText,
-  getLastRunStatusColor,
   formatDateTime,
   formatDuration,
+  getJobTypeColor,
+  getJobTypeText,
+  getLastRunStatusColor,
+  getLastRunStatusText,
+  getStatusColor,
+  getStatusText,
 
   // HTTP头部管理
   addHttpHeader,
@@ -78,8 +78,8 @@ const {
   removeSshEnvironment,
 
   // SSH资源搜索
-  searchSshResources,
   filteredSshResources,
+  searchSshResources,
 
   // 命令参数管理
   addArg,
@@ -94,31 +94,31 @@ const {
   fetchSshResources,
 
   // 任务详情操作
-  showJobDetail,
   closeDetailModal,
+  showJobDetail,
 
   // 创建操作
-  openCreateModal,
   closeCreateModal,
+  openCreateModal,
   submitCreateForm,
 
   // 编辑操作
-  openEditModal,
   closeEditModal,
+  openEditModal,
   submitEditForm,
 
   // 任务操作
   deleteJob,
-  enableJob,
   disableJob,
+  enableJob,
   triggerJob,
 
   // 批量操作
   batchOperation,
 
   // 表单操作
-  validateScheduleExpression,
   handleJobTypeChange,
+  validateScheduleExpression,
 
   // 本地执行开关
   allowLocalExec,

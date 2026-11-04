@@ -160,20 +160,20 @@ export function useRcaCache() {
   }
   onMounted(refreshCacheStats);
   return {
-    loadingStats,
-    clearingCache,
-    clearAllModalVisible,
     cacheStats,
-    statsError,
-    operationError,
+    clearAllModalVisible,
+    clearHistory,
+    clearingCache,
     clearNamespaceForm,
     clearOperationForm,
-    operationHistory,
-    refreshCacheStats,
+    confirmClearAllCache,
     handleClearNamespaceCache,
     handleClearOperationCache,
+    loadingStats,
+    operationError,
+    operationHistory,
+    refreshCacheStats,
     showClearAllModal,
-    confirmClearAllCache,
-    clearHistory,
+    statsError,
   };
 }

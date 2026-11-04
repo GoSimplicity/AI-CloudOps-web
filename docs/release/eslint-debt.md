@@ -893,3 +893,16 @@ MonitorConfig的Name统一为1..255、InstanceKey（历史API字段instance_ip�
 - 私有分派探针保留真实discriminant源码和原primitive case表达式，只把整body替换为唯一组标记及对应退出；fixture own getter记录判别式读取，不执行业务body。33个switch、149组共597种输入覆盖每个合法key、未知值、null/undefined/NaN、number/BigInt、Symbol及拒绝coerce的对象；旧/新分派、读取次数、标记轨迹和return/throw/break选择一致，未知值/default行为一致。该证据仅验证分派与终止选择，不冒称运行了真实await分支、模型请求、通知或业务API；原完整body与作用域的静态等价另行核对。
 - 目标21文件实际lint1114→1051 errors，0 warnings，逐文件各规则无新增；其中sort-switch-case83→20，保留同文件未审组及两个组内顺序命中，没有声称全部93条已清零。全Web现有167文件3692项单元测试及应用类型检查通过。
 - no-await-expression-member的90条实际全部在单元测试或E2E spec，本阶段没有混入该类别。未修改测试逻辑、CI、规则、ignore、lock、MonitorConfig、全局helper或backend，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。
+
+## 阶段九十：本地同步own-data门面的分组顺序与证明工具复核
+
+16个生产文件仅整理19处本地同步门面绑定或根return，目标净减101条sort-objects。3个provider根return净减37（AutoFix23/Cron6/RCA缓存8），16个caller解构净减64（Cron17/AutoFix25/RCA缓存8/局部请求helper12/SSH终端2）；两份共用helper源码不修改。纯类型object/interface生产命中只有25条且需另立类型宏合同，本阶段未混入；已审K8s跨组残留、wire params/response、DOM receiver及未知usePreferences/useAppConfig返回值均不处理。
+
+- 真实TS符号确认caller绑定到直接export的本地同步函数，返回门面为已完成构造的plain own-data对象；每个所用key均保证为最终自有数据字段。3个修改provider的生产runtime入口只有对应3个页面的flat解构，另有WorkflowInput对AutoFixTemplateKey的类型导入；没有生产namespace/reexport/dynamic入口、整门面传递或枚举观察。JSX/JS及测试调用方亦已盘点，没有把未知消费者作为安全依据。
+- provider只排序原注释组、空行组内连续已初始化的shorthand段。Cron的...toRefs(state)、AutoFix的operationOwner:scope.owner及任何非shorthand都保持原位，barrier前后字段集合不变；显式字段与展开字段无覆盖、duplicate为0。所有声明、initializer、watch/call、同statement的其它内容、RHS求值及其它源码原样保持，不跨spread改变覆盖结果或getter/call时点。
+- Cron的state是reactive直传的25个唯一own-data字段；实际TS symbol追踪147处引用，唯一bare escape是toRefs(state)，其它均为既有字段直接访问，无顶层delete、未知key或别名逃逸。实际Vue3.5.42 toRefs按现有key产生ref数据字段，完整return spread完成后形成新对象的自有数据属性。私有探针只运行源状态initializer/两个初始model构造器（enum使用Fake常量）及实际reactive/toRefs，核对25字段×前后两次共50个ref写入联动；未运行完整业务factory或请求。
+- 其余探针对160个解构字段使用触达value成员即抛错的opaque引用，确认只复制相同引用、不解ref.value；3个实际return片段的own descriptor和值关联相同，scope.owner与toRefs各保持原一次barrier轨迹。对象键插入顺序会变化，依据是当前消费者只按名读取；不是对任意对象无序或恶意全局prototype修改的泛化保证。13个SFC默认空expose，当前无setupState/__returned__反射或整map业务消费；开发工具内部显示次序可不同。
+- 完整source/编译script AST只允许上述段内次序及对应私有__returned__ shorthand次序变化，所有非位置semantic节点、固定barrier、alias raw、分组、语句顺序、模板/style和binding分类保持。全354个SFC的dev/prod共708组比较使用已保存before overlay与实际after磁盘、清transitive缓存，运行JS AST/DOM/SSR均0差异、两侧0错误。14个编辑文件被实际读取，其中13是本身SFC，另1是经WorkflowInput宏读取的AutoFix类型模块；Cron和RCA缓存两个TS当前无SFC宏consumer，不冒称全部provider均被宏使用。
+- 本阶段的危险Boolean/String control检出临时AST证明脚本直接把Array.push结果返回给ts.forEachChild会提前停止遍历的问题。先暂停源码落盘，完整审查56个相关脚本/63个调用，在新/tmp complete副本修正7个历史写法及本阶段此前两处写法，保留旧冻结日志和expected。历史7个canonicalizer及本阶段新版均能检出非首个第三statement语义mutation与真实导入Boolean/String运行时构造顺序变化；18个相关历史/当前重放最终全部通过。对应Git提交与保存快照212组逐字核对，历史受影响证明已重新完整验证，未发现未解释的semantic差异；首轮3个重放因runner漏传--after的输入断言失败亦保留记录，补参数后独立通过。没有用旧aggregate exit0代替实际收据，业务源没有因此修改。
+- 16文件实际lint743→642 errors，0 warnings，逐文件各规则无新增；全Web现有167文件3692项单元测试及应用类型检查通过。本阶段不以101减法宣称新的全仓总量，仍区分最后完整实扫与目标复扫。
+- 未修改测试逻辑、CI、规则、ignore、lock、MonitorConfig、全局helper或backend，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。

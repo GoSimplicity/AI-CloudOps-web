@@ -16,7 +16,7 @@ import 'xterm/css/xterm.css';
 const props = defineProps<{ kind: 'cloud' | 'local'; resourceId: string }>();
 const viewport = ref<HTMLElement | null>(null);
 const router = useRouter();
-const { state, error, connect, disconnect } = useSshTerminal(viewport, {
+const { connect, disconnect, error, state } = useSshTerminal(viewport, {
   kind: () => props.kind,
   resourceId: () => props.resourceId,
 });

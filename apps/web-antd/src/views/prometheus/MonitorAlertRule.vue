@@ -155,7 +155,7 @@ const handleApiError = (error: unknown, defaultMessage: string): void => {
 
 // --- 响应式状态 ---
 const loading = ref(false);
-const { loadError, beginRequest } = useListRequest(loading);
+const { beginRequest, loadError } = useListRequest(loading);
 const data = ref<MonitorAlertRule[]>([]);
 const scrapePools = ref<MonitorScrapePool[]>([]);
 const poolSearch = ref('');

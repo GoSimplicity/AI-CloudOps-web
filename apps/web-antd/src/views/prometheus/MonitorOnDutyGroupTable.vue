@@ -63,22 +63,22 @@ const loading = ref(false);
 const detailLoading = ref(false);
 const historyLoading = ref(false);
 const changesLoading = ref(false);
-const { loadError: detailError, beginRequest: beginDetailRequest } =
+const { beginRequest: beginDetailRequest, loadError: detailError } =
   useListRequest(detailLoading);
 const {
-  loadError: scheduleError,
   beginRequest: beginScheduleRequest,
   invalidate: invalidateSchedule,
+  loadError: scheduleError,
 } = useListRequest(loading);
 const {
-  loadError: historyError,
   beginRequest: beginHistoryRequest,
   invalidate: invalidateHistory,
+  loadError: historyError,
 } = useListRequest(historyLoading);
 const {
-  loadError: changeError,
   beginRequest: beginChangeRequest,
   invalidate: invalidateChanges,
+  loadError: changeError,
 } = useListRequest(changesLoading);
 const loadError = computed(
   () =>

@@ -166,9 +166,9 @@ const columns = [
 // 状态数据
 const loading = ref(false);
 const {
-  loadError,
   beginRequest,
   invalidate: invalidateList,
+  loadError,
 } = useListRequest(loading);
 const searchQuery = ref('');
 const enableFilter = ref<1 | 2 | undefined>(undefined);

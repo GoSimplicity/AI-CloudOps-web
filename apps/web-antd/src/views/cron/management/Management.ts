@@ -1109,8 +1109,8 @@ export function useCronJobPage() {
     ...toRefs(state),
 
     // 表单引用
-    formRef,
     clearPage,
+    formRef,
 
     // 计算属性
     filteredCronJobs,
@@ -1121,37 +1121,37 @@ export function useCronJobPage() {
     editFormRules,
 
     // 工具函数
-    getStatusText,
-    getStatusColor,
-    getJobTypeText,
-    getJobTypeColor,
-    getLastRunStatusText,
-    getLastRunStatusColor,
     formatDateTime,
     formatDuration,
+    getJobTypeColor,
+    getJobTypeText,
+    getLastRunStatusColor,
+    getLastRunStatusText,
+    getStatusColor,
+    getStatusText,
 
     // 数据操作
     fetchCronJobs,
     fetchSshResources,
 
     // 任务详情操作
-    showJobDetail,
     closeDetailModal,
+    showJobDetail,
 
     // 创建操作
-    openCreateModal,
     closeCreateModal,
+    openCreateModal,
     submitCreateForm,
 
     // 编辑操作
-    openEditModal,
     closeEditModal,
+    openEditModal,
     submitEditForm,
 
     // 任务操作
     deleteJob,
-    enableJob,
     disableJob,
+    enableJob,
     triggerJob,
 
     // 批量操作
@@ -1161,8 +1161,8 @@ export function useCronJobPage() {
     handlePageChange,
 
     // 表单操作
-    validateScheduleExpression,
     handleJobTypeChange,
+    validateScheduleExpression,
 
     // 本地执行开关
     isLocalExecLocked,

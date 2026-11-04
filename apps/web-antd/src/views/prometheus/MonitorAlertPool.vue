@@ -136,7 +136,7 @@ const columns = [
 
 // 状态数据
 const loading = ref(false);
-const { loadError, beginRequest, invalidate } = useListRequest(loading);
+const { beginRequest, invalidate, loadError } = useListRequest(loading);
 const searchText = ref('');
 const data = ref<MonitorAlertManagerPool[]>([]);
 
