@@ -48,34 +48,34 @@ const { can, hasPerm } = usePermission();
 const {
   // state
   clusters,
-  namespaces,
-  loading,
-  loadError,
   clustersError,
-  namespacesError,
   clustersLoading,
-  namespacesLoading,
-  searchText,
+  clustersTotal,
+  currentPage,
   filterClusterId,
+  filterLabels,
   filterNamespace,
   filterType,
-  filterLabels,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
-  clustersTotal,
+  loadError,
+  loading,
+  namespaces,
+  namespacesError,
+  namespacesLoading,
   namespacesTotal,
+  pageSize,
+  searchText,
+  selectedRows,
+  total,
 
   // modal state
+  detailLoading,
   isCreateModalVisible,
   isCreateYamlModalVisible,
-  isEditModalVisible,
   isDetailModalVisible,
+  isEditModalVisible,
+  isYamlLoading,
   isYamlModalVisible,
   submitLoading,
-  detailLoading,
-  isYamlLoading,
 
   // operation targets
   currentOperationSecret,
@@ -83,19 +83,19 @@ const {
 
   // form models
   createFormModel,
+  createYamlFormModel,
   editFormModel,
   yamlFormModel,
-  createYamlFormModel,
 
   // form refs
+  createYamlFormRef,
   formRef,
   yamlFormRef,
-  createYamlFormRef,
 
   // form rules
   createFormRules,
-  yamlFormRules,
   createYamlFormRules,
+  yamlFormRules,
 
   // computed
   filteredSecrets,
@@ -107,34 +107,34 @@ const {
   K8sSecretType,
 
   // operations
+  clearNamespaces,
+  clearSecrets,
   fetchClusters,
   fetchNamespaces,
   fetchSecrets,
-  clearSecrets,
-  clearNamespaces,
   loadMoreClusters,
   loadMoreNamespaces,
 
   // detail operations
-  showSecretDetail,
   closeDetailModal,
+  showSecretDetail,
 
   // YAML operations
-  showYamlModal,
   closeYamlModal,
+  showYamlModal,
   submitYamlForm,
 
   // create operations
-  openCreateModal,
   closeCreateModal,
-  submitCreateForm,
-  openCreateYamlModal,
   closeCreateYamlModal,
+  openCreateModal,
+  openCreateYamlModal,
+  submitCreateForm,
   submitCreateYamlForm,
 
   // edit operations
-  openEditModal,
   closeEditModal,
+  openEditModal,
   submitEditForm,
 
   // secret operations
@@ -142,8 +142,8 @@ const {
 
   // filter operations
   addFilterLabel,
-  removeFilterLabel,
   clearFilterLabels,
+  removeFilterLabel,
 
   // batch operations
   batchOperation,
@@ -152,36 +152,36 @@ const {
   handlePageChange,
 
   // form field operations
-  removeStringDataField,
-  removeEditStringDataField,
-  removeLabelField,
-  removeEditLabelField,
   removeAnnotationField,
   removeEditAnnotationField,
+  removeEditLabelField,
+  removeEditStringDataField,
+  removeLabelField,
+  removeStringDataField,
 
   // yaml operations
-  insertYamlTemplate,
-  formatYaml,
-  validateYaml,
   clearYaml,
   formatEditYaml,
+  formatYaml,
+  insertYamlTemplate,
   validateEditYaml,
+  validateYaml,
 
   // SEC-25/26 reveal / data 编辑
+  addEditDataRow,
+  clearRevealedValues,
+  editDataLoading,
+  editDataRows,
+  getEditDataRowError,
+  getPlainValueForCopy,
+  hideRevealedKey,
+  removeEditDataRow,
+  resetEditDataRow,
   revealedValues,
   revealingKeys,
-  secretDetailDataKeys,
   revealSecretKey,
-  hideRevealedKey,
-  getPlainValueForCopy,
-  clearRevealedValues,
-  editDataRows,
-  editDataLoading,
+  secretDetailDataKeys,
   setEditDataValue,
-  resetEditDataRow,
-  removeEditDataRow,
-  addEditDataRow,
-  getEditDataRowError,
 } = useSecretPage();
 
 // 页面卸载时清空 reveal 得到的明文

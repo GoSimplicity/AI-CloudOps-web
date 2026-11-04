@@ -849,3 +849,13 @@ MonitorConfig的Name统一为1..255、InstanceKey（历史API字段instance_ip�
 - 私有差分使用实际AntD Form/FormItem.validateFields及原生async-validator：108对象×12有效/无效/Unicode值×3种validateFirst×4组submit/blur/change、first/firstFields选项，共15552组前后对照。完整校验结果、errorFields/outOfDate/values、onValidate事件、首错及规则顺序一致；RegExp source/flags/lastIndex以独立实例比较，原生method选择引用相同，没有执行业务validator或API。
 - 磁盘源码精确匹配提案，18个SFC binding、模板/style及生产DOM/SSR保持；目标lint1406→1289 errors，0 warnings，逐文件各规则无新增。全Web现有167文件3692项单元测试及应用类型检查通过。
 - 未修改MonitorConfig、测试逻辑、CI、规则、ignore、lock或全局helper，没有新增镜像测试或构建；未操作backend、preview、数据库、凭据或真实API，未上线。
+
+## 阶段八十六：本地同步hook门面的分组解构绑定顺序
+
+18个K8s页面仅整理从对应本地use*Page同步函数返回值中解构的绑定，不修改hook提供方或任何业务表达式。1515个字段的目标诊断原上界为769；所有列表均有语义分组注释，本阶段只在原组内排序，保持标题原序及每组完整绑定集合，实际净减471条sort-objects，跨组的298条不为清数强行移动。CSS候选另行只读量化后仅有一个字面量对象的2条诊断，未混入本阶段。
+
+- TypeScript真实词法symbol确认18个调用均绑定到对应相对路径的named import，提供方是直接export、非async/generator的同步function，导出binding无其它本地引用、写入或eval。每个函数根层return均是完整shorthand自有数据属性的原生对象字面量，选中字段全部存在；没有getter、Proxy、spread、动态fallback、默认值、rest、computed或嵌套binding。提供方源码SHA前后保持。
+- 只改变这18个const声明内部的BindingElement次序，完整元素raw、alias、同声明其它内容、RHS调用与所有其它源码逐字保持。私有语言消费探针对原/新真实binding片段使用同一个plain own-data facade，1515个值均以触达属性即抛错的Proxy检查：绑定引用一致，没有读取ref.value或其它值成员；这是own-data解构合同证明，不冒称执行了18个实际hook或真实集群请求。
+- Vue绑定分类及生产DOM/SSR模板输出逐字一致，模板/style和所有其它语句原文保持。编译后全script AST仅选中解构pattern及对应__returned__的私有shorthand次序变化；不能宣称内部对象的键顺序不变。18个页面均默认空__expose，实际Vue3.5.42运行时不将__isScriptSetup绑定暴露到普通ctx；当前生产代码和业务测试无setupState/__returned__反射或整map消费。现有业务无该内部次序观察，开发工具显示的内部绑定排列可不同，未以泛化的“对象无序”作为依据。
+- 落盘源码精确匹配提案，分组标题、每组raw绑定集合及其它全AST通过核对。18文件实际lint1224→753 errors，0 warnings，逐文件各规则无新增；未重新扫描全仓，不以目标减法宣称新的全局基线。全Web现有167文件3692项单元测试和应用类型检查通过；对改动文件执行只读界面检测，无发现，未改变视觉设计。
+- 没有修改测试逻辑、CI、规则、ignore、lock、共享helper或backend，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。

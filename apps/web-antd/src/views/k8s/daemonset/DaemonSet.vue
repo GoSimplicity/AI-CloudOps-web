@@ -42,58 +42,58 @@ const { can } = usePermission();
 const {
   // state
   clusters,
-  namespaces,
-  loading,
-  loadError,
   clustersError,
-  namespacesError,
   clustersLoading,
-  namespacesLoading,
-  searchText,
-  filterStatus,
-  filterClusterId,
-  filterNamespace,
-  filterLabels,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
   clustersTotal,
+  currentPage,
+  filterClusterId,
+  filterLabels,
+  filterNamespace,
+  filterStatus,
+  loadError,
+  loading,
+  namespaces,
+  namespacesError,
+  namespacesLoading,
   namespacesTotal,
+  pageSize,
+  searchText,
+  selectedRows,
+  total,
 
   // modal state
+  detailLoading,
   isCreateModalVisible,
   isCreateYamlModalVisible,
-  isEditModalVisible,
   isDetailModalVisible,
-  isYamlModalVisible,
-  isPodModalVisible,
+  isEditModalVisible,
   isHistoryModalVisible,
+  isPodModalVisible,
+  isYamlModalVisible,
   submitLoading,
-  detailLoading,
 
   // operation targets
-  currentOperationDaemonSet,
   currentDaemonSetDetail,
-  daemonSetPods,
+  currentOperationDaemonSet,
   daemonSetHistory,
+  daemonSetPods,
 
   // form models
   createFormModel,
-  editFormModel,
   createYamlFormModel,
+  editFormModel,
   yamlFormModel,
 
   // form refs
-  formRef,
-  editFormRef,
-  yamlFormRef,
   createYamlFormRef,
+  editFormRef,
+  formRef,
+  yamlFormRef,
 
   // form rules
   createFormRules,
-  yamlFormRules,
   createYamlFormRules,
+  yamlFormRules,
 
   // computed
   filteredDaemonSets,
@@ -101,33 +101,33 @@ const {
 
   // helpers
   getEnvText,
-  getStatusText,
   getStatusColor,
+  getStatusText,
 
   // operations
-  fetchClusters,
-  fetchNamespaces,
-  fetchDaemonSets,
   clearDaemonSets,
   clearNamespaces,
+  fetchClusters,
+  fetchDaemonSets,
+  fetchNamespaces,
   loadMoreClusters,
   loadMoreNamespaces,
 
   // detail operations
-  showDaemonSetDetail,
   closeDetailModal,
+  showDaemonSetDetail,
 
   // YAML operations
-  showYamlModal,
   closeYamlModal,
+  showYamlModal,
   submitYamlForm,
 
   // create operations
-  openCreateModal,
   closeCreateModal,
-  submitCreateForm,
-  openCreateYamlModal,
   closeCreateYamlModal,
+  openCreateModal,
+  openCreateYamlModal,
+  submitCreateForm,
   submitCreateYamlForm,
 
   // daemonSet operations
@@ -135,24 +135,24 @@ const {
   restartDaemonSet,
 
   // edit operations
-  openEditModal,
   closeEditModal,
+  openEditModal,
   submitEditForm,
 
   // pod operations
-  showPodModal,
   closePodModal,
+  showPodModal,
 
   // history operations
+  closeHistoryModal,
   historyLoading,
   isHistoryCurrent,
   showHistoryModal,
-  closeHistoryModal,
 
   // filter operations
   addFilterLabel,
-  removeFilterLabel,
   clearFilterLabels,
+  removeFilterLabel,
 
   // batch operations
   batchOperation,
@@ -162,19 +162,19 @@ const {
 
   // form field operations
   addImageField,
+  removeAnnotationField,
+  removeEditAnnotationField,
+  removeEditLabelField,
   removeImageField,
   removeLabelField,
-  removeAnnotationField,
-  removeEditLabelField,
-  removeEditAnnotationField,
 
   // yaml operations
-  insertYamlTemplate,
-  formatYaml,
-  validateYaml,
   clearYaml,
   formatEditYaml,
+  formatYaml,
+  insertYamlTemplate,
   validateEditYaml,
+  validateYaml,
 
   // constants
   K8sDaemonSetStatus,

@@ -37,35 +37,35 @@ const { can } = usePermission();
 const {
   // state
   clusters,
-  namespaces,
-  loading,
-  loadError,
   clustersError,
-  namespacesError,
   clustersLoading,
-  namespacesLoading,
-  searchText,
-  filterStatus,
-  filterClusterId,
-  filterNamespace,
-  filterType,
-  filterLabels,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
   clustersTotal,
+  currentPage,
+  filterClusterId,
+  filterLabels,
+  filterNamespace,
+  filterStatus,
+  filterType,
+  loadError,
+  loading,
+  namespaces,
+  namespacesError,
+  namespacesLoading,
   namespacesTotal,
+  pageSize,
+  searchText,
+  selectedRows,
+  total,
 
   // modal state
+  detailLoading,
   isCreateModalVisible,
   isCreateYamlModalVisible,
-  isEditModalVisible,
   isDetailModalVisible,
-  isYamlModalVisible,
+  isEditModalVisible,
   isEndpointsModalVisible,
+  isYamlModalVisible,
   submitLoading,
-  detailLoading,
 
   // operation targets
   currentOperationService,
@@ -74,21 +74,21 @@ const {
 
   // form models
   createFormModel,
+  createYamlFormModel,
   editFormModel,
   yamlFormModel,
-  createYamlFormModel,
 
   // form refs
-  formRef,
-  editFormRef,
-  yamlFormRef,
   createYamlFormRef,
+  editFormRef,
+  formRef,
+  yamlFormRef,
 
   // form rules
   createFormRules,
+  createYamlFormRules,
   editFormRules,
   yamlFormRules,
-  createYamlFormRules,
 
   // computed
   filteredServices,
@@ -96,85 +96,85 @@ const {
 
   // helpers
   getEnvText,
-  getStatusText,
-  getStatusColor,
-  getServiceTypeText,
   getServiceTypeColor,
+  getServiceTypeText,
+  getStatusColor,
+  getStatusText,
 
   // operations
+  clearNamespaces,
+  clearServices,
   fetchClusters,
   fetchNamespaces,
   fetchServices,
-  clearServices,
-  clearNamespaces,
 
   loadMoreNamespaces,
 
   // detail operations
-  showServiceDetail,
   closeDetailModal,
+  showServiceDetail,
 
   // YAML operations
-  showYamlModal,
   closeYamlModal,
+  showYamlModal,
   submitYamlForm,
 
   // create operations
-  openCreateModal,
   closeCreateModal,
-  submitCreateForm,
-  openCreateYamlModal,
   closeCreateYamlModal,
+  openCreateModal,
+  openCreateYamlModal,
+  submitCreateForm,
   submitCreateYamlForm,
 
   // edit operations
-  openEditModal,
   closeEditModal,
+  openEditModal,
   submitEditForm,
 
   // service operations
   deleteService,
 
   // endpoints operations
-  showEndpointsModal,
   closeEndpointsModal,
+  showEndpointsModal,
 
   // filter operations
   addFilterLabel,
-  removeFilterLabel,
   clearFilterLabels,
+  removeFilterLabel,
 
   // batch operations
   batchOperation,
 
   // pagination operations
-  handlePageChange,
-  onSearch,
-  handleFilterChange,
   handleClusterChange,
   handleClusterDropdownScroll,
+  handleFilterChange,
+  handlePageChange,
+  onSearch,
 
   // form field operations
   addPortField,
-  removePortField,
-  removeLabelField,
   removeAnnotationField,
+  removeLabelField,
+  removePortField,
   removeSelectorField,
 
   // edit form field operations
   addEditPortField,
-  removeEditPortField,
-  addNewEditLabel,
-  removeEditLabelField,
-  addNewEditSelector,
-  removeEditSelectorField,
   addNewEditAnnotation,
+  addNewEditLabel,
+  addNewEditSelector,
   removeEditAnnotationField,
+  removeEditLabelField,
+  removeEditPortField,
+  removeEditSelectorField,
 
   // edit form helper variables
+  newEditAnnotationKey,
   newEditLabelKey,
   newEditSelectorKey,
-  newEditAnnotationKey,
 
   // constants
   K8sSvcStatus,

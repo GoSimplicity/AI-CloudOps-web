@@ -27,26 +27,26 @@ const { can } = usePermission();
 const {
   // state
   clusters,
-  loading,
-  loadError,
   clustersError,
   clustersLoading,
-  searchText,
-  filterClusterId,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
   clustersTotal,
+  currentPage,
+  filterClusterId,
+  loadError,
+  loading,
+  pageSize,
+  searchText,
+  selectedRows,
+  total,
 
   // modal state
+  checkLoading,
+  detailLoading,
   isCreateModalVisible,
-  isEditModalVisible,
   isDetailModalVisible,
+  isEditModalVisible,
   isYamlModalVisible,
   submitLoading,
-  detailLoading,
-  checkLoading,
 
   // operation targets
   currentOperationTemplate,
@@ -58,8 +58,8 @@ const {
   yamlFormModel,
 
   // form refs
-  formRef,
   editFormRef,
+  formRef,
 
   // form rules
   createFormRules,
@@ -70,38 +70,38 @@ const {
   rowSelection,
 
   // helpers
-  getEnvText,
-  getClusterName,
-  getUserDisplay,
   formatK8sTime,
+  getClusterName,
+  getEnvText,
+  getUserDisplay,
 
   // operations
+  clearTemplates,
   fetchClusters,
   fetchTemplates,
-  clearTemplates,
   loadMoreClusters,
 
   // detail operations
-  showTemplateDetail,
   closeDetailModal,
+  showTemplateDetail,
 
   // YAML operations
-  showYamlModal,
   closeYamlModal,
+  showYamlModal,
 
   // create operations
-  openCreateModal,
   closeCreateModal,
+  openCreateModal,
   submitCreateForm,
 
   // edit operations
-  openEditModal,
   closeEditModal,
+  openEditModal,
   submitEditForm,
 
   // template operations
-  deleteTemplate,
   checkTemplate,
+  deleteTemplate,
 
   // batch operations
   batchOperation,
@@ -110,12 +110,12 @@ const {
   handlePageChange,
 
   // YAML operations
-  insertYamlTemplate,
-  formatYaml,
-  validateYaml,
   clearYaml,
   formatEditYaml,
+  formatYaml,
+  insertYamlTemplate,
   validateEditYaml,
+  validateYaml,
 } = useTemplatePage();
 
 const onSearch = () => {

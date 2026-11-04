@@ -23,32 +23,32 @@ const { can } = usePermission();
 const {
   // state
 
-  templates,
   clusters,
-  loading,
-  loadError,
   clustersError,
-  templatesError,
   clustersLoading,
-  templatesLoading,
-  searchText,
-  filterClusterId,
-  filterTemplateId,
-  filterStatus,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
   clustersTotal,
+  currentPage,
+  filterClusterId,
+  filterStatus,
+  filterTemplateId,
+  loadError,
+  loading,
+  pageSize,
+  searchText,
+  selectedRows,
+  templates,
+  templatesError,
+  templatesLoading,
   templatesTotal,
+  total,
 
   // modal state
+  executeLoading,
   isCreateModalVisible,
-  isEditModalVisible,
   isDetailModalVisible,
+  isEditModalVisible,
   isExecuteModalVisible,
   submitLoading,
-  executeLoading,
 
   // operation targets
   currentOperationTask,
@@ -60,8 +60,8 @@ const {
   executeFormModel,
 
   // form refs
-  formRef,
   editFormRef,
+  formRef,
 
   // form rules
   createFormRules,
@@ -72,38 +72,38 @@ const {
   rowSelection,
 
   // helpers
-  getEnvText,
-  getStatusText,
-  getStatusColor,
   formatK8sTime,
+  getEnvText,
+  getStatusColor,
+  getStatusText,
   getTemplateName,
 
   // operations
-  fetchClusters,
-  fetchTemplates,
-  fetchTasks,
   clearTasks,
   clearTemplates,
+  fetchClusters,
+  fetchTasks,
+  fetchTemplates,
   loadMoreClusters,
   loadMoreTemplates,
 
   // detail operations
-  showTaskDetail,
   closeDetailModal,
+  showTaskDetail,
 
   // create operations
-  openCreateModal,
   closeCreateModal,
+  openCreateModal,
   submitCreateForm,
 
   // edit operations
-  openEditModal,
   closeEditModal,
+  openEditModal,
   submitEditForm,
 
   // execute operations
-  openExecuteModal,
   closeExecuteModal,
+  openExecuteModal,
   submitExecuteForm,
 
   // task operations
@@ -116,10 +116,10 @@ const {
   handlePageChange,
 
   // form field operations
-  addVariableField,
-  removeVariableField,
   addEditVariableField,
+  addVariableField,
   removeEditVariableField,
+  removeVariableField,
 
   // constants
   TaskStatus,

@@ -29,42 +29,42 @@ const { can } = usePermission();
 const {
   // state
   clusters,
-  loading,
-  loadError,
   clustersError,
   clustersLoading,
-  searchText,
-  filterStatus,
-  filterClusterId,
-  selectedRows,
   currentPage,
+  filterClusterId,
+  filterStatus,
+  loadError,
+  loading,
   pageSize,
+  searchText,
+  selectedRows,
 
   // modal state
+  isDrainModalVisible,
   isLabelModalVisible,
   isTaintModalVisible,
-  isDrainModalVisible,
   submitLoading,
 
   // detail modal
-  isDetailModalVisible,
-  detailLoading,
   currentNodeDetail,
+  detailLoading,
+  isDetailModalVisible,
 
   // form models
+  drainFormModel,
   labelFormModel,
   taintFormModel,
-  drainFormModel,
 
   // form refs
+  drainFormRef,
   labelFormRef,
   taintFormRef,
-  drainFormRef,
 
   // form rules
+  drainFormRules,
   labelFormRules,
   taintFormRules,
-  drainFormRules,
 
   // computed
   filteredNodes,
@@ -72,52 +72,52 @@ const {
 
   // helpers
   getEnvText,
-  getStatusText,
-  getStatusColor,
-  getSchedulableText,
   getSchedulableColor,
+  getSchedulableText,
+  getStatusColor,
+  getStatusText,
 
   // operations
+  clearNodes,
+  closeDetailModal,
   fetchClusters,
   fetchNodes,
-  clearNodes,
   showNodeDetail,
-  closeDetailModal,
 
   // label operations
-  openEditLabelModal,
   closeLabelModal,
-  submitLabelForm,
+  openEditLabelModal,
   removeLabelField,
+  submitLabelForm,
 
   // taint operations
-  openTaintModal,
-  closeTaintModal,
   addTaint,
-  removeTaint,
-  isNewTaint,
-  submitTaintForm,
+  closeTaintModal,
   hasTaintChanges,
+  isNewTaint,
+  openTaintModal,
+  removeTaint,
+  submitTaintForm,
   validateTaintYaml,
 
   // schedule operations
   toggleNodeSchedule,
 
   // drain operations
-  openDrainModal,
   closeDrainModal,
+  openDrainModal,
   submitDrainForm,
 
   // batch operations
   batchOperation,
 
   // cluster pagination
-  loadMoreClusters,
   handlePageChange,
+  loadMoreClusters,
 
   // pagination state
-  total,
   clustersTotal,
+  total,
 
   // constants
   NodeStatus,

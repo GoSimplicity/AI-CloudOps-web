@@ -29,32 +29,32 @@ const { can } = usePermission();
 const {
   // state
   clusters,
-  namespaces,
-  loading,
-  loadError,
   clustersError,
-  namespacesError,
   clustersLoading,
-  namespacesLoading,
-  searchText,
-  filterClusterId,
-  filterNamespace,
-  filterLabels,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
   clustersTotal,
+  currentPage,
+  filterClusterId,
+  filterLabels,
+  filterNamespace,
+  loadError,
+  loading,
+  namespaces,
+  namespacesError,
+  namespacesLoading,
   namespacesTotal,
+  pageSize,
+  searchText,
+  selectedRows,
+  total,
 
   // modal state
+  detailLoading,
   isCreateModalVisible,
   isCreateYamlModalVisible,
-  isEditModalVisible,
   isDetailModalVisible,
+  isEditModalVisible,
   isYamlModalVisible,
   submitLoading,
-  detailLoading,
 
   // operation targets
   currentOperationRole,
@@ -62,20 +62,20 @@ const {
 
   // form models
   createFormModel,
-  editFormModel,
   createYamlFormModel,
+  editFormModel,
   yamlFormModel,
 
   // form refs
-  formRef,
-  editFormRef,
-  yamlFormRef,
   createYamlFormRef,
+  editFormRef,
+  formRef,
+  yamlFormRef,
 
   // form rules
   createFormRules,
-  editFormRules,
   createYamlFormRules,
+  editFormRules,
   yamlFormRules,
 
   // computed
@@ -86,34 +86,34 @@ const {
   getEnvText,
 
   // operations
+  clearNamespaces,
+  clearRoles,
   fetchClusters,
   fetchNamespaces,
   fetchRoles,
-  clearRoles,
-  clearNamespaces,
   loadMoreClusters,
   loadMoreNamespaces,
 
   // detail operations
-  showRoleDetail,
   closeDetailModal,
+  showRoleDetail,
 
   // YAML operations
-  showYamlModal,
   closeYamlModal,
+  showYamlModal,
   submitYamlForm,
 
   // create operations
-  openCreateModal,
   closeCreateModal,
-  submitCreateForm,
-  openCreateYamlModal,
   closeCreateYamlModal,
+  openCreateModal,
+  openCreateYamlModal,
+  submitCreateForm,
   submitCreateYamlForm,
 
   // edit operations
-  openEditModal,
   closeEditModal,
+  openEditModal,
   submitEditForm,
 
   // role operations
@@ -121,8 +121,8 @@ const {
 
   // filter operations
   addFilterLabel,
-  removeFilterLabel,
   clearFilterLabels,
+  removeFilterLabel,
 
   // batch operations
   batchOperation,
@@ -131,24 +131,24 @@ const {
   handlePageChange,
 
   // form field operations
-  addRuleField,
-  removeRuleField,
-  addVerbToRule,
-  removeVerbFromRule,
   addApiGroupToRule,
-  removeApiGroupFromRule,
   addResourceToRule,
-  removeResourceFromRule,
-  removeLabelField,
+  addRuleField,
+  addVerbToRule,
   removeAnnotationField,
+  removeApiGroupFromRule,
+  removeLabelField,
+  removeResourceFromRule,
+  removeRuleField,
+  removeVerbFromRule,
 
   // YAML utility functions
-  insertYamlTemplate,
-  formatYaml,
-  validateYaml,
   clearYaml,
   formatEditYaml,
+  formatYaml,
+  insertYamlTemplate,
   validateEditYaml,
+  validateYaml,
 } = useRolePage();
 
 // 添加新标签/注解的方法

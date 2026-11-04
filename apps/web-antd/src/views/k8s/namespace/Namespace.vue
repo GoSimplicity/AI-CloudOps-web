@@ -25,100 +25,100 @@ const { can } = usePermission();
 const {
   // state
   clusters,
-  loading,
-  loadError,
-  clustersLoading,
   clustersError,
-  searchText,
-  filterStatus,
+  clustersLoading,
+  currentPage,
   filterClusterId,
   filterLabels,
-  selectedRows,
-  currentPage,
+  filterStatus,
+  loadError,
+  loading,
   pageSize,
+  searchText,
+  selectedRows,
 
   // modal state
-  isLabelModalVisible,
   isCreateModalVisible,
   isDeleteModalVisible,
   isLabelEdit,
+  isLabelModalVisible,
   submitLoading,
 
   // detail modal
-  isDetailModalVisible,
-  detailLoading,
   currentNamespaceDetail,
+  detailLoading,
+  isDetailModalVisible,
 
   // operation target
   currentOperationNamespace,
 
   // form models
-  labelFormModel,
   createFormModel,
   deleteFormModel,
+  labelFormModel,
 
   // form refs
-  labelFormRef,
   createFormRef,
+  labelFormRef,
 
   // form rules
-  labelFormRules,
   createFormRules,
+  labelFormRules,
 
   // computed
   filteredNamespaces,
   rowSelection,
 
   // helpers
-  getEnvText,
-  getStatusText,
-  getStatusColor,
-  getPhaseText,
-  getPhaseColor,
   getClusterName,
+  getEnvText,
+  getPhaseColor,
+  getPhaseText,
+  getStatusColor,
+  getStatusText,
 
   // operations
+  clearNamespaces,
+  closeDetailModal,
   fetchClusters,
   fetchNamespaces,
-  clearNamespaces,
   showNamespaceDetail,
-  closeDetailModal,
 
   // create operations
-  openCreateModal,
   closeCreateModal,
+  openCreateModal,
   submitCreateForm,
 
   // label operations
-  openEditLabelModal,
   closeLabelModal,
-  submitLabelForm,
-  removeLabelField,
+  openEditLabelModal,
   removeAnnotationField,
-  removeCreateLabelField,
   removeCreateAnnotationField,
+  removeCreateLabelField,
+  removeLabelField,
+  submitLabelForm,
 
   // delete operations
+  closeDeleteModal,
   deleteNamespace,
   forceDeleteNamespace,
-  closeDeleteModal,
   submitDeleteForm,
 
   // filter operations
   addFilterLabel,
-  removeFilterLabel,
   clearFilterLabels,
+  removeFilterLabel,
 
   // batch operations
   batchOperation,
 
   // cluster pagination
-  loadMoreClusters,
   handlePageChange,
+  loadMoreClusters,
 
   // pagination state
-  total,
   clustersTotal,
+  total,
 
   // constants
   NamespaceStatus,

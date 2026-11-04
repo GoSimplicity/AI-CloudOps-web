@@ -40,43 +40,43 @@ const { can } = usePermission();
 const {
   // state
   clusters,
-  namespaces,
-  loading,
-  loadError,
   clustersError,
-  namespacesError,
   clustersLoading,
-  namespacesLoading,
-  searchText,
-  filterStatus,
+  clustersTotal,
+  currentPage,
   filterClusterId,
+  filterLabels,
   filterNamespace,
   filterServiceName,
-  filterLabels,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
-  clustersTotal,
+  filterStatus,
+  loadError,
+  loading,
+  namespaces,
+  namespacesError,
+  namespacesLoading,
   namespacesTotal,
+  pageSize,
+  searchText,
+  selectedRows,
+  total,
 
   // modal state
+  detailLoading,
   isCreateModalVisible,
   isCreateYamlModalVisible,
-  isEditModalVisible,
   isDetailModalVisible,
+  isEditModalVisible,
+  isHistoryModalVisible,
+  isPodModalVisible,
   isScaleModalVisible,
   isYamlModalVisible,
-  isPodModalVisible,
-  isHistoryModalVisible,
   submitLoading,
-  detailLoading,
 
   // operation targets
   currentOperationStatefulSet,
   currentStatefulSetDetail,
-  statefulSetPods,
   statefulSetHistory,
+  statefulSetPods,
 
   // form models
   createFormModel,
@@ -86,18 +86,18 @@ const {
   yamlFormModel,
 
   // form refs
-  formRef,
+  createYamlFormRef,
   editFormRef,
+  formRef,
   scaleFormRef,
   yamlFormRef,
-  createYamlFormRef,
 
   // form rules
   createFormRules,
+  createYamlFormRules,
   editFormRules,
   scaleFormRules,
   yamlFormRules,
-  createYamlFormRules,
 
   // computed
   filteredStatefulSets,
@@ -105,44 +105,44 @@ const {
 
   // helpers
   getEnvText,
-  getStatusText,
   getStatusColor,
+  getStatusText,
 
   // operations
+  clearNamespaces,
+  clearStatefulSets,
   fetchClusters,
   fetchNamespaces,
   fetchStatefulSets,
-  clearStatefulSets,
-  clearNamespaces,
   loadMoreClusters,
   loadMoreNamespaces,
 
   // detail operations
-  showStatefulSetDetail,
   closeDetailModal,
+  showStatefulSetDetail,
 
   // YAML operations
-  showYamlModal,
-  closeYamlModal,
-  submitYamlForm,
-  insertYamlTemplate,
-  formatYaml,
-  validateYaml,
   clearYaml,
+  closeYamlModal,
   formatEditYaml,
+  formatYaml,
+  insertYamlTemplate,
+  showYamlModal,
+  submitYamlForm,
   validateEditYaml,
+  validateYaml,
 
   // create operations
-  openCreateModal,
   closeCreateModal,
-  submitCreateForm,
-  openCreateYamlModal,
   closeCreateYamlModal,
+  openCreateModal,
+  openCreateYamlModal,
+  submitCreateForm,
   submitCreateYamlForm,
 
   // edit operations
-  openEditModal,
   closeEditModal,
+  openEditModal,
   submitEditForm,
 
   // statefulSet operations
@@ -150,24 +150,24 @@ const {
   restartStatefulSet,
 
   // scale operations
-  openScaleModal,
   closeScaleModal,
+  openScaleModal,
   submitScaleForm,
 
   // pod operations
-  showPodModal,
   closePodModal,
+  showPodModal,
 
   // history operations
+  closeHistoryModal,
   historyLoading,
   isHistoryCurrent,
   showHistoryModal,
-  closeHistoryModal,
 
   // filter operations
   addFilterLabel,
-  removeFilterLabel,
   clearFilterLabels,
+  removeFilterLabel,
 
   // batch operations
   batchOperation,
@@ -176,14 +176,14 @@ const {
   handlePageChange,
 
   // form field operations
-  addImageField,
-  removeImageField,
   addEditImageField,
-  removeEditImageField,
-  removeLabelField,
+  addImageField,
   removeAnnotationField,
-  removeEditLabelField,
   removeEditAnnotationField,
+  removeEditImageField,
+  removeEditLabelField,
+  removeImageField,
+  removeLabelField,
 
   // constants
   K8sStatefulSetStatus,

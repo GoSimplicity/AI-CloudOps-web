@@ -49,39 +49,39 @@ const { can } = usePermission();
 const {
   // state
   clusters,
-  namespaces,
-  loading,
-  loadError,
   clustersError,
-  namespacesError,
   clustersLoading,
-  namespacesLoading,
-  searchText,
-  filterStatus,
-  filterClusterId,
-  filterNamespace,
-  filterLabels,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
   clustersTotal,
+  currentPage,
+  filterClusterId,
+  filterLabels,
+  filterNamespace,
+  filterStatus,
+  loadError,
+  loading,
+  namespaces,
+  namespacesError,
+  namespacesLoading,
   namespacesTotal,
+  pageSize,
+  searchText,
+  selectedRows,
+  total,
 
   // modal state
+  detailLoading,
   isCreateModalVisible,
   isCreateYamlModalVisible,
-  isEditModalVisible,
   isDetailModalVisible,
-  isYamlModalVisible,
-  isLogsModalVisible,
+  isEditModalVisible,
   isExecModalVisible,
-  isPortForwardModalVisible,
   isFileManagerModalVisible,
-  submitLoading,
-  detailLoading,
-  logsLoading,
+  isLogsModalVisible,
   isLogsStreaming,
+  isPortForwardModalVisible,
+  isYamlModalVisible,
+  logsLoading,
+  submitLoading,
 
   // 终端状态
   isTerminalConnected,
@@ -90,29 +90,29 @@ const {
   // operation targets
   currentOperationPod,
   currentPodDetail,
-  podLogs,
   podContainers,
+  podLogs,
 
   // form models
   createFormModel,
-  editFormModel,
-  yamlFormModel,
   createYamlFormModel,
-  logsFormModel,
+  editFormModel,
   execFormModel,
+  logsFormModel,
   portForwardFormModel,
+  yamlFormModel,
 
   // form refs
-  formRef,
-  yamlFormRef,
   createYamlFormRef,
   execFormRef,
+  formRef,
+  yamlFormRef,
 
   // form rules
   createFormRules,
-  yamlFormRules,
   createYamlFormRules,
   execFormRules,
+  yamlFormRules,
 
   // computed
   filteredPods,
@@ -120,79 +120,79 @@ const {
 
   // helpers
   getEnvText,
-  getStatusText,
-  getStatusColor,
   getPhaseText,
+  getStatusColor,
+  getStatusText,
 
   // operations
+  clearNamespaces,
+  clearPods,
   fetchClusters,
   fetchNamespaces,
   fetchPods,
-  clearPods,
-  clearNamespaces,
   loadMoreClusters,
   loadMoreNamespaces,
 
   // detail operations
-  showPodDetail,
   closeDetailModal,
+  showPodDetail,
 
   // YAML operations
-  showYamlModal,
   closeYamlModal,
+  showYamlModal,
   submitYamlForm,
 
   // YAML toolbar operations
-  insertYamlTemplate,
-  formatYaml,
-  validateYaml,
   clearYaml,
   formatEditYaml,
+  formatYaml,
+  insertYamlTemplate,
   validateEditYaml,
+  validateYaml,
 
   // create operations
-  openCreateModal,
   closeCreateModal,
-  submitCreateForm,
-  openCreateYamlModal,
   closeCreateYamlModal,
+  openCreateModal,
+  openCreateYamlModal,
+  submitCreateForm,
   submitCreateYamlForm,
 
   // edit operations
-  openEditModal,
   closeEditModal,
+  openEditModal,
   submitEditForm,
 
   // pod operations
   deletePod,
 
   // logs operations
-  showLogsModal,
   closeLogsModal,
   fetchPodLogs,
+  showLogsModal,
   stopLogsStream,
 
   // exec operations
-  showExecModal,
   closeExecModal,
   connectToTerminal,
   disconnectTerminal,
+  showExecModal,
 
   // port forward operations
-  showPortForwardModal,
   closePortForwardModal,
+  showPortForwardModal,
   submitPortForward,
 
   // file operations
-  showFileManagerModal,
   closeFileManagerModal,
-  uploadFile,
   downloadFile,
+  showFileManagerModal,
+  uploadFile,
 
   // filter operations
   addFilterLabel,
-  removeFilterLabel,
   clearFilterLabels,
+  removeFilterLabel,
 
   // batch operations
   batchOperation,
@@ -202,15 +202,15 @@ const {
 
   // form field operations
   addContainerField,
-  removeContainerField,
   addEnvField,
-  removeEnvField,
   addPortField,
-  removePortField,
   addPortForwardField,
-  removePortForwardField,
-  removeLabelField,
   removeAnnotationField,
+  removeContainerField,
+  removeEnvField,
+  removeLabelField,
+  removePortField,
+  removePortForwardField,
 
   // constants
   K8sPodStatus,

@@ -34,55 +34,55 @@ const { can } = usePermission();
 const {
   // state
   clusters,
-  namespaces,
-  loading,
-  loadError,
   clustersError,
-  namespacesError,
   clustersLoading,
-  namespacesLoading,
-  searchText,
-  filterStatus,
-  filterClusterId,
-  filterNamespace,
-  filterLabels,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
   clustersTotal,
+  currentPage,
+  filterClusterId,
+  filterLabels,
+  filterNamespace,
+  filterStatus,
+  loadError,
+  loading,
+  namespaces,
+  namespacesError,
+  namespacesLoading,
   namespacesTotal,
+  pageSize,
+  searchText,
+  selectedRows,
+  total,
 
   // modal state
+  detailLoading,
   isCreateModalVisible,
   isCreateYamlModalVisible,
-  isEditModalVisible,
   isDetailModalVisible,
+  isEditModalVisible,
   isYamlModalVisible,
   submitLoading,
-  detailLoading,
 
   // operation targets
-  currentOperationIngress,
   currentIngressDetail,
+  currentOperationIngress,
 
   // form models
   createFormModel,
+  createYamlFormModel,
   editFormModel,
   yamlFormModel,
-  createYamlFormModel,
 
   // form refs
-  formRef,
-  editFormRef,
-  yamlFormRef,
   createYamlFormRef,
+  editFormRef,
+  formRef,
+  yamlFormRef,
 
   // form rules
   createFormRules,
+  createYamlFormRules,
   editFormRules,
   yamlFormRules,
-  createYamlFormRules,
 
   // computed
   filteredIngresses,
@@ -90,38 +90,38 @@ const {
 
   // helpers
   getEnvText,
-  getStatusText,
   getStatusColor,
+  getStatusText,
 
   // operations
-  fetchClusters,
-  fetchNamespaces,
-  fetchIngresses,
   clearIngresses,
   clearNamespaces,
+  fetchClusters,
+  fetchIngresses,
+  fetchNamespaces,
   loadMoreClusters,
   loadMoreNamespaces,
 
   // detail operations
-  showIngressDetail,
   closeDetailModal,
+  showIngressDetail,
 
   // YAML operations
-  showYamlModal,
   closeYamlModal,
+  showYamlModal,
   submitYamlForm,
 
   // create operations
-  openCreateModal,
   closeCreateModal,
-  submitCreateForm,
-  openCreateYamlModal,
   closeCreateYamlModal,
+  openCreateModal,
+  openCreateYamlModal,
+  submitCreateForm,
   submitCreateYamlForm,
 
   // edit operations
-  openEditModal,
   closeEditModal,
+  openEditModal,
   submitEditForm,
 
   // ingress operations
@@ -129,8 +129,8 @@ const {
 
   // filter operations
   addFilterLabel,
-  removeFilterLabel,
   clearFilterLabels,
+  removeFilterLabel,
 
   // batch operations
   batchOperation,
@@ -140,25 +140,25 @@ const {
 
   // form field operations
   addRuleField,
-  removeRuleField,
   addTlsField,
-  removeTlsField,
-  removeLabelField,
   removeAnnotationField,
+  removeLabelField,
+  removeRuleField,
+  removeTlsField,
 
   // edit form field operations
   addEditRuleField,
-  removeEditRuleField,
   addEditTlsField,
-  removeEditTlsField,
-  addNewEditLabel,
-  removeEditLabelField,
   addNewEditAnnotation,
+  addNewEditLabel,
   removeEditAnnotationField,
+  removeEditLabelField,
+  removeEditRuleField,
+  removeEditTlsField,
 
   // edit form helper variables
-  newEditLabelKey,
   newEditAnnotationKey,
+  newEditLabelKey,
 
   // constants
   K8sIngressStatus,

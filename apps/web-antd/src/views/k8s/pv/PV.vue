@@ -30,32 +30,32 @@ const { can } = usePermission();
 const {
   // state
   clusters,
-  loading,
-  loadError,
   clustersError,
   clustersLoading,
-  searchText,
-  filterClusterId,
-  filterAccessMode,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
   clustersTotal,
+  currentPage,
+  filterAccessMode,
+  filterClusterId,
+  loadError,
+  loading,
+  pageSize,
+  searchText,
+  selectedRows,
+  total,
 
   // form refs
+  createYamlFormRef,
   formRef,
   yamlFormRef,
-  createYamlFormRef,
 
   // modal state
+  detailLoading,
   isCreateModalVisible,
   isCreateYamlModalVisible,
-  isEditModalVisible,
   isDetailModalVisible,
+  isEditModalVisible,
   isYamlModalVisible,
   submitLoading,
-  detailLoading,
 
   // current operation
   currentOperationPV,
@@ -63,87 +63,87 @@ const {
 
   // form models
   createFormModel,
+  createYamlFormModel,
   editFormModel,
   yamlFormModel,
-  createYamlFormModel,
 
   // form rules
   createFormRules,
-  yamlFormRules,
   createYamlFormRules,
+  yamlFormRules,
 
   // computed
   filteredPVs,
   rowSelection,
 
   // helpers
-  getEnvText,
-  getPVStatusText,
-  getPVStatusColor,
   getAccessModeText,
+  getEnvText,
+  getPVStatusColor,
+  getPVStatusText,
 
   // api calls
-  fetchClusters,
-  fetchPVs,
   createPV,
   createPVByYaml,
+  deleteBatchPVs,
+  deletePV,
+  fetchClusters,
+  fetchPVs,
+  reclaimPV,
   updatePV,
   updatePVByYaml,
-  deletePV,
-  reclaimPV,
-  deleteBatchPVs,
 
   // modal handlers
   openCreateModal,
   openCreateYamlModal,
-  openEditModal,
   openDetailModal,
+  openEditModal,
   openYamlModal,
 
   // form helpers
-  resetCreateForm,
-  resetEditForm,
-  resetYamlForm,
-  resetCreateYamlForm,
   handleVolumeTypeChange,
   isRequiredField,
+  resetCreateForm,
+  resetCreateYamlForm,
+  resetEditForm,
+  resetYamlForm,
 
   // filter handlers
   handleClusterChange,
-  handleFilterChange,
   handleClusterDropdownScroll,
+  handleFilterChange,
 
   // label/annotation helpers
-  newLabelKey,
-  newAnnotationKey,
-  addNewLabel,
-  removeLabelField,
   addNewAnnotation,
-  removeAnnotationField,
-  newEditLabelKey,
-  newEditAnnotationKey,
-  addNewEditLabel,
-  removeEditLabelField,
   addNewEditAnnotation,
+  addNewEditLabel,
+  addNewLabel,
+  newAnnotationKey,
+  newEditAnnotationKey,
+  newEditLabelKey,
+  newLabelKey,
+  removeAnnotationField,
   removeEditAnnotationField,
+  removeEditLabelField,
+  removeLabelField,
 
   // volume source helpers
-  newVolumeSourceKey,
-  newVolumeSourceValue,
+  addNewEditVolumeSource,
   addNewVolumeSource,
-  removeVolumeSourceField,
   newEditVolumeSourceKey,
   newEditVolumeSourceValue,
-  addNewEditVolumeSource,
+  newVolumeSourceKey,
+  newVolumeSourceValue,
   removeEditVolumeSourceField,
+  removeVolumeSourceField,
 
   // yaml operations
-  insertYamlTemplate,
-  formatYaml,
-  validateYaml,
   clearYaml,
   formatEditYaml,
+  formatYaml,
+  insertYamlTemplate,
   validateEditYaml,
+  validateYaml,
 
   // constants
   K8sPVStatus,

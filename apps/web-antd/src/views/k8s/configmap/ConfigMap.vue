@@ -35,53 +35,53 @@ const { can } = usePermission();
 const {
   // state
   clusters,
-  namespaces,
-  loading,
-  loadError,
   clustersError,
-  namespacesError,
   clustersLoading,
-  namespacesLoading,
-  searchText,
+  clustersTotal,
+  currentPage,
   filterClusterId,
-  filterNamespace,
   filterDataKey,
   filterLabels,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
-  clustersTotal,
+  filterNamespace,
+  loadError,
+  loading,
+  namespaces,
+  namespacesError,
+  namespacesLoading,
   namespacesTotal,
+  pageSize,
+  searchText,
+  selectedRows,
+  total,
 
   // modal state
+  detailLoading,
   isCreateModalVisible,
   isCreateYamlModalVisible,
-  isEditModalVisible,
   isDetailModalVisible,
+  isEditModalVisible,
   isYamlModalVisible,
   submitLoading,
-  detailLoading,
 
   // operation targets
-  currentOperationConfigMap,
   currentConfigMapDetail,
+  currentOperationConfigMap,
 
   // form models
   createFormModel,
+  createYamlFormModel,
   editFormModel,
   yamlFormModel,
-  createYamlFormModel,
 
   // form refs
+  createYamlFormRef,
   formRef,
   yamlFormRef,
-  createYamlFormRef,
 
   // form rules
   createFormRules,
-  yamlFormRules,
   createYamlFormRules,
+  yamlFormRules,
 
   // computed
   filteredConfigMaps,
@@ -92,34 +92,34 @@ const {
   parseJsonField,
 
   // operations
-  fetchClusters,
-  fetchNamespaces,
-  fetchConfigMaps,
   clearConfigMaps,
   clearNamespaces,
+  fetchClusters,
+  fetchConfigMaps,
+  fetchNamespaces,
   loadMoreClusters,
   loadMoreNamespaces,
 
   // detail operations
-  showConfigMapDetail,
   closeDetailModal,
+  showConfigMapDetail,
 
   // YAML operations
-  showYamlModal,
   closeYamlModal,
+  showYamlModal,
   submitYamlForm,
 
   // create operations
-  openCreateModal,
   closeCreateModal,
-  submitCreateForm,
-  openCreateYamlModal,
   closeCreateYamlModal,
+  openCreateModal,
+  openCreateYamlModal,
+  submitCreateForm,
   submitCreateYamlForm,
 
   // edit operations
-  openEditModal,
   closeEditModal,
+  openEditModal,
   submitEditForm,
 
   // configmap operations
@@ -127,8 +127,8 @@ const {
 
   // filter operations
   addFilterLabel,
-  removeFilterLabel,
   clearFilterLabels,
+  removeFilterLabel,
 
   // batch operations
   batchOperation,
@@ -137,22 +137,22 @@ const {
   handlePageChange,
 
   // form field operations
-  removeDataField,
-  removeEditDataField,
-  removeBinaryDataField,
-  removeEditBinaryDataField,
-  removeLabelField,
-  removeEditLabelField,
   removeAnnotationField,
+  removeBinaryDataField,
+  removeDataField,
   removeEditAnnotationField,
+  removeEditBinaryDataField,
+  removeEditDataField,
+  removeEditLabelField,
+  removeLabelField,
 
   // yaml operations
-  insertYamlTemplate,
-  formatYaml,
-  validateYaml,
   clearYaml,
   formatEditYaml,
+  formatYaml,
+  insertYamlTemplate,
   validateEditYaml,
+  validateYaml,
 } = useConfigMapPage();
 
 // 添加新字段的方法

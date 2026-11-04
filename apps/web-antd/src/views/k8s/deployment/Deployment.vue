@@ -40,63 +40,63 @@ const { can } = usePermission();
 const {
   // state
   clusters,
-  namespaces,
-  loading,
-  loadError,
   clustersError,
-  namespacesError,
   clustersLoading,
-  namespacesLoading,
-  searchText,
-  filterStatus,
-  filterClusterId,
-  filterNamespace,
-  filterLabels,
-  selectedRows,
-  currentPage,
-  pageSize,
-  total,
   clustersTotal,
+  currentPage,
+  filterClusterId,
+  filterLabels,
+  filterNamespace,
+  filterStatus,
+  loadError,
+  loading,
+  namespaces,
+  namespacesError,
+  namespacesLoading,
   namespacesTotal,
+  pageSize,
+  searchText,
+  selectedRows,
+  total,
 
   // modal state
+  detailLoading,
   isCreateModalVisible,
   isCreateYamlModalVisible,
-  isEditModalVisible,
   isDetailModalVisible,
+  isEditModalVisible,
+  isHistoryModalVisible,
+  isPodModalVisible,
   isScaleModalVisible,
   isYamlModalVisible,
-  isPodModalVisible,
-  isHistoryModalVisible,
   submitLoading,
-  detailLoading,
 
   // operation targets
-  currentOperationDeployment,
   currentDeploymentDetail,
-  deploymentPods,
+  currentOperationDeployment,
   deploymentHistory,
+  deploymentPods,
 
   // form models
   createFormModel,
-  editFormModel,
   createYamlFormModel,
+  editFormModel,
   scaleFormModel,
   yamlFormModel,
 
   // form refs
-  formRef,
+  createYamlFormRef,
   editFormRef,
+  formRef,
   scaleFormRef,
   yamlFormRef,
-  createYamlFormRef,
 
   // form rules
   createFormRules,
+  createYamlFormRules,
   editFormRules,
   scaleFormRules,
   yamlFormRules,
-  createYamlFormRules,
 
   // computed
   filteredDeployments,
@@ -104,65 +104,65 @@ const {
 
   // helpers
   getEnvText,
-  getStatusText,
   getStatusColor,
+  getStatusText,
 
   // operations
-  fetchClusters,
-  fetchNamespaces,
-  fetchDeployments,
   clearDeployments,
   clearNamespaces,
+  fetchClusters,
+  fetchDeployments,
+  fetchNamespaces,
   loadMoreClusters,
   loadMoreNamespaces,
 
   // detail operations
-  showDeploymentDetail,
   closeDetailModal,
+  showDeploymentDetail,
 
   // YAML operations
-  showYamlModal,
   closeYamlModal,
+  showYamlModal,
   submitYamlForm,
 
   // create operations
-  openCreateModal,
   closeCreateModal,
-  submitCreateForm,
-  openCreateYamlModal,
   closeCreateYamlModal,
+  openCreateModal,
+  openCreateYamlModal,
+  submitCreateForm,
   submitCreateYamlForm,
 
   // edit operations
-  openEditModal,
   closeEditModal,
+  openEditModal,
   submitEditForm,
 
   // deployment operations
   deleteDeployment,
-  restartDeployment,
   pauseDeployment,
+  restartDeployment,
   resumeDeployment,
 
   // scale operations
-  openScaleModal,
   closeScaleModal,
+  openScaleModal,
   submitScaleForm,
 
   // pod operations
-  showPodModal,
   closePodModal,
+  showPodModal,
 
   // history operations
+  closeHistoryModal,
   historyLoading,
   isHistoryCurrent,
   showHistoryModal,
-  closeHistoryModal,
 
   // filter operations
   addFilterLabel,
-  removeFilterLabel,
   clearFilterLabels,
+  removeFilterLabel,
 
   // batch operations
   batchOperation,
@@ -172,17 +172,17 @@ const {
 
   // form field operations
   addImageField,
+  removeAnnotationField,
   removeImageField,
   removeLabelField,
-  removeAnnotationField,
 
   // yaml operations
-  insertYamlTemplate,
-  formatYaml,
-  validateYaml,
   clearYaml,
   formatEditYaml,
+  formatYaml,
+  insertYamlTemplate,
   validateEditYaml,
+  validateYaml,
 
   // constants
   K8sDeploymentStatus,
