@@ -249,7 +249,7 @@ export function useNodePage() {
       [NodeStatus.Unknown]: '未知',
       [NodeStatus.Error]: '异常',
     };
-    return status !== undefined ? map[status] || '未知' : '未知';
+    return status === undefined ? '未知' : map[status] || '未知';
   };
 
   const getStatusColor = (status?: NodeStatus) => {
@@ -260,7 +260,7 @@ export function useNodePage() {
       [NodeStatus.Unknown]: 'default',
       [NodeStatus.Error]: 'error',
     };
-    return status !== undefined ? map[status] || 'default' : 'default';
+    return status === undefined ? 'default' : map[status] || 'default';
   };
 
   const getSchedulableText = (schedulable?: number) => {
@@ -301,7 +301,7 @@ export function useNodePage() {
         size: pageSize.value,
         search: searchText.value || undefined,
         status:
-          filterStatus.value !== undefined ? [filterStatus.value] : undefined,
+          filterStatus.value === undefined ? undefined : [filterStatus.value],
       };
       const res = await getK8sNodeList(params);
       if (

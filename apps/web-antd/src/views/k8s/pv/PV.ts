@@ -1144,15 +1144,15 @@ export function usePVPage() {
       if (!pv.metadata?.name) {
         issues.push('缺少 metadata.name 字段');
       }
-      if (!pv.spec) {
-        issues.push('缺少 spec 字段');
-      } else {
+      if (pv.spec) {
         if (!pv.spec.capacity?.storage) {
           issues.push('缺少 spec.capacity.storage 字段');
         }
         if (!pv.spec.accessModes || pv.spec.accessModes.length === 0) {
           issues.push('缺少 spec.accessModes 字段');
         }
+      } else {
+        issues.push('缺少 spec 字段');
       }
 
       if (issues.length > 0) {
@@ -1274,15 +1274,15 @@ export function usePVPage() {
       if (!pv.metadata?.name) {
         issues.push('缺少 metadata.name 字段');
       }
-      if (!pv.spec) {
-        issues.push('缺少 spec 字段');
-      } else {
+      if (pv.spec) {
         if (!pv.spec.capacity?.storage) {
           issues.push('缺少 spec.capacity.storage 字段');
         }
         if (!pv.spec.accessModes || pv.spec.accessModes.length === 0) {
           issues.push('缺少 spec.accessModes 字段');
         }
+      } else {
+        issues.push('缺少 spec 字段');
       }
 
       if (issues.length > 0) {

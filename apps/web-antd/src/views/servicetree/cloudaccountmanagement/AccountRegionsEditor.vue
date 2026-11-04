@@ -194,9 +194,9 @@ const codes = computed({
         region_name: previous?.region_name || regionNames.get(region) || '',
         description: previous?.description ?? '',
         is_default: region === nextDefault,
-        ...(previous?.project_id !== undefined
-          ? { project_id: previous.project_id }
-          : {}),
+        ...(previous?.project_id === undefined
+          ? {}
+          : { project_id: previous.project_id }),
       };
     });
   },

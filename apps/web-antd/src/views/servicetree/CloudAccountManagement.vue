@@ -367,7 +367,7 @@ const normalizeRegions = (regions: CloudAccountRegionInput[] = []) =>
     region_name: item.region_name ?? '',
     description: item.description ?? '',
     is_default: !!item.is_default,
-    ...(item.project_id !== undefined ? { project_id: item.project_id } : {}),
+    ...(item.project_id === undefined ? {} : { project_id: item.project_id }),
   }));
 const regionSignature = (regions: CloudAccountRegionInput[]) =>
   JSON.stringify(

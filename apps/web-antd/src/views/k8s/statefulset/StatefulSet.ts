@@ -359,7 +359,7 @@ export function useStatefulSetPage() {
       [K8sStatefulSetStatus.Updating]: '更新中',
       [K8sStatefulSetStatus.Error]: '异常',
     };
-    return status !== undefined ? map[status] || '未知' : '未知';
+    return status === undefined ? '未知' : map[status] || '未知';
   };
 
   const getStatusColor = (status?: K8sStatefulSetStatus) => {
@@ -369,7 +369,7 @@ export function useStatefulSetPage() {
       [K8sStatefulSetStatus.Updating]: 'processing',
       [K8sStatefulSetStatus.Error]: 'error',
     };
-    return status !== undefined ? map[status] || 'default' : 'default';
+    return status === undefined ? 'default' : map[status] || 'default';
   };
 
   // 时间格式化函数
@@ -1328,9 +1328,7 @@ export function useStatefulSetPage() {
       if (!statefulset.metadata?.name) {
         issues.push('缺少 metadata.name 字段');
       }
-      if (!statefulset.spec) {
-        issues.push('缺少 spec 字段');
-      } else {
+      if (statefulset.spec) {
         if (!statefulset.spec.serviceName) {
           issues.push('缺少 spec.serviceName 字段');
         }
@@ -1340,6 +1338,8 @@ export function useStatefulSetPage() {
         if (!statefulset.spec.template) {
           issues.push('缺少 spec.template 字段');
         }
+      } else {
+        issues.push('缺少 spec 字段');
       }
 
       if (issues.length > 0) {
@@ -1431,9 +1431,7 @@ export function useStatefulSetPage() {
       if (!statefulset.metadata?.name) {
         issues.push('缺少 metadata.name 字段');
       }
-      if (!statefulset.spec) {
-        issues.push('缺少 spec 字段');
-      } else {
+      if (statefulset.spec) {
         if (!statefulset.spec.serviceName) {
           issues.push('缺少 spec.serviceName 字段');
         }
@@ -1443,6 +1441,8 @@ export function useStatefulSetPage() {
         if (!statefulset.spec.template) {
           issues.push('缺少 spec.template 字段');
         }
+      } else {
+        issues.push('缺少 spec 字段');
       }
 
       if (issues.length > 0) {

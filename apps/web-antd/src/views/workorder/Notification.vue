@@ -1564,9 +1564,9 @@ const saveNotification = async (): Promise<void> => {
       return;
     }
     for (const address of recipientAddresses) {
-      const invalid = !formData.channels.includes(address.channel)
-        ? '接收地址渠道必须包含在已选择的通知渠道中'
-        : addressError(address.channel, address.address);
+      const invalid = formData.channels.includes(address.channel)
+        ? addressError(address.channel, address.address)
+        : '接收地址渠道必须包含在已选择的通知渠道中';
       if (invalid || Array.from(address.name).length > 100) {
         recipientError.value = invalid || '接收人名称不能超过100字符';
         return;
@@ -1617,9 +1617,9 @@ const saveNotification = async (): Promise<void> => {
         subject_template: formData.subjectTemplate,
         max_retries: formData.maxRetries,
         retry_interval: formData.retryInterval,
-        ...(formData.status !== originalNotificationStatus.value
-          ? { status: formData.status }
-          : {}),
+        ...(formData.status === originalNotificationStatus.value
+          ? {}
+          : { status: formData.status }),
         priority: formData.priority,
         is_default: formData.isDefault,
       };

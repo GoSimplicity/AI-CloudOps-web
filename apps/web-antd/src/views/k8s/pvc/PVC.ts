@@ -1202,15 +1202,15 @@ export function usePVCPage() {
       if (!pvc.metadata?.name) {
         issues.push('缺少 metadata.name 字段');
       }
-      if (!pvc.spec) {
-        issues.push('缺少 spec 字段');
-      } else {
+      if (pvc.spec) {
         if (!pvc.spec.resources?.requests?.storage) {
           issues.push('缺少 spec.resources.requests.storage 字段');
         }
         if (!pvc.spec.accessModes || pvc.spec.accessModes.length === 0) {
           issues.push('缺少 spec.accessModes 字段');
         }
+      } else {
+        issues.push('缺少 spec 字段');
       }
 
       if (issues.length > 0) {
@@ -1331,15 +1331,15 @@ export function usePVCPage() {
       if (!pvc.metadata?.name) {
         issues.push('缺少 metadata.name 字段');
       }
-      if (!pvc.spec) {
-        issues.push('缺少 spec 字段');
-      } else {
+      if (pvc.spec) {
         if (!pvc.spec.resources?.requests?.storage) {
           issues.push('缺少 spec.resources.requests.storage 字段');
         }
         if (!pvc.spec.accessModes || pvc.spec.accessModes.length === 0) {
           issues.push('缺少 spec.accessModes 字段');
         }
+      } else {
+        issues.push('缺少 spec 字段');
       }
 
       if (issues.length > 0) {

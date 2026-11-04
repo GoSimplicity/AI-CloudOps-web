@@ -659,9 +659,7 @@ export function useCronJobPage() {
   // SSH资源搜索
   const searchSshResources = (searchText: string) => {
     state.sshSearchText = searchText;
-    if (!searchText) {
-      state.filteredSshResources = [...state.sshResources];
-    } else {
+    if (searchText) {
       const searchLower = searchText.toLowerCase();
       state.filteredSshResources = state.sshResources.filter(
         (resource) =>
@@ -670,6 +668,8 @@ export function useCronJobPage() {
           (resource.description &&
             resource.description.toLowerCase().includes(searchLower)),
       );
+    } else {
+      state.filteredSshResources = [...state.sshResources];
     }
   };
 
@@ -1016,13 +1016,13 @@ export function useCronJobPage() {
       if (!isCurrent()) return;
       const result = response;
 
-      if (!result.valid) {
-        message.error(`调度表达式验证失败：${result.error_message}`);
-      } else {
+      if (result.valid) {
         message.success('调度表达式验证通过');
         if (result.next_run_times?.length) {
           message.info(`下次执行时间：${result.next_run_times[0]}`);
         }
+      } else {
+        message.error(`调度表达式验证失败：${result.error_message}`);
       }
     } catch (error) {
       if (isCurrent() && shouldNotifyPageError(error))

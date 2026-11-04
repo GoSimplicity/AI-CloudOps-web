@@ -394,7 +394,7 @@ export function usePodPage() {
       [K8sPodStatus.Failed]: '失败',
       [K8sPodStatus.Unknown]: '未知',
     };
-    return status !== undefined ? map[status] || '未知' : '未知';
+    return status === undefined ? '未知' : map[status] || '未知';
   };
 
   const getStatusColor = (status?: K8sPodStatus) => {
@@ -405,7 +405,7 @@ export function usePodPage() {
       [K8sPodStatus.Failed]: 'error',
       [K8sPodStatus.Unknown]: 'default',
     };
-    return status !== undefined ? map[status] || 'default' : 'default';
+    return status === undefined ? 'default' : map[status] || 'default';
   };
 
   const getPhaseText = (phase?: K8sPodPhase) => {
@@ -416,7 +416,7 @@ export function usePodPage() {
       [K8sPodPhase.Failed]: '失败',
       [K8sPodPhase.Unknown]: '未知',
     };
-    return phase !== undefined ? map[phase] || '未知' : '未知';
+    return phase === undefined ? '未知' : map[phase] || '未知';
   };
 
   // 转换函数：Record<string, string> -> KeyValueList
@@ -1014,9 +1014,7 @@ export function usePodPage() {
       if (!pod.metadata?.name) {
         issues.push('缺少 metadata.name 字段');
       }
-      if (!pod.spec) {
-        issues.push('缺少 spec 字段');
-      } else {
+      if (pod.spec) {
         if (
           !pod.spec.containers ||
           !Array.isArray(pod.spec.containers) ||
@@ -1027,6 +1025,8 @@ export function usePodPage() {
         if (!pod.spec.restartPolicy) {
           issues.push('建议设置 spec.restartPolicy 字段');
         }
+      } else {
+        issues.push('缺少 spec 字段');
       }
 
       if (issues.length > 0) {
@@ -1148,9 +1148,7 @@ export function usePodPage() {
       if (!pod.metadata?.name) {
         issues.push('缺少 metadata.name 字段');
       }
-      if (!pod.spec) {
-        issues.push('缺少 spec 字段');
-      } else {
+      if (pod.spec) {
         if (
           !pod.spec.containers ||
           !Array.isArray(pod.spec.containers) ||
@@ -1161,6 +1159,8 @@ export function usePodPage() {
         if (!pod.spec.restartPolicy) {
           issues.push('建议设置 spec.restartPolicy 字段');
         }
+      } else {
+        issues.push('缺少 spec 字段');
       }
 
       if (issues.length > 0) {
@@ -2147,11 +2147,11 @@ export function usePodPage() {
           } else if (event.code === 4401) {
             // 连上之后令牌失效（P2-C）
             void recoverFromUnauthorizedAfterOpen();
-          } else if (!event.wasClean) {
+          } else if (event.wasClean) {
+            onClose?.();
+          } else {
             // 非正常关闭且不是手动关闭，尝试重连
             scheduleReconnect();
-          } else {
-            onClose?.();
           }
         };
       } catch {

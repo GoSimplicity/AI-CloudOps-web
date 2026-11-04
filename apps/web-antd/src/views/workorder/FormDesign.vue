@@ -311,10 +311,10 @@ const moveField = (index: number, direction: number) => {
 const initFormData = () => {
   const data: Record<string, any> = {};
   formSchema.fields.forEach((field) => {
-    if (field.default !== undefined) {
-      data[field.name] = field.default;
-    } else {
+    if (field.default === undefined) {
       data[field.name] = getDefaultValue(field.type);
+    } else {
+      data[field.name] = field.default;
     }
   });
   formData.value = data;

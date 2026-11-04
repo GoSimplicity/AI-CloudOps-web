@@ -305,7 +305,7 @@ export function useIngressPage() {
       [K8sIngressStatus.PENDING]: '等待中',
       [K8sIngressStatus.FAILED]: '失败',
     };
-    return status !== undefined ? map[status] || '未知' : '未知';
+    return status === undefined ? '未知' : map[status] || '未知';
   };
 
   const getStatusColor = (status?: K8sIngressStatus) => {
@@ -314,7 +314,7 @@ export function useIngressPage() {
       [K8sIngressStatus.PENDING]: 'warning',
       [K8sIngressStatus.FAILED]: 'error',
     };
-    return status !== undefined ? map[status] || 'default' : 'default';
+    return status === undefined ? 'default' : map[status] || 'default';
   };
 
   // 转换函数：Record<string, string> -> KeyValueList

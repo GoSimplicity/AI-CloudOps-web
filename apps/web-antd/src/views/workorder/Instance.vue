@@ -982,9 +982,7 @@ const initializeVisualFormData = (): void => {
   // 根据表单字段设置默认值
   currentFormDesign.value.schema.fields.forEach((field: FormField) => {
     if (!(field.name in newData)) {
-      if (field.default !== undefined) {
-        newData[field.name] = field.default;
-      } else {
+      if (field.default === undefined) {
         // 根据字段类型设置默认值
         switch (field.type) {
           case FormFieldType.Text:
@@ -1014,6 +1012,8 @@ const initializeVisualFormData = (): void => {
             newData[field.name] = '';
           }
         }
+      } else {
+        newData[field.name] = field.default;
       }
     }
   });
@@ -1747,7 +1747,7 @@ const handleEditInstance = async (row: WorkorderInstanceItem) => {
         description: res.description,
         priority: res.priority,
         process_id: res.process_id,
-        assignee_id: res.assignee_id != null ? res.assignee_id : undefined,
+        assignee_id: res.assignee_id == null ? undefined : res.assignee_id,
         form_data_json: JSON.stringify(res.form_data || {}, null, 2),
         form_data: res.form_data,
         status: res.status,
@@ -2514,9 +2514,9 @@ const saveInstance = async () => {
         form_data: formData,
         status: InstanceStatus.Draft,
         priority: instanceDialog.form.priority,
-        ...(instanceDialog.form.assignee_id != null
-          ? { assignee_id: Number(instanceDialog.form.assignee_id) }
-          : {}),
+        ...(instanceDialog.form.assignee_id == null
+          ? {}
+          : { assignee_id: Number(instanceDialog.form.assignee_id) }),
         description: instanceDialog.form.description,
         tags: instanceDialog.form.tags,
         due_date: instanceDialog.form.due_date

@@ -945,15 +945,15 @@ export function useClusterRoleBindingPage() {
       if (!clusterRoleBinding.metadata?.name) {
         issues.push('缺少 metadata.name 字段');
       }
-      if (!clusterRoleBinding.roleRef) {
-        issues.push('缺少 roleRef 字段');
-      } else {
+      if (clusterRoleBinding.roleRef) {
         if (!clusterRoleBinding.roleRef.name) {
           issues.push('缺少 roleRef.name 字段');
         }
         if (!clusterRoleBinding.roleRef.kind) {
           issues.push('缺少 roleRef.kind 字段');
         }
+      } else {
+        issues.push('缺少 roleRef 字段');
       }
       if (!clusterRoleBinding.subjects) {
         issues.push('缺少 subjects 字段');
@@ -1082,15 +1082,15 @@ export function useClusterRoleBindingPage() {
       if (!clusterRoleBinding.metadata?.name) {
         issues.push('缺少 metadata.name 字段');
       }
-      if (!clusterRoleBinding.roleRef) {
-        issues.push('缺少 roleRef 字段');
-      } else {
+      if (clusterRoleBinding.roleRef) {
         if (!clusterRoleBinding.roleRef.name) {
           issues.push('缺少 roleRef.name 字段');
         }
         if (!clusterRoleBinding.roleRef.kind) {
           issues.push('缺少 roleRef.kind 字段');
         }
+      } else {
+        issues.push('缺少 roleRef 字段');
       }
       if (!clusterRoleBinding.subjects) {
         issues.push('缺少 subjects 字段');

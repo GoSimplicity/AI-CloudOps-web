@@ -746,7 +746,9 @@ const refreshKnowledge = async () => {
     });
 
     if (!accountScope.sameOwner(identity)) return;
-    if (response?.refreshed !== false) {
+    if (response?.refreshed === false) {
+      throw new Error(response?.message || '刷新知识库失败');
+    } else {
       const docsCount = response?.documents_count;
       const vectorCount = response?.vector_count;
       let successMsg = '知识库刷新成功';
@@ -759,8 +761,6 @@ const refreshKnowledge = async () => {
       }
 
       showSuccess(successMsg);
-    } else {
-      throw new Error(response?.message || '刷新知识库失败');
     }
   } catch (error) {
     if (accountScope.sameOwner(identity)) handleApiError(error, '刷新知识库');
@@ -848,9 +848,7 @@ const loadState = () => {
       sessions.value = Array.isArray(ses.sessions) ? ses.sessions : [];
       currentLocalSessionId.value = ses.currentLocalSessionId || '';
     }
-    if (!sessions.value.length) {
-      createNewSession(true);
-    } else {
+    if (sessions.value.length) {
       const selected =
         sessions.value.find((s) => s.localId === currentLocalSessionId.value) ||
         sessions.value[0];
@@ -859,6 +857,8 @@ const loadState = () => {
         selected.serverId = sessionId.value;
       sessionId.value = selected?.serverId || '';
       if (sessionId.value) void restoreCurrentSession();
+    } else {
+      createNewSession(true);
     }
     // 覆盖旧版本本地对话副本，仅保留服务端会话指针。
     persistState();

@@ -155,9 +155,9 @@ export async function updateCloudAccountRegionStatus(
 export async function getAvailableRegions(params: GetAvailableRegionsReq) {
   // 仅发送已保存账户ID或厂商枚举，绝不将密钥拼接进URL
   const query =
-    params.cloud_account_id !== undefined
-      ? { cloud_account_id: params.cloud_account_id }
-      : { provider: params.provider };
+    params.cloud_account_id === undefined
+      ? { provider: params.provider }
+      : { cloud_account_id: params.cloud_account_id };
   if (
     'cloud_account_id' in query &&
     (typeof query.cloud_account_id !== 'number' ||

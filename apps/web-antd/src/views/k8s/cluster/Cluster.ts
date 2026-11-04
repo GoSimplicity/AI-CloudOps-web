@@ -169,7 +169,7 @@ export function useClusterPage() {
       [ClusterStatus.Stopped]: '已停止',
       [ClusterStatus.Error]: '异常',
     } as Record<number, string>;
-    return s !== undefined ? map[s] || '未知' : '未知';
+    return s === undefined ? '未知' : map[s] || '未知';
   };
 
   // 防御：即使旧版后端仍回传 kubeconfig 原文，也不在前端状态里保留

@@ -297,7 +297,7 @@ export function useDeploymentPage() {
       [K8sDeploymentStatus.Paused]: '已暂停',
       [K8sDeploymentStatus.Error]: '异常',
     };
-    return status !== undefined ? map[status] || '未知' : '未知';
+    return status === undefined ? '未知' : map[status] || '未知';
   };
 
   const getStatusColor = (status?: K8sDeploymentStatus) => {
@@ -307,7 +307,7 @@ export function useDeploymentPage() {
       [K8sDeploymentStatus.Paused]: 'warning',
       [K8sDeploymentStatus.Error]: 'error',
     };
-    return status !== undefined ? map[status] || 'default' : 'default';
+    return status === undefined ? 'default' : map[status] || 'default';
   };
 
   // 转换函数：Record<string, string> -> KeyValueList
@@ -1210,9 +1210,7 @@ export function useDeploymentPage() {
       if (!deployment.metadata?.name) {
         issues.push('缺少 metadata.name 字段');
       }
-      if (!deployment.spec) {
-        issues.push('缺少 spec 字段');
-      } else {
+      if (deployment.spec) {
         if (deployment.spec.replicas === undefined) {
           issues.push('建议设置 spec.replicas 字段');
         }
@@ -1222,6 +1220,8 @@ export function useDeploymentPage() {
         if (!deployment.spec.template) {
           issues.push('缺少 spec.template 字段');
         }
+      } else {
+        issues.push('缺少 spec 字段');
       }
 
       if (issues.length > 0) {
@@ -1343,9 +1343,7 @@ export function useDeploymentPage() {
       if (!deployment.metadata?.name) {
         issues.push('缺少 metadata.name 字段');
       }
-      if (!deployment.spec) {
-        issues.push('缺少 spec 字段');
-      } else {
+      if (deployment.spec) {
         if (deployment.spec.replicas === undefined) {
           issues.push('建议设置 spec.replicas 字段');
         }
@@ -1355,6 +1353,8 @@ export function useDeploymentPage() {
         if (!deployment.spec.template) {
           issues.push('缺少 spec.template 字段');
         }
+      } else {
+        issues.push('缺少 spec 字段');
       }
 
       if (issues.length > 0) {

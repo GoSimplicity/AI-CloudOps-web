@@ -754,3 +754,12 @@ SystemRole、Secret、MonitorOnDutyGroup和MonitorScrapeJob四个SFC各搬移一
 - 磁盘源码与提案逐字匹配，四段完整statement与其它statement顺序、真实compileScript binding分类及生产DOM/SSR render一致。四文件lint328→324 errors、0 warnings，逐文件各规则无新增，其余既有诊断保留。
 - 原/新实际编译角色、值班组和采集任务setup，在Fake API成功/失败六组轨迹中保持factory零请求、真实computed角色选择、详情转编辑及mounted树/列表读取和失败处理一致。该探针为受控setup/生命周期调用，实际DOM行为由现有挂载回归覆盖。
 - 角色、Secret目录、值班CRUD/调班、采集安全/凭据、Prometheus列表、权限按钮与表格等现有19文件754项测试及应用类型检查通过；没有新增镜像测试、修改断言、规则或ignore，也没有重复全仓测试和构建。没有真实集群、凭据、通知或外部API操作，未上线。
+
+## 阶段七十六：否定条件与完整分支的同构整理
+
+23个源文件（9个SFC、14个TS）仅处理53处unicorn/no-negated-condition：对!operand或!=/!==条件取逻辑补，并交换完整if块或三元分支。条件operand仍按原顺序求值一次，成员getter/coercion与被选分支的真实执行路径保持；原块作用域、分支内声明、调用与副作用次序保持，没有重排对象属性、数据、初始化或其它规则。
+
+- 当前53处均满足限定合同，无无else、悬挂else、块外注释归属不明、嵌套函数声明或重叠fix需要豁免。完整分支原文和内注释保留，括号及三元结合按真实解析后的AST核对，运算优先级保持；规范化条件逻辑补与分支交换后，整个真实script AST的token/literal/声明结构一致。
+- 磁盘源码逐字匹配已审提案；其它源码仅有该规则的精确fix，9个SFC模板/style字节、compileScript binding分类和生产DOM/SSR render保持。Root另用HEAD-before及磁盘源码独立重建canonical AST和模板/style复核通过。
+- 23文件定向lint2742→2689 errors，1 warning保持；该规则53→0，逐文件各规则无新增。其余既有诊断保留，没有修改规则、ignore、测试或lock，也没有随手格式化。
+- 全Web现有166文件3619项测试及应用类型检查通过，覆盖K8s、Cron、AI、云账户、工单等原有异步隔离与失败回归；没有新增镜像测试，本阶段按约定未重复构建。没有真实外部API、集群、云或凭据操作，未上线。

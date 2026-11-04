@@ -351,9 +351,9 @@ const loadDialogCategories = async (
       page: reset ? 1 : categoryPagination.current,
       size: categoryPagination.pageSize,
       search:
-        search !== undefined
-          ? search
-          : categorySearchKeyword.value || undefined,
+        search === undefined
+          ? categorySearchKeyword.value || undefined
+          : search,
     };
 
     const response = await listWorkorderCategory(params);
@@ -453,7 +453,7 @@ const loadDialogProcesses = async (
       page: reset ? 1 : processPagination.current,
       size: processPagination.pageSize,
       search:
-        search !== undefined ? search : processSearchKeyword.value || undefined,
+        search === undefined ? processSearchKeyword.value || undefined : search,
     };
 
     const response = await listWorkorderProcess(params);
@@ -553,7 +553,7 @@ const loadDialogForms = async (
       page: reset ? 1 : formPagination.current,
       size: formPagination.pageSize,
       search:
-        search !== undefined ? search : formSearchKeyword.value || undefined,
+        search === undefined ? formSearchKeyword.value || undefined : search,
     };
 
     const response = await listWorkorderFormDesign(params);

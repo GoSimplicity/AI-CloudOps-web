@@ -473,8 +473,8 @@ async function fetchAllSystemData() {
         ? `${label}：${entry.reason.message}`
         : `${label}：未返回有效数据`;
     readErrors.value = [
-      !infoData ? reason(info, '主机信息读取失败') : '',
-      !metricsData ? reason(measured, '系统采样读取失败') : '',
+      infoData ? '' : reason(info, '主机信息读取失败'),
+      metricsData ? '' : reason(measured, '系统采样读取失败'),
     ].filter(Boolean);
     receivedAt.value = new Date().toLocaleString('zh-CN');
     recordHistory();

@@ -238,7 +238,7 @@ export function useServicePage() {
       [K8sSvcStatus.Stopped]: '已停止',
       [K8sSvcStatus.Error]: '异常',
     };
-    return status !== undefined ? map[status] || '未知' : '未知';
+    return status === undefined ? '未知' : map[status] || '未知';
   };
 
   const getStatusColor = (status?: K8sSvcStatus) => {
@@ -247,7 +247,7 @@ export function useServicePage() {
       [K8sSvcStatus.Stopped]: 'default',
       [K8sSvcStatus.Error]: 'error',
     };
-    return status !== undefined ? map[status] || 'default' : 'default';
+    return status === undefined ? 'default' : map[status] || 'default';
   };
 
   const getServiceTypeText = (type?: string) => {

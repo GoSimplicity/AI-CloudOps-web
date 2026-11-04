@@ -418,9 +418,9 @@ const loadFormDialogCategories = async (
       page: reset ? 1 : categoryPagination.current,
       size: categoryPagination.pageSize,
       search:
-        search !== undefined
-          ? search
-          : categorySearchKeyword.value || undefined,
+        search === undefined
+          ? categorySearchKeyword.value || undefined
+          : search,
     };
 
     const response = await listWorkorderCategory(params);

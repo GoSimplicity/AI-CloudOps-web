@@ -1158,15 +1158,15 @@ export function useRoleBindingPage() {
       if (!roleBinding.metadata?.namespace) {
         issues.push('缺少 metadata.namespace 字段');
       }
-      if (!roleBinding.roleRef) {
-        issues.push('缺少 roleRef 字段');
-      } else {
+      if (roleBinding.roleRef) {
         if (!roleBinding.roleRef.name) {
           issues.push('缺少 roleRef.name 字段');
         }
         if (!roleBinding.roleRef.kind) {
           issues.push('缺少 roleRef.kind 字段');
         }
+      } else {
+        issues.push('缺少 roleRef 字段');
       }
       if (!roleBinding.subjects) {
         issues.push('缺少 subjects 字段');
@@ -1296,15 +1296,15 @@ export function useRoleBindingPage() {
       if (!roleBinding.metadata?.namespace) {
         issues.push('缺少 metadata.namespace 字段');
       }
-      if (!roleBinding.roleRef) {
-        issues.push('缺少 roleRef 字段');
-      } else {
+      if (roleBinding.roleRef) {
         if (!roleBinding.roleRef.name) {
           issues.push('缺少 roleRef.name 字段');
         }
         if (!roleBinding.roleRef.kind) {
           issues.push('缺少 roleRef.kind 字段');
         }
+      } else {
+        issues.push('缺少 roleRef 字段');
       }
       if (!roleBinding.subjects) {
         issues.push('缺少 subjects 字段');
