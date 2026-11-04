@@ -219,7 +219,7 @@ export function findRedactedPlaceholder(payload: {
 
 /** 某个键的整个值是带引号（单 / 双）的占位符，允许行尾注释 */
 const QUOTED_REDACTED_VALUE_PATTERN =
-  /^[ \t]*[^\s#:][^:\n]*:[ \t]*(["'])<redacted>\1[ \t]*(?:#.*)?$/m;
+  /^[\t ]*[^\s#:][^\n:]*:[\t ]*(["'])<redacted>\1[\t ]*(?:#.*)?$/m;
 
 function leadingWidth(line: string) {
   return line.length - line.trimStart().length;
@@ -230,11 +230,11 @@ function leadingWidth(line: string) {
  * 键分支不能以 `- ` 开头（`- ` 只归列表项前缀），避免与列表项前缀重叠回溯（同 BLOCK_SCALAR_HEADER_PATTERN）。
  */
 const VALUE_ON_NEXT_LINE_KEY_PATTERN =
-  /^[ \t]*(?:-[ \t]+)*(?:"[^"\n]*"|'[^'\n]*'|(?:[^\s#'"-]|-(?=\S))[^:\n]*):(?:[ \t]+[!&]\S*)*[ \t]*(?:#.*)?$/;
+  /^[\t ]*(?:-[\t ]+)*(?:"[^\n"]*"|'[^\n']*'|(?:[^\s"#'-]|-(?=\S))[^\n:]*):(?:[\t ]+[!&]\S*)*[\t ]*(?:#.*)?$/;
 
 /** 下一行整行是带引号的占位符（可带标签 / 锚点与行尾注释） */
 const NEXT_LINE_QUOTED_REDACTED_PATTERN =
-  /^[ \t]*(?:[!&]\S*[ \t]+)*(["'])<redacted>\1[ \t]*(?:#.*)?$/;
+  /^[\t ]*(?:[!&]\S*[\t ]+)*(["'])<redacted>\1[\t ]*(?:#.*)?$/;
 
 /**
  * incr6 P3-1：`key:` 换行后（跳过空行与整行注释）更深缩进的一行恰好是 `"<redacted>"` / `'<redacted>'`，
@@ -281,7 +281,7 @@ export function yamlHasQuotedRedacted(yamlText: string) {
  * 60KB 的 `- - - …` 单行要回溯约 1.5s（平方级），改后约 1ms。以 `-` 开头的键（如 `-k:`）仍可匹配。
  */
 const BLOCK_SCALAR_HEADER_PATTERN =
-  /^[ \t]*(?:-[ \t]+)*(?:(?:"[^"\n]*"|'[^'\n]*'|(?:[^\s#'"-]|-(?=\S))[^:\n]*):[ \t]*)?(?:[!&]\S*[ \t]+)*[|>](?:[1-9][+-]?|[+-][1-9]?)?[ \t]*(?:#.*)?$/;
+  /^[\t ]*(?:-[\t ]+)*(?:(?:"[^\n"]*"|'[^\n']*'|(?:[^\s"#'-]|-(?=\S))[^\n:]*):[\t ]*)?(?:[!&]\S*[\t ]+)*[>|](?:[1-9][+-]?|[+-][1-9]?)?[\t ]*(?:#.*)?$/;
 
 /**
  * YAML 文本里是否有块标量里单独一行的占位符：块内任一行去掉首尾空白后**恰好等于** `<redacted>` 即算；
@@ -341,11 +341,11 @@ export function readRevealedValue(
 // ---- YAML 编辑：展示时把 data 的 base64 解成明文、提交时再编码（incr7 从 Secret.ts 移入并重写，便于与上面的拦截器对照测试） ----
 
 /** data 段头：顶格 `data:`，后面只允许空白与行尾注释 */
-const DATA_SECTION_HEADER_PATTERN = /^data:[ \t]*(?:#.*)?$/;
+const DATA_SECTION_HEADER_PATTERN = /^data:[\t ]*(?:#.*)?$/;
 
 /** 顶格的非空、非注释行（结束当前段） */
 function isTopLevelLine(line: string) {
-  return line !== '' && !/^[ \t#]/.test(line);
+  return line !== '' && !/^[\t #]/.test(line);
 }
 
 /**
@@ -608,7 +608,7 @@ function isNonCanonicalSecretFieldKey(key: string) {
  * 改为裸键必须以非空白、非冒号结尾，冒号前的空白只归 `[ \t]*`，线性时间。
  */
 const TOP_LEVEL_KEY_PATTERN =
-  /^(?:"([^"\\]*)"|'([^']*)'|([^\s"'#?:[{\-](?:[^:]*[^ \t:])?))[ \t]*:(?:[ \t]|$)/;
+  /^(?:"([^"\\]*)"|'([^']*)'|([^\s"#':?[{\-](?:[^:]*[^\t :])?))[\t ]*:(?:[\t ]|$)/;
 
 /** incr8 P3-2：js-yaml 当作普通字符、Go（YAML 1.1）当作换行的字符；U+FEFF 只允许出现在开头（BOM） */
 const YAML_LINE_BREAK_CHAR_PATTERN = /[\u0085\u2028\u2029]/;
@@ -625,7 +625,7 @@ const STRICT_BASE64_PATTERN =
 
 /** 双引号值：只允许 \" 与 \\ 转义，引号后只允许行尾注释（value 已去掉首尾空白） */
 const SUPPORTED_QUOTED_VALUE_PATTERN =
-  /^"(?:[^"\\\n]|\\["\\])*"(?:[ \t]+#.*)?$/;
+  /^"(?:[^\n"\\]|\\["\\])*"(?:[\t ]+#.*)?$/;
 
 /** 顶格 `data:` 头后允许的同行内容：空、行尾注释、空映射 / null */
 const DATA_HEADER_INLINE_OK_PATTERN =
@@ -651,7 +651,7 @@ export function getYamlDataFormatError(yamlText: string): null | string {
     const line = rawLine.replace(/\r$/, '');
     if (isTopLevelLine(line)) {
       // incr8 P3-1：已有内容之后的 `---` = 第二个文档（与兜底的 loadAll 同口径，提示也一致）
-      if (/^---(?:[ \t]|$)/.test(line)) {
+      if (/^---(?:[\t ]|$)/.test(line)) {
         if (seenTopLevelContent) return YAML_MULTI_DOCUMENT_MESSAGE;
         continue;
       }
@@ -664,7 +664,7 @@ export function getYamlDataFormatError(yamlText: string): null | string {
           return yamlDataUnsupportedMessage('data');
         }
         inData = true;
-      } else if (/^(["'])data\1[ \t]*:/.test(line)) {
+      } else if (/^(["'])data\1[\t ]*:/.test(line)) {
         return yamlDataUnsupportedMessage('data');
       } else {
         // incr8 P2-1：`Data:` / `StringData:` / `"Data":` 等非规范键名
@@ -677,7 +677,7 @@ export function getYamlDataFormatError(yamlText: string): null | string {
           }
         }
         // `data :`（冒号前有空格）：编码器不认，值不会被编码
-        if (/^data[ \t]+:/.test(line))
+        if (/^data[\t ]+:/.test(line))
           return yamlDataUnsupportedMessage('data');
       }
       continue;
@@ -714,7 +714,7 @@ export function getYamlDataFormatError(yamlText: string): null | string {
       return yamlDataUnsupportedMessage(`第 ${index + 1} 行`);
     currentKey = key;
     const after = content.slice(keyMatch[0].length);
-    if (after !== '' && !/^[ \t]/.test(after)) {
+    if (after !== '' && !/^[\t ]/.test(after)) {
       return yamlDataMissingSpaceMessage(currentKey);
     }
     const value = after.trim();
@@ -739,7 +739,7 @@ export function getYamlDataFormatError(yamlText: string): null | string {
     if ("|>'!&*[{%@`?,".includes(first)) {
       return yamlDataUnsupportedMessage(currentKey);
     }
-    const commentAt = value.search(/[ \t]#/);
+    const commentAt = value.search(/[\t ]#/);
     const plain =
       commentAt === -1 ? value : value.slice(0, commentAt).trimEnd();
     // incr8 取舍 5：null / ~ 是空值，提示删除该键（与表单 EMPTY_VALUE_MESSAGE 同口径）
@@ -755,7 +755,7 @@ export function getYamlDataFormatError(yamlText: string): null | string {
 
 /** 规范化后（Go 的 base64 解码忽略 \r \n）判断一个 base64 串是否解码为占位符；不是严格 base64 返回 undefined */
 function decodesToRedacted(encoded: string): boolean | undefined {
-  const compact = encoded.replace(/[\r\n]/g, '');
+  const compact = encoded.replace(/[\n\r]/g, '');
   if (!STRICT_BASE64_PATTERN.test(compact)) return undefined;
   const decoded = decodeBase64Utf8(compact);
   return decoded !== undefined && isRedactedText(decoded);
@@ -766,7 +766,7 @@ function keyOfLineAt(text: string, offset: number) {
   const lineStart = text.lastIndexOf('\n', offset - 1) + 1;
   const lineEnd = text.indexOf('\n', offset);
   const line = text.slice(lineStart, lineEnd === -1 ? text.length : lineEnd);
-  const key = /^[ \t]*(?:-[ \t]+)*["']?([\w.-]+)["']?[ \t]*:/.exec(line);
+  const key = /^[\t ]*(?:-[\t ]+)*["']?([\w.-]+)["']?[\t ]*:/.exec(line);
   const keyName = key?.[1];
   if (keyName !== undefined) return keyName;
   let lineNumber = 1;

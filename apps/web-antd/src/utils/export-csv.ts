@@ -7,7 +7,7 @@ export function encodeCsv(rows: unknown[][]): string {
         row
           .map((value) => {
             const text = value == null ? '' : String(value);
-            const safe = /^[\s\u0000-\u001f]*[=+@-]/.test(text)
+            const safe = /^[\s\u0000-\u001f]*[+=@-]/.test(text)
               ? `'${text}`
               : text;
             return `"${safe.replaceAll('"', '""')}"`;

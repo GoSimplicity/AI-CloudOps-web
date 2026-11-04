@@ -23,7 +23,7 @@ for (const name of fs.readdirSync(dir).filter((x) => x.endsWith('.ts'))) {
         component = find('component');
       const view = component?.initializer
         .getText(source)
-        .match(/import\(['"]#\/views\/([^'"]+)['"]\)/)?.[1];
+        .match(/import\(["']#\/views\/([^"']+)["']\)/)?.[1];
       if (route && view && ts.isStringLiteral(route.initializer)) {
         const target = path.join(root, 'apps/web-antd/src/views', view);
         const text = fs.existsSync(target)

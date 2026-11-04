@@ -1204,7 +1204,7 @@ const exportToExcel = (data: TreeCloudResource[]) => {
   // 导出文件
   const timestamp = new Date()
     .toISOString()
-    .replace(/[:.]/g, '-')
+    .replace(/[.:]/g, '-')
     .substring(0, 19);
   const filename = `云资源列表_${timestamp}.csv`;
   const firstRow = exportData[0];

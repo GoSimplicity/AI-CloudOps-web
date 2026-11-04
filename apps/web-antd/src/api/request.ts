@@ -56,7 +56,7 @@ function readBadRequestDetail(data: any): string {
       : typeof data?.error?.message === 'string'
         ? data.error.message
         : '';
-  const text = raw.replace(/\s*[\r\n]+\s*/g, ' ').trim();
+  const text = raw.replace(/\s*[\n\r]+\s*/g, ' ').trim();
   return [...text].slice(0, HTTP_BAD_REQUEST_DETAIL_MAX_LENGTH).join('');
 }
 
@@ -93,9 +93,9 @@ const sensitiveSegmentPattern = (segment: string) =>
 const AUTOFIX_SEGMENT_PATTERN = sensitiveSegmentPattern('autofix');
 /** Secret 接口：独立的 secret / secrets 段（/k8s/secret/…，含 sec26 的 …/reveal；复数为 K8s 原生写法） */
 const SECRET_SEGMENT_PATTERN = sensitiveSegmentPattern('secrets?');
-const MANAGED_CLOUD_PATTERN = /(?:^|\/)tree\/cloud\/managed(?=[/?#;]|$)/i;
+const MANAGED_CLOUD_PATTERN = /(?:^|\/)tree\/cloud\/managed(?=[#/;?]|$)/i;
 const NOTIFICATION_ACCESS_PATTERN =
-  /(?:^|\/)(?:workorder\/notification\/(?:events|inbox)|user\/permissions)(?=[/?#;]|$)/i;
+  /(?:^|\/)(?:workorder\/notification\/(?:events|inbox)|user\/permissions)(?=[#/;?]|$)/i;
 
 function matchesSensitivePath(error: any, pattern: RegExp): boolean {
   const path = readRequestPath(error);

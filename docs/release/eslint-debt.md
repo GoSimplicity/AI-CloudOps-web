@@ -906,3 +906,16 @@ MonitorConfig的Name统一为1..255、InstanceKey（历史API字段instance_ip�
 - 本阶段的危险Boolean/String control检出临时AST证明脚本直接把Array.push结果返回给ts.forEachChild会提前停止遍历的问题。先暂停源码落盘，完整审查56个相关脚本/63个调用，在新/tmp complete副本修正7个历史写法及本阶段此前两处写法，保留旧冻结日志和expected。历史7个canonicalizer及本阶段新版均能检出非首个第三statement语义mutation与真实导入Boolean/String运行时构造顺序变化；18个相关历史/当前重放最终全部通过。对应Git提交与保存快照212组逐字核对，历史受影响证明已重新完整验证，未发现未解释的semantic差异；首轮3个重放因runner漏传--after的输入断言失败亦保留记录，补参数后独立通过。没有用旧aggregate exit0代替实际收据，业务源没有因此修改。
 - 16文件实际lint743→642 errors，0 warnings，逐文件各规则无新增；全Web现有167文件3692项单元测试及应用类型检查通过。本阶段不以101减法宣称新的全仓总量，仍区分最后完整实扫与目标复扫。
 - 未修改测试逻辑、CI、规则、ignore、lock、MonitorConfig、全局helper或backend，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。
+
+## 阶段九十一：单码点字符类union的精确元素排列
+
+本阶段基于最近实际全扫1130文件/7509 errors/5 warnings（fatal、保护规则、parser均0，directive audit41），仅修改7个生产文件的24个RegExp literal。99条better-regex中先排除17个测试/spec命中，82个生产命中有55个涉及非排列的range、escape、group等变换；形式合格的27个再排除3个交叉规则冲突，最终目标净减24。未把目标减法宣称为新的全局计数。
+
+- 仅允许Character、CharacterSet、CharacterClassRange组成的单码点union，使用实际@eslint-community/regexpp4.12.2解析old/new完整literal。每个元素的raw及parser语义多重集、range两端、negation、flags原文、其它完整regexp AST、capture/name/backreference解析关系及字符类外bytes均保持。全域集合等价依据是同一flag域内union成员不变；/i折叠与range仍沿用原AST语义，不靠有限样本推断全域。
+- /v整个UnicodeSets flag、字符集字符串、多字符disjunction/set-operation均不纳。5组允许与11组拒绝control覆盖/u、negation、range、capture/backref、flags及raw escape等，/v即使简单类也拒绝。没有把[0-9]改成\d、移除group、改变escape拼写或其它正则优化混入。
+- request3、CSV1、Cron2、Secret YAML工具15、CloudAccount1、CloudResource1、布局审计工具1。ai的[\s\S]→[\S\s]会新增regexp/match-any，Secret两处\-移到类尾会新增no-useless-escape，故这3处原文保留；不改规则、allow或ignore来纳入，也不顺手去掉escape。
+- 当前consumer只使用native test/exec、String matching/replacement或按名追踪的private matcher参数；方法需直接调用，未发现regex.source、toString、stringify、再构造、导出或未知整值逃逸。RegExp源文本本身会变化，本阶段不声称保留其字符串表示，安全合同限于已核实的匹配消费者。
+- 对最终24条及1个sticky/命名捕获/d索引control补充13500步exec与6750组replace对照，匹配、编号/命名capture、offset/index/indices、lastIndex轨迹、$替换编号和callback替换结果一致；有限探针仅补充状态与消费证据，不能替代parser的全域集合证明。没有执行真实API、模型或通知。
+- actual HEAD before与磁盘proposal逐字核对，固定24个literal范围外bytes不变；完整TS及实际SFC编译script AST仅允许已验证的regex leaf变化，其它节点、Vue binding、模板/style及DOM/SSR输出保持。proof的forEachChild callback全部返回void，非首个第三statement语义mutation必须检出；原失败lint及正负control证据均保留。
+- 指定重点回归21文件779项通过，其中SecretData全部4组282项，覆盖YAML编码、占位符与脱敏；CSV、request敏感路径、Cloud及Cron现有用例同时通过。全Web167文件3692项单元测试、应用类型检查通过。7文件actual lint419→395 errors，0 warnings，逐文件各规则无新增。
+- 未修改测试逻辑、CI、规则、ignore、依赖、lock、MonitorConfig或backend，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。
