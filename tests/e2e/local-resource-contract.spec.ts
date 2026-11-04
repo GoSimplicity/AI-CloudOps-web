@@ -61,7 +61,7 @@ test('local resource metadata preserves credentials and persists structured tags
       const login = page.waitForResponse(
         (response) => new URL(response.url()).pathname === '/api/user/login',
       );
-      await page.getByRole('button', { name: '登录', exact: true }).click();
+      await page.getByRole('button', { exact: true, name: '登录' }).click();
       const authentication = await (await login).json();
       if (authentication.code !== 0)
         throw new Error('Private local authentication failed');

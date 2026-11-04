@@ -50,7 +50,7 @@ test('notification department and explicit addresses persist disabled and preser
       new URL(response.url()).pathname === '/api/user/login' &&
       response.request().method() === 'POST',
   );
-  await page.getByRole('button', { name: '登录', exact: true }).click();
+  await page.getByRole('button', { exact: true, name: '登录' }).click();
   await page.evaluate(() => {
     for (const input of document.querySelectorAll<HTMLInputElement>(
       'input[type="password"]',
@@ -109,11 +109,11 @@ test('notification department and explicit addresses persist disabled and preser
     await expect(page.locator('.ops-page h1')).toHaveText('通知配置');
     for (const kind of ['dept', 'custom']) {
       await page
-        .getByRole('button', { name: '创建通知配置', exact: true })
+        .getByRole('button', { exact: true, name: '创建通知配置' })
         .click();
       const dialog = page.getByRole('dialog', {
-        name: '创建通知配置',
         exact: true,
+        name: '创建通知配置',
       });
       await dialog
         .getByPlaceholder('请输入通知配置名称', { exact: true })
@@ -207,8 +207,8 @@ test('notification department and explicit addresses persist disabled and preser
     );
     await row.getByRole('button', { name: /^编\s*辑$/ }).click();
     const dialog = page.getByRole('dialog', {
-      name: '编辑通知配置',
       exact: true,
+      name: '编辑通知配置',
     });
     await expect(
       dialog.getByLabel('自定义接收地址1', { exact: true }),

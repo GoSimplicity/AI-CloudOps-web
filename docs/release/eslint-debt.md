@@ -831,3 +831,11 @@ MonitorConfig的Name统一为1..255、InstanceKey（历史API字段instance_ip�
 - Modal/Table仅为隔离外壳，Form/FormItem/Input/Select与async-validator均为实际AntD；合法选择通过控件update:value事件提供，没有validate替身。Fake API仅验证前端提交边界，不冒称SQL/迁移或浏览器像素验收。旧PrometheusFormSafety只补同principal的hasPerm授权替身，原断言与fixture保持。
 - 静态复核确认仅宽度规则、四处规则继承及权限检查变化，原API body、owner/fingerprint/顺序、其它validators和style保持；生产文件既有lint54条未增加，旧测试lint0保持，新width测试lint0，没有规则或ignore豁免。
 - 最终全Web167文件3692项测试及应用类型检查通过。没有改Go/schema、CI、lock或其它页，没有调用真实API、通知、凭据、preview或数据库，未上线。
+
+## 阶段八十四：Page.getByRole字面量options顺序
+
+9个E2E spec文件仅重排50处实际Page.getByRole的name/exact字面量属性。值限定string和boolean，无getter、spread、computed、call、identifier或其它options；真实scope/symbol确认page来自Playwright fixture或显式导入的Page参数类型。完整property原文及其它全流程AST（含calls、断言、清理和imports）保持，属性外注释归属歧义和directive均0。
+
+- 已安装Playwright1.64.1的Page→Frame.getByRole→getByRoleSelector按固定字段名生成selector，原options不保留到Locator。私有探针只在内存副本暴露既有类/函数，实际Page/Frame/Locator构造链对照全部50条配置，最终selector逐字一致且为实际Locator实例；channel设为触达即失败的Proxy，实际RPC为0，未launch browser，也未执行spec主体、密码读取或业务E2E。
+- 落盘源码精确匹配提案，完整AST仅上述两个属性的次序变化；未混viewport/screenshot的更宽RPC或文件写入链，未触及production页面、MonitorConfig、union或Vue属性。9文件lint484→434 errors，0 warnings，逐文件各规则无新增，其余诊断保留。
+- 既有全Web167文件3692项单元测试及应用类型检查通过。该unit/app-type范围不冒称执行或直接覆盖这些spec：编辑spec另有实际ESLint解析、全AST/符号和实际SDK selector字节证明，按约定未运行会触及业务的E2E。没有新增镜像测试、改变测试流程/断言、CI、规则、ignore或lock，未构建，未操作preview、数据库或真实API，未上线。

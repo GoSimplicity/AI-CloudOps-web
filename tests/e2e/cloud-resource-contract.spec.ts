@@ -73,7 +73,7 @@ test('cloud resource sync selection uses local regions and cancellation never ca
       const login = page.waitForResponse(
         (response) => new URL(response.url()).pathname === '/api/user/login',
       );
-      await page.getByRole('button', { name: '登录', exact: true }).click();
+      await page.getByRole('button', { exact: true, name: '登录' }).click();
       const authentication = await (await login).json();
       if (authentication.code !== 0)
         throw new Error('Private local authentication failed');
@@ -105,7 +105,7 @@ test('cloud resource sync selection uses local regions and cancellation never ca
           new URL(response.url()).pathname ===
           `/api/tree/cloud/account/${id}/detail`,
       );
-      await page.getByRole('button', { name: '同步资源', exact: true }).click();
+      await page.getByRole('button', { exact: true, name: '同步资源' }).click();
       const dialog = page.getByRole('dialog');
       await dialog
         .locator('.ant-select')
@@ -149,7 +149,7 @@ test('cloud resource sync selection uses local regions and cancellation never ca
       await dialog.getByRole('button', { name: /^取\s*消$/ }).click();
       await page.getByLabel('深色', { exact: true }).click();
       await page.setViewportSize({ width: 390, height: 844 });
-      await page.getByRole('button', { name: '同步资源', exact: true }).click();
+      await page.getByRole('button', { exact: true, name: '同步资源' }).click();
       await expect(dialog.locator('#cloud-sync-regions')).toBeVisible();
       const cancel = dialog.getByRole('button', { name: /^取\s*消$/ });
       expect(

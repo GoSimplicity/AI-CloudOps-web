@@ -39,7 +39,7 @@ test('isolated OpenSSH terminal executes, interrupts and resizes from the browse
   await page
     .getByLabel('密码', { exact: true })
     .fill(requireFixtureValue(password));
-  await page.getByRole('button', { name: '登录', exact: true }).click();
+  await page.getByRole('button', { exact: true, name: '登录' }).click();
   await expect(page).not.toHaveURL(/auth\/login/);
   let terminalConnections = 0;
   page.on('websocket', (socket) => {
@@ -114,7 +114,7 @@ test('isolated OpenSSH terminal executes, interrupts and resizes from the browse
     fullPage: true,
     animations: 'disabled',
   });
-  await page.getByRole('button', { name: '关闭连接', exact: true }).click();
+  await page.getByRole('button', { exact: true, name: '关闭连接' }).click();
   await expect(page.getByText('连接已关闭', { exact: true })).toBeVisible();
   expect(errors).toEqual([]);
 });

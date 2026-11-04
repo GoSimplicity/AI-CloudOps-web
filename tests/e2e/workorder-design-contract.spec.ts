@@ -73,7 +73,7 @@ test('workorder local form and process design save round-trip and cancel', async
     const login = page.waitForResponse(
       (response) => new URL(response.url()).pathname === '/api/user/login',
     );
-    await page.getByRole('button', { name: '登录', exact: true }).click();
+    await page.getByRole('button', { exact: true, name: '登录' }).click();
     const authentication = await (await login).json();
     if (authentication.code !== 0)
       throw new Error('Private local authentication failed');
@@ -114,7 +114,7 @@ test('workorder local form and process design save round-trip and cancel', async
     await page.getByRole('button', { name: /预览表单/ }).click();
     await expect(page.locator('.preview-notice')).toContainText('不会创建');
     await page.locator('.form-preview input').fill('仅验证本地设计');
-    await page.getByRole('button', { name: '校验预览', exact: true }).click();
+    await page.getByRole('button', { exact: true, name: '校验预览' }).click();
     await expect(
       page.locator('.ant-message-success').filter({ hasText: '未创建工单' }),
     ).toBeVisible();
@@ -126,7 +126,7 @@ test('workorder local form and process design save round-trip and cancel', async
         new URL(response.url()).pathname ===
         '/api/workorder/form-design/create',
     );
-    await page.getByRole('button', { name: '保存设计', exact: true }).click();
+    await page.getByRole('button', { exact: true, name: '保存设计' }).click();
     expect((await (await savedForm).json()).code).toBe(0);
     const forms = (
       await api(`/workorder/form-design/list?page=1&size=10&search=${nonce}`)
@@ -204,12 +204,12 @@ test('workorder local form and process design save round-trip and cancel', async
       ],
       connections: [{ from: 'owned_start', to: 'owned_end' }],
     };
-    await page.getByRole('tab', { name: 'JSON编辑', exact: true }).click();
+    await page.getByRole('tab', { exact: true, name: 'JSON编辑' }).click();
     await page
       .getByPlaceholder('请输入或粘贴流程定义JSON')
       .fill(JSON.stringify(definition));
     await page.getByRole('button', { name: /应用到可视化/ }).click();
-    await page.getByRole('tab', { name: '可视化设计', exact: true }).click();
+    await page.getByRole('tab', { exact: true, name: '可视化设计' }).click();
     await expect(page.locator('.process-step')).toHaveCount(2);
     await page.getByRole('button', { name: /预览流程/ }).click();
     await expect(page.getByRole('dialog')).toContainText('结束');
@@ -224,7 +224,7 @@ test('workorder local form and process design save round-trip and cancel', async
       (response) =>
         new URL(response.url()).pathname === '/api/workorder/process/create',
     );
-    await page.getByRole('button', { name: '保存流程', exact: true }).click();
+    await page.getByRole('button', { exact: true, name: '保存流程' }).click();
     expect((await (await savedProcess).json()).code).toBe(0);
     const processes = (
       await api(`/workorder/process/list?page=1&size=10&search=${nonce}`)

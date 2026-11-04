@@ -105,7 +105,7 @@ test('disabled HTTP cron persists create and execution-field edits without runni
       const login = page.waitForResponse(
         (response) => new URL(response.url()).pathname === '/api/user/login',
       );
-      await page.getByRole('button', { name: '登录', exact: true }).click();
+      await page.getByRole('button', { exact: true, name: '登录' }).click();
       await page.evaluate(() => {
         for (const input of document.querySelectorAll<HTMLInputElement>(
           'input[type="password"]',

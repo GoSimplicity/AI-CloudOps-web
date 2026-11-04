@@ -103,7 +103,7 @@ test('cloud account local CRUD preserves regions and never auto-verifies', async
       const login = page.waitForResponse(
         (response) => new URL(response.url()).pathname === '/api/user/login',
       );
-      await page.getByRole('button', { name: '登录', exact: true }).click();
+      await page.getByRole('button', { exact: true, name: '登录' }).click();
       await page.evaluate(() => {
         for (const input of document.querySelectorAll<HTMLInputElement>(
           'input[type="password"]',
@@ -140,7 +140,7 @@ test('cloud account local CRUD preserves regions and never auto-verifies', async
         };
         owned.push(item); // Discover the same unique name even after a lost create response.
         await page
-          .getByRole('button', { name: '添加账户', exact: true })
+          .getByRole('button', { exact: true, name: '添加账户' })
           .click();
         const dialog = page.getByRole('dialog');
         await dialog.getByPlaceholder('请输入云账户名称').fill(name);

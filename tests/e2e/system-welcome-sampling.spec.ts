@@ -47,7 +47,7 @@ test('welcome displays local metrics, read-only refresh and compact themed mobil
   } catch {
     throw new Error('Private login field unavailable; credential omitted');
   }
-  await page.getByRole('button', { name: '登录', exact: true }).click();
+  await page.getByRole('button', { exact: true, name: '登录' }).click();
   await expect(page).not.toHaveURL(/auth\/login/, { timeout: 30_000 });
   const measured = page.waitForResponse(
     (response) =>
@@ -70,7 +70,7 @@ test('welcome displays local metrics, read-only refresh and compact themed mobil
     page.locator('.metric-card').first().locator('.metric-value'),
   ).toHaveText(snapshot.cpu_usage.toFixed(1));
   await expect(
-    page.getByRole('heading', { name: '累计网络流量', exact: true }),
+    page.getByRole('heading', { exact: true, name: '累计网络流量' }),
   ).toBeVisible();
   await expect(page.locator('.chart-container canvas')).toHaveCount(1);
   await expect(page.locator('.chart-container-small canvas')).toHaveCount(1);
@@ -79,7 +79,7 @@ test('welcome displays local metrics, read-only refresh and compact themed mobil
       new URL(result.url()).pathname === '/api/system/metrics' &&
       result.request().method() === 'GET',
   );
-  await page.getByRole('button', { name: '刷新采样', exact: true }).click();
+  await page.getByRole('button', { exact: true, name: '刷新采样' }).click();
   expect((await refresh).status()).toBe(200);
   await expect(page.locator('.sample-status')).not.toHaveText('正在读取采样');
   if (
@@ -151,7 +151,7 @@ test('welcome displays local metrics, read-only refresh and compact themed mobil
       }),
     }),
   );
-  await page.getByRole('button', { name: '刷新采样', exact: true }).click();
+  await page.getByRole('button', { exact: true, name: '刷新采样' }).click();
   await expect(page.locator('.metric-value')).toHaveText([
     '未知',
     '未知',
@@ -168,7 +168,7 @@ test('welcome displays local metrics, read-only refresh and compact themed mobil
       body: JSON.stringify({ code: 0, data: null }),
     }),
   );
-  await page.getByRole('button', { name: '刷新采样', exact: true }).click();
+  await page.getByRole('button', { exact: true, name: '刷新采样' }).click();
   await expect(page.locator('.metric-value')).toHaveText([
     '未知',
     '未知',

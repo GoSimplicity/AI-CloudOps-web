@@ -52,7 +52,7 @@ async function acceptanceLogin(page: Page) {
   await page
     .getByLabel('密码', { exact: true })
     .fill(requireFixtureValue(password));
-  await page.getByRole('button', { name: '登录', exact: true }).click();
+  await page.getByRole('button', { exact: true, name: '登录' }).click();
   await page.evaluate(() => {
     const input = document.querySelector<HTMLInputElement>('#password');
     if (input) input.value = '';
@@ -131,7 +131,7 @@ test('authenticated navigation renders every standalone business route', async (
   await page
     .getByLabel('密码', { exact: true })
     .fill(requireFixtureValue(password));
-  await page.getByRole('button', { name: '登录', exact: true }).click();
+  await page.getByRole('button', { exact: true, name: '登录' }).click();
   await page.evaluate(() => {
     const input = document.querySelector<HTMLInputElement>('#password');
     if (input) input.value = '';
@@ -256,7 +256,7 @@ test('system list layouts preserve responsive filters and role creation controls
       new URL(response.url()).pathname === '/api/user/login' &&
       response.request().method() === 'POST',
   );
-  await page.getByRole('button', { name: '登录', exact: true }).click();
+  await page.getByRole('button', { exact: true, name: '登录' }).click();
   await page.evaluate(() => {
     const input = document.querySelector<HTMLInputElement>('#password');
     if (input) input.value = '';
@@ -387,7 +387,7 @@ test('workorder list layouts preserve mobile actions and cancellation', async ({
   await page
     .getByLabel('密码', { exact: true })
     .fill(requireFixtureValue(password));
-  await page.getByRole('button', { name: '登录', exact: true }).click();
+  await page.getByRole('button', { exact: true, name: '登录' }).click();
   await page.evaluate(() => {
     const input = document.querySelector<HTMLInputElement>('#password');
     if (input) input.value = '';
@@ -463,14 +463,14 @@ test('account menu reflects profile API and notifications have an honest empty s
   await page
     .getByLabel('密码', { exact: true })
     .fill(requireFixtureValue(password));
-  await page.getByRole('button', { name: '登录', exact: true }).click();
+  await page.getByRole('button', { exact: true, name: '登录' }).click();
   await page.evaluate(() => {
     const input = document.querySelector<HTMLInputElement>('#password');
     if (input) input.value = '';
   });
   await expect(page).not.toHaveURL(/auth\/login/, { timeout: 30_000 });
   const profile = (await (await profileResponse).json()).data;
-  await page.getByRole('button', { name: '账户菜单', exact: true }).click();
+  await page.getByRole('button', { exact: true, name: '账户菜单' }).click();
   const menu = page.locator('[role="menu"][data-state="open"]');
   await expect(menu).toBeVisible();
   const content = await menu.textContent();
@@ -487,11 +487,11 @@ test('account menu reflects profile API and notifications have an honest empty s
     menu.getByText('ann.vben@gmail.com', { exact: true }),
   ).toHaveCount(0);
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: '通知', exact: true }).click();
+  await page.getByRole('button', { exact: true, name: '通知' }).click();
   await expect(page.getByText('通知源尚未接入', { exact: true })).toBeVisible();
   await expect(page.locator('.bell-button .bg-primary')).toHaveCount(0);
   await expect(
-    page.getByRole('button', { name: '查看所有', exact: true }),
+    page.getByRole('button', { exact: true, name: '查看所有' }),
   ).toHaveCount(0);
   await page.screenshot({
     path: '.cache/ui-verification/notification-empty.png',
@@ -531,7 +531,7 @@ test('kubernetes cluster and namespace lists use real isolated resources', async
   await page
     .getByLabel('密码', { exact: true })
     .fill(requireFixtureValue(password));
-  await page.getByRole('button', { name: '登录', exact: true }).click();
+  await page.getByRole('button', { exact: true, name: '登录' }).click();
   await page.evaluate(() => {
     const input = document.querySelector<HTMLInputElement>('#password');
     if (input) input.value = '';
@@ -597,7 +597,7 @@ test('kubernetes cluster and namespace lists use real isolated resources', async
     )
     .toBeLessThanOrEqual(1);
   const accountBounds = await page
-    .getByRole('button', { name: '账户菜单', exact: true })
+    .getByRole('button', { exact: true, name: '账户菜单' })
     .boundingBox();
   expect(requireFixtureValue(accountBounds).x).toBeGreaterThanOrEqual(0);
   expect(
@@ -766,7 +766,7 @@ test('pod terminal negotiates credential subprotocol and returns real output', a
     .first();
   await pod.getByRole('button', { name: '执行命令', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
-  await page.getByRole('button', { name: '连接终端', exact: true }).click();
+  await page.getByRole('button', { exact: true, name: '连接终端' }).click();
   await expect(page.getByText('已连接', { exact: true })).toBeVisible({
     timeout: 30_000,
   });
@@ -787,7 +787,7 @@ test('pod terminal negotiates credential subprotocol and returns real output', a
     negotiatedApp: true,
     echoedCredential: false,
   });
-  await page.getByRole('button', { name: '断开连接', exact: true }).click();
+  await page.getByRole('button', { exact: true, name: '断开连接' }).click();
   await page.getByRole('dialog').locator('button.ant-modal-close').click();
   await expect(page.getByRole('dialog')).not.toBeVisible();
 });
@@ -855,7 +855,7 @@ test('assistant rejects unowned legacy cache and uses the profile UID', async ({
       return chat.owner === owner;
     }, String(profile.id)),
   ).toBe(true);
-  await page.getByRole('button', { name: '账户菜单', exact: true }).click();
+  await page.getByRole('button', { exact: true, name: '账户菜单' }).click();
   await page.getByRole('menuitem', { name: /^退出登录/ }).click();
   await page
     .getByRole('dialog')
@@ -933,7 +933,7 @@ test('assistant clears an invalid owned session and permits a fresh question', a
     }, String(profile.id)),
   ).toBe(true);
   await page.locator('.ai-float-window button[title="关闭"]').click();
-  await page.getByRole('button', { name: '账户菜单', exact: true }).click();
+  await page.getByRole('button', { exact: true, name: '账户菜单' }).click();
   const menu = page.locator('[role="menu"][data-state="open"]');
   await menu.getByRole('menuitem', { name: /^退出登录/ }).click();
   await page
@@ -1315,12 +1315,12 @@ test('on-duty calendar reads an isolated real group and supports month navigatio
     await expect(page.locator('.calendar-day').first()).toBeVisible();
     const title = page.locator('.calendar-title h2');
     const initial = await title.textContent();
-    await page.getByRole('button', { name: '下个月', exact: true }).click();
+    await page.getByRole('button', { exact: true, name: '下个月' }).click();
     await expect(title).not.toHaveText(requireFixtureValue(initial));
     await expect(
-      page.getByRole('button', { name: '上个月', exact: true }),
+      page.getByRole('button', { exact: true, name: '上个月' }),
     ).toBeEnabled();
-    await page.getByRole('button', { name: '上个月', exact: true }).click();
+    await page.getByRole('button', { exact: true, name: '上个月' }).click();
     await expect(title).toHaveText(requireFixtureValue(initial));
     const history = page.waitForResponse(
       (response) =>
@@ -1334,7 +1334,7 @@ test('on-duty calendar reads an isolated real group and supports month navigatio
     await page.getByLabel('深色', { exact: true }).click();
     await page.setViewportSize({ width: 390, height: 844 });
     await expectUncovered(
-      page.getByRole('button', { name: '返回值班组', exact: true }),
+      page.getByRole('button', { exact: true, name: '返回值班组' }),
     );
     expect(
       await page.evaluate(
@@ -1875,7 +1875,7 @@ test('notification configuration uses real pagination, logs and safe responsive 
     await expect(page.getByRole('dialog').locator('.ant-empty')).toBeVisible();
     await page.getByRole('dialog').locator('button.ant-modal-close').click();
     await page
-      .getByRole('button', { name: '创建通知配置', exact: true })
+      .getByRole('button', { exact: true, name: '创建通知配置' })
       .click();
     await expect(page.getByRole('dialog')).toContainText('创建通知配置');
     await page
@@ -1884,10 +1884,10 @@ test('notification configuration uses real pagination, logs and safe responsive 
       .click();
     await page.setViewportSize({ width: 390, height: 844 });
     await expectUncovered(
-      page.getByRole('button', { name: '创建通知配置', exact: true }),
+      page.getByRole('button', { exact: true, name: '创建通知配置' }),
     );
     await expectUncovered(
-      page.getByRole('button', { name: '重置通知筛选', exact: true }),
+      page.getByRole('button', { exact: true, name: '重置通知筛选' }),
     );
     const summary = page.locator('.stats-grid');
     expect(
@@ -2112,7 +2112,7 @@ test('workorder instance completes a real template draft submit and approval lif
     await page.goto(routePath('/instance'));
     await expect(page.locator('.ops-page h1')).toHaveText('工单实例');
     await page
-      .getByRole('button', { name: '从模板创建工单', exact: true })
+      .getByRole('button', { exact: true, name: '从模板创建工单' })
       .click();
     let dialog = page.getByRole('dialog');
     await dialog.locator('.ant-select').first().click();
@@ -2124,7 +2124,7 @@ test('workorder instance completes a real template draft submit and approval lif
       .getByPlaceholder('请输入工单标题', { exact: true })
       .fill(nonce);
     await dialog.locator('.ant-modal-footer .ant-btn-primary').click();
-    dialog = page.getByRole('dialog', { name: '创建工单', exact: true });
+    dialog = page.getByRole('dialog', { exact: true, name: '创建工单' });
     await expect(
       dialog.locator('.visual-form-fields input').first(),
     ).toHaveValue('仅本机浏览器验收');
@@ -2191,10 +2191,10 @@ test('workorder instance completes a real template draft submit and approval lif
       .click();
     await page.setViewportSize({ width: 390, height: 844 });
     await expectUncovered(
-      page.getByRole('button', { name: '创建工单', exact: true }),
+      page.getByRole('button', { exact: true, name: '创建工单' }),
     );
     await expectUncovered(
-      page.getByRole('button', { name: '重置工单筛选', exact: true }),
+      page.getByRole('button', { exact: true, name: '重置工单筛选' }),
     );
     expect(
       await page
@@ -2281,8 +2281,8 @@ test('RCA and prediction pages keep initial controls local and cache cancellatio
         .filter({ hasText: '清除所有缓存' })
         .click();
       const dialog = page.getByRole('dialog', {
-        name: '确认清除所有缓存',
         exact: true,
+        name: '确认清除所有缓存',
       });
       await expect(dialog).toBeVisible();
       await dialog.getByRole('button', { name: /^取\s*消$/ }).click();
