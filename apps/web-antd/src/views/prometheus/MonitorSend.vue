@@ -182,7 +182,7 @@ let onDutyGroupSearchDebounce: ReturnType<typeof setTimeout> | undefined;
 let userSearchDebounce: ReturnType<typeof setTimeout> | undefined;
 
 // 防抖处理
-let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+let searchTimeout: null | ReturnType<typeof setTimeout> = null;
 onBeforeUnmount(() => {
   if (searchTimeout) clearTimeout(searchTimeout);
   clearTimeout(poolSearchDebounce);

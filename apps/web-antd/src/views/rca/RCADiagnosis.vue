@@ -58,10 +58,10 @@ const inputData = ref({
 });
 
 // 诊断结果
-const quickDiagnosisResult = ref<QuickDiagnosisResponse | null>(null);
+const quickDiagnosisResult = ref<null | QuickDiagnosisResponse>(null);
 const eventPatternsResult = ref<EventPatternsResponse | null>(null);
 const errorSummaryResult = ref<ErrorSummaryResponse | null>(null);
-const rcaAnalysisResult = ref<RCAAnalysisResponse | null>(null);
+const rcaAnalysisResult = ref<null | RCAAnalysisResponse>(null);
 const usableStatus = (status?: string) =>
   status === 'completed' || status === 'degraded';
 const quickUsable = computed(() =>
@@ -75,7 +75,7 @@ const errorCategoriesChartRef = ref<HTMLElement>();
 let errorTrendsChart: echarts.ECharts | null = null;
 let errorCategoriesChart: echarts.ECharts | null = null;
 
-let refreshTimer: ReturnType<typeof setInterval> | null = null;
+let refreshTimer: null | ReturnType<typeof setInterval> = null;
 const diagnosisError = ref('');
 const diagnosisContext = ref<{ hours: number; namespace: string } | null>(null);
 const scope = useAiRequestScope(() => {

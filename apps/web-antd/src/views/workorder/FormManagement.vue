@@ -131,7 +131,7 @@ const previewFormData = ref<Record<string, any>>({});
 const formDialogCategories = ref<WorkorderCategoryItem[]>([]);
 const categorySelectorLoading = ref(false);
 const categorySearchKeyword = ref('');
-let categorySearchTimeout: ReturnType<typeof setTimeout> | null = null;
+let categorySearchTimeout: null | ReturnType<typeof setTimeout> = null;
 
 // 分类分页状态
 const categoryPagination = reactive({
@@ -146,7 +146,7 @@ const jsonValidationError = ref('');
 const exampleDialogVisible = ref(false);
 
 // 防抖处理
-let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+let searchTimeout: null | ReturnType<typeof setTimeout> = null;
 
 // 清理定时器
 onBeforeUnmount(() => {
@@ -195,12 +195,12 @@ const formDialog = reactive({
 
 // 详情对话框数据
 const detailDialog = reactive({
-  form: null as WorkorderFormDesignItem | null,
+  form: null as null | WorkorderFormDesignItem,
 });
 
 // 预览对话框数据
 const previewDialog = reactive({
-  form: null as WorkorderFormDesignItem | null,
+  form: null as null | WorkorderFormDesignItem,
 });
 
 // 表单验证规则

@@ -37,7 +37,7 @@ vi.mock('#/store', () => ({
   useAuthStore: () => ({ getAuthGeneration: () => 0 }),
 }));
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }));
-let wrapper: VueWrapper | undefined;
+let wrapper: undefined | VueWrapper;
 const resource = {
   id: 7,
   name: '密钥主机',

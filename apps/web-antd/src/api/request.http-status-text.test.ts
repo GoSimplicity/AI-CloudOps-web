@@ -528,10 +528,10 @@ describe('fE-02b：409 / 429 / Request aborted 请求层文案', () => {
       async (mode) => {
         fakeXhr.mode = mode;
         class FakeXMLHttpRequest {
-          onabort: null | (() => void) = null;
-          onerror: null | (() => void) = null;
-          onloadend: null | (() => void) = null;
-          ontimeout: null | (() => void) = null;
+          onabort: (() => void) | null = null;
+          onerror: (() => void) | null = null;
+          onloadend: (() => void) | null = null;
+          ontimeout: (() => void) | null = null;
           readyState = 0;
           responseText = '';
           responseURL = '';

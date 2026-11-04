@@ -22,7 +22,7 @@ function required<T>(value: null | T | undefined): T {
 
 const permissions = vi.hoisted(() => ({
   allowed: null as null | string[],
-  allowedRef: null as null | { value: null | string[] },
+  allowedRef: null as { value: null | string[] } | null,
 }));
 vi.mock('@vben/stores', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@vben/stores')>()),
@@ -57,7 +57,7 @@ const client = vi.hoisted(() => ({
   delete: vi.fn(),
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
-let wrapper: VueWrapper | undefined;
+let wrapper: undefined | VueWrapper;
 let selectedProvider = 1;
 const record = () => ({
   id: 7,

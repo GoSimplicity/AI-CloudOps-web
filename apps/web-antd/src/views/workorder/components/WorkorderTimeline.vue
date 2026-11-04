@@ -56,7 +56,7 @@ const showDetails = ref<Record<number, boolean>>({});
 // 详情对话框
 const detailDialog = reactive({
   visible: false,
-  item: null as WorkorderInstanceTimelineItem | null,
+  item: null as null | WorkorderInstanceTimelineItem,
 });
 
 // 时间线对话框

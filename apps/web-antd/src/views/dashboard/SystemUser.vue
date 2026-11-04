@@ -93,7 +93,7 @@ const modalTitle = ref('');
 // 数据
 const userList = ref<UserInfo[]>([]);
 const roleList = ref<UserRole[]>([]);
-const currentUser = ref<UserInfo | null>(null);
+const currentUser = ref<null | UserInfo>(null);
 const assignedRoles = ref<UserRole[]>([]);
 const rolesLoading = ref(false);
 const rolesLoaded = ref(false);
@@ -196,7 +196,7 @@ onUnmounted(() => {
   ++userListRevision;
   ++userStatisticsRevision;
 });
-const viewUserData = ref<UserInfo | null>(null);
+const viewUserData = ref<null | UserInfo>(null);
 const userStatistics = ref<UserStatistics>({
   admin_count: 0,
   active_user_count: 0,

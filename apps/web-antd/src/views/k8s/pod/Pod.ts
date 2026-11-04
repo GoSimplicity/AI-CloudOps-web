@@ -192,7 +192,7 @@ export function usePodPage() {
   // 终端相关状态
   const isTerminalConnected = ref(false);
   const terminalLoading = ref(false);
-  const terminal = ref<Terminal | null>(null);
+  const terminal = ref<null | Terminal>(null);
   let terminalInputSubscription: { dispose: () => void } | undefined;
   let terminalResizeObserver: ResizeObserver | undefined;
   const terminalConnection = ref<{
@@ -423,7 +423,7 @@ export function usePodPage() {
 
   // 转换函数：Record<string, string> -> KeyValueList
   const recordToKeyValueList = (
-    record: Record<string, string> | null | undefined,
+    record: null | Record<string, string> | undefined,
   ): KeyValueList => {
     if (!record || typeof record !== 'object') {
       return [];
@@ -1404,7 +1404,7 @@ export function usePodPage() {
     }
 
     let abortController: AbortController;
-    let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+    let reader: null | ReadableStreamDefaultReader<Uint8Array> = null;
     let isManualClose = false;
     let reconnectAttempts = 0;
     let reconnectTimeoutId: NodeJS.Timeout | null = null;
@@ -1925,7 +1925,7 @@ export function usePodPage() {
       (params.shell || 'sh').replace(/^\/bin\//, ''),
     );
 
-    let socket: WebSocket | null = null;
+    let socket: null | WebSocket = null;
     let resizeSubscription: { dispose: () => void } | undefined;
     let isManualClose = false;
     let reconnectAttempts = 0;

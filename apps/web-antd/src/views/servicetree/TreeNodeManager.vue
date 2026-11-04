@@ -81,7 +81,7 @@ const statusFilter = ref<TreeNodeStatus | undefined>(undefined);
 const treeData = ref<TreeNodeWithRelations[]>([]);
 const selectedKeys = ref<number[]>([]);
 const expandedKeys = ref<number[]>([]);
-const selectedNode = ref<TreeNodeWithRelations | null>(null);
+const selectedNode = ref<null | TreeNodeWithRelations>(null);
 
 // 防抖处理
 let searchTimeout: any = null;

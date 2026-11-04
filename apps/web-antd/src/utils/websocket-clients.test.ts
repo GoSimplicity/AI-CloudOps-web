@@ -62,7 +62,7 @@ class TestSocket {
     connections(url, protocols, this);
   }
 }
-let wrapper: VueWrapper | undefined;
+let wrapper: undefined | VueWrapper;
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers();

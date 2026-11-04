@@ -943,3 +943,15 @@ MonitorConfig的Name统一为1..255、InstanceKey（历史API字段instance_ip�
 - 落盘前与actualHEAD 5f5bc8f逐文件before完全一致，磁盘与冻结proposal精确匹配。proof的forEachChild callback全部void，非首个第三statement语义mutation必须检出。没有出现静态源码raw比对测试失败，也没有更改任何断言或snapshot消红。
 - actual94文件lint4204→4025 errors，既有warnings5→5，逐文件各规则无新增，目标净减179；全Web167文件3692项单元测试、app类型检查及真实tsconfig.node检查通过。按现有CI命令pnpm build:antd构建11个任务全部成功（10个缓存、应用实际构建）；不以构建成功推断bundle/hash字节保持。本阶段没有重扫全仓或用179减法宣称新的全局总量。
 - 未修改workflow、规则、依赖、lock、MonitorConfig或backend，没有新增镜像测试；未操作preview、数据库、凭据、真实集群或业务API，未上线。
+
+## 阶段九十四：单一完整类型atom的nullable union排列
+
+当前75文件定向实扫确认sort-union-types仍138条，而非按旧计数推算。只选择一个完整非nil类型atom与预定义null/undefined组成的nullable union：92处候选排除MonitorConfig一处后，62文件91处净减91，其中40个生产文件、22个测试文件；internal/vite-config/src/plugins/nitro-mock.ts仅涉及其类型一处。其余literal/reference混合、复杂成员排序及无exactfix命中均保留，没有将全部union当成“类型会擦除”而排序。
+
+- 每个非nil atom（TypeReference、array、parenthesized函数或完整type literal）的原文和内部结构原样保留，没有排序其内部literal、overload、conditional、infer、intersection或字段；全部成员raw多重集、别名、外部注释/语句次序保持。只重新排列nil与这个完整atom，不引入新类型、断言或类型cast。MonitorConfig、测试断言/snapshot、规则、依赖均不改。
+- 实际TypeScript5.9.3与Vue虚拟TypeScript Program在strictNullChecks开启的两侧输入中独立解析91节点。before读保存overlay，after读实际磁盘；resolved成员id、flags、intrinsic、type text、alias、symbol及成员顺序均0差异，没有error/any/unknown成员冒充成功解析。这个顺序检查与单atom内部不变共同保护实际类型消费，不能用单纯JS擦除替代。
+- 项目代码检索无UnionToTuple、LastOf、LastInUnion、UnionToIntersection等顺序消费或相关utility导入；infer命中仅MergeAll按原tuple序递归及interopDefault提取default属性，均非union末成员推导。本阶段不对任意未审的新外部顺序敏感消费者作泛化承诺，严格保留当前实际resolved成员顺序并验证宏消费。
+- 全354个SFC的dev/prod共708组实际磁盘对照0差异、两侧0错误。完整JS AST、binding、DOM/SSR均相同，未归一或忽略RuntimeCtorArray次序；真实导入Boolean/String危险control仍能检出。27个编辑SFC本身被读取，当前没有编辑TS模块被类型宏读取；其余35个当前无宏消费，未冒称每个API/配置类型都被宏消费。
+- before与actualHEAD ceb1cbec逐文件精确核对，disk与冻结proposal一致。完整source AST只允许91个已审nullable union成员排列，固定范围外字节与nonnull atom原文保持；forEachChild callback全部void，非首个第三statement语义mutation必须检出。固定TS transpileModule设置target/module ESNext、verbatimModuleSyntax:true、removeComments:true、jsx:Preserve下，源脚本及实际SFC编译script的擦除JS字节一致；该说法不包括production bundle/hash/sourceMap或任意compiler选项。
+- actual62文件lint2678→2587 errors，原有warnings4→4，逐文件各规则无新增。全Web167文件3692项单元测试、app及真实node配置类型检查通过；按既有pnpm build:antd执行11个构建任务全部成功（本轮0缓存）。没有通过改测试expected或snapshot处理静态源码比对失败。
+- 未修改workflow、runtime/CI逻辑、规则、依赖、lock、MonitorConfig或backend，没有新增镜像测试；未操作preview、数据库、凭据、真实集群或业务API，未上线。只报告目标复扫，不以91减法宣称新的全仓总量。

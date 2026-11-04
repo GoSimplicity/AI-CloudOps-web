@@ -281,7 +281,7 @@ export function useSecretPage() {
 
   // 转换函数：Record<string, string> -> KeyValueList
   const recordToKeyValueList = (
-    record: Record<string, string> | null | undefined,
+    record: null | Record<string, string> | undefined,
   ): KeyValueList => {
     if (!record || typeof record !== 'object') {
       return [];

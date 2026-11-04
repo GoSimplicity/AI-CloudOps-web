@@ -31,7 +31,7 @@ vi.mock('#/api/core/aiops/assistant', () => api);
 vi.mock('#/utils/permission', () => ({
   usePermission: () => ({ can: () => state.allowed }),
 }));
-let wrapper: VueWrapper | undefined;
+let wrapper: undefined | VueWrapper;
 const deferred = () => {
   let resolve!: (value: any) => void;
   let reject!: (reason: any) => void;

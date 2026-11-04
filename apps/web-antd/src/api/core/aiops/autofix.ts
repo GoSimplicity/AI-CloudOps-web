@@ -18,7 +18,7 @@ export interface AutoFixAction {
   description?: string;
   executable?: boolean;
   parameters?: Record<string, any>;
-  result?: Record<string, any> | null;
+  result?: null | Record<string, any>;
   risk_assessment?: AutoFixRiskAssessment;
   status?: string;
   target?: {

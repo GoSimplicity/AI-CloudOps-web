@@ -52,7 +52,7 @@ const viewMode = ref<'list' | 'timeline'>('timeline');
 // 详情对话框
 const detailDialog = reactive({
   visible: false,
-  item: null as WorkorderInstanceFlowItem | null,
+  item: null as null | WorkorderInstanceFlowItem,
 });
 
 // 流转记录对话框

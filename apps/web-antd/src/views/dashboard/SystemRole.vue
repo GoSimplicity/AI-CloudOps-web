@@ -57,9 +57,9 @@ const roleList = ref<Role[]>([]);
 const apiList = ref<any[]>([]);
 const modalApiList = ref<any[]>([]);
 const selectedApis = ref<any[]>([]);
-const currentRole = ref<Role | null>(null);
+const currentRole = ref<null | Role>(null);
 const assignedApis = ref<any[]>([]);
-const viewRoleData = ref<Role | null>(null);
+const viewRoleData = ref<null | Role>(null);
 const typeFilter = ref<number | undefined>(undefined);
 
 // 搜索参数

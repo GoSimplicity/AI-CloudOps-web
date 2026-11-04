@@ -70,7 +70,7 @@ const sample = (overrides: Record<string, unknown> = {}) => ({
   last_update_time: 1_792_740_000,
   ...overrides,
 });
-let wrapper: VueWrapper | undefined;
+let wrapper: undefined | VueWrapper;
 const state = () => (required(wrapper).vm as any).$.setupState;
 function render() {
   wrapper = mount(Welcome, { global: { plugins: [Antd] } });

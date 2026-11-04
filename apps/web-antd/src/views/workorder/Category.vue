@@ -190,7 +190,7 @@ const formDialog = reactive({
 
 const detailDialog = reactive({
   visible: false,
-  data: null as WorkorderCategoryItem | null,
+  data: null as null | WorkorderCategoryItem,
 });
 
 watch(

@@ -271,7 +271,7 @@ const fetchDutySchedule = async (): Promise<void> => {
         const isCurrentMonth = date.isSame(currentMonth, 'month');
 
         // 处理用户信息和换班标识
-        let user: User | null = null;
+        let user: null | User = null;
         let originUser: string | undefined = undefined;
         let isAdjusted = false;
 

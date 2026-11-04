@@ -150,7 +150,7 @@ const supportRecordFilter = ref<1 | 2 | undefined>(undefined);
 const scrapePoolList = ref<MonitorScrapePool[]>([]);
 
 // 防抖处理
-let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+let searchTimeout: null | ReturnType<typeof setTimeout> = null;
 
 // 分页配置
 const paginationConfig = reactive({

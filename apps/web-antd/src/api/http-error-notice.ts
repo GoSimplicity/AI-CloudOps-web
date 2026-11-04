@@ -40,7 +40,7 @@ function liveEntry(key: string): NoticeEntry | undefined {
 /** message.error 返回的 thenable 在这条提示关闭时 resolve；同 key 后续再写过则不释放 */
 function releaseOnClose(key: string, entry: NoticeEntry, handle: unknown) {
   const version = entry.version;
-  const then = (handle as undefined | { then?: unknown })?.then;
+  const then = (handle as { then?: unknown } | undefined)?.then;
   if (typeof then !== 'function') return;
   then.call(handle, () => {
     if (visibleNotices.get(key) === entry && entry.version === version) {

@@ -183,7 +183,7 @@ const detailMetadataErrors = reactive({
   step: '',
   navigation: '',
 });
-const detailTarget = ref<WorkorderInstanceItem | null>(null);
+const detailTarget = ref<null | WorkorderInstanceItem>(null);
 const loadError = ref('');
 let listRequest = 0;
 // 只保留当前展开行的动作；关闭、换行、换账号及列表刷新均作废旧请求
@@ -392,15 +392,15 @@ const templateDialog = reactive({
 // 详情对话框
 const detailDialog = reactive({
   visible: false,
-  instance: null as WorkorderInstanceItem | null,
+  instance: null as null | WorkorderInstanceItem,
   availableActions: [] as string[],
   currentStep: null as any,
   actionsLoading: false,
   stepLoading: false,
-  previousStep: null as ProcessStep | null,
-  nextStep: null as ProcessStep | null,
+  previousStep: null as null | ProcessStep,
+  nextStep: null as null | ProcessStep,
   allSteps: [] as ProcessStep[],
-  processDefinition: null as ProcessDefinition | null,
+  processDefinition: null as null | ProcessDefinition,
 });
 
 const isDetailCurrent = (id: number, request: number) =>
@@ -605,7 +605,7 @@ const formDataValidationError = ref('');
 const formEditMode = ref<'json' | 'visual'>('visual');
 
 // 当前流程的表单设计
-const currentFormDesign = ref<WorkorderFormDesignItem | null>(null);
+const currentFormDesign = ref<null | WorkorderFormDesignItem>(null);
 const formDesignLoading = ref(false);
 
 const closeInstanceForm = () => {
@@ -625,7 +625,7 @@ const visualFormData = ref<Record<string, any>>({});
 const dialogProcesses = ref<WorkorderProcessItem[]>([]);
 const processSelectorLoading = ref(false);
 const processSearchKeyword = ref('');
-let processSearchTimeout: ReturnType<typeof setTimeout> | null = null;
+let processSearchTimeout: null | ReturnType<typeof setTimeout> = null;
 
 const processPagination = reactive({
   current: 1,
@@ -638,7 +638,7 @@ const processPagination = reactive({
 const dialogUsers = ref<UserListItem[]>([]);
 const userSelectorLoading = ref(false);
 const userSearchKeyword = ref('');
-let userSearchTimeout: ReturnType<typeof setTimeout> | null = null;
+let userSearchTimeout: null | ReturnType<typeof setTimeout> = null;
 
 const userPagination = reactive({
   current: 1,

@@ -35,7 +35,7 @@ vi.mock('@vben/stores', async (importOriginal) => ({
 vi.mock('#/store', () => ({
   useAuthStore: () => ({ getAuthGeneration: () => 0 }),
 }));
-let wrapper: VueWrapper | undefined;
+let wrapper: undefined | VueWrapper;
 let record: Record<string, unknown>;
 beforeEach(() => {
   vi.clearAllMocks();

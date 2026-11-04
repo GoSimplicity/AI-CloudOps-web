@@ -169,8 +169,8 @@ const syncHistoryList = ref<CloudResourceSyncHistory[]>([]);
 const changeLogList = ref<CloudResourceChangeLog[]>([]);
 
 // 当前操作的资源
-const currentResource = ref<TreeCloudResource | null>(null);
-const currentDetail = ref<TreeCloudResource | null>(null);
+const currentResource = ref<null | TreeCloudResource>(null);
+const currentDetail = ref<null | TreeCloudResource>(null);
 
 // 表单数据
 const editForm = reactive<UpdateTreeCloudResourceReq>({

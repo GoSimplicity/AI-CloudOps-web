@@ -91,7 +91,7 @@ export interface K8sRoleBinding {
   labels?: Record<string, string>;
   annotations?: Record<string, string>;
   role_ref: RoleRef;
-  subjects: Subject[] | null;
+  subjects: null | Subject[];
   resource_version: string;
   age: string;
 }

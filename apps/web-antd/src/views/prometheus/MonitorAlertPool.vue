@@ -141,7 +141,7 @@ const searchText = ref('');
 const data = ref<MonitorAlertManagerPool[]>([]);
 
 // 防抖处理
-let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+let searchTimeout: null | ReturnType<typeof setTimeout> = null;
 onBeforeUnmount(() => {
   if (searchTimeout) clearTimeout(searchTimeout);
 });

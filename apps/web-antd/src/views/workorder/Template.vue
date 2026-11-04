@@ -173,14 +173,14 @@ const formRules = {
 // 详情对话框
 const detailDialog = reactive({
   visible: false,
-  template: null as WorkorderTemplateItem | null,
+  template: null as null | WorkorderTemplateItem,
 });
 
 // 分类选择器相关
 const dialogCategories = ref<WorkorderCategoryItem[]>([]);
 const categorySelectorLoading = ref(false);
 const categorySearchKeyword = ref('');
-let categorySearchTimeout: ReturnType<typeof setTimeout> | null = null;
+let categorySearchTimeout: null | ReturnType<typeof setTimeout> = null;
 
 const categoryPagination = reactive({
   current: 1,
@@ -193,7 +193,7 @@ const categoryPagination = reactive({
 const dialogProcesses = ref<WorkorderProcessItem[]>([]);
 const processSelectorLoading = ref(false);
 const processSearchKeyword = ref('');
-let processSearchTimeout: ReturnType<typeof setTimeout> | null = null;
+let processSearchTimeout: null | ReturnType<typeof setTimeout> = null;
 
 const processPagination = reactive({
   current: 1,
@@ -206,7 +206,7 @@ const processPagination = reactive({
 const dialogForms = ref<WorkorderFormDesignItem[]>([]);
 const formSelectorLoading = ref(false);
 const formSearchKeyword = ref('');
-let formSearchTimeout: ReturnType<typeof setTimeout> | null = null;
+let formSearchTimeout: null | ReturnType<typeof setTimeout> = null;
 
 const formPagination = reactive({
   current: 1,

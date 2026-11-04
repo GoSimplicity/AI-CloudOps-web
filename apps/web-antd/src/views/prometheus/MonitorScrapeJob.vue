@@ -175,7 +175,7 @@ const dialogPoolHasMore = ref(true);
 let poolSearchDebounce: ReturnType<typeof setTimeout> | undefined;
 
 // 防抖处理
-let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+let searchTimeout: null | ReturnType<typeof setTimeout> = null;
 
 // 分页配置
 const paginationConfig = reactive({

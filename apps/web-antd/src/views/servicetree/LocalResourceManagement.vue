@@ -99,9 +99,9 @@ const newTag = ref('');
 const tagInputRef = ref();
 const selectedTreeNodeIds = ref<number[]>([]);
 const selectedUnbindNodeIds = ref<number[]>([]);
-const currentResource = ref<TreeLocalResource | null>(null);
+const currentResource = ref<null | TreeLocalResource>(null);
 const localResources = ref<TreeLocalResource[]>([]);
-const currentDetail = ref<TreeLocalResource | null>(null);
+const currentDetail = ref<null | TreeLocalResource>(null);
 interface BindingTreeNode extends TreeNode {
   children?: BindingTreeNode[];
 }

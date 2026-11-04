@@ -71,7 +71,7 @@ import {
 const analyzing = ref(false);
 const predictionError = ref('');
 const activeChartTab = ref('trend');
-const predictionResult = ref<PredictionResponse | null>(null);
+const predictionResult = ref<null | PredictionResponse>(null);
 
 const trendChartRef = ref<HTMLElement>();
 const confidenceChartRef = ref<HTMLElement>();

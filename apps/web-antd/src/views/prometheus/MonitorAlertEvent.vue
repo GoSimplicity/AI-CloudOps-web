@@ -124,7 +124,7 @@ const eventTimesFilter = ref<number | undefined>(undefined);
 const data = ref<MonitorAlertEvent[]>([]);
 
 // 防抖处理
-let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+let searchTimeout: null | ReturnType<typeof setTimeout> = null;
 onBeforeUnmount(() => {
   if (searchTimeout) clearTimeout(searchTimeout);
 });

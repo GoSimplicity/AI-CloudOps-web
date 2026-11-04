@@ -24,7 +24,7 @@ const api = vi.hoisted(() => ({
   addDocument: vi.fn(),
 }));
 vi.mock('#/api/core/aiops/assistant', () => api);
-let wrapper: VueWrapper | undefined;
+let wrapper: undefined | VueWrapper;
 beforeEach(() => {
   vi.clearAllMocks();
   setActivePinia(createPinia());

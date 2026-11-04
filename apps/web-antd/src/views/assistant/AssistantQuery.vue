@@ -40,12 +40,12 @@ const isLoading = ref(false);
 const currentSessionId = ref('');
 const assistantMode = ref(1);
 const chatHistoryRef = ref<HTMLElement>();
-const pendingTurn = ref<null | {
+const pendingTurn = ref<{
   mode: number;
   question: string;
   sessionId: string;
   turnId: string;
-}>(null);
+} | null>(null);
 const sessionNotice = ref('');
 
 // 聊天历史

@@ -40,7 +40,7 @@ vi.mock('@vben/stores', () => ({
   useAccessStore: () => account.access,
 }));
 vi.mock('#/api/core/aiops/autofix', () => api);
-let wrapper: VueWrapper | undefined;
+let wrapper: undefined | VueWrapper;
 const action = () => ({
   action_id: 'restart',
   action_type: 'restart_deployment',

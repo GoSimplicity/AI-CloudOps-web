@@ -18,7 +18,7 @@ vi.mock('vue-router', () => ({
   useRoute: () => ({ query: { id: '7' } }),
   useRouter: () => navigation,
 }));
-let wrapper: VueWrapper | undefined;
+let wrapper: undefined | VueWrapper;
 const detail = vi.fn();
 beforeEach(() => {
   vi.clearAllMocks();

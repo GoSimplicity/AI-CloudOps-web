@@ -448,7 +448,7 @@ function recordHistory() {
         )
       : [];
 }
-function snapshot(value: unknown): Snapshot | null {
+function snapshot(value: unknown): null | Snapshot {
   return value !== null &&
     typeof value === 'object' &&
     !Array.isArray(value) &&

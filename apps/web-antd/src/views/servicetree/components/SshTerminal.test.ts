@@ -75,7 +75,7 @@ class Socket {
     this.onopen?.();
   }
 }
-let wrapper: VueWrapper | undefined;
+let wrapper: undefined | VueWrapper;
 const latest = () =>
   required(transport.connections.mock.calls.at(-1))[2] as Socket;
 function render(resourceId = '42') {

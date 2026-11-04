@@ -53,7 +53,7 @@ const metricsError = ref('');
 const analyzing = ref(false);
 const loadingMetrics = ref(false);
 const activeResultTab = ref('root-causes');
-const analysisResult = ref<RCAAnalysisResponse | null>(null);
+const analysisResult = ref<null | RCAAnalysisResponse>(null);
 const availableMetrics = ref<Array<{ label: string; value: string }>>([]);
 
 // 图表引用

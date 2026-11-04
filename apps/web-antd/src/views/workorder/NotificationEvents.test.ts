@@ -46,7 +46,7 @@ vi.mock('#/api/core/workorder/notification-events', () => ({
     resolve: 'POST /api/workorder/notification/events/:id/resolve',
   },
 }));
-let wrapper: VueWrapper | undefined;
+let wrapper: undefined | VueWrapper;
 const allCodes = [
   'GET /api/workorder/notification/events',
   'GET /api/workorder/notification/events/:id/deliveries',

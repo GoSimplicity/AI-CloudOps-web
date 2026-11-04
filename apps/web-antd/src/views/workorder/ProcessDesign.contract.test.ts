@@ -28,7 +28,7 @@ const definition = () => ({
   ],
   connections: [{ id: 's-e', from: 's', to: 'e' }],
 });
-let wrapper: VueWrapper | undefined;
+let wrapper: undefined | VueWrapper;
 beforeEach(() => {
   vi.resetAllMocks();
   vi.stubGlobal(

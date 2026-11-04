@@ -291,7 +291,7 @@ const toggleReplies = (commentId: number) => {
 };
 
 // 引用评论相关状态
-const quotedComment = ref<WorkorderInstanceCommentItem | null>(null);
+const quotedComment = ref<null | WorkorderInstanceCommentItem>(null);
 const quickTextareaRef = ref();
 
 // 快速评论

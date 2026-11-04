@@ -48,7 +48,7 @@ let categoryRequest = 0;
 let importRequest = 0;
 let clearDialog: ReturnType<typeof Modal.confirm> | undefined;
 const categoryError = ref<null | string>(null);
-const selectedCategory = ref<WorkorderCategoryItem | null>(null);
+const selectedCategory = ref<null | WorkorderCategoryItem>(null);
 const showJsonViewer = ref(false);
 const showCategoryModal = ref(false);
 const dynamicFormRef = ref();
@@ -141,7 +141,7 @@ const loadCategories = async (resetPage = false) => {
 /**
  * 分类搜索输入变化（去抖处理）
  */
-let searchTimer: ReturnType<typeof setTimeout> | null = null;
+let searchTimer: null | ReturnType<typeof setTimeout> = null;
 
 /**
  * 关闭分类选择弹窗

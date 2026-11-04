@@ -27,7 +27,7 @@ export interface K8sRole {
   created_at: string;
   labels: Record<string, string>;
   annotations: Record<string, string>;
-  rules: PolicyRule[] | null;
+  rules: null | PolicyRule[];
   resource_version: string;
   age: string;
 }

@@ -20,7 +20,7 @@ function required<T>(value: null | T | undefined): T {
 
 const client = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
-let wrapper: VueWrapper | undefined;
+let wrapper: undefined | VueWrapper;
 beforeEach(() => {
   vi.resetAllMocks();
   vi.stubGlobal(

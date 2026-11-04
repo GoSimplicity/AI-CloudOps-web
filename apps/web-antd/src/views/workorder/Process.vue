@@ -278,7 +278,7 @@ const processDialog = reactive({
 // 详情对话框
 const detailDialog = reactive({
   visible: false,
-  process: null as WorkorderProcessItem | null,
+  process: null as null | WorkorderProcessItem,
 });
 
 watch(

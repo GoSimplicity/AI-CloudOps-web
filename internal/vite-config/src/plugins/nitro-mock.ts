@@ -8,7 +8,7 @@ import getPort from 'get-port';
 
 type NitroPackModule = typeof import('nitropack');
 
-let nitroPackModulePromise: Promise<NitroPackModule> | null = null;
+let nitroPackModulePromise: null | Promise<NitroPackModule> = null;
 
 const loadNitroPackModule = async () => {
   if (!nitroPackModulePromise) {

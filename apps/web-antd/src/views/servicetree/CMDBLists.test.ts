@@ -92,7 +92,7 @@ const row = (name: string) => ({
   is_leaf: 2,
 });
 const result = (name: string) => ({ items: [row(name)], total: 1 });
-let wrapper: VueWrapper | undefined;
+let wrapper: undefined | VueWrapper;
 beforeEach(() => {
   vi.resetAllMocks();
   vi.stubGlobal(

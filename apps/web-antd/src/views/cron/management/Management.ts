@@ -347,7 +347,7 @@ export function useCronJobPage() {
   };
 
   // 开关关闭时，已有的命令行/脚本任务不可编辑、不可触发（后端会拒绝）
-  const isLocalExecLocked = (job?: Pick<CronJob, 'job_type'> | null) =>
+  const isLocalExecLocked = (job?: null | Pick<CronJob, 'job_type'>) =>
     !state.allowLocalExec && isLocalExecJobType(job?.job_type);
 
   // 创建表单验证规则

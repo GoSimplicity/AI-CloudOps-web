@@ -88,7 +88,7 @@ const resource = {
   port: 22,
   auth_mode: 1,
 };
-let wrapper: VueWrapper | undefined;
+let wrapper: undefined | VueWrapper;
 beforeEach(() => {
   vi.resetAllMocks();
   permissions.check.mockReturnValue(true);

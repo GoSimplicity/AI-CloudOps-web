@@ -50,7 +50,7 @@ vi.mock('echarts/core', () => ({
     return chart;
   },
 }));
-let wrapper: VueWrapper | undefined;
+let wrapper: undefined | VueWrapper;
 const state = () => (required(wrapper).vm as any).$.setupState;
 function render(component: any, actual = false) {
   wrapper = (actual ? mount : shallowMount)(component, {

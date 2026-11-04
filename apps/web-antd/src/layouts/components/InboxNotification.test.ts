@@ -73,7 +73,7 @@ const deferred = () => {
   });
   return { promise, resolve };
 };
-let wrapper: VueWrapper | undefined;
+let wrapper: undefined | VueWrapper;
 async function start() {
   wrapper = mount(InboxNotification, {
     attachTo: document.body,

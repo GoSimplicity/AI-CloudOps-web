@@ -21,10 +21,10 @@ export interface K8sClusterRoleBinding {
   cluster_id: number;
   uid: string;
   created_at: string;
-  labels: Record<string, string> | null;
-  annotations: Record<string, string> | null;
+  labels: null | Record<string, string>;
+  annotations: null | Record<string, string>;
   role_ref: RoleRef;
-  subjects: Subject[] | null;
+  subjects: null | Subject[];
   resource_version: string;
   age: string;
 }

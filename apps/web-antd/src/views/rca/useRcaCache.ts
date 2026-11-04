@@ -17,7 +17,7 @@ export function useRcaCache() {
   const loadingStats = ref(false);
   const clearingCache = ref(false);
   const clearAllModalVisible = ref(false);
-  const cacheStats = ref<RCACacheStatsResponse | null>(null);
+  const cacheStats = ref<null | RCACacheStatsResponse>(null);
   const statsError = ref('');
   const operationError = ref('');
   const clearNamespaceForm = reactive({ namespace: '' });

@@ -26,7 +26,7 @@ export function useSshTerminal(
   const error = ref('');
   let terminal: Terminal | undefined;
   let fitAddon: FitAddon | undefined;
-  let socket: WebSocket | undefined;
+  let socket: undefined | WebSocket;
   let connectionTimer: number | undefined;
   let inputSubscription: IDisposable | undefined;
   let sizeSubscription: IDisposable | undefined;

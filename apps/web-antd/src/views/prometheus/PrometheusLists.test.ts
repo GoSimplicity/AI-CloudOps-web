@@ -43,7 +43,7 @@ vi.mock('@vben/stores', () => ({
   useUserStore: () => ({ userInfo: { userId: 1 } }),
 }));
 
-let wrapper: VueWrapper | undefined;
+let wrapper: undefined | VueWrapper;
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(message, 'success');

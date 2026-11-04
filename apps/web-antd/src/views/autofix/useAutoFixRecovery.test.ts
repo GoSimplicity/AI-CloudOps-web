@@ -94,7 +94,7 @@ const Harness = defineComponent({
   setup: () => useAutoFixWorkflow(),
   render: () => h('div'),
 });
-let wrapper: VueWrapper<any> | undefined;
+let wrapper: undefined | VueWrapper<any>;
 async function mountHarness() {
   wrapper = mount(Harness);
   await flushPromises();
