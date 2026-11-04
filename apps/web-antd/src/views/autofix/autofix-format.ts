@@ -3,6 +3,8 @@ import type {
   AutoFixWorkflowResponse,
 } from '#/api/core/aiops/autofix';
 
+import { getOwnLookupValue } from '#/utils/own-lookup';
+
 const statusColorMap: Record<string, string> = {
   blocked: 'red',
   completed: 'green',
@@ -64,27 +66,33 @@ const actionIconMap: Record<string, string> = {
 };
 
 export function getStatusTagColor(status?: string) {
-  return statusColorMap[status || ''] || 'default';
+  return getOwnLookupValue(statusColorMap, status || '') || 'default';
 }
 
 export function getRiskTagColor(level?: string) {
-  return riskColorMap[level || ''] || 'default';
+  return getOwnLookupValue(riskColorMap, level || '') || 'default';
 }
 
 export function getStatusLabel(status?: string) {
-  return statusLabelMap[status || ''] || status || '未知';
+  return getOwnLookupValue(statusLabelMap, status || '') || status || '未知';
 }
 
 export function getFaultLabel(faultType?: string) {
-  return faultLabelMap[faultType || ''] || faultType || '未知故障';
+  return (
+    getOwnLookupValue(faultLabelMap, faultType || '') || faultType || '未知故障'
+  );
 }
 
 export function getActionLabel(actionType?: string) {
-  return actionLabelMap[actionType || ''] || actionType || '未知动作';
+  return (
+    getOwnLookupValue(actionLabelMap, actionType || '') ||
+    actionType ||
+    '未知动作'
+  );
 }
 
 export function getActionIcon(actionType?: string) {
-  return actionIconMap[actionType || ''] || 'lucide:wrench';
+  return getOwnLookupValue(actionIconMap, actionType || '') || 'lucide:wrench';
 }
 
 export function formatBoolean(value?: boolean | null) {

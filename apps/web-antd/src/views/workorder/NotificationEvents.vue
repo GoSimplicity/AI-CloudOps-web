@@ -5,6 +5,7 @@ import { useAccessStore, useUserStore } from '@vben/stores';
 
 import { message } from 'ant-design-vue';
 
+import { getOwnLookupValue } from '#/utils/own-lookup';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 import {
   cancelNotificationEvent,
@@ -56,9 +57,9 @@ const states: Record<string, string> = {
 };
 const eventStates = Object.fromEntries(Object.entries(states).filter(([value]) => value !== 'sending'));
 const eventsNames: Record<string, string> = {
-  instance_created: '创建', instance_updated: '更新', instance_deleted: '删除', instance_submitted: '提交',
-  instance_assigned: '指派', instance_approved: '审批通过', instance_rejected: '拒绝',
-  instance_completed: '完成', instance_cancelled: '取消', instance_returned: '退回', instance_commented: '评论',
+  instance_approved: '审批通过', instance_assigned: '指派', instance_cancelled: '取消', instance_commented: '评论',
+  instance_completed: '完成', instance_created: '创建', instance_deleted: '删除',
+  instance_rejected: '拒绝', instance_returned: '退回', instance_submitted: '提交', instance_updated: '更新',
 };
 const safeId = (id: unknown): id is number => typeof id === 'number' && Number.isSafeInteger(id) && id > 0;
 const safeCount = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : '—';
@@ -247,8 +248,8 @@ onBeforeUnmount(() => { alive = false; session++; listGeneration++; detailGenera
       <a-table :data-source="events" :loading="loading" :pagination="false" :scroll="{ x: 850 }" row-key="id" size="middle">
         <a-table-column key="id" title="事件 ID"><template #default="{ record }">{{ safeId(record.id) ? record.id : '—' }}</template></a-table-column>
         <a-table-column key="instance" title="工单 ID"><template #default="{ record }">{{ safeId(record.instance_id) ? record.instance_id : '—' }}</template></a-table-column>
-        <a-table-column key="event" title="事件"><template #default="{ record }">{{ eventsNames[record.event_type] ?? '其他事件' }}</template></a-table-column>
-        <a-table-column key="status" title="状态"><template #default="{ record }">{{ states[record.status] ?? '未知状态' }}</template></a-table-column>
+        <a-table-column key="event" title="事件"><template #default="{ record }">{{ getOwnLookupValue(eventsNames, record.event_type) ?? '其他事件' }}</template></a-table-column>
+        <a-table-column key="status" title="状态"><template #default="{ record }">{{ getOwnLookupValue(states, record.status) ?? '未知状态' }}</template></a-table-column>
         <a-table-column key="scheduled" title="下次处理"><template #default="{ record }">{{ dateText(record.next_attempt_at) }}</template></a-table-column>
         <a-table-column key="operation" :width="235" title="操作">
 <template #default="{ record }">
@@ -264,13 +265,13 @@ onBeforeUnmount(() => { alive = false; session++; listGeneration++; detailGenera
     </template>
     <a-drawer :open="!!selected" title="投递详情" width="min(680px, 100vw)" @close="closeDetails">
       <a-alert message="结果未知不代表失败，请核对渠道记录后再处理。" show-icon type="warning" />
-      <p v-if="selected">事件 {{ selected.id }} · {{ states[selected.status] ?? '未知状态' }}</p>
+      <p v-if="selected">事件 {{ selected.id }} · {{ getOwnLookupValue(states, selected.status) ?? '未知状态' }}</p>
       <a-alert v-if="detailFailure" :message="detailFailure" show-icon type="error" />
       <a-spin :spinning="detailLoading">
         <a-table :data-source="deliveries" :pagination="false" :scroll="{ x: 600 }" row-key="id" size="small">
           <a-table-column key="channel" title="渠道"><template #default="{ record }">{{ record.channel === 'email' ? '邮件' : record.channel === 'feishu' ? '飞书' : record.channel === 'in_app' ? '站内消息' : '其他' }}</template></a-table-column>
           <a-table-column key="recipient" title="接收人"><template #default="{ record }"><div>{{ masked(record.channel, record.recipient_masked) }}</div><small class="hash">{{ hashText(record.recipient_hash) }}</small></template></a-table-column>
-          <a-table-column key="status" title="状态"><template #default="{ record }">{{ states[record.status] ?? '未知状态' }}</template></a-table-column>
+          <a-table-column key="status" title="状态"><template #default="{ record }">{{ getOwnLookupValue(states, record.status) ?? '未知状态' }}</template></a-table-column>
           <a-table-column key="attempts" title="次数"><template #default="{ record }">{{ safeCount(record.attempts) }}</template></a-table-column>
           <a-table-column key="actions" title="处置">
 <template #default="{ record }">

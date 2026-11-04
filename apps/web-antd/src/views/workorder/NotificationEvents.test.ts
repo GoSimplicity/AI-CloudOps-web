@@ -466,3 +466,155 @@ it('aPI 按后端合同发送精确路径和请求体', async () => {
     ],
   ]);
 });
+
+it.each(['constructor', '__proto__', 'toString', 'future_event'])(
+  'renders the unknown event fallback for API event_type %s',
+  async (eventType) => {
+    api.listNotificationEvents.mockResolvedValue({
+      total: 1,
+      items: [{ ...event(), event_type: eventType }],
+    });
+    await start();
+    expect(required(wrapper).text()).toContain('其他事件');
+    expect(api.listNotificationEvents).toHaveBeenCalledTimes(1);
+    expect(api.cancelNotificationEvent).not.toHaveBeenCalled();
+    expect(api.retryNotificationEvent).not.toHaveBeenCalled();
+    expect(api.resolveNotificationDelivery).not.toHaveBeenCalled();
+  },
+);
+
+it('does not invoke an inherited event-name getter when rendering API rows', async () => {
+  await start();
+  const setupState: unknown = Reflect.get(required(wrapper).vm.$, 'setupState');
+  if (setupState === null || typeof setupState !== 'object') {
+    throw new Error('Expected notification setup fixture');
+  }
+  const dictionary: unknown = Reflect.get(setupState, 'eventsNames');
+  if (dictionary === null || typeof dictionary !== 'object') {
+    throw new Error('Expected notification event-name lookup fixture');
+  }
+  const key = 'cloudops_notification_lookup_canary';
+  const original = Object.getPrototypeOf(dictionary);
+  let calls = 0;
+  const prototype = Object.create(original);
+  Object.defineProperty(prototype, key, {
+    configurable: true,
+    get() {
+      calls++;
+      return Object.keys(this).join(',');
+    },
+  });
+  Object.setPrototypeOf(dictionary, prototype);
+  try {
+    api.listNotificationEvents.mockResolvedValue({
+      total: 1,
+      items: [{ ...event(), event_type: key }],
+    });
+    await click('刷新');
+    expect(required(wrapper).text()).toContain('其他事件');
+    expect(calls).toBe(0);
+    expect(api.listNotificationEvents).toHaveBeenCalledTimes(2);
+    expect(api.cancelNotificationEvent).not.toHaveBeenCalled();
+    expect(api.retryNotificationEvent).not.toHaveBeenCalled();
+    expect(api.resolveNotificationDelivery).not.toHaveBeenCalled();
+  } finally {
+    Object.setPrototypeOf(dictionary, original);
+  }
+});
+
+function expectNoUnknownStateActions() {
+  const labels = ['取消排期', '重试事件', '确认送达', '重新投递'];
+  for (const label of labels) {
+    expect(
+      [...document.querySelectorAll('button')].some(
+        (button) => button.textContent?.trim() === label,
+      ),
+    ).toBe(false);
+  }
+  expect(api.cancelNotificationEvent).not.toHaveBeenCalled();
+  expect(api.retryNotificationEvent).not.toHaveBeenCalled();
+  expect(api.resolveNotificationDelivery).not.toHaveBeenCalled();
+}
+
+for (const sink of ['list', 'title', 'delivery'] as const) {
+  it.each(['constructor', '__proto__', 'toString', 'future_status'])(
+    `renders the unknown status fallback in ${sink} for API status %s`,
+    async (status) => {
+      api.listNotificationEvents.mockResolvedValue({
+        total: 1,
+        items: [event(sink === 'delivery' ? 'uncertain' : status)],
+      });
+      api.getNotificationDeliveries.mockResolvedValue([
+        { ...delivery(), status: sink === 'delivery' ? status : 'uncertain' },
+      ]);
+      await start();
+      if (sink === 'list') {
+        const row = required(wrapper).get('.ant-table-tbody tr.ant-table-row');
+        expect(required(row.findAll('td')[3]).text()).toBe('未知状态');
+      } else {
+        await click('详情');
+        const drawer = required(document.querySelector('.ant-drawer-body'));
+        if (sink === 'title') {
+          expect(drawer.textContent).toContain('事件 10 · 未知状态');
+        } else {
+          const row = required(
+            drawer.querySelector('.ant-table-tbody tr.ant-table-row'),
+          );
+          expect(required(row.querySelectorAll('td').item(2)).textContent).toBe(
+            '未知状态',
+          );
+        }
+      }
+      expectNoUnknownStateActions();
+    },
+  );
+}
+
+it('does not invoke a status prototype getter in list, detail title or delivery rows', async () => {
+  await start();
+  const setupState: unknown = Reflect.get(required(wrapper).vm.$, 'setupState');
+  if (setupState === null || typeof setupState !== 'object') {
+    throw new Error('Expected notification setup fixture');
+  }
+  const dictionary: unknown = Reflect.get(setupState, 'states');
+  if (dictionary === null || typeof dictionary !== 'object') {
+    throw new Error('Expected notification status lookup fixture');
+  }
+  const key = 'cloudops_notification_status_canary';
+  const original = Object.getPrototypeOf(dictionary);
+  let calls = 0;
+  const prototype = Object.create(original);
+  Object.defineProperty(prototype, key, {
+    configurable: true,
+    get() {
+      calls++;
+      return Object.keys(this).join(',');
+    },
+  });
+  Object.setPrototypeOf(dictionary, prototype);
+  try {
+    api.listNotificationEvents.mockResolvedValue({
+      total: 1,
+      items: [event(key)],
+    });
+    api.getNotificationDeliveries.mockResolvedValue([
+      { ...delivery(), status: key },
+    ]);
+    await click('刷新');
+    const listRow = required(wrapper).get('.ant-table-tbody tr.ant-table-row');
+    expect(required(listRow.findAll('td')[3]).text()).toBe('未知状态');
+    await click('详情');
+    const drawer = required(document.querySelector('.ant-drawer-body'));
+    expect(drawer.textContent).toContain('事件 10 · 未知状态');
+    const row = required(
+      drawer.querySelector('.ant-table-tbody tr.ant-table-row'),
+    );
+    expect(required(row.querySelectorAll('td').item(2)).textContent).toBe(
+      '未知状态',
+    );
+    expect(calls).toBe(0);
+    expectNoUnknownStateActions();
+  } finally {
+    Object.setPrototypeOf(dictionary, original);
+  }
+});

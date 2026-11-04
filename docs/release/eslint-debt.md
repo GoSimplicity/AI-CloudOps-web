@@ -781,3 +781,14 @@ SystemRole、Secret、MonitorOnDutyGroup和MonitorScrapeJob四个SFC各搬移一
 - 落盘前在两个独立fresh JS process/JSDOM及库module graph中，以九字段原序/排序各运行10个实际Modal DOM场景，包含每次content render的完整trace一致。标题、正文、按钮文字、危险类型、宽度、居中、ok/cancel/程序关闭，以及Promise resolve关闭和reject保留窗口的行为保持；拒绝路径仅按精确Fake Error身份记录SDK预期事件，未知错误仍使探针失败。使用Fake回调，不执行业务API。
 - 全树AST仅对限定配置的property顺序规范化后相同，真实符号及值分类再次核对；6个SFC binding、模板/style和生产DOM/SSR render保持。19文件lint2284→2135 errors，0 warnings，逐文件各规则无新增；未混入Table.columns、菜单、CSS、校验或参与遍历/哈希的数据。
 - 全Web现有166文件3619项测试及应用类型检查通过，保留原有确认/取消、权限、异步归属及失败回归；未修改测试逻辑、断言、fixture、规则、ignore、CI或lock，没有新增镜像测试或重复构建。没有真实集群、通知、云或外部API操作，未上线。
+
+## 阶段七十九：未知显示键的own lookup修复
+
+AutoFix六个公开formatter及NotificationEvents的eventsNames、states共八个字典、十处读取复用既有getOwnLookupValue。此前string输入constructor、__proto__或toString会命中继承属性，返回function/object而绕过原fallback；继承getter还可能执行并观察字典插入序。现在仅返回owned值，非own键走原fallback，不读取继承getter；这是明确的显示行为修复，不冒称纯重排等价。
+
+- formatter保留原有||链、空输入和普通future key的原文本/默认颜色/图标合同；事件名称与列表状态、详情标题、投递状态均保留??及原“其他事件”/“未知状态”fallback。合法owned值保持，既有helper的0/false/空串合同由原测试继续覆盖，未改helper或换fallback运算符。
+- 只有守卫后的eventsNames顶层keys排序；states声明及Object.entries→eventStates原文和下拉顺序保持，所有按钮closed状态检查原字节保持。PV配置、其它闭集状态map及其它索引表未混改，未知状态显示不会授权取消/重试/投递动作。
+- 两个现有测试文件新增30项必要回归，保留全部旧statement、断言及fixture。最终HEAD原生产代码加载下26项新增用例失败、24项通过（含四项普通future键正向）；修复后50项全部通过。六formatter覆盖合法/空/未知键与继承getter；真实AntD挂载和Fake API覆盖事件名称、列表状态、详情标题、投递行的constructor/proto/toString/future及局部字典canary getter，验证回退渲染且无写请求。
+- getter测试不扩写Object.prototype：formatter对既有__proto__ accessor经真实descriptor类型guard后spy并finally恢复，通知在局部字典设置私有prototype并finally恢复。fixture使用unknown和明确对象guard，没有用any或强制断言绕过类型检查，也没有规则豁免；不以修改旧期望掩盖原错误。
+- 生产AST复核仅有十处guard调用、必要import和单个eventsNames排序，原控制流及fallback运算符保持；模板仅四处读取替换，原binding及style保持。四文件lint77→71 errors，各规则无新增，净减6条sort-objects；六formatter与状态读取改动是功能修复而非计数成果。
+- 最终源码全Web166文件3649项测试及应用类型检查通过，包含30项新增回归。没有改CI、规则、ignore或lock，没有新增镜像测试或重复构建；没有真实模型、通知、云、集群或外部API操作，未上线。
