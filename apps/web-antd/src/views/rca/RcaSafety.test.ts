@@ -240,7 +240,7 @@ describe('rCA请求与账户边界', () => {
 });
 
 describe('rCA采集状态', () => {
-  const result = (status: string, coverage: number | null) => ({
+  const result = (status: string, coverage: null | number) => ({
     status,
     namespace: 'default',
     analysis_id: 'fixture-id',

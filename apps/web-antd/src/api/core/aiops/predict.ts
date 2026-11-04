@@ -71,9 +71,9 @@ export interface DiskPredictionRequest extends BasePredictionRequest {
 export interface PredictionDataPoint {
   timestamp: string;
   predicted_value: number;
-  confidence_lower?: number | null;
-  confidence_upper?: number | null;
-  confidence_level?: number | null;
+  confidence_lower?: null | number;
+  confidence_upper?: null | number;
+  confidence_level?: null | number;
 }
 
 // 资源利用率预测接口
@@ -89,7 +89,7 @@ export interface ResourceUtilization {
 export interface ScalingRecommendation {
   action: ScalingAction;
   trigger_time: string;
-  confidence: number | null;
+  confidence: null | number;
   reason: string;
   target_instances?: number;
   target_cpu_cores?: number;
@@ -141,13 +141,13 @@ export interface PredictionResponse {
   cost_analysis?: CostAnalysis;
   pattern_analysis: Record<string, any>;
   trend_insights: string[];
-  model_accuracy?: number | null;
+  model_accuracy?: null | number;
   prediction_summary: Record<string, any>;
-  method?: string | null;
-  model_version?: string | null;
+  method?: null | string;
+  model_version?: null | string;
   fallback_mode?: boolean;
-  fallback_reason?: string | null;
-  ai_fallback_reason?: string | null;
+  fallback_reason?: null | string;
+  ai_fallback_reason?: null | string;
   analysis_failures?: string[];
   ai_enhanced?: boolean;
   ai_insights?: string[];
@@ -210,11 +210,11 @@ export interface AIEnhancedPredictionResponse {
   cost_analysis?: CostAnalysis;
   pattern_analysis: Record<string, any>;
   trend_insights: string[];
-  model_accuracy?: number | null;
+  model_accuracy?: null | number;
   prediction_summary: Record<string, any>;
-  method?: string | null;
-  model_version?: string | null;
-  ai_fallback_reason?: string | null;
+  method?: null | string;
+  model_version?: null | string;
+  ai_fallback_reason?: null | string;
   analysis_failures?: string[];
   ai_enhanced: boolean;
   analysis_context?: AIAnalysisContext;
@@ -226,7 +226,7 @@ export interface AIEnhancedPredictionResponse {
   ai_processing_stages: Record<string, string>;
   data_quality_assessment: Record<string, any>;
   fallback_mode?: boolean;
-  fallback_reason?: string | null;
+  fallback_reason?: null | string;
   timestamp: string;
 }
 

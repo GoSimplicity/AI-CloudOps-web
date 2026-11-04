@@ -236,7 +236,7 @@ export function useDaemonSetPage() {
   }));
 
   // helpers
-  const validateClusterId = (record: K8sDaemonSet): number | null => {
+  const validateClusterId = (record: K8sDaemonSet): null | number => {
     const clusterId = record.cluster_id || filterClusterId.value;
     if (!clusterId || clusterId === 0) {
       message.error('无效的集群ID，请重新选择集群');

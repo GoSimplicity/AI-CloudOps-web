@@ -36,7 +36,7 @@ interface CronJobPageState {
   loading: boolean;
   submitLoading: boolean;
   detailLoading: boolean;
-  error: string | null;
+  error: null | string;
 
   // 数据状态
   cronJobs: CronJob[];
@@ -142,7 +142,7 @@ const resolveListFailureText = (
 const handleListFailure = (
   error: any,
   texts: ListFailureTexts,
-): string | null => {
+): null | string => {
   if (isCanceledRequest(error)) return null;
   const text = resolveListFailureText(error, texts);
   if (shouldNotifyPageError(error)) {

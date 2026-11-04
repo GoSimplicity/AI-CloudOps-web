@@ -213,7 +213,7 @@ export function usePVPage() {
   }));
 
   // helpers
-  const validateClusterId = (record: K8sPV): number | null => {
+  const validateClusterId = (record: K8sPV): null | number => {
     const clusterId = record.cluster_id || filterClusterId.value;
     if (!clusterId || clusterId === 0) {
       message.error('无效的集群ID，请重新选择集群');

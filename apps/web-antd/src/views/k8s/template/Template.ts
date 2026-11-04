@@ -77,7 +77,7 @@ export function useTemplatePage() {
   const clustersLoading = ref(false);
   const searchText = ref('');
   const filterClusterId = ref<number | undefined>(undefined);
-  const selectedRowKeys = ref<(string | number)[]>([]);
+  const selectedRowKeys = ref<(number | string)[]>([]);
   const selectedRows = ref<K8sYamlTemplate[]>([]);
   const currentPage = ref(1);
   const pageSize = ref(10);
@@ -167,14 +167,14 @@ export function useTemplatePage() {
 
   const rowSelection = computed(() => ({
     selectedRowKeys: selectedRowKeys.value,
-    onChange: (keys: (string | number)[], rows: K8sYamlTemplate[]) => {
+    onChange: (keys: (number | string)[], rows: K8sYamlTemplate[]) => {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
     },
   }));
 
   // helpers
-  const validateClusterId = (): number | null => {
+  const validateClusterId = (): null | number => {
     if (!filterClusterId.value || filterClusterId.value === 0) {
       message.error('请先选择集群');
       return null;

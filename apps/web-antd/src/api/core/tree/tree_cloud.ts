@@ -409,8 +409,8 @@ export interface ManagedCloudHistory {
   retry_safe?: boolean;
   operator_id: number;
   started_at: string;
-  finished_at?: string | null;
-  resolved_at?: string | null;
+  finished_at?: null | string;
+  resolved_at?: null | string;
   resolved_by?: number;
   resolution_reason?: string;
 }

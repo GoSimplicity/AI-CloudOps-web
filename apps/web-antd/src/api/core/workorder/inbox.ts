@@ -8,7 +8,7 @@ export interface InboxMessage {
   event_type: string;
   subject: string;
   content: string;
-  read_at: string | null;
+  read_at: null | string;
   created_at: string;
 }
 export interface InboxPermissions {

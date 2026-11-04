@@ -7,7 +7,7 @@
  * @param timeStr - 时间字符串（ISO 8601 格式或其他可解析格式）
  * @returns 格式化后的时间字符串
  */
-export const formatK8sTime = (timeStr?: string | null): string => {
+export const formatK8sTime = (timeStr?: null | string): string => {
   if (!timeStr) return '-';
 
   try {
@@ -37,7 +37,7 @@ export const formatK8sTime = (timeStr?: string | null): string => {
  * @param ageStr - age 字符串
  * @returns 格式化后的存在时间字符串
  */
-export const formatK8sAge = (ageStr?: string | null): string => {
+export const formatK8sAge = (ageStr?: null | string): string => {
   if (!ageStr) return '-';
 
   // 解析类似 "5303h13m51.495736s" 的格式

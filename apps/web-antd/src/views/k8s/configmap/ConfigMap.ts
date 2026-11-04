@@ -206,7 +206,7 @@ export function useConfigMapPage() {
   }));
 
   // helpers
-  const validateClusterId = (record: K8sConfigMap): number | null => {
+  const validateClusterId = (record: K8sConfigMap): null | number => {
     const clusterId = record.cluster_id || filterClusterId.value;
     if (!clusterId || clusterId === 0) {
       message.error('无效的集群ID，请重新选择集群');

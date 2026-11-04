@@ -64,7 +64,7 @@ export function useTaskPage() {
   const filterClusterId = ref<number | undefined>(undefined);
   const filterTemplateId = ref<number | undefined>(undefined);
   const filterStatus = ref<TaskStatusType | undefined>(undefined);
-  const selectedRowKeys = ref<(string | number)[]>([]);
+  const selectedRowKeys = ref<(number | string)[]>([]);
   const selectedRows = ref<K8sYamlTask[]>([]);
   const currentPage = ref(1);
   const pageSize = ref(10);
@@ -155,14 +155,14 @@ export function useTaskPage() {
 
   const rowSelection = computed(() => ({
     selectedRowKeys: selectedRowKeys.value,
-    onChange: (keys: (string | number)[], rows: K8sYamlTask[]) => {
+    onChange: (keys: (number | string)[], rows: K8sYamlTask[]) => {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
     },
   }));
 
   // helpers
-  const validateClusterId = (): number | null => {
+  const validateClusterId = (): null | number => {
     if (!filterClusterId.value || filterClusterId.value === 0) {
       message.error('请先选择集群');
       return null;

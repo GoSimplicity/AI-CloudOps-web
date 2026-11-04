@@ -142,7 +142,7 @@ export interface CreateCronJobReq {
   http_body?: string;
   script_type?: string;
   script_content?: string;
-  ssh_resource_id?: number | null; // 可空字段
+  ssh_resource_id?: null | number; // 可空字段
   ssh_command?: string;
   ssh_work_dir?: string;
   ssh_environment?: KeyValue[];
@@ -169,7 +169,7 @@ export interface UpdateCronJobReq {
   http_body?: string;
   script_type?: string;
   script_content?: string;
-  ssh_resource_id?: number | null; // 可空字段
+  ssh_resource_id?: null | number; // 可空字段
   ssh_command?: string;
   ssh_work_dir?: string;
   ssh_environment?: KeyValue[];

@@ -144,17 +144,17 @@ export async function getAutoFixReady() {
 }
 
 export interface AutoFixExecutionSummary {
-  status?: string | null;
+  status?: null | string;
   audit_result_recorded?: boolean | null;
   executed_actions?: Array<{
-    action_id?: string | null;
-    status?: string | null;
+    action_id?: null | string;
+    status?: null | string;
   }>;
 }
 
 export interface AutoFixOperation {
   plan_id: string;
-  operation_id?: string | null;
+  operation_id?: null | string;
   state:
     | 'building'
     | 'pending'
@@ -167,7 +167,7 @@ export interface AutoFixOperation {
   created_at?: string;
   updated_at?: string;
   expires_at?: string;
-  reason?: string | null;
+  reason?: null | string;
   retry_safe?: boolean;
   claimed_action_ids?: string[];
   result?: AutoFixWorkflowResponse | null;

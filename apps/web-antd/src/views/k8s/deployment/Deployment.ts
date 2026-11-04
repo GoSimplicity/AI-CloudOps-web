@@ -269,7 +269,7 @@ export function useDeploymentPage() {
   }));
 
   // helpers
-  const validateClusterId = (record: K8sDeployment): number | null => {
+  const validateClusterId = (record: K8sDeployment): null | number => {
     const clusterId = record.cluster_id || filterClusterId.value;
     if (!clusterId || clusterId === 0) {
       message.error('无效的集群ID，请重新选择集群');

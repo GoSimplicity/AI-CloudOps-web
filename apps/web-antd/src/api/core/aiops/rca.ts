@@ -212,7 +212,7 @@ export interface RCACollectionSource {
 
 export interface RCACollection {
   status?: 'complete' | 'partial' | 'failed';
-  coverage?: number | null;
+  coverage?: null | number;
   coverage_basis?: string;
   sources?: Partial<Record<'metrics' | 'events' | 'logs', RCACollectionSource>>;
 }

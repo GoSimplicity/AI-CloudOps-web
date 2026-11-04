@@ -2,9 +2,9 @@ import { requestClient } from '#/api/request';
 
 export interface NotificationEvent {
   id: number;
-  parent_event_id: number | null;
-  notification_id: number | null;
-  occurrence: number | null;
+  parent_event_id: null | number;
+  notification_id: null | number;
+  occurrence: null | number;
   repeat_count: number;
   repeat_minutes: number;
   instance_id: number;
@@ -22,11 +22,11 @@ export interface NotificationDelivery {
   notification_id: number;
   channel: string;
   recipient_hash: string;
-  recipient_masked?: string | null;
+  recipient_masked?: null | string;
   status: string;
   attempts: number;
   max_retries: number;
-  next_attempt_at: string | null;
+  next_attempt_at: null | string;
 }
 
 export interface NotificationResolution {

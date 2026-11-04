@@ -1,4 +1,4 @@
-export function formatProbability(value: number | null | undefined) {
+export function formatProbability(value: null | number | undefined) {
   return typeof value === 'number' &&
     Number.isFinite(value) &&
     value >= 0 &&

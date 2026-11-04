@@ -792,3 +792,13 @@ AutoFix六个公开formatter及NotificationEvents的eventsNames、states共八�
 - getter测试不扩写Object.prototype：formatter对既有__proto__ accessor经真实descriptor类型guard后spy并finally恢复，通知在局部字典设置私有prototype并finally恢复。fixture使用unknown和明确对象guard，没有用any或强制断言绕过类型检查，也没有规则豁免；不以修改旧期望掩盖原错误。
 - 生产AST复核仅有十处guard调用、必要import和单个eventsNames排序，原控制流及fallback运算符保持；模板仅四处读取替换，原binding及style保持。四文件lint77→71 errors，各规则无新增，净减6条sort-objects；六formatter与状态读取改动是功能修复而非计数成果。
 - 最终源码全Web166文件3649项测试及应用类型检查通过，包含30项新增回归。没有改CI、规则、ignore或lock，没有新增镜像测试或重复构建；没有真实模型、通知、云、集群或外部API操作，未上线。
+
+## 阶段八十：经Vue消费者验证的primitive union顺序
+
+29个TS文件仅整理58处union：30处number|null、23处string|null、4处string|number及1处number|null|undefined。成员原文multiset、声明作用域和其它AST保持，注释归属不清的项不纳入；未扩大到Boolean/String组合、literal、引用或复杂function/conditional/infer/intersection成员。196条中净减58，138条保留，不以TS擦除就泛称所有union可交换。
+
+- 每个编辑文件以已保存before快照和真实落盘after比较，完整TS AST仅上述成员次序变化，擦除后的完整JavaScript AST相同。strictNullChecks下真实checker解析的intrinsic .types形状和实际顺序一致；已安装TypeScript5.9.3会预先创建这些intrinsic类型并按type.id整理union，不将此证明推广到可能观察顺序的literal/复杂类型操作。
+- 已安装Vue3.5.42提供registerTS、compileScript fs(fileExists/readFile/realpath)、invalidateTypeCache及parseCache接口。before host显式覆盖29份原快照，after host读取真实磁盘；两次之间失效全部transitive read/deps及parse缓存。先用虚拟导入TS的Boolean|String→String|Boolean控制样例正确检出runtime props JavaScript变化，避免缓存或纯TS擦除造成假绿。
+- 全仓354个真实SFC逐个比较开发/生产，共708组before/after：两侧编译错误均0，完整compiled JavaScript AST、bindings及DOM/SSR输出差异0。编译器实际读取5个编辑TS：api/core下的aiops/predict.ts、aiops/rca.ts、cron/cron.ts、tree/tree_cloud.ts，以及views/servicetree/managed-operation-marker.ts；每个读取的before/after内容digest分别核对快照/磁盘且不同。
+- 其余24个编辑文件标记“当前无SFC consumer”，仅指本次SFC宏类型解析未读取，不代表业务组件没有value import；这些文件自身的完整emit JavaScript AST已另行验证。没有宣称全29文件都被SFC类型消费者读取，也不跳过无法证明的消费者。
+- 29文件定向lint净减58条sort-union-types，逐文件各规则无新增；全Web现有166文件3649项测试及应用类型检查通过。manifest内RcaSafety.test.ts仅一处type annotation顺序，测试逻辑、断言及fixture不变；未改规则、ignore、CI或lock，没有新增镜像测试或重复构建，没有真实外部API或凭据操作，未上线。
