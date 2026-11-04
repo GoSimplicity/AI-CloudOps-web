@@ -125,25 +125,25 @@ const columns = [
 
 // 调班记录列定义
 const changeColumns = [
-  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
-  { title: '日期', dataIndex: 'date', key: 'date', width: 120 },
-  { title: '人员变更', dataIndex: 'users', key: 'users', width: 250 },
-  { title: '调班原因', dataIndex: 'reason', key: 'reason', width: 200 },
+  { dataIndex: 'id', key: 'id', title: 'ID', width: 80 },
+  { dataIndex: 'date', key: 'date', title: '日期', width: 120 },
+  { dataIndex: 'users', key: 'users', title: '人员变更', width: 250 },
+  { dataIndex: 'reason', key: 'reason', title: '调班原因', width: 200 },
   {
-    title: '创建人',
     dataIndex: 'create_user_name',
     key: 'creator',
+    title: '创建人',
     width: 150,
   },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 180 },
+  { dataIndex: 'created_at', key: 'created_at', title: '创建时间', width: 180 },
 ];
 
 // 值班历史列定义
 const historyColumns = [
-  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
-  { title: '日期', dataIndex: 'date_string', key: 'date', width: 120 },
-  { title: '人员信息', dataIndex: 'users', key: 'users', width: 300 },
-  { title: '记录时间', dataIndex: 'created_at', key: 'created_at', width: 180 },
+  { dataIndex: 'id', key: 'id', title: 'ID', width: 80 },
+  { dataIndex: 'date_string', key: 'date', title: '日期', width: 120 },
+  { dataIndex: 'users', key: 'users', title: '人员信息', width: 300 },
+  { dataIndex: 'created_at', key: 'created_at', title: '记录时间', width: 180 },
 ];
 
 // 状态数据

@@ -301,20 +301,20 @@ const columns = [
 ];
 
 const conditionColumns = [
-  { title: '类型', dataIndex: 'type', key: 'type', width: '15%' },
-  { title: '状态', dataIndex: 'status', key: 'status', width: '10%' },
-  { title: '原因', dataIndex: 'reason', key: 'reason', width: '20%' },
+  { dataIndex: 'type', key: 'type', title: '类型', width: '15%' },
+  { dataIndex: 'status', key: 'status', title: '状态', width: '10%' },
+  { dataIndex: 'reason', key: 'reason', title: '原因', width: '20%' },
   {
-    title: '消息',
     dataIndex: 'message',
-    key: 'message',
-    width: '35%',
     ellipsis: true,
+    key: 'message',
+    title: '消息',
+    width: '35%',
   },
   {
-    title: '最后更新',
     dataIndex: 'lastTransitionTime',
     key: 'lastTransitionTime',
+    title: '最后更新',
     width: '20%',
   },
 ];

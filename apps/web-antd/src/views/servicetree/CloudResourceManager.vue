@@ -316,23 +316,23 @@ const columns = [
 
 // 同步历史列
 const syncHistoryColumns = [
-  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
-  { title: '地域', dataIndex: 'region', key: 'region', width: 120 },
-  { title: '同步状态', key: 'sync_status', width: 100 },
-  { title: '同步模式', key: 'sync_mode', width: 100 },
-  { title: '统计信息', key: 'stats', width: 350 },
-  { title: '耗时', key: 'duration', width: 100 },
-  { title: '开始时间', key: 'start_time', width: 180 },
+  { dataIndex: 'id', key: 'id', title: 'ID', width: 80 },
+  { dataIndex: 'region', key: 'region', title: '地域', width: 120 },
+  { key: 'sync_status', title: '同步状态', width: 100 },
+  { key: 'sync_mode', title: '同步模式', width: 100 },
+  { key: 'stats', title: '统计信息', width: 350 },
+  { key: 'duration', title: '耗时', width: 100 },
+  { key: 'start_time', title: '开始时间', width: 180 },
 ];
 
 // 变更日志列
 const changeLogColumns = [
-  { title: '资源ID', dataIndex: 'resource_id', key: 'resource_id', width: 100 },
-  { title: '实例ID', dataIndex: 'instance_id', key: 'instance_id', width: 150 },
-  { title: '变更类型', key: 'change_type', width: 120 },
-  { title: '变更信息', key: 'change_info', width: 350 },
-  { title: '操作人', key: 'operator', width: 150 },
-  { title: '变更时间', key: 'change_time', width: 180 },
+  { dataIndex: 'resource_id', key: 'resource_id', title: '资源ID', width: 100 },
+  { dataIndex: 'instance_id', key: 'instance_id', title: '实例ID', width: 150 },
+  { key: 'change_type', title: '变更类型', width: 120 },
+  { key: 'change_info', title: '变更信息', width: 350 },
+  { key: 'operator', title: '操作人', width: 150 },
+  { key: 'change_time', title: '变更时间', width: 180 },
 ];
 
 // ========== 辅助方法 ==========

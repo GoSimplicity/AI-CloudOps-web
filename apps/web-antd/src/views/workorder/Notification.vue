@@ -182,20 +182,20 @@ const columns = [
 ];
 
 const logsColumns = [
-  { title: '渠道', dataIndex: 'channel', key: 'channel', width: 100 },
+  { dataIndex: 'channel', key: 'channel', title: '渠道', width: 100 },
   {
-    title: '接收地址',
     dataIndex: 'recipient_addr',
     key: 'recipient',
+    title: '接收地址',
     width: 180,
   },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 80 },
-  { title: '发送时间', dataIndex: 'send_at', key: 'sendAt', width: 180 },
+  { dataIndex: 'status', key: 'status', title: '状态', width: 80 },
+  { dataIndex: 'send_at', key: 'sendAt', title: '发送时间', width: 180 },
   {
-    title: '错误信息',
     dataIndex: 'error_message',
-    key: 'error',
     ellipsis: true,
+    key: 'error',
+    title: '错误信息',
   },
 ];
 

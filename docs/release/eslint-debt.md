@@ -811,3 +811,12 @@ AutoFix六个公开formatter及NotificationEvents的eventsNames、states共八�
 - 落盘前在两个fresh JS process/JSDOM和实际Table库中分别使用原序/排序后的125个实际配置。13组header/cell文本、key/dataIndex取值、col inline宽度、align/fixed/ellipsis类名、两实际sorter的完整调用轨迹、排序与第二页分页回调/结果一致。仅验证DOM/style/class合同，不冒称浏览器像素视觉，不触发任何业务API。
 - 落盘源码精确匹配提案，全script AST仅上述静态property顺序变化，数组顺序、完整函数及其它AST保持；13个SFC binding、模板/style和生产DOM/SSR render保持。Root独立使用真实HEAD-before与磁盘源码复核同样通过，无属性外注释归属歧义或directive。
 - 13文件lint1002→815 errors，0 warnings，逐文件各规则无新增，其余列与既有诊断保留。全Web现有166文件3649项测试及应用类型检查通过；没有新增镜像测试、修改测试逻辑、规则、ignore、CI或lock，没有因落盘重复已通过的消费探针，本阶段未构建。没有操作preview、数据库、真实集群、凭据或外部API，未上线。
+
+## 阶段八十二：其它静态列数组及customRender配置顺序
+
+12个SFC的15个局部const列数组仅整理66个对象，净减75条sort-objects。范围仍限定已审九种具名列属性及literal/完整arrow创建，标识符值候选实际为0，没有为了扩大数量纳入identifier、member、import/global或value-call。新增消费合同包括两段仅解构text的customRender和一段按record.count比较的sorter；所有完整property/callback原文及数组元素原位保持。
+
+- 实际a-table绑定、私有数组无脚本逃逸、slot按字段名读取和change忽略额外metadata已核；customRender无column、whole props、rest/default、arguments或this消费。SystemApi的未审handler以及Service.portColumns的filter/整数组链保留，Service仅处理已证明的endpointColumns，不改变其它列或数据数组。
+- 落盘前两个fresh进程使用实际AntD4.2.6 Table运行15组配置：原/排序DOM文本、inline样式与类名、分页、实际count sorter和customRender调用轨迹一致。customRender实际调用原RCA formatter代码，覆盖长文本截断及无效时间fallback；只验证JSDOM DOM/style/class合同，不冒称像素视觉。消费探针通过后按约定复用，未因落盘重复运行。
+- 磁盘源码精确匹配提案，全script AST仅限定列对象property顺序变化，数组每元素及其它AST保持，完整props/回调raw bags及未审项保持；12个SFC binding、模板/style和生产DOM/SSR输出一致。RCA的truncateText与formatShortTime整段声明（含原注释）字节一致，属性外注释归属歧义和directive均0。
+- 12文件lint1117→1042 errors，0 warnings，逐文件各规则无新增；全Web现有166文件3649项测试及应用类型检查通过。未新增镜像测试、改测试逻辑、CI、规则、ignore或lock，也未构建；未操作preview、数据库、真实集群、凭据或业务API，未上线。

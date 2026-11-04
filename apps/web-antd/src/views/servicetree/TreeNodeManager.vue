@@ -146,11 +146,11 @@ const userSearchQuery = ref('');
 
 // 资源表格配置
 const resourceColumns = [
-  { title: '资源名称', dataIndex: 'name', key: 'name' },
-  { title: '地址', key: 'address' },
-  { title: '状态', dataIndex: 'status', key: 'status' },
-  { title: '环境', dataIndex: 'environment', key: 'environment' },
-  { title: '描述', dataIndex: 'description', key: 'description' },
+  { dataIndex: 'name', key: 'name', title: '资源名称' },
+  { key: 'address', title: '地址' },
+  { dataIndex: 'status', key: 'status', title: '状态' },
+  { dataIndex: 'environment', key: 'environment', title: '环境' },
+  { dataIndex: 'description', key: 'description', title: '描述' },
 ];
 
 const resourceRowSelection = {

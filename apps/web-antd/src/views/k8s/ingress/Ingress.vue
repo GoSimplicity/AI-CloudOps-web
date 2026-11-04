@@ -293,13 +293,13 @@ const columns = [
 ];
 
 const ruleColumns = [
-  { title: '主机', dataIndex: 'host', key: 'host' },
-  { title: '路径', dataIndex: 'http', key: 'http' },
+  { dataIndex: 'host', key: 'host', title: '主机' },
+  { dataIndex: 'http', key: 'http', title: '路径' },
 ];
 
 const tlsColumns = [
-  { title: 'Secret 名称', dataIndex: 'secret_name', key: 'secret_name' },
-  { title: '主机列表', dataIndex: 'hosts', key: 'hosts' },
+  { dataIndex: 'secret_name', key: 'secret_name', title: 'Secret 名称' },
+  { dataIndex: 'hosts', key: 'hosts', title: '主机列表' },
 ];
 
 // 标签过滤器状态

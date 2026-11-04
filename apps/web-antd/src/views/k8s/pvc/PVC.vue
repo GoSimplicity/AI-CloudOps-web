@@ -232,33 +232,33 @@ const columns = [
 // Pod列表表格列定义
 const podsColumns = [
   {
-    title: 'Pod名称',
     dataIndex: 'name',
     key: 'name',
+    title: 'Pod名称',
     width: 200,
   },
   {
-    title: '命名空间',
     dataIndex: 'namespace',
     key: 'namespace',
+    title: '命名空间',
     width: 120,
   },
   {
-    title: '状态',
     dataIndex: 'status',
     key: 'status',
+    title: '状态',
     width: 120,
   },
   {
-    title: '节点',
     dataIndex: 'node_name',
     key: 'node_name',
+    title: '节点',
     width: 150,
   },
   {
-    title: '创建时间',
     dataIndex: 'created_at',
     key: 'created_at',
+    title: '创建时间',
     width: 180,
   },
 ];

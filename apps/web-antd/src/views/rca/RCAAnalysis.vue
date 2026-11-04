@@ -106,33 +106,33 @@ const timeMarks = {
 // 关键事件表格列定义
 const criticalEventsColumns = [
   {
-    title: '时间',
-    dataIndex: 'timestamp',
-    key: 'timestamp',
-    width: 150,
-    ellipsis: true,
     customRender: ({ text }: any) => formatShortTime(text),
-  },
-  {
-    title: '原因',
-    dataIndex: 'reason',
-    key: 'reason',
-    width: 120,
+    dataIndex: 'timestamp',
     ellipsis: true,
+    key: 'timestamp',
+    title: '时间',
+    width: 150,
   },
   {
-    title: '次数',
+    dataIndex: 'reason',
+    ellipsis: true,
+    key: 'reason',
+    title: '原因',
+    width: 120,
+  },
+  {
     dataIndex: 'count',
     key: 'count',
-    width: 80,
     sorter: (a: any, b: any) => a.count - b.count,
+    title: '次数',
+    width: 80,
   },
   {
-    title: '消息',
-    dataIndex: 'message',
-    key: 'message',
-    ellipsis: true,
     customRender: ({ text }: any) => truncateText(text, 100),
+    dataIndex: 'message',
+    ellipsis: true,
+    key: 'message',
+    title: '消息',
   },
 ];
 

@@ -290,10 +290,10 @@ const getVisiblePortColumns = (ports: any[]) => {
 };
 
 const endpointColumns = [
-  { title: 'IP地址', dataIndex: 'ip', key: 'ip' },
-  { title: '端口', dataIndex: 'port', key: 'port' },
-  { title: '协议', dataIndex: 'protocol', key: 'protocol' },
-  { title: '状态', dataIndex: 'ready', key: 'ready' },
+  { dataIndex: 'ip', key: 'ip', title: 'IP地址' },
+  { dataIndex: 'port', key: 'port', title: '端口' },
+  { dataIndex: 'protocol', key: 'protocol', title: '协议' },
+  { dataIndex: 'ready', key: 'ready', title: '状态' },
 ];
 
 // 标签过滤器状态

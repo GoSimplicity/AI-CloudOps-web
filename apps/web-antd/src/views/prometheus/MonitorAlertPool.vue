@@ -213,10 +213,10 @@ const userSearchText = ref('');
 const activeForm = ref<'add' | 'edit' | null>(null);
 
 const userColumns = [
-  { title: '用户名', dataIndex: 'username', key: 'username' },
-  { title: '昵称', dataIndex: 'nickname', key: 'nickname' },
-  { title: '邮箱', dataIndex: 'email', key: 'email' },
-  { title: '操作', key: 'action', width: 80, align: 'center' as const },
+  { dataIndex: 'username', key: 'username', title: '用户名' },
+  { dataIndex: 'nickname', key: 'nickname', title: '昵称' },
+  { dataIndex: 'email', key: 'email', title: '邮箱' },
+  { align: 'center' as const, key: 'action', title: '操作', width: 80 },
 ];
 
 // 表单验证规则

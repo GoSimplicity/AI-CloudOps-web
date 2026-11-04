@@ -53,9 +53,9 @@ const router = useRouter();
 
 // 列定义
 const historyColumns = [
-  { title: '值班日期', key: 'date', width: 120 },
-  { title: '人员变更', key: 'users', width: 220 },
-  { title: '记录时间', key: 'createdAt', width: 150 },
+  { key: 'date', title: '值班日期', width: 120 },
+  { key: 'users', title: '人员变更', width: 220 },
+  { key: 'createdAt', title: '记录时间', width: 150 },
 ];
 
 // 状态数据

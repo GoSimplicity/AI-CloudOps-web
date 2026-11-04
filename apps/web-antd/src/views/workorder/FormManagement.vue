@@ -109,10 +109,10 @@ const columns = [
 ];
 
 const schemaColumns = [
-  { title: '类型', dataIndex: 'type', key: 'type', width: 120 },
-  { title: '标签', dataIndex: 'label', key: 'label', width: 180 },
-  { title: '字段名', dataIndex: 'name', key: 'name', width: 180 },
-  { title: '是否必填', dataIndex: 'required', key: 'required', width: 100 },
+  { dataIndex: 'type', key: 'type', title: '类型', width: 120 },
+  { dataIndex: 'label', key: 'label', title: '标签', width: 180 },
+  { dataIndex: 'name', key: 'name', title: '字段名', width: 180 },
+  { dataIndex: 'required', key: 'required', title: '是否必填', width: 100 },
 ];
 
 // 状态数据
