@@ -103,11 +103,11 @@ const definitionJsonString = computed<string>({
 // 表单验证规则
 const formRules = {
   name: [
-    { required: true, message: '请输入流程名称', trigger: 'blur' },
-    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' },
+    { message: '请输入流程名称', required: true, trigger: 'blur' },
+    { max: 50, message: '长度应为3到50个字符', min: 3, trigger: 'blur' },
   ],
   form_design_id: [
-    { required: true, message: '请选择关联表单', trigger: 'change' },
+    { message: '请选择关联表单', required: true, trigger: 'change' },
   ],
   definition: [
     {

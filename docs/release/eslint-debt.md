@@ -839,3 +839,13 @@ MonitorConfig的Name统一为1..255、InstanceKey（历史API字段instance_ip�
 - 已安装Playwright1.64.1的Page→Frame.getByRole→getByRoleSelector按固定字段名生成selector，原options不保留到Locator。私有探针只在内存副本暴露既有类/函数，实际Page/Frame/Locator构造链对照全部50条配置，最终selector逐字一致且为实际Locator实例；channel设为触达即失败的Proxy，实际RPC为0，未launch browser，也未执行spec主体、密码读取或业务E2E。
 - 落盘源码精确匹配提案，完整AST仅上述两个属性的次序变化；未混viewport/screenshot的更宽RPC或文件写入链，未触及production页面、MonitorConfig、union或Vue属性。9文件lint484→434 errors，0 warnings，逐文件各规则无新增，其余诊断保留。
 - 既有全Web167文件3692项单元测试及应用类型检查通过。该unit/app-type范围不冒称执行或直接覆盖这些spec：编辑spec另有实际ESLint解析、全AST/符号和实际SDK selector字节证明，按约定未运行会触及业务的E2E。没有新增镜像测试、改变测试流程/断言、CI、规则、ignore或lock，未构建，未操作preview、数据库或真实API，未上线。
+
+## 阶段八十五：声明式Form Rule具名元数据顺序
+
+本阶段基于Root重新实扫的1130文件/8929 errors/5 warnings基线（fatal、保护规则均0，directive audit41），不以跨阶段减法代替全量扫描。18个生产SFC仅整理108个原生声明式rule对象，目标净减117条sort-objects；本阶段未重扫全局，因此不宣称新的全仓错误总量。
+
+- 元数据限type/required/min/max/len/pattern/enum/whitespace/message/trigger，值为literal、原RegExp或原序literal数组；不纳validator/asyncValidator/transform/defaultField、函数、member、call或其它数据对象。只重排rule内部具名属性，outer字段字典和rule数组每个元素原位，全部属性/正则raw、opaque callbacks及其它全AST保持，注释归属歧义0。
+- scope追踪确认真实a-form/a-form-item消费，无脚本整map逃逸；computed内局部rules只作原named字段赋值并返回Vue getter。已安装AntD FormItem保持selfRules优先，部分字段既有覆盖不会被激活或修复，本批不变更该业务语义。validateUtil克隆后删除trigger/ruleIndex，async-validator按具名元数据读取；其Object.keys(rule)仅用于移除message后判断唯一required，不依赖这些多字段的排列。Form随后只合并errors及warningOnly，不向业务返回rule字典。
+- 私有差分使用实际AntD Form/FormItem.validateFields及原生async-validator：108对象×12有效/无效/Unicode值×3种validateFirst×4组submit/blur/change、first/firstFields选项，共15552组前后对照。完整校验结果、errorFields/outOfDate/values、onValidate事件、首错及规则顺序一致；RegExp source/flags/lastIndex以独立实例比较，原生method选择引用相同，没有执行业务validator或API。
+- 磁盘源码精确匹配提案，18个SFC binding、模板/style及生产DOM/SSR保持；目标lint1406→1289 errors，0 warnings，逐文件各规则无新增。全Web现有167文件3692项单元测试及应用类型检查通过。
+- 未修改MonitorConfig、测试逻辑、CI、规则、ignore、lock或全局helper，没有新增镜像测试或构建；未操作backend、preview、数据库、凭据或真实API，未上线。

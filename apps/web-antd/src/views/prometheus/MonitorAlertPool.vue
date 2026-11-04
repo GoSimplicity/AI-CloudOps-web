@@ -222,12 +222,12 @@ const userColumns = [
 // 表单验证规则
 const formRules = {
   name: [
-    { required: true, message: '请输入实例池名称', trigger: 'blur' },
-    { min: 1, max: 50, message: '长度应为1到50个字符', trigger: 'blur' },
+    { message: '请输入实例池名称', required: true, trigger: 'blur' },
+    { max: 50, message: '长度应为1到50个字符', min: 1, trigger: 'blur' },
   ],
   receiver: [
-    { required: true, message: '请选择兜底接收者', trigger: 'change' },
-    { min: 1, max: 100, message: '长度应为1到100个字符', trigger: 'change' },
+    { message: '请选择兜底接收者', required: true, trigger: 'change' },
+    { max: 100, message: '长度应为1到100个字符', min: 1, trigger: 'change' },
   ],
 };
 

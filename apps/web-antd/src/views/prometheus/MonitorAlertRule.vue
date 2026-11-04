@@ -219,8 +219,8 @@ const editForm = reactive({
 });
 
 const formRules = {
-  name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
-  pool_id: [{ required: true, message: '请选择所属实例池', trigger: 'change' }],
+  name: [{ message: '请输入名称', required: true, trigger: 'blur' }],
+  pool_id: [{ message: '请选择所属实例池', required: true, trigger: 'change' }],
   ip_address: [
     {
       required: true,
@@ -234,12 +234,12 @@ const formRules = {
       trigger: 'blur',
     },
   ],
-  expr: [{ required: true, message: '请输入PromQL表达式', trigger: 'blur' }],
+  expr: [{ message: '请输入PromQL表达式', required: true, trigger: 'blur' }],
   send_group_id: [
     { message: '请选择发送组', required: true, trigger: 'change' },
   ],
-  severity: [{ required: true, message: '请选择严重性', trigger: 'change' }],
-  for_time: [{ required: true, message: '请输入持续时间', trigger: 'blur' }],
+  severity: [{ message: '请选择严重性', required: true, trigger: 'change' }],
+  for_time: [{ message: '请输入持续时间', required: true, trigger: 'blur' }],
 };
 
 // --- 响应式布局 ---

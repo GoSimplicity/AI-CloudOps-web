@@ -376,10 +376,10 @@ const regionSignature = (regions: CloudAccountRegionInput[]) =>
 
 const formRules = computed(() => ({
   name: [
-    { required: true, message: '请输入云账户名称', trigger: 'blur' },
-    { min: 2, max: 100, message: '名称长度在2-100个字符之间', trigger: 'blur' },
+    { message: '请输入云账户名称', required: true, trigger: 'blur' },
+    { max: 100, message: '名称长度在2-100个字符之间', min: 2, trigger: 'blur' },
   ],
-  provider: [{ required: true, message: '请选择云厂商', trigger: 'change' }],
+  provider: [{ message: '请选择云厂商', required: true, trigger: 'change' }],
   status: [
     {
       required: true,
@@ -436,36 +436,36 @@ const formRules = computed(() => ({
   access_key: isEdit.value
     ? [
         {
-          min: 10,
           max: 500,
           message: '新 Access Key 长度需为10至500位',
+          min: 10,
           trigger: 'blur',
         },
       ]
     : [
-        { required: true, message: '请输入 Access Key', trigger: 'blur' },
+        { message: '请输入 Access Key', required: true, trigger: 'blur' },
         {
-          min: 10,
           max: 500,
           message: 'Access Key 长度需为10至500位',
+          min: 10,
           trigger: 'blur',
         },
       ],
   secret_key: isEdit.value
     ? [
         {
-          min: 10,
           max: 500,
           message: '新 Secret Key 长度需为10至500位',
+          min: 10,
           trigger: 'blur',
         },
       ]
     : [
-        { required: true, message: '请输入 Secret Key', trigger: 'blur' },
+        { message: '请输入 Secret Key', required: true, trigger: 'blur' },
         {
-          min: 10,
           max: 500,
           message: 'Secret Key 长度需为10至500位',
+          min: 10,
           trigger: 'blur',
         },
       ],

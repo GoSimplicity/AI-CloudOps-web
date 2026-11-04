@@ -263,8 +263,8 @@ const captureFormScope = (mode: RecordFormMode) => {
 // 表单验证规则
 const formRules = {
   name: [
-    { required: true, message: '请输入记录名称', trigger: 'blur' },
-    { min: 1, max: 50, message: '长度应为1到50个字符', trigger: 'blur' },
+    { message: '请输入记录名称', required: true, trigger: 'blur' },
+    { max: 50, message: '长度应为1到50个字符', min: 1, trigger: 'blur' },
   ],
   pool_id: [
     {
@@ -305,7 +305,7 @@ const formRules = {
       trigger: 'blur',
     },
   ],
-  expr: [{ required: true, message: '请输入表达式', trigger: 'blur' }],
+  expr: [{ message: '请输入表达式', required: true, trigger: 'blur' }],
 };
 
 const getRecordStatusClass = (record: MonitorRecordRule): string => {

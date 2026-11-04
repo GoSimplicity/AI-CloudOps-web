@@ -245,18 +245,18 @@ const formData = reactive(initFormData());
 // 表单验证规则
 const formRules = computed(() => {
   const rules: any = {
-    username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-    real_name: [{ required: true, message: '请输入真实姓名', trigger: 'blur' }],
-    mobile: [{ required: true, message: '请输入手机号', trigger: 'blur' }],
+    username: [{ message: '请输入用户名', required: true, trigger: 'blur' }],
+    real_name: [{ message: '请输入真实姓名', required: true, trigger: 'blur' }],
+    mobile: [{ message: '请输入手机号', required: true, trigger: 'blur' }],
   };
 
   if (modalTitle.value === '新建用户') {
     rules.password = [
-      { required: true, message: '请输入密码', trigger: 'blur' },
-      { min: 6, message: '密码长度至少6位', trigger: 'blur' },
+      { message: '请输入密码', required: true, trigger: 'blur' },
+      { message: '密码长度至少6位', min: 6, trigger: 'blur' },
     ];
     rules.confirmPassword = [
-      { required: true, message: '请确认密码', trigger: 'blur' },
+      { message: '请确认密码', required: true, trigger: 'blur' },
       {
         validator: (_rule: any, value: string) => {
           if (value && value !== formData.password) {
@@ -275,21 +275,21 @@ const formRules = computed(() => {
 // 修改密码表单验证规则
 const formChangPwdRules = computed(() => {
   const rules: any = {
-    password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+    password: [{ message: '请输入密码', required: true, trigger: 'blur' }],
   };
 
   if (modalTitle.value === '修改密码') {
     rules.password = [
-      { required: true, message: '请输入密码', trigger: 'blur' },
-      { min: 6, message: '密码长度至少6位', trigger: 'blur' },
+      { message: '请输入密码', required: true, trigger: 'blur' },
+      { message: '密码长度至少6位', min: 6, trigger: 'blur' },
     ];
     rules.newPassword = [
-      { required: true, message: '请输入密码', trigger: 'blur' },
-      { min: 6, message: '密码长度至少6位', trigger: 'blur' },
+      { message: '请输入密码', required: true, trigger: 'blur' },
+      { message: '密码长度至少6位', min: 6, trigger: 'blur' },
     ];
 
     rules.confirmPassword = [
-      { required: true, message: '请确认密码', trigger: 'blur' },
+      { message: '请确认密码', required: true, trigger: 'blur' },
       {
         validator: (_rule: any, value: string) => {
           if (value && value !== formData.newPassword) {

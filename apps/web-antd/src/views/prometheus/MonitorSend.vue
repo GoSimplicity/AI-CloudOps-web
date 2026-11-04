@@ -370,15 +370,15 @@ onBeforeUnmount(() => {
 // 表单验证规则
 const formRules = {
   name: [
-    { required: true, message: '请输入发送组名称', trigger: 'blur' },
-    { min: 2, max: 50, message: '长度应为2到50个字符', trigger: 'blur' },
+    { message: '请输入发送组名称', required: true, trigger: 'blur' },
+    { max: 50, message: '长度应为2到50个字符', min: 2, trigger: 'blur' },
   ],
   name_zh: [
-    { required: true, message: '请输入发送组中文名称', trigger: 'blur' },
-    { min: 2, max: 50, message: '长度应为2到50个字符', trigger: 'blur' },
+    { message: '请输入发送组中文名称', required: true, trigger: 'blur' },
+    { max: 50, message: '长度应为2到50个字符', min: 2, trigger: 'blur' },
   ],
   pool_id: [
-    { required: true, message: '请选择关联AlertManager池', trigger: 'change' },
+    { message: '请选择关联AlertManager池', required: true, trigger: 'change' },
   ],
 };
 

@@ -251,21 +251,21 @@ function currentRecord(ticket: RecordTicket) {
 const formRules = {
   name: [
     {
-      required: true,
       message: '请输入采集池名称',
+      required: true,
       trigger: 'blur',
       whitespace: true,
     },
-    { min: 1, max: 50, message: '长度应为1到50个字符', trigger: 'blur' },
+    { max: 50, message: '长度应为1到50个字符', min: 1, trigger: 'blur' },
   ],
   scrape_interval: [
-    { required: true, message: '请输入采集间隔', trigger: 'blur' },
+    { message: '请输入采集间隔', required: true, trigger: 'blur' },
   ],
   scrape_timeout: [
-    { required: true, message: '请输入采集超时时间', trigger: 'blur' },
+    { message: '请输入采集超时时间', required: true, trigger: 'blur' },
   ],
   remote_timeout_seconds: [
-    { required: true, message: '请输入远程超时时间', trigger: 'blur' },
+    { message: '请输入远程超时时间', required: true, trigger: 'blur' },
   ],
 };
 

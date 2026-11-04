@@ -253,42 +253,42 @@ const paginationConfig = computed(() => ({
 
 const formRules = computed(() => ({
   name: [
-    { required: true, message: '请输入服务器名称', trigger: 'blur' },
-    { min: 2, max: 50, message: '名称长度在2-50个字符之间', trigger: 'blur' },
+    { message: '请输入服务器名称', required: true, trigger: 'blur' },
+    { max: 50, message: '名称长度在2-50个字符之间', min: 2, trigger: 'blur' },
   ],
   ip_addr: [
-    { required: true, message: '请输入IP地址', trigger: 'blur' },
+    { message: '请输入IP地址', required: true, trigger: 'blur' },
     {
+      message: 'IP地址格式不正确',
       pattern:
         /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/,
-      message: 'IP地址格式不正确',
       trigger: 'blur',
     },
   ],
   port: [
-    { required: true, message: '请输入SSH端口', trigger: 'blur' },
+    { message: '请输入SSH端口', required: true, trigger: 'blur' },
     {
-      type: 'number',
-      min: 1,
       max: 65_535,
       message: '端口范围为1-65535',
+      min: 1,
       trigger: 'blur',
+      type: 'number',
     },
   ],
   username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 1, max: 50, message: '用户名长度在1-50个字符之间', trigger: 'blur' },
+    { message: '请输入用户名', required: true, trigger: 'blur' },
+    { max: 50, message: '用户名长度在1-50个字符之间', min: 1, trigger: 'blur' },
   ],
   os_type: [
-    { required: true, message: '请选择操作系统类型', trigger: 'change' },
+    { message: '请选择操作系统类型', required: true, trigger: 'change' },
   ],
-  auth_mode: [{ required: true, message: '请选择认证方式', trigger: 'change' }],
+  auth_mode: [{ message: '请选择认证方式', required: true, trigger: 'change' }],
   password:
     formData.value.auth_mode === AuthMode.PASSWORD &&
     (!isEdit.value || existingAuthMode.value !== AuthMode.PASSWORD)
       ? [
-          { required: true, message: '请输入登录密码', trigger: 'blur' },
-          { min: 6, message: '密码长度至少6位', trigger: 'blur' },
+          { message: '请输入登录密码', required: true, trigger: 'blur' },
+          { message: '密码长度至少6位', min: 6, trigger: 'blur' },
         ]
       : [],
   key:

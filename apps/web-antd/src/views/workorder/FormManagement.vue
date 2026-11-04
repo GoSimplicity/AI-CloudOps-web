@@ -205,10 +205,10 @@ const previewDialog = reactive({
 // 表单验证规则
 const formRules = {
   name: [
-    { required: true, message: '请输入表单名称', trigger: 'blur' },
-    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' },
+    { message: '请输入表单名称', required: true, trigger: 'blur' },
+    { max: 50, message: '长度应为3到50个字符', min: 3, trigger: 'blur' },
   ],
-  category_id: [{ required: true, message: '请选择分类', trigger: 'change' }],
+  category_id: [{ message: '请选择分类', required: true, trigger: 'change' }],
 };
 
 // 字段帮助文本

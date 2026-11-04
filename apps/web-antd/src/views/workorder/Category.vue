@@ -225,10 +225,10 @@ onUnmounted(() => {
  */
 const formRules = {
   name: [
-    { required: true, message: '请输入分类名称', trigger: 'blur' },
-    { min: 2, max: 100, message: '分类名称长度为2-100个字符', trigger: 'blur' },
+    { message: '请输入分类名称', required: true, trigger: 'blur' },
+    { max: 100, message: '分类名称长度为2-100个字符', min: 2, trigger: 'blur' },
   ],
-  status: [{ required: true, message: '请选择状态', trigger: 'change' }],
+  status: [{ message: '请选择状态', required: true, trigger: 'change' }],
 };
 
 /**

@@ -422,35 +422,35 @@ const addressError = (channel: string, raw: string) => {
 
 // 表单验证规则
 const notificationRules = {
-  name: [{ required: true, message: '请输入配置名称', trigger: 'blur' }],
+  name: [{ message: '请输入配置名称', required: true, trigger: 'blur' }],
   eventTypes: [
     {
-      required: true,
-      type: 'array',
-      min: 1,
       message: '请选择至少一个触发事件',
+      min: 1,
+      required: true,
       trigger: 'change',
+      type: 'array',
     },
   ],
   triggerType: [
-    { required: true, message: '请选择触发类型', trigger: 'change' },
+    { message: '请选择触发类型', required: true, trigger: 'change' },
   ],
   channels: [
     {
-      required: true,
-      type: 'array',
-      min: 1,
       message: '请选择至少一个通知渠道',
+      min: 1,
+      required: true,
       trigger: 'change',
+      type: 'array',
     },
   ],
   recipientTypes: [
     {
-      required: true,
-      type: 'array',
-      min: 1,
       message: '请选择至少一种接收人类型',
+      min: 1,
+      required: true,
       trigger: 'change',
+      type: 'array',
     },
   ],
   recipientUsers: [
@@ -484,43 +484,43 @@ const notificationRules = {
     },
   ],
   messageTemplate: [
-    { required: true, message: '请输入消息模板', trigger: 'blur' },
+    { message: '请输入消息模板', required: true, trigger: 'blur' },
   ],
   maxRetries: [
     {
-      required: true,
-      type: 'number',
-      min: 0,
       max: 100,
       message: '最大重试次数必须在0-100之间',
+      min: 0,
+      required: true,
       trigger: 'blur',
+      type: 'number',
     },
   ],
   retryInterval: [
     {
-      required: true,
-      type: 'number',
-      min: 1,
       message: '重试间隔必须大于0',
+      min: 1,
+      required: true,
       trigger: 'blur',
+      type: 'number',
     },
   ],
-  priority: [{ required: true, message: '请选择优先级', trigger: 'change' }],
+  priority: [{ message: '请选择优先级', required: true, trigger: 'change' }],
 };
 
 // 手动发送验证规则
 const manualSendRules = {
   channels: [
     {
-      required: true,
-      type: 'array',
-      min: 1,
       message: '请选择至少一个通知渠道',
+      min: 1,
+      required: true,
       trigger: 'change',
+      type: 'array',
     },
   ],
   recipient: [
-    { required: true, message: '请输入接收人地址', trigger: 'blur' },
+    { message: '请输入接收人地址', required: true, trigger: 'blur' },
     {
       validator: (_rule: any, value: string, callback: Function) => {
         if (!value || !value.trim()) {
@@ -551,8 +551,8 @@ const manualSendRules = {
       trigger: 'blur',
     },
   ],
-  subject: [{ required: true, message: '请输入通知主题', trigger: 'blur' }],
-  content: [{ required: true, message: '请输入通知内容', trigger: 'blur' }],
+  subject: [{ message: '请输入通知主题', required: true, trigger: 'blur' }],
+  content: [{ message: '请输入通知内容', required: true, trigger: 'blur' }],
 };
 
 // 计算统计数据

@@ -171,8 +171,8 @@ const resourcePagination = reactive({
 // 表单验证规则
 const formRules = {
   name: [
-    { required: true, message: '请输入节点名称', trigger: 'blur' },
-    { min: 2, max: 50, message: '长度应为2到50个字符', trigger: 'blur' },
+    { message: '请输入节点名称', required: true, trigger: 'blur' },
+    { max: 50, message: '长度应为2到50个字符', min: 2, trigger: 'blur' },
   ],
 };
 

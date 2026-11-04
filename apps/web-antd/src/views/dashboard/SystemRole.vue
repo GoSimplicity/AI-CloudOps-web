@@ -107,9 +107,9 @@ const formData = reactive(initFormData());
 
 // 表单验证规则
 const formRules = {
-  name: [{ required: true, message: '请输入角色名称', trigger: 'blur' }],
-  code: [{ required: true, message: '请输入角色编码', trigger: 'blur' }],
-  status: [{ required: true, message: '请选择状态', trigger: 'change' }],
+  name: [{ message: '请输入角色名称', required: true, trigger: 'blur' }],
+  code: [{ message: '请输入角色编码', required: true, trigger: 'blur' }],
+  status: [{ message: '请选择状态', required: true, trigger: 'change' }],
 };
 
 // 计算属性

@@ -366,12 +366,12 @@ const instanceDialog = reactive({
 // 表单验证规则
 const formRules = {
   title: [
-    { required: true, message: '请输入工单标题', trigger: 'blur' },
-    { min: 1, max: 200, message: '长度应为1到200个字符', trigger: 'blur' },
+    { message: '请输入工单标题', required: true, trigger: 'blur' },
+    { max: 200, message: '长度应为1到200个字符', min: 1, trigger: 'blur' },
   ],
-  priority: [{ required: true, message: '请选择优先级', trigger: 'change' }],
+  priority: [{ message: '请选择优先级', required: true, trigger: 'change' }],
   process_id: [
-    { required: true, message: '请选择关联流程', trigger: 'change' },
+    { message: '请选择关联流程', required: true, trigger: 'change' },
   ],
 };
 

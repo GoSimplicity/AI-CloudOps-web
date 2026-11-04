@@ -351,23 +351,23 @@ function validStaticTarget(value: unknown): boolean {
 const formRules = computed(() => ({
   name: [
     {
-      required: true,
       message: '请输入采集任务名称',
+      required: true,
       trigger: 'blur',
       whitespace: true,
     },
-    { min: 1, max: 50, message: '长度应为1到50个字符', trigger: 'blur' },
+    { max: 50, message: '长度应为1到50个字符', min: 1, trigger: 'blur' },
   ],
   service_discovery_type: [
-    { required: true, message: '请选择服务发现类型', trigger: 'change' },
+    { message: '请选择服务发现类型', required: true, trigger: 'change' },
   ],
-  scheme: [{ required: true, message: '请选择协议方案', trigger: 'change' }],
+  scheme: [{ message: '请选择协议方案', required: true, trigger: 'change' }],
   metrics_path: [
-    { required: true, message: '请输入监控采集路径', trigger: 'blur' },
+    { message: '请输入监控采集路径', required: true, trigger: 'blur' },
   ],
-  pool_id: [{ required: true, message: '请选择关联采集池', trigger: 'change' }],
+  pool_id: [{ message: '请选择关联采集池', required: true, trigger: 'change' }],
   scrape_interval: [
-    { required: true, message: '请输入采集间隔', trigger: 'blur' },
+    { message: '请输入采集间隔', required: true, trigger: 'blur' },
     {
       message: '采集间隔必须为非负整数',
       min: 0,
@@ -376,7 +376,7 @@ const formRules = computed(() => ({
     },
   ],
   scrape_timeout: [
-    { required: true, message: '请输入采集超时', trigger: 'blur' },
+    { message: '请输入采集超时', required: true, trigger: 'blur' },
     {
       message: '采集超时必须为非负整数',
       min: 0,
@@ -385,7 +385,7 @@ const formRules = computed(() => ({
     },
   ],
   refresh_interval: [
-    { required: true, message: '请输入刷新间隔', trigger: 'blur' },
+    { message: '请输入刷新间隔', required: true, trigger: 'blur' },
     {
       message: '刷新间隔必须为非负整数',
       min: 0,
@@ -395,19 +395,19 @@ const formRules = computed(() => ({
   ],
   port: [
     ...(formDialog.form.service_discovery_type === ServiceDiscoveryType.Static
-      ? [{ required: true, message: '请输入端口', trigger: 'blur' }]
+      ? [{ message: '请输入端口', required: true, trigger: 'blur' }]
       : []),
     {
-      type: 'integer' as const,
-      min: 0,
       max: 65_535,
       message: '端口必须为0或1-65535的整数',
+      min: 0,
       trigger: 'blur',
+      type: 'integer' as const,
     },
   ],
   ip_address: [
     ...(formDialog.form.service_discovery_type === ServiceDiscoveryType.Static
-      ? [{ required: true, message: '请输入目标主机或IP地址', trigger: 'blur' }]
+      ? [{ message: '请输入目标主机或IP地址', required: true, trigger: 'blur' }]
       : []),
     {
       trigger: 'blur',

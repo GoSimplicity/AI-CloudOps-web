@@ -321,7 +321,7 @@ const historyDateRange = ref<[Dayjs, Dayjs] | null>(null);
 // 表单验证规则
 const formRules = {
   name: [
-    { required: true, message: '请输入值班组名称', trigger: 'blur' },
+    { message: '请输入值班组名称', required: true, trigger: 'blur' },
     {
       min: 1,
       max: 50,
@@ -332,11 +332,11 @@ const formRules = {
   ],
   shift_days: [
     {
-      required: true,
-      type: 'integer' as const,
-      min: 1,
       message: '请输入正整数轮班周期',
+      min: 1,
+      required: true,
       trigger: 'blur',
+      type: 'integer' as const,
     },
   ],
   description: [
@@ -348,17 +348,17 @@ const formRules = {
     },
   ],
   user_ids: [
-    { required: true, message: '请选择至少一个值班成员', trigger: 'change' },
+    { message: '请选择至少一个值班成员', required: true, trigger: 'change' },
   ],
 };
 
 const changeFormRules = {
-  date: [{ required: true, message: '请选择调班日期', trigger: 'change' }],
+  date: [{ message: '请选择调班日期', required: true, trigger: 'change' }],
   origin_user_id: [
-    { required: true, message: '请选择原值班人员', trigger: 'change' },
+    { message: '请选择原值班人员', required: true, trigger: 'change' },
   ],
   on_duty_user_id: [
-    { required: true, message: '请选择调班后人员', trigger: 'change' },
+    { message: '请选择调班后人员', required: true, trigger: 'change' },
   ],
 };
 
