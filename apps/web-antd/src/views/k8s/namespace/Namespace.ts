@@ -724,112 +724,112 @@ export function useNamespacePage() {
 
   return {
     // state
-    namespaces,
     clusters,
-    loadError,
     clustersError,
-    loading,
     clustersLoading,
-    searchText,
-    filterStatus,
-    filterClusterId,
-    filterLabels,
-    selectedRowKeys,
-    selectedRows,
-    currentPage,
-    pageSize,
-    total,
-    clustersTotal,
     clustersPage,
     clustersSize,
+    clustersTotal,
+    currentPage,
+    filterClusterId,
+    filterLabels,
+    filterStatus,
+    loadError,
+    loading,
+    namespaces,
+    pageSize,
+    searchText,
+    selectedRowKeys,
+    selectedRows,
+    total,
 
     // form refs
-    labelFormRef,
     createFormRef,
+    labelFormRef,
 
     // modal state
-    isLabelModalVisible,
     isCreateModalVisible,
     isDeleteModalVisible,
     isLabelEdit,
+    isLabelModalVisible,
     submitLoading,
 
     // detail modal
-    isDetailModalVisible,
-    detailLoading,
     currentNamespaceDetail,
+    detailLoading,
+    isDetailModalVisible,
 
     // operation target
     currentOperationNamespace,
 
     // form models
-    labelFormModel,
     createFormModel,
     deleteFormModel,
+    labelFormModel,
     labelsFilterFormModel,
 
     // form rules
-    labelFormRules,
     createFormRules,
     deleteFormRules,
+    labelFormRules,
 
     // computed
     filteredNamespaces,
     rowSelection,
 
     // helpers
-    getEnvText,
-    getStatusText,
-    getStatusColor,
-    getPhaseText,
-    getPhaseColor,
     getClusterName,
-    recordToKeyValueList,
-    keyValueListToRecord,
-    hasSystemLabels,
-    hasUserLabels,
+    getEnvText,
+    getPhaseColor,
+    getPhaseText,
+    getStatusColor,
+    getStatusText,
     getSystemLabelsFromKeyValueList,
     getUserLabelsFromKeyValueList,
+    hasSystemLabels,
+    hasUserLabels,
+    keyValueListToRecord,
+    recordToKeyValueList,
 
     // operations
+    clearNamespaces,
+    closeDetailModal,
     fetchClusters,
     fetchNamespaces,
-    clearNamespaces,
     showNamespaceDetail,
-    closeDetailModal,
 
     // create operations
-    openCreateModal,
     closeCreateModal,
+    openCreateModal,
     submitCreateForm,
 
     // label operations
-    openEditLabelModal,
     closeLabelModal,
-    submitLabelForm,
-    removeLabelField,
+    openEditLabelModal,
     removeAnnotationField,
-    removeCreateLabelField,
     removeCreateAnnotationField,
+    removeCreateLabelField,
+    removeLabelField,
+    submitLabelForm,
 
     // delete operations
+    closeDeleteModal,
     deleteNamespace,
     forceDeleteNamespace,
-    closeDeleteModal,
     submitDeleteForm,
 
     // filter operations
     addFilterLabel,
-    removeFilterLabel,
     clearFilterLabels,
+    removeFilterLabel,
 
     // batch operations
     batchOperation,
 
     // cluster pagination
+    handlePageChange,
     loadMoreClusters,
     resetClusters,
-    handlePageChange,
 
     // constants
     NamespaceStatus,

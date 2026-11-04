@@ -940,49 +940,49 @@ export function useNodePage() {
 
   return {
     // state
-    nodes,
     clusters,
-    loading,
-    loadError,
     clustersError,
     clustersLoading,
-    searchText,
-    filterStatus,
-    filterClusterId,
-    selectedRowKeys,
-    selectedRows,
-    currentPage,
-    pageSize,
-    total,
-    clustersTotal,
     clustersPage,
     clustersSize,
+    clustersTotal,
+    currentPage,
+    filterClusterId,
+    filterStatus,
+    loadError,
+    loading,
+    nodes,
+    pageSize,
+    searchText,
+    selectedRowKeys,
+    selectedRows,
+    total,
 
     // form refs
+    drainFormRef,
     labelFormRef,
     taintFormRef,
-    drainFormRef,
 
     // modal state
+    isDrainModalVisible,
     isLabelModalVisible,
     isTaintModalVisible,
-    isDrainModalVisible,
     submitLoading,
 
     // detail modal
-    isDetailModalVisible,
-    detailLoading,
     currentNodeDetail,
+    detailLoading,
+    isDetailModalVisible,
 
     // form models
+    drainFormModel,
     labelFormModel,
     taintFormModel,
-    drainFormModel,
 
     // form rules
+    drainFormRules,
     labelFormRules,
     taintFormRules,
-    drainFormRules,
 
     // computed
     filteredNodes,
@@ -990,49 +990,49 @@ export function useNodePage() {
 
     // helpers
     getEnvText,
-    getStatusText,
-    getStatusColor,
-    getSchedulableText,
     getSchedulableColor,
+    getSchedulableText,
+    getStatusColor,
+    getStatusText,
 
     // operations
+    clearNodes,
+    closeDetailModal,
     fetchClusters,
     fetchNodes,
-    clearNodes,
     showNodeDetail,
-    closeDetailModal,
 
     // label operations
-    openEditLabelModal,
     closeLabelModal,
-    submitLabelForm,
+    openEditLabelModal,
     removeLabelField,
+    submitLabelForm,
 
     // taint operations
-    openTaintModal,
-    closeTaintModal,
     addTaint,
-    removeTaint,
-    isNewTaint,
-    submitTaintForm,
+    closeTaintModal,
     hasTaintChanges,
+    isNewTaint,
+    openTaintModal,
+    removeTaint,
+    submitTaintForm,
     validateTaintYaml,
 
     // schedule operations
     toggleNodeSchedule,
 
     // drain operations
-    openDrainModal,
     closeDrainModal,
+    openDrainModal,
     submitDrainForm,
 
     // batch operations
     batchOperation,
 
     // cluster pagination
+    handlePageChange,
     loadMoreClusters,
     resetClusters,
-    handlePageChange,
 
     // constants
     NodeStatus,

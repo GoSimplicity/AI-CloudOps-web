@@ -1405,163 +1405,163 @@ export function useDeploymentPage() {
 
   return {
     // state
-    loadError,
-    clustersError,
-    namespacesError,
-    deployments,
     clusters,
-    namespaces,
-    loading,
+    clustersError,
     clustersLoading,
-    namespacesLoading,
-    searchText,
-    filterStatus,
-    filterClusterId,
-    filterNamespace,
-    filterLabels,
-    selectedRowKeys,
-    selectedRows,
-    currentPage,
-    pageSize,
-    total,
-    clustersTotal,
     clustersPage,
     clustersSize,
-    namespacesTotal,
+    clustersTotal,
+    currentPage,
+    deployments,
+    filterClusterId,
+    filterLabels,
+    filterNamespace,
+    filterStatus,
+    loadError,
+    loading,
+    namespaces,
+    namespacesError,
+    namespacesLoading,
     namespacesPage,
     namespacesSize,
+    namespacesTotal,
+    pageSize,
+    searchText,
+    selectedRowKeys,
+    selectedRows,
+    total,
 
     // form refs
-    formRef,
+    createYamlFormRef,
     editFormRef,
+    formRef,
     scaleFormRef,
     yamlFormRef,
-    createYamlFormRef,
 
     // modal state
+    detailLoading,
     isCreateModalVisible,
     isCreateYamlModalVisible,
-    isEditModalVisible,
     isDetailModalVisible,
+    isEditModalVisible,
+    isHistoryModalVisible,
+    isPodModalVisible,
     isScaleModalVisible,
     isYamlModalVisible,
-    isPodModalVisible,
-    isHistoryModalVisible,
     submitLoading,
-    detailLoading,
 
     // operation targets
-    currentOperationDeployment,
     currentDeploymentDetail,
+    currentOperationDeployment,
     currentYamlContent,
-    deploymentPods,
     deploymentHistory,
+    deploymentPods,
 
     // form models
     createFormModel,
+    createYamlFormModel,
     editFormModel,
     scaleFormModel,
     yamlFormModel,
-    createYamlFormModel,
 
     // form rules
     createFormRules,
+    createYamlFormRules,
     editFormRules,
     scaleFormRules,
     yamlFormRules,
-    createYamlFormRules,
 
     // computed
     filteredDeployments,
     rowSelection,
 
     // helpers
-    validateClusterId,
     getEnvText,
-    getStatusText,
     getStatusColor,
-    recordToKeyValueList,
+    getStatusText,
     keyValueListToRecord,
+    recordToKeyValueList,
+    validateClusterId,
 
     // operations
-    fetchClusters,
-    fetchNamespaces,
-    fetchDeployments,
     clearDeployments,
     clearNamespaces,
+    fetchClusters,
+    fetchDeployments,
+    fetchNamespaces,
     loadMoreClusters,
     loadMoreNamespaces,
 
     // detail operations
-    showDeploymentDetail,
     closeDetailModal,
+    showDeploymentDetail,
 
     // YAML operations
-    showYamlModal,
     closeYamlModal,
+    showYamlModal,
     submitYamlForm,
 
     // create operations
-    openCreateModal,
     closeCreateModal,
-    submitCreateForm,
-    openCreateYamlModal,
     closeCreateYamlModal,
+    openCreateModal,
+    openCreateYamlModal,
+    submitCreateForm,
     submitCreateYamlForm,
 
     // edit operations
-    openEditModal,
     closeEditModal,
+    openEditModal,
     submitEditForm,
 
     // deployment operations
     deleteDeployment,
-    restartDeployment,
     pauseDeployment,
+    restartDeployment,
     resumeDeployment,
 
     // scale operations
-    openScaleModal,
     closeScaleModal,
+    openScaleModal,
     submitScaleForm,
 
     // pod operations
-    showPodModal,
     closePodModal,
+    showPodModal,
 
     // history operations
+    closeHistoryModal,
     historyLoading,
     isHistoryCurrent,
     showHistoryModal,
-    closeHistoryModal,
 
     // filter operations
     addFilterLabel,
-    removeFilterLabel,
     clearFilterLabels,
+    removeFilterLabel,
 
     // batch operations
     batchOperation,
 
     // pagination operations
-    resetClusters,
     handlePageChange,
+    resetClusters,
 
     // form field operations
-    addImageField,
-    removeImageField,
-    addLabelField,
-    removeLabelField,
     addAnnotationField,
+    addImageField,
+    addLabelField,
     removeAnnotationField,
+    removeImageField,
+    removeLabelField,
 
     // yaml operations
-    insertYamlTemplate,
-    formatYaml,
-    validateYaml,
     clearYaml,
     formatEditYaml,
+    formatYaml,
+    insertYamlTemplate,
     validateEditYaml,
+    validateYaml,
 
     // constants
     K8sDeploymentStatus,

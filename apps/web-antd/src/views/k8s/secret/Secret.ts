@@ -1494,62 +1494,62 @@ export function useSecretPage() {
 
   return {
     // SEC-25/26 reveal / data 编辑
+    addEditDataRow,
+    clearRevealedValues,
+    editDataLoading,
+    editDataRows,
+    getEditDataRowError,
+    getPlainValueForCopy,
+    hideRevealedKey,
+    removeEditDataRow,
+    resetEditDataRow,
     revealedValues,
     revealingKeys,
-    secretDetailDataKeys,
     revealSecretKey,
-    hideRevealedKey,
-    getPlainValueForCopy,
-    clearRevealedValues,
-    editDataRows,
-    editDataLoading,
+    secretDetailDataKeys,
     setEditDataValue,
-    resetEditDataRow,
-    removeEditDataRow,
-    addEditDataRow,
-    getEditDataRowError,
 
     // state
-    secrets,
     clusters,
-    namespaces,
-    loading,
-    loadError,
     clustersError,
-    namespacesError,
     clustersLoading,
-    namespacesLoading,
-    searchText,
-    filterClusterId,
-    filterNamespace,
-    filterType,
-    filterLabels,
-    selectedRowKeys,
-    selectedRows,
-    currentPage,
-    pageSize,
-    total,
-    clustersTotal,
     clustersPage,
     clustersSize,
-    namespacesTotal,
+    clustersTotal,
+    currentPage,
+    filterClusterId,
+    filterLabels,
+    filterNamespace,
+    filterType,
+    loadError,
+    loading,
+    namespaces,
+    namespacesError,
+    namespacesLoading,
     namespacesPage,
     namespacesSize,
+    namespacesTotal,
+    pageSize,
+    searchText,
+    secrets,
+    selectedRowKeys,
+    selectedRows,
+    total,
 
     // form refs
+    createYamlFormRef,
     formRef,
     yamlFormRef,
-    createYamlFormRef,
 
     // modal state
+    detailLoading,
     isCreateModalVisible,
     isCreateYamlModalVisible,
-    isEditModalVisible,
     isDetailModalVisible,
+    isEditModalVisible,
+    isYamlLoading,
     isYamlModalVisible,
     submitLoading,
-    detailLoading,
-    isYamlLoading,
 
     // operation targets
     currentOperationSecret,
@@ -1557,57 +1557,57 @@ export function useSecretPage() {
 
     // form models
     createFormModel,
+    createYamlFormModel,
     editFormModel,
     yamlFormModel,
-    createYamlFormModel,
 
     // form rules
     createFormRules,
-    yamlFormRules,
     createYamlFormRules,
+    yamlFormRules,
 
     // computed
     filteredSecrets,
     rowSelection,
 
     // helpers
-    validateClusterId,
     getEnvText,
     getSecretTypeText,
-    recordToKeyValueList,
+    K8sSecretType,
     keyValueListToRecord,
     parseJsonField,
-    K8sSecretType,
+    recordToKeyValueList,
+    validateClusterId,
 
     // operations
+    clearNamespaces,
+    clearSecrets,
     fetchClusters,
     fetchNamespaces,
     fetchSecrets,
-    clearSecrets,
-    clearNamespaces,
     loadMoreClusters,
     loadMoreNamespaces,
 
     // detail operations
-    showSecretDetail,
     closeDetailModal,
+    showSecretDetail,
 
     // YAML operations
-    showYamlModal,
     closeYamlModal,
+    showYamlModal,
     submitYamlForm,
 
     // create operations
-    openCreateModal,
     closeCreateModal,
-    submitCreateForm,
-    openCreateYamlModal,
     closeCreateYamlModal,
+    openCreateModal,
+    openCreateYamlModal,
+    submitCreateForm,
     submitCreateYamlForm,
 
     // edit operations
-    openEditModal,
     closeEditModal,
+    openEditModal,
     submitEditForm,
 
     // secret operations
@@ -1615,32 +1615,32 @@ export function useSecretPage() {
 
     // filter operations
     addFilterLabel,
-    removeFilterLabel,
     clearFilterLabels,
+    removeFilterLabel,
 
     // batch operations
     batchOperation,
 
     // pagination operations
-    resetClusters,
     handlePageChange,
+    resetClusters,
 
     // form field operations
+    removeAnnotationField,
     removeDataField,
+    removeEditAnnotationField,
     removeEditDataField,
-    removeStringDataField,
+    removeEditLabelField,
     removeEditStringDataField,
     removeLabelField,
-    removeEditLabelField,
-    removeAnnotationField,
-    removeEditAnnotationField,
+    removeStringDataField,
 
     // yaml operations
-    insertYamlTemplate,
-    formatYaml,
-    validateYaml,
     clearYaml,
     formatEditYaml,
+    formatYaml,
+    insertYamlTemplate,
     validateEditYaml,
+    validateYaml,
   };
 }

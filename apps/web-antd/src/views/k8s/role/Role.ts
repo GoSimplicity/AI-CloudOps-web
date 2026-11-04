@@ -1284,34 +1284,34 @@ export function useRolePage() {
 
   return {
     // state
-    roles,
     clusters,
-    namespaces,
-    loading,
-    loadError,
     clustersError,
-    namespacesError,
     clustersLoading,
-    namespacesLoading,
-    searchText,
-    filterClusterId,
-    filterNamespace,
-    filterLabels,
-    selectedRows,
-    currentPage,
-    pageSize,
-    total,
     clustersTotal,
+    currentPage,
+    filterClusterId,
+    filterLabels,
+    filterNamespace,
+    loadError,
+    loading,
+    namespaces,
+    namespacesError,
+    namespacesLoading,
     namespacesTotal,
+    pageSize,
+    roles,
+    searchText,
+    selectedRows,
+    total,
 
     // modal state
+    detailLoading,
     isCreateModalVisible,
     isCreateYamlModalVisible,
-    isEditModalVisible,
     isDetailModalVisible,
+    isEditModalVisible,
     isYamlModalVisible,
     submitLoading,
-    detailLoading,
 
     // operation targets
     currentOperationRole,
@@ -1319,20 +1319,20 @@ export function useRolePage() {
 
     // form models
     createFormModel,
-    editFormModel,
     createYamlFormModel,
+    editFormModel,
     yamlFormModel,
 
     // form refs
-    formRef,
-    editFormRef,
-    yamlFormRef,
     createYamlFormRef,
+    editFormRef,
+    formRef,
+    yamlFormRef,
 
     // form rules
     createFormRules,
-    editFormRules,
     createYamlFormRules,
+    editFormRules,
     yamlFormRules,
 
     // computed
@@ -1340,38 +1340,38 @@ export function useRolePage() {
     rowSelection,
 
     // helpers
-    validateClusterId,
     getEnvText,
+    validateClusterId,
 
     // operations
+    clearNamespaces,
+    clearRoles,
     fetchClusters,
     fetchNamespaces,
     fetchRoles,
-    clearRoles,
-    clearNamespaces,
     loadMoreClusters,
     loadMoreNamespaces,
 
     // detail operations
-    showRoleDetail,
     closeDetailModal,
+    showRoleDetail,
 
     // YAML operations
-    showYamlModal,
     closeYamlModal,
+    showYamlModal,
     submitYamlForm,
 
     // create operations
-    openCreateModal,
     closeCreateModal,
-    submitCreateForm,
-    openCreateYamlModal,
     closeCreateYamlModal,
+    openCreateModal,
+    openCreateYamlModal,
+    submitCreateForm,
     submitCreateYamlForm,
 
     // edit operations
-    openEditModal,
     closeEditModal,
+    openEditModal,
     submitEditForm,
 
     // role operations
@@ -1379,8 +1379,8 @@ export function useRolePage() {
 
     // filter operations
     addFilterLabel,
-    removeFilterLabel,
     clearFilterLabels,
+    removeFilterLabel,
 
     // batch operations
     batchOperation,
@@ -1389,23 +1389,23 @@ export function useRolePage() {
     handlePageChange,
 
     // form field operations
-    addRuleField,
-    removeRuleField,
-    addVerbToRule,
-    removeVerbFromRule,
     addApiGroupToRule,
-    removeApiGroupFromRule,
     addResourceToRule,
-    removeResourceFromRule,
-    removeLabelField,
+    addRuleField,
+    addVerbToRule,
     removeAnnotationField,
+    removeApiGroupFromRule,
+    removeLabelField,
+    removeResourceFromRule,
+    removeRuleField,
+    removeVerbFromRule,
 
     // YAML utility functions
-    insertYamlTemplate,
-    formatYaml,
-    validateYaml,
     clearYaml,
     formatEditYaml,
+    formatYaml,
+    insertYamlTemplate,
     validateEditYaml,
+    validateYaml,
   };
 }

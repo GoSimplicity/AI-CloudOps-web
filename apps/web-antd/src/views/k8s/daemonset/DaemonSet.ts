@@ -1301,106 +1301,106 @@ export function useDaemonSetPage() {
 
   return {
     // state
-    daemonSets,
     clusters,
-    namespaces,
-    loading,
-    loadError,
     clustersError,
-    namespacesError,
     clustersLoading,
-    namespacesLoading,
-    searchText,
-    filterStatus,
-    filterClusterId,
-    filterNamespace,
-    filterLabels,
-    selectedRowKeys,
-    selectedRows,
-    currentPage,
-    pageSize,
-    total,
-    clustersTotal,
     clustersPage,
     clustersSize,
-    namespacesTotal,
+    clustersTotal,
+    currentPage,
+    daemonSets,
+    filterClusterId,
+    filterLabels,
+    filterNamespace,
+    filterStatus,
+    loadError,
+    loading,
+    namespaces,
+    namespacesError,
+    namespacesLoading,
     namespacesPage,
     namespacesSize,
+    namespacesTotal,
+    pageSize,
+    searchText,
+    selectedRowKeys,
+    selectedRows,
+    total,
 
     // form refs
-    formRef,
+    createYamlFormRef,
     editFormRef,
+    formRef,
     rollbackFormRef,
     yamlFormRef,
-    createYamlFormRef,
 
     // modal state
+    detailLoading,
     isCreateModalVisible,
     isCreateYamlModalVisible,
-    isEditModalVisible,
     isDetailModalVisible,
+    isEditModalVisible,
+    isHistoryModalVisible,
+    isPodModalVisible,
     isRollbackModalVisible,
     isYamlModalVisible,
-    isPodModalVisible,
-    isHistoryModalVisible,
     submitLoading,
-    detailLoading,
 
     // operation targets
-    currentOperationDaemonSet,
     currentDaemonSetDetail,
+    currentOperationDaemonSet,
     currentYamlContent,
-    daemonSetPods,
     daemonSetHistory,
+    daemonSetPods,
 
     // form models
     createFormModel,
+    createYamlFormModel,
     editFormModel,
     rollbackFormModel,
     yamlFormModel,
-    createYamlFormModel,
 
     // form rules
     createFormRules,
+    createYamlFormRules,
     rollbackFormRules,
     yamlFormRules,
-    createYamlFormRules,
 
     // computed
     filteredDaemonSets,
     rowSelection,
 
     // helpers
-    validateClusterId,
     getEnvText,
-    getStatusText,
     getStatusColor,
+    getStatusText,
     keyValueListToRecord,
+    validateClusterId,
 
     // operations
-    fetchClusters,
-    fetchNamespaces,
-    fetchDaemonSets,
     clearDaemonSets,
     clearNamespaces,
+    fetchClusters,
+    fetchDaemonSets,
+    fetchNamespaces,
     loadMoreClusters,
     loadMoreNamespaces,
 
     // detail operations
-    showDaemonSetDetail,
     closeDetailModal,
+    showDaemonSetDetail,
 
     // YAML operations
-    showYamlModal,
     closeYamlModal,
+    showYamlModal,
     submitYamlForm,
 
     // create operations
-    openCreateModal,
     closeCreateModal,
-    submitCreateForm,
-    openCreateYamlModal,
     closeCreateYamlModal,
+    openCreateModal,
+    openCreateYamlModal,
+    submitCreateForm,
     submitCreateYamlForm,
 
     // daemonSet operations
@@ -1408,50 +1408,50 @@ export function useDaemonSetPage() {
     restartDaemonSet,
 
     // rollback operations
-    openEditModal,
     closeEditModal,
-    submitEditForm,
-    openRollbackModal,
     closeRollbackModal,
+    openEditModal,
+    openRollbackModal,
+    submitEditForm,
     submitRollbackForm,
 
     // pod operations
-    showPodModal,
     closePodModal,
+    showPodModal,
 
     // history operations
+    closeHistoryModal,
     historyLoading,
     isHistoryCurrent,
     showHistoryModal,
-    closeHistoryModal,
 
     // filter operations
     addFilterLabel,
-    removeFilterLabel,
     clearFilterLabels,
+    removeFilterLabel,
 
     // batch operations
     batchOperation,
 
     // pagination operations
-    resetClusters,
     handlePageChange,
+    resetClusters,
 
     // form field operations
     addImageField,
+    removeAnnotationField,
+    removeEditAnnotationField,
+    removeEditLabelField,
     removeImageField,
     removeLabelField,
-    removeAnnotationField,
-    removeEditLabelField,
-    removeEditAnnotationField,
 
     // yaml operations
-    insertYamlTemplate,
-    formatYaml,
-    validateYaml,
     clearYaml,
     formatEditYaml,
+    formatYaml,
+    insertYamlTemplate,
     validateEditYaml,
+    validateYaml,
 
     // constants
     K8sDaemonSetStatus,

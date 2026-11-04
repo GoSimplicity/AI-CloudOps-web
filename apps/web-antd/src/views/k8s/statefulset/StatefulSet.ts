@@ -1463,125 +1463,125 @@ export function useStatefulSetPage() {
 
   return {
     // state
-    statefulSets,
     clusters,
-    namespaces,
-    loading,
-    loadError,
     clustersError,
-    namespacesError,
     clustersLoading,
-    namespacesLoading,
-    searchText,
-    filterStatus,
-    filterClusterId,
-    filterNamespace,
-    filterServiceName,
-    filterLabels,
-    selectedRowKeys,
-    selectedRows,
-    currentPage,
-    pageSize,
-    total,
-    clustersTotal,
     clustersPage,
     clustersSize,
-    namespacesTotal,
+    clustersTotal,
+    currentPage,
+    filterClusterId,
+    filterLabels,
+    filterNamespace,
+    filterServiceName,
+    filterStatus,
+    loadError,
+    loading,
+    namespaces,
+    namespacesError,
+    namespacesLoading,
     namespacesPage,
     namespacesSize,
+    namespacesTotal,
+    pageSize,
+    searchText,
+    selectedRowKeys,
+    selectedRows,
+    statefulSets,
+    total,
 
     // form refs
-    formRef,
-    editFormRef,
-    scaleFormRef,
-    rollbackFormRef,
-    yamlFormRef,
     createYamlFormRef,
+    editFormRef,
+    formRef,
+    rollbackFormRef,
+    scaleFormRef,
+    yamlFormRef,
 
     // modal state
+    detailLoading,
     isCreateModalVisible,
     isCreateYamlModalVisible,
-    isEditModalVisible,
     isDetailModalVisible,
-    isScaleModalVisible,
-    isRollbackModalVisible,
-    isYamlModalVisible,
-    isPodModalVisible,
+    isEditModalVisible,
     isHistoryModalVisible,
+    isPodModalVisible,
+    isRollbackModalVisible,
+    isScaleModalVisible,
+    isYamlModalVisible,
     submitLoading,
-    detailLoading,
 
     // operation targets
     currentOperationStatefulSet,
     currentStatefulSetDetail,
     currentYamlContent,
-    statefulSetPods,
     statefulSetHistory,
+    statefulSetPods,
 
     // form models
     createFormModel,
-    editFormModel,
-    scaleFormModel,
-    rollbackFormModel,
-    yamlFormModel,
     createYamlFormModel,
+    editFormModel,
+    rollbackFormModel,
+    scaleFormModel,
+    yamlFormModel,
 
     // form rules
     createFormRules,
-    editFormRules,
-    scaleFormRules,
-    rollbackFormRules,
-    yamlFormRules,
     createYamlFormRules,
+    editFormRules,
+    rollbackFormRules,
+    scaleFormRules,
+    yamlFormRules,
 
     // computed
     filteredStatefulSets,
     rowSelection,
 
     // helpers
-    validateClusterId,
-    getEnvText,
-    getStatusText,
-    getStatusColor,
     formatTime,
-    recordToKeyValueList,
+    getEnvText,
+    getStatusColor,
+    getStatusText,
     keyValueListToRecord,
+    recordToKeyValueList,
+    validateClusterId,
 
     // operations
+    clearNamespaces,
+    clearStatefulSets,
     fetchClusters,
     fetchNamespaces,
     fetchStatefulSets,
-    clearStatefulSets,
-    clearNamespaces,
     loadMoreClusters,
     loadMoreNamespaces,
 
     // detail operations
-    showStatefulSetDetail,
     closeDetailModal,
+    showStatefulSetDetail,
 
     // YAML operations
-    showYamlModal,
-    closeYamlModal,
-    submitYamlForm,
-    insertYamlTemplate,
-    formatYaml,
-    validateYaml,
     clearYaml,
+    closeYamlModal,
     formatEditYaml,
+    formatYaml,
+    insertYamlTemplate,
+    showYamlModal,
+    submitYamlForm,
     validateEditYaml,
+    validateYaml,
 
     // create operations
-    openCreateModal,
     closeCreateModal,
-    submitCreateForm,
-    openCreateYamlModal,
     closeCreateYamlModal,
+    openCreateModal,
+    openCreateYamlModal,
+    submitCreateForm,
     submitCreateYamlForm,
 
     // edit operations
-    openEditModal,
     closeEditModal,
+    openEditModal,
     submitEditForm,
 
     // statefulSet operations
@@ -1589,46 +1589,46 @@ export function useStatefulSetPage() {
     restartStatefulSet,
 
     // scale operations
-    openScaleModal,
     closeScaleModal,
+    openScaleModal,
     submitScaleForm,
 
     // rollback operations
-    openRollbackModal,
     closeRollbackModal,
+    openRollbackModal,
     submitRollbackForm,
 
     // pod operations
-    showPodModal,
     closePodModal,
+    showPodModal,
 
     // history operations
+    closeHistoryModal,
     historyLoading,
     isHistoryCurrent,
     showHistoryModal,
-    closeHistoryModal,
 
     // filter operations
     addFilterLabel,
-    removeFilterLabel,
     clearFilterLabels,
+    removeFilterLabel,
 
     // batch operations
     batchOperation,
 
     // pagination operations
-    resetClusters,
     handlePageChange,
+    resetClusters,
 
     // form field operations
-    addImageField,
-    removeImageField,
     addEditImageField,
-    removeEditImageField,
-    removeLabelField,
+    addImageField,
     removeAnnotationField,
-    removeEditLabelField,
     removeEditAnnotationField,
+    removeEditImageField,
+    removeEditLabelField,
+    removeImageField,
+    removeLabelField,
 
     // constants
     K8sStatefulSetStatus,

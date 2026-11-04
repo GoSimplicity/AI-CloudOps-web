@@ -1128,109 +1128,109 @@ export function useIngressPage() {
 
   return {
     // state
-    ingresses,
     clusters,
-    namespaces,
-    loading,
-    loadError,
     clustersError,
-    namespacesError,
     clustersLoading,
-    namespacesLoading,
-    searchText,
-    filterStatus,
-    filterClusterId,
-    filterNamespace,
-    filterLabels,
-    selectedRowKeys,
-    selectedRows,
-    currentPage,
-    pageSize,
-    total,
-    clustersTotal,
     clustersPage,
     clustersSize,
-    namespacesTotal,
+    clustersTotal,
+    currentPage,
+    filterClusterId,
+    filterLabels,
+    filterNamespace,
+    filterStatus,
+    ingresses,
+    loadError,
+    loading,
+    namespaces,
+    namespacesError,
+    namespacesLoading,
     namespacesPage,
     namespacesSize,
+    namespacesTotal,
+    pageSize,
+    searchText,
+    selectedRowKeys,
+    selectedRows,
+    total,
 
     // form refs
-    formRef,
-    editFormRef,
-    yamlFormRef,
     createYamlFormRef,
+    editFormRef,
+    formRef,
+    yamlFormRef,
 
     // modal state
+    detailLoading,
     isCreateModalVisible,
     isCreateYamlModalVisible,
-    isEditModalVisible,
     isDetailModalVisible,
+    isEditModalVisible,
     isYamlModalVisible,
     submitLoading,
-    detailLoading,
 
     // operation targets
-    currentOperationIngress,
     currentIngressDetail,
+    currentOperationIngress,
     currentYamlContent,
 
     // form models
     createFormModel,
+    createYamlFormModel,
     editFormModel,
     yamlFormModel,
-    createYamlFormModel,
 
     // form rules
     createFormRules,
+    createYamlFormRules,
     editFormRules,
     yamlFormRules,
-    createYamlFormRules,
 
     // computed
     filteredIngresses,
     rowSelection,
 
     // helpers
-    validateClusterId,
-    getEnvText,
-    getStatusText,
-    getStatusColor,
-    recordToKeyValueList,
-    keyValueListToRecord,
-    extractHosts,
     calculateAge,
-    parseLoadBalancerInfo,
+    extractHosts,
+    getEnvText,
+    getStatusColor,
+    getStatusText,
+    keyValueListToRecord,
     parseHTTPPaths,
+    parseLoadBalancerInfo,
+    recordToKeyValueList,
+    validateClusterId,
 
     // operations
-    fetchClusters,
-    fetchNamespaces,
-    fetchIngresses,
     clearIngresses,
     clearNamespaces,
+    fetchClusters,
+    fetchIngresses,
+    fetchNamespaces,
     loadMoreClusters,
     loadMoreNamespaces,
 
     // detail operations
-    showIngressDetail,
     closeDetailModal,
+    showIngressDetail,
 
     // YAML operations
-    showYamlModal,
     closeYamlModal,
+    showYamlModal,
     submitYamlForm,
 
     // create operations
-    openCreateModal,
     closeCreateModal,
-    submitCreateForm,
-    openCreateYamlModal,
     closeCreateYamlModal,
+    openCreateModal,
+    openCreateYamlModal,
+    submitCreateForm,
     submitCreateYamlForm,
 
     // edit operations
-    openEditModal,
     closeEditModal,
+    openEditModal,
     submitEditForm,
 
     // ingress operations
@@ -1238,37 +1238,37 @@ export function useIngressPage() {
 
     // filter operations
     addFilterLabel,
-    removeFilterLabel,
     clearFilterLabels,
+    removeFilterLabel,
 
     // batch operations
     batchOperation,
 
     // pagination operations
-    resetClusters,
     handlePageChange,
+    resetClusters,
 
     // form field operations
     addRuleField,
-    removeRuleField,
     addTlsField,
-    removeTlsField,
-    removeLabelField,
     removeAnnotationField,
+    removeLabelField,
+    removeRuleField,
+    removeTlsField,
 
     // edit form field operations
     addEditRuleField,
-    removeEditRuleField,
     addEditTlsField,
-    removeEditTlsField,
-    addNewEditLabel,
-    removeEditLabelField,
     addNewEditAnnotation,
+    addNewEditLabel,
     removeEditAnnotationField,
+    removeEditLabelField,
+    removeEditRuleField,
+    removeEditTlsField,
 
     // edit form helper variables
-    newEditLabelKey,
     newEditAnnotationKey,
+    newEditLabelKey,
 
     // constants
     K8sIngressStatus,

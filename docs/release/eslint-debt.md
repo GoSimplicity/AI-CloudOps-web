@@ -859,3 +859,14 @@ MonitorConfig的Name统一为1..255、InstanceKey（历史API字段instance_ip�
 - Vue绑定分类及生产DOM/SSR模板输出逐字一致，模板/style和所有其它语句原文保持。编译后全script AST仅选中解构pattern及对应__returned__的私有shorthand次序变化；不能宣称内部对象的键顺序不变。18个页面均默认空__expose，实际Vue3.5.42运行时不将__isScriptSetup绑定暴露到普通ctx；当前生产代码和业务测试无setupState/__returned__反射或整map消费。现有业务无该内部次序观察，开发工具显示的内部绑定排列可不同，未以泛化的“对象无序”作为依据。
 - 落盘源码精确匹配提案，分组标题、每组raw绑定集合及其它全AST通过核对。18文件实际lint1224→753 errors，0 warnings，逐文件各规则无新增；未重新扫描全仓，不以目标减法宣称新的全局基线。全Web现有167文件3692项单元测试和应用类型检查通过；对改动文件执行只读界面检测，无发现，未改变视觉设计。
 - 没有修改测试逻辑、CI、规则、ignore、lock、共享helper或backend，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。
+
+## 阶段八十七：同步hook返回门面的分组属性顺序
+
+18个K8s provider仅整理各自根层return对象的1735个shorthand属性，保留原分组标题、各组完整属性集合及组间次序，目标净减570条sort-objects。不移动任何局部声明、initializer、调用、watch或生命周期注册，不处理嵌套函数的返回值及其它对象；18个SFC消费者原文保持。
+
+- 实际tsconfig模块解析核对本仓入站依赖：51条静态import包含18个生产页面入口和17个测试文件的33条import，另有一个测试文件动态import Secret；无生产namespace、reexport、barrel、require或动态入口。18个生产入口均为已核实symbol的同步named函数直接调用并flat解构，返回门面没有整map传递、枚举、spread、JSON/hash或反射消费；测试harness可按名持有门面，测试中的枚举针对payload/record等子数据，未观察门面的键次序。
+- 所选根return全部是自有数据属性的原生对象字面量，真实shorthand value symbol已在return之前声明，无getter、Proxy、computed、spread、默认值或表达式调用。只改变完成初始化后读取词法绑定并创建自有属性的顺序，属性值不会解ref或调用用户代码。私有差分以1735个触达成员即抛错的Proxy值运行原/新真实return片段，逐key的完整own-property descriptor、引用与原型相同；这是语言消费合同证明，不冒称运行了18个真实provider或集群API。对象键插入顺序确有变化，安全依据是当前入站消费者不观察该顺序，而不是“对象无序”的假设。
+- 精确before快照与HEAD一致，disk与proposal一致；完整property raw、分组标题和每组属性集合保持，return对象外源码逐字相同，全AST仅该根对象的属性次序变化。没有改变provider export、声明/初始化顺序、API请求或SFC模板/style。
+- 为避免漏掉跨文件类型宏，使用实际Vue compiler-sfc3.5.42对全354个SFC的dev/prod共708组编译作差分，前侧读取已保存before overlay，后侧读取实际磁盘源码，每轮清transitive类型及parse缓存。编译JS AST、binding分类及DOM/SSR输出0差异、两侧0错误；导入Boolean/String顺序危险control仍能检出。实际宏编译读取这些provider的数量为0，因此准确记录18个当前无SFC类型宏consumer，不冒称它们都被宏解析过。
+- 18个文件实际lint2091→1521 errors，0 warnings，逐文件各规则无新增；本阶段未重扫全仓，不以570减法宣称新的全局数量。全Web现有167文件3692项单元测试及应用类型检查通过。
+- 未修改测试逻辑、CI、规则、ignore、lock、全局helper、MonitorConfig或backend，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。

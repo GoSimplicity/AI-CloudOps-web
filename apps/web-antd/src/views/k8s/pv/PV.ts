@@ -1333,38 +1333,38 @@ export function usePVPage() {
 
   return {
     // state
-    pvs,
     clusters,
-    loading,
-    loadError,
     clustersError,
     clustersLoading,
-    searchText,
-    filterClusterId,
-    filterStatus,
-    filterAccessMode,
-    filterVolumeType,
-    selectedRowKeys,
-    selectedRows,
-    currentPage,
-    pageSize,
-    total,
     clustersPage,
     clustersSize,
+    currentPage,
+    filterAccessMode,
+    filterClusterId,
+    filterStatus,
+    filterVolumeType,
+    loadError,
+    loading,
+    pageSize,
+    pvs,
+    searchText,
+    selectedRowKeys,
+    selectedRows,
+    total,
 
     // form refs
+    createYamlFormRef,
     formRef,
     yamlFormRef,
-    createYamlFormRef,
 
     // modal state
+    detailLoading,
     isCreateModalVisible,
     isCreateYamlModalVisible,
-    isEditModalVisible,
     isDetailModalVisible,
+    isEditModalVisible,
     isYamlModalVisible,
     submitLoading,
-    detailLoading,
 
     // current operation
     currentOperationPV,
@@ -1373,96 +1373,96 @@ export function usePVPage() {
 
     // form models
     createFormModel,
+    createYamlFormModel,
     editFormModel,
     yamlFormModel,
-    createYamlFormModel,
 
     // form rules
     createFormRules,
-    yamlFormRules,
     createYamlFormRules,
+    yamlFormRules,
 
     // computed
     filteredPVs,
     rowSelection,
 
     // helpers
-    getEnvText,
-    getPVStatusText,
-    getPVStatusColor,
     getAccessModeText,
+    getEnvText,
+    getPVStatusColor,
+    getPVStatusText,
 
     // operations
-    fetchClusters,
-    fetchPVs,
-    fetchPVDetails,
-    fetchPVYaml,
     clearPVs,
+    fetchClusters,
+    fetchPVDetails,
+    fetchPVs,
+    fetchPVYaml,
     loadMoreClusters,
     resetClusters,
 
     // crud operations
     createPV,
     createPVByYaml,
-    updatePV,
-    updatePVByYaml,
+    deleteBatchPVs,
     deletePV,
     reclaimPV,
-    deleteBatchPVs,
+    updatePV,
+    updatePVByYaml,
 
     // modal handlers
     openCreateModal,
     openCreateYamlModal,
-    openEditModal,
     openDetailModal,
+    openEditModal,
     openYamlModal,
 
     // form helpers
-    resetCreateForm,
-    resetEditForm,
-    resetYamlForm,
-    resetCreateYamlForm,
     handleVolumeTypeChange,
     isRequiredField,
+    resetCreateForm,
+    resetCreateYamlForm,
+    resetEditForm,
+    resetYamlForm,
 
     // filter handlers
     handleClusterChange,
-    handleFilterChange,
-    handleSearch,
-    handlePageChange,
     handleClusterDropdownScroll,
+    handleFilterChange,
+    handlePageChange,
+    handleSearch,
 
     // label/annotation helpers
-    newLabelKey,
-    newAnnotationKey,
-    addNewLabel,
-    removeLabelField,
     addNewAnnotation,
-    removeAnnotationField,
-    newEditLabelKey,
-    newEditAnnotationKey,
-    addNewEditLabel,
-    removeEditLabelField,
     addNewEditAnnotation,
+    addNewEditLabel,
+    addNewLabel,
+    newAnnotationKey,
+    newEditAnnotationKey,
+    newEditLabelKey,
+    newLabelKey,
+    removeAnnotationField,
     removeEditAnnotationField,
+    removeEditLabelField,
+    removeLabelField,
 
     // volume source helpers
-    newVolumeSourceKey,
-    newVolumeSourceValue,
+    addNewEditVolumeSource,
     addNewVolumeSource,
-    removeVolumeSourceField,
     newEditVolumeSourceKey,
     newEditVolumeSourceValue,
-    addNewEditVolumeSource,
+    newVolumeSourceKey,
+    newVolumeSourceValue,
     removeEditVolumeSourceField,
+    removeVolumeSourceField,
 
     // yaml operations
-    insertYamlTemplate,
-    formatYaml,
-    validateYaml,
     clearYaml,
     formatEditYaml,
+    formatYaml,
+    insertYamlTemplate,
     validateEditYaml,
+    validateYaml,
 
     // constants
     K8sPVStatus,

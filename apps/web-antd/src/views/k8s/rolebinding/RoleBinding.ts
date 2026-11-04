@@ -1360,34 +1360,34 @@ export function useRoleBindingPage() {
 
   return {
     // state
-    roleBindings,
     clusters,
-    namespaces,
-    loading,
-    loadError,
     clustersError,
-    namespacesError,
     clustersLoading,
-    namespacesLoading,
-    searchText,
-    filterClusterId,
-    filterNamespace,
-    filterLabels,
-    selectedRows,
-    currentPage,
-    pageSize,
-    total,
     clustersTotal,
+    currentPage,
+    filterClusterId,
+    filterLabels,
+    filterNamespace,
+    loadError,
+    loading,
+    namespaces,
+    namespacesError,
+    namespacesLoading,
     namespacesTotal,
+    pageSize,
+    roleBindings,
+    searchText,
+    selectedRows,
+    total,
 
     // modal state
+    detailLoading,
     isCreateModalVisible,
     isCreateYamlModalVisible,
-    isEditModalVisible,
     isDetailModalVisible,
+    isEditModalVisible,
     isYamlModalVisible,
     submitLoading,
-    detailLoading,
 
     // operation targets
     currentOperationRoleBinding,
@@ -1395,20 +1395,20 @@ export function useRoleBindingPage() {
 
     // form models
     createFormModel,
-    editFormModel,
     createYamlFormModel,
+    editFormModel,
     yamlFormModel,
 
     // form refs
-    formRef,
-    editFormRef,
-    yamlFormRef,
     createYamlFormRef,
+    editFormRef,
+    formRef,
+    yamlFormRef,
 
     // form rules
     createFormRules,
-    editFormRules,
     createYamlFormRules,
+    editFormRules,
     yamlFormRules,
 
     // computed
@@ -1416,40 +1416,40 @@ export function useRoleBindingPage() {
     rowSelection,
 
     // helpers
-    validateClusterId,
-    getEnvText,
     getClusterName,
+    getEnvText,
     getUserDisplay,
+    validateClusterId,
 
     // operations
+    clearNamespaces,
+    clearRoleBindings,
     fetchClusters,
     fetchNamespaces,
     fetchRoleBindings,
-    clearRoleBindings,
-    clearNamespaces,
     loadMoreClusters,
     loadMoreNamespaces,
 
     // detail operations
-    showRoleBindingDetail,
     closeDetailModal,
+    showRoleBindingDetail,
 
     // YAML operations
-    showYamlModal,
     closeYamlModal,
+    showYamlModal,
     submitYamlForm,
 
     // create operations
-    openCreateModal,
     closeCreateModal,
-    submitCreateForm,
-    openCreateYamlModal,
     closeCreateYamlModal,
+    openCreateModal,
+    openCreateYamlModal,
+    submitCreateForm,
     submitCreateYamlForm,
 
     // edit operations
-    openEditModal,
     closeEditModal,
+    openEditModal,
     submitEditForm,
 
     // roleBinding operations
@@ -1457,8 +1457,8 @@ export function useRoleBindingPage() {
 
     // filter operations
     addFilterLabel,
-    removeFilterLabel,
     clearFilterLabels,
+    removeFilterLabel,
 
     // batch operations
     batchOperation,
@@ -1467,21 +1467,21 @@ export function useRoleBindingPage() {
     handlePageChange,
 
     // form field operations
-    addSubjectField,
-    removeSubjectField,
-    removeLabelField,
-    removeAnnotationField,
     addEditSubjectField,
-    removeEditSubjectField,
-    removeEditLabelField,
+    addSubjectField,
+    removeAnnotationField,
     removeEditAnnotationField,
+    removeEditLabelField,
+    removeEditSubjectField,
+    removeLabelField,
+    removeSubjectField,
 
     // YAML utility functions
-    insertYamlTemplate,
-    formatYaml,
-    validateYaml,
     clearYaml,
     formatEditYaml,
+    formatYaml,
+    insertYamlTemplate,
     validateEditYaml,
+    validateYaml,
   };
 }

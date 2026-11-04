@@ -866,36 +866,36 @@ export function useTemplatePage() {
 
   return {
     // state
-    templates,
     clusters,
-    loading,
-    loadError,
     clustersError,
     clustersLoading,
-    searchText,
-    filterClusterId,
-    selectedRowKeys,
-    selectedRows,
-    currentPage,
-    pageSize,
-    total,
-    clustersTotal,
     clustersPage,
     clustersSize,
+    clustersTotal,
+    currentPage,
+    filterClusterId,
+    loadError,
+    loading,
+    pageSize,
+    searchText,
+    selectedRowKeys,
+    selectedRows,
+    templates,
+    total,
 
     // form refs
+    editFormRef,
     formRef,
     yamlFormRef,
-    editFormRef,
 
     // modal state
+    checkLoading,
+    detailLoading,
     isCreateModalVisible,
-    isEditModalVisible,
     isDetailModalVisible,
+    isEditModalVisible,
     isYamlModalVisible,
     submitLoading,
-    detailLoading,
-    checkLoading,
 
     // operation targets
     currentOperationTemplate,
@@ -915,53 +915,53 @@ export function useTemplatePage() {
     rowSelection,
 
     // helpers
-    validateClusterId,
-    getEnvText,
-    getClusterName,
-    getUserDisplay,
     formatK8sTime,
+    getClusterName,
+    getEnvText,
+    getUserDisplay,
+    validateClusterId,
 
     // operations
+    clearTemplates,
     fetchClusters,
     fetchTemplates,
-    clearTemplates,
     loadMoreClusters,
 
     // detail operations
-    showTemplateDetail,
     closeDetailModal,
+    showTemplateDetail,
 
     // YAML operations
-    showYamlModal,
     closeYamlModal,
+    showYamlModal,
 
     // create operations
-    openCreateModal,
     closeCreateModal,
+    openCreateModal,
     submitCreateForm,
 
     // edit operations
-    openEditModal,
     closeEditModal,
+    openEditModal,
     submitEditForm,
 
     // template operations
-    deleteTemplate,
     checkTemplate,
+    deleteTemplate,
 
     // batch operations
     batchOperation,
 
     // pagination operations
-    resetClusters,
     handlePageChange,
+    resetClusters,
 
     // YAML operations
-    insertYamlTemplate,
-    formatYaml,
-    validateYaml,
     clearYaml,
     formatEditYaml,
+    formatYaml,
+    insertYamlTemplate,
     validateEditYaml,
+    validateYaml,
   };
 }

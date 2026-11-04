@@ -1255,101 +1255,101 @@ export function useConfigMapPage() {
 
   return {
     // state
-    configMaps,
     clusters,
-    namespaces,
-    loading,
-    loadError,
     clustersError,
-    namespacesError,
     clustersLoading,
-    namespacesLoading,
-    searchText,
-    filterClusterId,
-    filterNamespace,
-    filterDataKey,
-    filterLabels,
-    selectedRowKeys,
-    selectedRows,
-    currentPage,
-    pageSize,
-    total,
-    clustersTotal,
     clustersPage,
     clustersSize,
-    namespacesTotal,
+    clustersTotal,
+    configMaps,
+    currentPage,
+    filterClusterId,
+    filterDataKey,
+    filterLabels,
+    filterNamespace,
+    loadError,
+    loading,
+    namespaces,
+    namespacesError,
+    namespacesLoading,
     namespacesPage,
     namespacesSize,
+    namespacesTotal,
+    pageSize,
+    searchText,
+    selectedRowKeys,
+    selectedRows,
+    total,
 
     // form refs
+    createYamlFormRef,
     formRef,
     yamlFormRef,
-    createYamlFormRef,
 
     // modal state
+    detailLoading,
     isCreateModalVisible,
     isCreateYamlModalVisible,
-    isEditModalVisible,
     isDetailModalVisible,
+    isEditModalVisible,
     isYamlModalVisible,
     submitLoading,
-    detailLoading,
 
     // operation targets
-    currentOperationConfigMap,
     currentConfigMapDetail,
+    currentOperationConfigMap,
 
     // form models
     createFormModel,
+    createYamlFormModel,
     editFormModel,
     yamlFormModel,
-    createYamlFormModel,
 
     // form rules
     createFormRules,
-    yamlFormRules,
     createYamlFormRules,
+    yamlFormRules,
 
     // computed
     filteredConfigMaps,
     rowSelection,
 
     // helpers
-    validateClusterId,
     getEnvText,
-    recordToKeyValueList,
     keyValueListToRecord,
     parseJsonField,
+    recordToKeyValueList,
+    validateClusterId,
 
     // operations
-    fetchClusters,
-    fetchNamespaces,
-    fetchConfigMaps,
     clearConfigMaps,
     clearNamespaces,
+    fetchClusters,
+    fetchConfigMaps,
+    fetchNamespaces,
     loadMoreClusters,
     loadMoreNamespaces,
 
     // detail operations
-    showConfigMapDetail,
     closeDetailModal,
+    showConfigMapDetail,
 
     // YAML operations
-    showYamlModal,
     closeYamlModal,
+    showYamlModal,
     submitYamlForm,
 
     // create operations
-    openCreateModal,
     closeCreateModal,
-    submitCreateForm,
-    openCreateYamlModal,
     closeCreateYamlModal,
+    openCreateModal,
+    openCreateYamlModal,
+    submitCreateForm,
     submitCreateYamlForm,
 
     // edit operations
-    openEditModal,
     closeEditModal,
+    openEditModal,
     submitEditForm,
 
     // configmap operations
@@ -1357,32 +1357,32 @@ export function useConfigMapPage() {
 
     // filter operations
     addFilterLabel,
-    removeFilterLabel,
     clearFilterLabels,
+    removeFilterLabel,
 
     // batch operations
     batchOperation,
 
     // pagination operations
-    resetClusters,
     handlePageChange,
+    resetClusters,
 
     // form field operations
-    removeDataField,
-    removeEditDataField,
-    removeBinaryDataField,
-    removeEditBinaryDataField,
-    removeLabelField,
-    removeEditLabelField,
     removeAnnotationField,
+    removeBinaryDataField,
+    removeDataField,
     removeEditAnnotationField,
+    removeEditBinaryDataField,
+    removeEditDataField,
+    removeEditLabelField,
+    removeLabelField,
 
     // yaml operations
-    insertYamlTemplate,
-    formatYaml,
-    validateYaml,
     clearYaml,
     formatEditYaml,
+    formatYaml,
+    insertYamlTemplate,
     validateEditYaml,
+    validateYaml,
   };
 }

@@ -1148,48 +1148,48 @@ export function useClusterRoleBindingPage() {
     // state
     clusterRoleBindings,
     clusters,
-    loading,
-    loadError,
     clustersError,
     clustersLoading,
-    searchText,
+    clustersTotal,
+    currentPage,
     filterClusterId,
     filterLabels,
-    selectedRows,
-    currentPage,
+    loadError,
+    loading,
     pageSize,
+    searchText,
+    selectedRows,
     total,
-    clustersTotal,
 
     // modal state
+    detailLoading,
     isCreateModalVisible,
     isCreateYamlModalVisible,
-    isEditModalVisible,
     isDetailModalVisible,
+    isEditModalVisible,
     isYamlModalVisible,
     submitLoading,
-    detailLoading,
 
     // operation targets
-    currentOperationClusterRoleBinding,
     currentClusterRoleBindingDetail,
+    currentOperationClusterRoleBinding,
 
     // form models
     createFormModel,
-    editFormModel,
     createYamlFormModel,
+    editFormModel,
     yamlFormModel,
 
     // form refs
-    formRef,
-    editFormRef,
-    yamlFormRef,
     createYamlFormRef,
+    editFormRef,
+    formRef,
+    yamlFormRef,
 
     // form rules
     createFormRules,
-    editFormRules,
     createYamlFormRules,
+    editFormRules,
     yamlFormRules,
 
     // computed
@@ -1197,35 +1197,35 @@ export function useClusterRoleBindingPage() {
     rowSelection,
 
     // helpers
-    validateClusterId,
     getEnvText,
+    validateClusterId,
 
     // operations
-    fetchClusters,
-    fetchClusterRoleBindings,
     clearClusterRoleBindings,
+    fetchClusterRoleBindings,
+    fetchClusters,
     loadMoreClusters,
 
     // detail operations
-    showClusterRoleBindingDetail,
     closeDetailModal,
+    showClusterRoleBindingDetail,
 
     // YAML operations
-    showYamlModal,
     closeYamlModal,
+    showYamlModal,
     submitYamlForm,
 
     // create operations
-    openCreateModal,
     closeCreateModal,
-    submitCreateForm,
-    openCreateYamlModal,
     closeCreateYamlModal,
+    openCreateModal,
+    openCreateYamlModal,
+    submitCreateForm,
     submitCreateYamlForm,
 
     // edit operations
-    openEditModal,
     closeEditModal,
+    openEditModal,
     submitEditForm,
 
     // clusterRoleBinding operations
@@ -1233,8 +1233,8 @@ export function useClusterRoleBindingPage() {
 
     // filter operations
     addFilterLabel,
-    removeFilterLabel,
     clearFilterLabels,
+    removeFilterLabel,
 
     // batch operations
     batchOperation,
@@ -1243,21 +1243,21 @@ export function useClusterRoleBindingPage() {
     handlePageChange,
 
     // form field operations
-    addSubjectField,
-    removeSubjectField,
-    removeLabelField,
-    removeAnnotationField,
     addEditSubjectField,
-    removeEditSubjectField,
-    removeEditLabelField,
+    addSubjectField,
+    removeAnnotationField,
     removeEditAnnotationField,
+    removeEditLabelField,
+    removeEditSubjectField,
+    removeLabelField,
+    removeSubjectField,
 
     // YAML utility functions
-    insertYamlTemplate,
-    formatYaml,
-    validateYaml,
     clearYaml,
     formatEditYaml,
+    formatYaml,
+    insertYamlTemplate,
     validateEditYaml,
+    validateYaml,
   };
 }

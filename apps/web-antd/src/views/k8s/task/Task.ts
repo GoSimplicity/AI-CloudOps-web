@@ -830,45 +830,45 @@ export function useTaskPage() {
 
   return {
     // state
-    tasks,
-    templates,
     clusters,
-    loading,
-    loadError,
     clustersError,
-    templatesError,
     clustersLoading,
-    templatesLoading,
-    searchText,
-    filterClusterId,
-    filterTemplateId,
-    filterStatus,
-    selectedRowKeys,
-    selectedRows,
-    currentPage,
-    pageSize,
-    total,
-    clustersTotal,
     clustersPage,
     clustersSize,
-    templatesTotal,
+    clustersTotal,
+    currentPage,
+    filterClusterId,
+    filterStatus,
+    filterTemplateId,
+    loadError,
+    loading,
+    pageSize,
+    searchText,
+    selectedRowKeys,
+    selectedRows,
+    tasks,
+    templates,
+    templatesError,
+    templatesLoading,
     templatesPage,
     templatesSize,
+    templatesTotal,
+    total,
 
     // form refs
-    formRef,
     editFormRef,
     executeFormRef,
+    formRef,
 
     // modal state
-    isCreateModalVisible,
-    isEditModalVisible,
-    isDetailModalVisible,
-    isExecuteModalVisible,
-    submitLoading,
+    checkLoading,
     detailLoading,
     executeLoading,
-    checkLoading,
+    isCreateModalVisible,
+    isDetailModalVisible,
+    isEditModalVisible,
+    isExecuteModalVisible,
+    submitLoading,
 
     // operation targets
     currentOperationTask,
@@ -888,39 +888,39 @@ export function useTaskPage() {
     rowSelection,
 
     // helpers
-    validateClusterId,
-    getEnvText,
-    getStatusText,
-    getStatusColor,
     formatK8sTime,
+    getEnvText,
+    getStatusColor,
+    getStatusText,
     getTemplateName,
+    validateClusterId,
 
     // operations
-    fetchClusters,
-    fetchTemplates,
-    fetchTasks,
     clearTasks,
     clearTemplates,
+    fetchClusters,
+    fetchTasks,
+    fetchTemplates,
     loadMoreClusters,
     loadMoreTemplates,
 
     // detail operations
-    showTaskDetail,
     closeDetailModal,
+    showTaskDetail,
 
     // create operations
-    openCreateModal,
     closeCreateModal,
+    openCreateModal,
     submitCreateForm,
 
     // edit operations
-    openEditModal,
     closeEditModal,
+    openEditModal,
     submitEditForm,
 
     // execute operations
-    openExecuteModal,
     closeExecuteModal,
+    openExecuteModal,
     submitExecuteForm,
 
     // task operations
@@ -930,15 +930,15 @@ export function useTaskPage() {
     batchOperation,
 
     // pagination operations
+    handlePageChange,
     resetClusters,
     resetTemplates,
-    handlePageChange,
 
     // form field operations
-    addVariableField,
-    removeVariableField,
     addEditVariableField,
+    addVariableField,
     removeEditVariableField,
+    removeVariableField,
 
     // constants
     TaskStatus,
