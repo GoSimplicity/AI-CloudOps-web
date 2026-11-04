@@ -1860,7 +1860,7 @@ onMounted(() => {
             {{ formatFullDateTime(detailDialog.form.updated_at || '') }}
           </a-descriptions-item>
           <a-descriptions-item
-            v-if="detailDialog.form.tags && detailDialog.form.tags.length"
+            v-if="detailDialog.form.tags && detailDialog.form.tags.length > 0"
             label="标签"
           >
             <div class="detail-tags-list">

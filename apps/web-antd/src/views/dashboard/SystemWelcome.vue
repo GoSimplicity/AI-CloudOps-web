@@ -143,7 +143,7 @@ const systemStatusClass = computed(() => {
   if (
     metrics.value.some((metric) => metric.raw === null) ||
     loadRatio.value === null ||
-    readErrors.value.length
+    readErrors.value.length > 0
   )
     return 'status-unknown';
   if (
@@ -580,7 +580,7 @@ onBeforeUnmount(() => {
       </a-row>
     </template>
     <a-alert
-      v-if="readErrors.length"
+      v-if="readErrors.length > 0"
       :message="readErrors.join('；')"
       type="error"
       show-icon
@@ -679,7 +679,7 @@ onBeforeUnmount(() => {
         <section class="surface-card">
           <h2>本次采样提示</h2>
           <a-empty
-            v-if="!events.length"
+            v-if="events.length === 0"
             :description="
               refreshing
                 ? '正在读取采样'

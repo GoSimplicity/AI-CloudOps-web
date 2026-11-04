@@ -1482,7 +1482,7 @@ const handleProcessChange = handleFilterChange;
 
 // 导出功能
 const handleExport = () => {
-  if (!instanceList.value.length) {
+  if (instanceList.value.length === 0) {
     message.info('当前页没有可导出的记录');
     return;
   }
@@ -2273,7 +2273,7 @@ const getStepTypeText = (stepType: string): string => {
 
 // 判断步骤是否已完成
 const isStepCompleted = (_step: ProcessStep, index: number): boolean => {
-  if (!detailDialog.currentStep || !detailDialog.allSteps.length) {
+  if (!detailDialog.currentStep || detailDialog.allSteps.length === 0) {
     return false;
   }
 
@@ -2285,7 +2285,7 @@ const isStepCompleted = (_step: ProcessStep, index: number): boolean => {
 
 // 判断步骤是否待处理
 const isStepPending = (_step: ProcessStep, index: number): boolean => {
-  if (!detailDialog.currentStep || !detailDialog.allSteps.length) {
+  if (!detailDialog.currentStep || detailDialog.allSteps.length === 0) {
     return true;
   }
 

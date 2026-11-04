@@ -284,7 +284,7 @@ onBeforeUnmount(() => { alive = false; session++; listGeneration++; detailGenera
         </a-table>
         <div v-if="allowed(codes.resolutions)" class="audit-list">
           <h3>处置记录</h3>
-          <p v-if="!resolutions.length">暂无处置记录</p>
+          <p v-if="resolutions.length === 0">暂无处置记录</p>
           <div v-for="entry in resolutions" :key="entry.id">{{ dateText(entry.created_at) }} · 操作人 {{ safeId(entry.operator_id) ? entry.operator_id : '—' }} · {{ ({ delivered: '确认送达', retry: '重新投递', retry_event: '重试事件', retry_schedule: '恢复排期', cancel_scheduled: '取消排期' } as Record<string, string>)[entry.action] ?? '其他操作' }}</div>
         </div>
       </a-spin>

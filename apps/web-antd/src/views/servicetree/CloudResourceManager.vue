@@ -703,7 +703,7 @@ const loadSyncRegions = async (id: number): Promise<void> => {
         (account.provider !== CloudProvider.HuaweiCloud ||
           !!region.project_id?.trim()),
     );
-    if (!syncRegions.value.length)
+    if (syncRegions.value.length === 0)
       syncRegionError.value = '此账户没有已启用的授权地域，请先在云账户中配置';
   } catch (error) {
     if (
@@ -869,7 +869,7 @@ const handleSync = async (): Promise<void> => {
       (account) => account.id === syncForm.cloud_account_id,
     ) ||
     syncRegionError.value ||
-    !syncRegions.value.length
+    syncRegions.value.length === 0
   ) {
     message.warning('请选择已启用的云账户并读取授权地域');
     return;
@@ -909,14 +909,14 @@ const handleSync = async (): Promise<void> => {
     if (
       syncForm.sync_mode === SyncMode.FULL ||
       regionIds.length !== 1 ||
-      !ids.length ||
+      ids.length === 0 ||
       ids.some((id) => !validId(id))
     ) {
       message.warning('该云厂商仅支持选择一个地域并输入有效实例ID进行增量同步');
       return;
     }
   }
-  if (syncForm.sync_mode === SyncMode.FULL && ids.length) {
+  if (syncForm.sync_mode === SyncMode.FULL && ids.length > 0) {
     message.warning('指定实例ID时不能进行全量同步');
     return;
   }
@@ -929,7 +929,7 @@ const handleSync = async (): Promise<void> => {
     cloud_account_region_ids: regionIds,
     resource_types: [CloudResourceType.ECS],
     sync_mode: syncForm.sync_mode,
-    instance_ids: ids.length ? ids : undefined,
+    instance_ids: ids.length > 0 ? ids : undefined,
     auto_bind: syncForm.auto_bind,
     bind_node_id: syncForm.auto_bind ? syncForm.bind_node_id : undefined,
   };
@@ -972,7 +972,7 @@ const handleSync = async (): Promise<void> => {
       message.error(SYNC_FAILURE_MESSAGE);
       return;
     }
-    if (result.status !== 'success' && syncRegionResults.value.length) {
+    if (result.status !== 'success' && syncRegionResults.value.length > 0) {
       await fetchResources();
       return;
     }
@@ -1946,7 +1946,7 @@ const closeDetails = () => {
         disabled:
           syncRegionsLoading ||
           !!syncRegionError ||
-          !syncRegions.length ||
+          syncRegions.length === 0 ||
           syncOutcomeUnknown,
       }"
       :style="{ top: 'var(--ops-space-xl)' }"
@@ -2084,7 +2084,7 @@ const closeDetails = () => {
           show-icon
           type="warning"
         />
-        <ul v-if="syncRegionResults.length" aria-label="地域同步结果">
+        <ul v-if="syncRegionResults.length > 0" aria-label="地域同步结果">
           <li v-for="region in syncRegionResults" :key="region.region_id">
             {{ region.region }}：{{
               region.status === 'success'

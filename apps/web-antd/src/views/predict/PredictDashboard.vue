@@ -400,7 +400,7 @@ const refreshAllPredictions = async () => {
       predictionError.value =
         '全部预测失败或数据无效，请检查服务与历史数据后重试';
       message.error(predictionError.value);
-    } else if (predictionFailures.value.length)
+    } else if (predictionFailures.value.length > 0)
       message.warning('部分预测完成，请重试失败项');
     else if (
       Object.values(predictionCache.value).some(
@@ -681,7 +681,7 @@ onUnmounted(() => {
     </a-card>
 
     <a-alert
-      v-if="predictionFailures.length"
+      v-if="predictionFailures.length > 0"
       type="warning"
       :message="`以下预测未完成：${predictionFailures.join('、')}，失败项不展示旧数据。`"
       show-icon
@@ -845,7 +845,7 @@ onUnmounted(() => {
       <a-col :xs="24">
         <a-card class="cost-card" title="各指标的成本估算">
           <a-empty
-            v-if="!costEntries.length"
+            v-if="costEntries.length === 0"
             description="当前响应未提供成本估算"
           />
           <section

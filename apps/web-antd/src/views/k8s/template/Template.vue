@@ -334,7 +334,7 @@ onMounted(async () => {
               type="primary"
               danger
               @click="() => batchOperation('删除')"
-              :disabled="!selectedRows.length"
+              :disabled="selectedRows.length === 0"
               v-if="can('k8s.template.batchDelete') && selectedRows.length > 0"
               class="k8s-toolbar-btn"
               title="批量删除选中的模板"

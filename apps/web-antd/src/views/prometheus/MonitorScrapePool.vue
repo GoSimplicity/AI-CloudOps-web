@@ -1249,7 +1249,7 @@ onMounted(() => {
           </a-descriptions-item>
           <a-descriptions-item label="标签">
             {{
-              detailDialog.form.tags && detailDialog.form.tags.length
+              detailDialog.form.tags && detailDialog.form.tags.length > 0
                 ? detailDialog.form.tags.join(', ')
                 : '未配置'
             }}

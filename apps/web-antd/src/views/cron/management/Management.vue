@@ -360,7 +360,7 @@ onUnmounted(clearPage);
           type="primary"
           danger
           @click="batchOperation('删除')"
-          :disabled="!selectedRows.length"
+          :disabled="selectedRows.length === 0"
           v-if="can('cron.job.batchDelete') && selectedRows.length > 0"
           class="k8s-toolbar-btn"
           title="批量删除选中的任务"
@@ -371,7 +371,7 @@ onUnmounted(clearPage);
 
         <a-button
           v-if="selectedRows.length > 0"
-          :disabled="!selectedRows.length"
+          :disabled="selectedRows.length === 0"
           class="k8s-toolbar-btn"
           title="批量启用选中的任务"
           @click="batchOperation('启用')"
@@ -382,7 +382,7 @@ onUnmounted(clearPage);
 
         <a-button
           v-if="selectedRows.length > 0"
-          :disabled="!selectedRows.length"
+          :disabled="selectedRows.length === 0"
           class="k8s-toolbar-btn"
           title="批量禁用选中的任务"
           @click="batchOperation('禁用')"

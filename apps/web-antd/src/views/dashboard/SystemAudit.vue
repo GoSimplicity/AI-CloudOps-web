@@ -390,7 +390,7 @@ const handleRefresh = () => {
 };
 
 const handleExport = () => {
-  if (!auditLogList.value.length) {
+  if (auditLogList.value.length === 0) {
     message.info('当前页没有可导出的记录');
     return;
   }

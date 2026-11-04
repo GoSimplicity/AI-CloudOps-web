@@ -195,7 +195,7 @@ const aiReviewHighlights = computed(() =>
 );
 const currentAgentStep = computed(() => {
   const used = normalizedResult.value?.agents_used || [];
-  if (!used.length) return 0;
+  if (used.length === 0) return 0;
   const last = used[used.length - 1];
   return Math.max(
     0,
@@ -329,7 +329,7 @@ const actionColumns = [
         每次显示最近 50 条记录，可通过记录查看计划状态。
       </p>
       <p
-        v-if="historyLoaded && !operationHistory.length"
+        v-if="historyLoaded && operationHistory.length === 0"
         class="operation-hint"
       >
         暂无操作记录。
@@ -354,7 +354,7 @@ const actionColumns = [
           · 结果审计未确认</span
         >
       </div>
-      <ul v-if="operationHistory.length" class="operation-history">
+      <ul v-if="operationHistory.length > 0" class="operation-history">
         <li v-for="item in operationHistory" :key="item.plan_id">
           <div>
             <strong>{{ operationLabel(item.state) }}</strong
@@ -485,7 +485,7 @@ const actionColumns = [
         <a-row :gutter="[16, 16]" class="ai-insight-grid">
           <a-col :xl="8" :xs="24">
             <a-card class="insight-card" title="AI分析">
-              <div v-if="aiAnalysisHighlights.length" class="insight-list">
+              <div v-if="aiAnalysisHighlights.length > 0" class="insight-list">
                 <div
                   v-for="item in aiAnalysisHighlights"
                   :key="item"
@@ -499,7 +499,7 @@ const actionColumns = [
           </a-col>
           <a-col :xl="8" :xs="24">
             <a-card class="insight-card" title="AI计划摘要">
-              <div v-if="aiPlanHighlights.length" class="insight-list">
+              <div v-if="aiPlanHighlights.length > 0" class="insight-list">
                 <div
                   v-for="item in aiPlanHighlights"
                   :key="item"
@@ -513,7 +513,7 @@ const actionColumns = [
           </a-col>
           <a-col :xl="8" :xs="24">
             <a-card class="insight-card" title="AI复核要点">
-              <div v-if="aiReviewHighlights.length" class="insight-list">
+              <div v-if="aiReviewHighlights.length > 0" class="insight-list">
                 <div
                   v-for="item in aiReviewHighlights"
                   :key="item"
@@ -546,7 +546,7 @@ const actionColumns = [
             </a-step>
           </a-steps>
 
-          <div v-if="visibleAgentMessages.length" class="agent-messages">
+          <div v-if="visibleAgentMessages.length > 0" class="agent-messages">
             <div
               v-for="(item, index) in visibleAgentMessages"
               :key="`${item.agent}-${index}`"
@@ -647,7 +647,7 @@ const actionColumns = [
         <a-row :gutter="[16, 16]" class="bottom-section">
           <a-col :xl="12" :xs="24">
             <a-card class="execution-card" title="执行结果">
-              <div v-if="executedActions.length" class="execution-list">
+              <div v-if="executedActions.length > 0" class="execution-list">
                 <div
                   v-for="action in executedActions"
                   :key="action.action_id || action.action_type"

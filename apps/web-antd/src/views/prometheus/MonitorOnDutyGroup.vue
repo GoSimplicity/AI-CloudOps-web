@@ -1124,7 +1124,7 @@ const exportPlan = (): void => {
 };
 
 const exportHistory = async (): Promise<void> => {
-  if (!historyDialog.data.length) return;
+  if (historyDialog.data.length === 0) return;
 
   try {
     // 导出前获取所有历史记录

@@ -851,7 +851,7 @@ const loadState = () => {
       sessions.value = Array.isArray(ses.sessions) ? ses.sessions : [];
       currentLocalSessionId.value = ses.currentLocalSessionId || '';
     }
-    if (sessions.value.length) {
+    if (sessions.value.length > 0) {
       const selected =
         sessions.value.find((s) => s.localId === currentLocalSessionId.value) ||
         sessions.value[0];

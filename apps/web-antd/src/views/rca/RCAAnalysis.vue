@@ -154,9 +154,9 @@ const hasAnomalies = computed(() => {
   const anomalies = analysisResult.value.anomalies;
   return !!(
     anomalies.events?.critical_events?.length ||
-    Object.keys(anomalies.events?.event_clusters || {}).length ||
-    Object.keys(anomalies.logs?.error_types || {}).length ||
-    Object.keys(anomalies.logs?.error_frequency || {}).length
+    Object.keys(anomalies.events?.event_clusters || {}).length > 0 ||
+    Object.keys(anomalies.logs?.error_types || {}).length > 0 ||
+    Object.keys(anomalies.logs?.error_frequency || {}).length > 0
   );
 });
 

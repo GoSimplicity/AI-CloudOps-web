@@ -247,7 +247,7 @@ onMounted(async () => {
 
           <a-button
             v-if="selectedRows.length > 0"
-            :disabled="!selectedRows.length"
+            :disabled="selectedRows.length === 0"
             class="k8s-toolbar-btn"
             danger
             title="批量删除选中的集群"

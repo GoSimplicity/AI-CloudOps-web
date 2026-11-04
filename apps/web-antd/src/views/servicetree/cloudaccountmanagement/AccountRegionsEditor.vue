@@ -293,7 +293,7 @@ const options = computed(() => {
       <a-select
         id="account-default-region"
         v-model:value="defaultRegion"
-        :disabled="disabled || !codes.length"
+        :disabled="disabled || codes.length === 0"
         :options="options"
         placeholder="请选择默认地域"
       />

@@ -532,7 +532,7 @@ onMounted(async () => {
               type="primary"
               danger
               @click="() => batchOperation('删除')"
-              :disabled="!selectedRows.length"
+              :disabled="selectedRows.length === 0"
               v-if="
                 can('k8s.rolebinding.batchDelete') && selectedRows.length > 0
               "

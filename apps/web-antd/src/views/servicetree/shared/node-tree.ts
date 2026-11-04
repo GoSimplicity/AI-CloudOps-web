@@ -14,7 +14,7 @@ export function filterNodeTree<T extends NodeShape>(
   return nodes.flatMap((node) => {
     if (node.name.toLowerCase().includes(needle)) return [node];
     const children = filterNodeTree(node.children ?? [], needle);
-    return children.length ? [{ ...node, children }] : [];
+    return children.length > 0 ? [{ ...node, children }] : [];
   });
 }
 
@@ -23,7 +23,7 @@ export function flattenNodeTree<T extends NodeShape>(nodes: T[]): T[] {
   const result: T[] = [];
   const seen = new Set<number>();
   const pending: NodeShape[] = [...nodes];
-  while (pending.length) {
+  while (pending.length > 0) {
     const node = pending.pop();
     if (node === undefined) throw new Error('服务树节点缺失');
     if (seen.has(node.id)) continue;

@@ -942,7 +942,7 @@ onMounted(async () => {
     <template #actions>
       <a-button @click="goBack">返回值班组</a-button>
       <a-button
-        :disabled="!calendarDays.length || !!scheduleError"
+        :disabled="calendarDays.length === 0 || !!scheduleError"
         :loading="exportLoading"
         class="action-btn"
         type="default"

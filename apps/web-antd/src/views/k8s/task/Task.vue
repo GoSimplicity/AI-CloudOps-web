@@ -268,7 +268,7 @@ onMounted(async () => {
   >
     <template #actions>
       <a-button
-        :disabled="!filterClusterId || !templates.length"
+        :disabled="!filterClusterId || templates.length === 0"
         type="primary"
         @click="openCreateModal"
       >
@@ -436,7 +436,7 @@ onMounted(async () => {
               type="primary"
               @click="() => batchOperation('执行')"
               :disabled="
-                !selectedRows.length ||
+                selectedRows.length === 0 ||
                 selectedRows.some((row) => row.status === TaskStatus.RUNNING)
               "
               v-if="can('k8s.task.batchApply') && selectedRows.length > 0"
@@ -453,7 +453,7 @@ onMounted(async () => {
               type="primary"
               danger
               @click="() => batchOperation('删除')"
-              :disabled="!selectedRows.length"
+              :disabled="selectedRows.length === 0"
               v-if="can('k8s.task.batchDelete') && selectedRows.length > 0"
               class="k8s-toolbar-btn"
               title="批量删除选中的任务"

@@ -2561,7 +2561,7 @@ export function usePodPage() {
 
   // 批量操作
   const batchOperation = (operation: string) => {
-    if (!selectedRows.value.length) return;
+    if (selectedRows.value.length === 0) return;
 
     Modal.confirm({
       title: `批量${operation}`,

@@ -823,7 +823,7 @@ export function useNodePage() {
 
   // 批量操作
   const batchOperation = (operation: string) => {
-    if (!selectedRows.value.length) return;
+    if (selectedRows.value.length === 0) return;
     if (operation === '禁用调度' && denyWithoutCode('k8s.node.batchCordon'))
       return;
 

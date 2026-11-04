@@ -37,7 +37,7 @@ const { can } = usePermission();
     </p>
     <a-alert v-if="issue" :message="issue" show-icon type="warning" />
     <a-alert
-      v-else-if="!actions.length"
+      v-else-if="actions.length === 0"
       message="当前阻断动作的资源、权限或命名空间硬限制未满足，不能通过审批放行"
       show-icon
       type="warning"

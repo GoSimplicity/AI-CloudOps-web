@@ -72,7 +72,7 @@ function valid(record: ManagedCloudOperation): boolean {
   )
     return false;
   if (
-    record.resource_ids.length &&
+    record.resource_ids.length > 0 &&
     JSON.stringify([...record.resource_ids].sort()) !==
       JSON.stringify([...props.marker.resource_ids].sort())
   )

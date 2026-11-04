@@ -315,7 +315,7 @@ onBeforeUnmount(() => {
           </a-checkbox>
           <a-spin :spinning="loading">
             <div
-              v-if="!messages.length && !listError && !loading"
+              v-if="messages.length === 0 && !listError && !loading"
               class="inbox-empty"
             >
               暂无消息

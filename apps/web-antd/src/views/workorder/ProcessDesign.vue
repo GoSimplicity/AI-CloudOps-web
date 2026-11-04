@@ -389,7 +389,7 @@ function definitionErrors(value: unknown): string[] {
   const definition = value as ProcessDefinition;
   const errors: string[] = [];
   const ids = new Set<string>();
-  if (!definition.steps.length) errors.push('流程至少需要一个步骤');
+  if (definition.steps.length === 0) errors.push('流程至少需要一个步骤');
   for (const step of definition.steps) {
     if (
       !step ||
@@ -442,7 +442,7 @@ const validateFlow = (): void => {
     steps: processSteps.value,
     connections: connections.value,
   });
-  if (errors.length)
+  if (errors.length > 0)
     validationDialog = Modal.error({
       title: '流程验证失败',
       content: h('pre', errors.join('\n')),
@@ -476,7 +476,7 @@ const formatJson = (): void => {
 const validateJson = (): void => {
   try {
     const errors = definitionErrors(JSON.parse(definitionJsonString.value));
-    if (errors.length) {
+    if (errors.length > 0) {
       message.error(errors[0]);
       return;
     }
@@ -489,7 +489,7 @@ const syncToVisual = (): void => {
   try {
     const definition = JSON.parse(definitionJsonString.value);
     const errors = definitionErrors(definition);
-    if (errors.length) {
+    if (errors.length > 0) {
       message.error(errors[0]);
       return;
     }
@@ -646,7 +646,7 @@ const saveProcess = async (): Promise<void> => {
     steps: processSteps.value,
     connections: connections.value,
   });
-  if (errors.length) {
+  if (errors.length > 0) {
     message.error(errors[0]);
     return;
   }

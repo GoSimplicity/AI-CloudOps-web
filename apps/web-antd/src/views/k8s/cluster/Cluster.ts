@@ -463,7 +463,7 @@ export function useClusterPage() {
   };
 
   const batchDelete = () => {
-    if (!selectedRows.value.length) return;
+    if (selectedRows.value.length === 0) return;
     Modal.confirm({
       title: '批量删除集群',
       content: `确定要删除选中的 ${selectedRows.value.length} 个集群吗？此操作不可撤销，请谨慎操作！`,

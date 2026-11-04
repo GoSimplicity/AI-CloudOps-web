@@ -870,3 +870,15 @@ MonitorConfig的Name统一为1..255、InstanceKey（历史API字段instance_ip�
 - 为避免漏掉跨文件类型宏，使用实际Vue compiler-sfc3.5.42对全354个SFC的dev/prod共708组编译作差分，前侧读取已保存before overlay，后侧读取实际磁盘源码，每轮清transitive类型及parse缓存。编译JS AST、binding分类及DOM/SSR输出0差异、两侧0错误；导入Boolean/String顺序危险control仍能检出。实际宏编译读取这些provider的数量为0，因此准确记录18个当前无SFC类型宏consumer，不冒称它们都被宏解析过。
 - 18个文件实际lint2091→1521 errors，0 warnings，逐文件各规则无新增；本阶段未重扫全仓，不以570减法宣称新的全局数量。全Web现有167文件3692项单元测试及应用类型检查通过。
 - 未修改测试逻辑、CI、规则、ignore、lock、全局helper、MonitorConfig或backend，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。
+
+## 阶段八十八：实际数组长度的布尔上下文判断
+
+本阶段从Root实扫1130文件/7771 errors/5 warnings、fatal与保护规则0、directive audit41的基线出发，不用跨阶段减法代替新全局扫描。先复核495条sort-imports：保持所有runtime import完整原文与相对次序、排除13个注释/指令歧义文件后，132个受限候选提案实际净减均为0，故没有修改import或混入其它规则。
+
+- 119条explicit-length-check中，最终只处理57个生产文件的98处。实际vue-tsc所用@vue/language-core2.2.12与Volar代理创建Vue虚拟TypeScript Program，经源映射定位真实属性节点；checker要求receiver为Array/tuple/string，union每分支均满足，拒绝any/unknown及自定义array-like。再按AST确认!、if/while/for/三元测试，或沿原&&/||最终进入布尔上下文；Boolean调用须解析到真实lib声明，不能仅凭名称假设。
+- 只把!length改为length === 0，或布尔消费中的length改为length > 0。receiver及完整属性访问AST/原文保持、仍求值一次，不移动initializer/call，不改变optional读取本身。RCA三个Object.keys(...).length的receiver是真实数组，外层为已核实的lib Boolean；其参数内原optional路径、fallback和其它逻辑操作数均原样保留。没有将数值结果0改成false交给业务返回或统计。
+- 其余21处明确保留：10个未提供自动fix的命中实际是total = response.total || response.items.length等数值回退计算；Role三个slot-any、AlertEvent一个slot-any、Secret一个size字段、自定义marker一个unknown与app Program之外的一个JS命中未建立此长度合同；另外4个本来类型/语义合格的替换会新增Prettier错误，故保留AutoFixWorkflow337、Node851、MonitorAlertEvent774、工单Template1655原文，没有为凑百条扩大排版范围。
+- 全源码只有上述98个精确fixspan变化。完整脚本TS AST、Vue模板结构及实际Babel表达式AST仅允许这些已验证谓词变化，其它semantic节点、指令、属性、文本、分支及注释保持；只剔除源码位置元数据，trailingComma位置归为仍存在的逗号。样式字节、Vue binding分类保持，原/新DOM与SSR均编译成功；生成的谓词代码会变化，不冒称编译文本逐字相同。
+- 私有语言探针对最终98项做882组对照，含长度0/1/多个元素/1000000稀疏数组以及空/普通/Unicode/大字符串。实际数组及boxed string使用只记录读取并原样Reflect.get的Proxy，布尔结果、receiver和length读取次数、&&/||短路与三元分支副作用轨迹相同。等价域是符合原Array/string合同的非负整数长度；另以负数、NaN及恶意Proxy返回非法长度作反例，明确不声称类型检查能验证任意恶意Proxy或违背API类型的运行时值。这是私有消费证明，不冒称浏览器业务验收。
+- 57文件实际lint3415→3317 errors，既有v-html warning1→1（总messages3416→3318），逐文件各规则无新增；目标净减98。本阶段未重新全仓扫描，不宣称新的全局总数。全Web现有167文件3692项单元测试及应用类型检查通过。
+- 没有修改测试逻辑、CI、规则、ignore、lock、MonitorConfig、全局helper或backend，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。

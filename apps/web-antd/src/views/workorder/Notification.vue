@@ -1559,7 +1559,7 @@ const saveNotification = async (): Promise<void> => {
       }))
     : [];
   if (formData.recipientTypes.includes('custom')) {
-    if (!recipientAddresses.length || recipientAddresses.length > 100) {
+    if (recipientAddresses.length === 0 || recipientAddresses.length > 100) {
       recipientError.value = '请配置1至100个自定义接收地址';
       return;
     }

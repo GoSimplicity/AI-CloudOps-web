@@ -274,7 +274,7 @@ async function loadAccounts() {
         );
         return;
       }
-      if (!data.items.length || all.length >= 1000)
+      if (data.items.length === 0 || all.length >= 1000)
         throw new Error('account list incomplete');
     }
     throw new Error('account list incomplete');
@@ -515,7 +515,7 @@ async function loadHistory() {
         clearReviewedMarker(target, all);
         return true;
       }
-      if (!data.items.length || all.length >= 1000)
+      if (data.items.length === 0 || all.length >= 1000)
         throw new Error('history incomplete');
     }
     throw new Error('history incomplete');
@@ -603,7 +603,7 @@ async function sync() {
     .map((item) => item.trim())
     .filter(Boolean);
   if (
-    !ids.length ||
+    ids.length === 0 ||
     ids.length > 100 ||
     ids.some((id) => !idPattern.test(id)) ||
     new Set(ids).size !== ids.length
@@ -941,7 +941,7 @@ onBeforeUnmount(() => {
     </div>
     <a-alert v-if="regionError" :message="regionError" show-icon type="error" />
     <a-alert
-      v-if="accountId && !regionLoading && !regions.length && !regionError"
+      v-if="accountId && !regionLoading && regions.length === 0 && !regionError"
       message="该账户没有配置地域"
       show-icon
       type="info"
@@ -1143,7 +1143,7 @@ onBeforeUnmount(() => {
       />
       <h3>最近同步历史</h3>
       <a-spin v-if="can(codes.history)" :spinning="historyLoading">
-        <p v-if="!history.length && !historyLoading && !historyError">
+        <p v-if="history.length === 0 && !historyLoading && !historyError">
           暂无历史
         </p>
         <ul v-else class="managed-history">

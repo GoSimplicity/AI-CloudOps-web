@@ -57,7 +57,7 @@ export function buildNotificationSchedule(
       throw new Error('条件必须是JSON对象');
     const fields = Object.entries(value);
     if (
-      !fields.length ||
+      fields.length === 0 ||
       fields.some(
         ([key, number]) =>
           (key !== 'status' && key !== 'priority') ||

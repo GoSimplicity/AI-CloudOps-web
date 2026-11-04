@@ -1352,7 +1352,7 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
   const dfs = (nodes: TreeNode[] = []) => {
     for (const n of nodes) {
       idToName.set(n.id, n.name);
-      if (n.children && n.children.length) dfs(n.children);
+      if (n.children && n.children.length > 0) dfs(n.children);
     }
   };
   dfs(treeData.value || []);
@@ -2137,7 +2137,7 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
               {{ formatFullDateTime(detailDialog.form.created_at || '') }}
             </a-descriptions-item>
             <a-descriptions-item
-              v-if="detailDialog.form.tags && detailDialog.form.tags.length"
+              v-if="detailDialog.form.tags && detailDialog.form.tags.length > 0"
               label="标签"
             >
               {{ (detailDialog.form.tags || []).join(', ') }}
@@ -2145,7 +2145,7 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
             <a-descriptions-item
               v-if="
                 detailDialog.form.tree_node_ids &&
-                detailDialog.form.tree_node_ids.length
+                detailDialog.form.tree_node_ids.length > 0
               "
               label="服务树节点"
             >

@@ -185,7 +185,7 @@ export function getAiPlanHighlights(plan?: Record<string, any>) {
     aiPlanSummary?.blocked_actions?.map((item: any) => item?.action_type),
   );
 
-  if (!highlights.length && plan?.summary) {
+  if (highlights.length === 0 && plan?.summary) {
     appendHighlights(
       highlights,
       `候选 ${plan.summary.total_actions || 0} 个动作`,

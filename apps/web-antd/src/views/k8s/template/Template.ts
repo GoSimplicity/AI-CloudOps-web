@@ -609,7 +609,7 @@ export function useTemplatePage() {
 
   // 批量操作
   const batchOperation = (operation: string) => {
-    if (!selectedRows.value.length) return;
+    if (selectedRows.value.length === 0) return;
 
     const clusterId = validateClusterId();
     if (!clusterId) return;

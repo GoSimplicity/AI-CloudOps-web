@@ -415,7 +415,7 @@ const refreshAllDiagnosis = async () => {
     if (!diagnosisLane.current(ticket)) return;
     initCharts();
 
-    if (diagnosisFailures.value.length) {
+    if (diagnosisFailures.value.length > 0) {
       message.warning('部分诊断未完成，请检查失败项目');
     } else if (
       results[0]?.status === 'degraded' ||
@@ -793,7 +793,7 @@ onUnmounted(() => {
 
     <!-- 图表区域 -->
     <a-alert
-      v-if="diagnosisFailures.length"
+      v-if="diagnosisFailures.length > 0"
       type="warning"
       :message="`未完成：${diagnosisFailures.join('、')}。当前结果不代表完整健康检查。`"
       show-icon
