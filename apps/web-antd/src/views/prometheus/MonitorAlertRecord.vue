@@ -285,7 +285,7 @@ const formRules = {
         }
         // 支持 IP:PORT 格式，如 192.168.1.100:9090 或 localhost:9090
         const ipPortPattern =
-          /^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])(:[0-9]+)?$/;
+          /^(([\dA-Za-z]|[\dA-Za-z][\dA-Za-z\-]*[\dA-Za-z])\.)*([\dA-Za-z]|[\dA-Za-z][\dA-Za-z\-]*[\dA-Za-z])(:\d+)?$/;
         if (!ipPortPattern.test(value)) {
           return Promise.reject(
             '请输入有效的IP地址，如 192.168.1.100:9090 或 localhost:9090',

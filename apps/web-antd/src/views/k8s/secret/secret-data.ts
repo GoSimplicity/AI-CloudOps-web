@@ -621,7 +621,7 @@ function hasYamlLineBreakChar(text: string) {
 
 /** 严格 base64（标准字母表、长度为 4 的倍数、末尾最多两个 =） */
 const STRICT_BASE64_PATTERN =
-  /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+  /^(?:[\d+/A-Za-z]{4})*(?:[\d+/A-Za-z]{2}==|[\d+/A-Za-z]{3}=)?$/;
 
 /** 双引号值：只允许 \" 与 \\ 转义，引号后只允许行尾注释（value 已去掉首尾空白） */
 const SUPPORTED_QUOTED_VALUE_PATTERN =
@@ -814,7 +814,7 @@ function hasMergeKey(root: unknown) {
 }
 
 /** 可能是 base64 的片段（主体 ≥8 个字符；`<redacted>` 的 base64 为 14 个字符 + `==`） */
-const BASE64_TOKEN_PATTERN = /[A-Za-z0-9+/]{8,}={0,2}/g;
+const BASE64_TOKEN_PATTERN = /[\d+/A-Za-z]{8,}={0,2}/g;
 
 /**
  * incr7 P2-A 兜底：YAML 编码之后、发请求之前（更新）或直接对原文（新建），检查最终要发出的内容：

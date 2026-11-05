@@ -416,7 +416,7 @@ const addressError = (channel: string, raw: string) => {
     return '请输入有效邮箱地址';
   if (
     channel === 'feishu' &&
-    (value.length > 100 || !/^o[unc]_[a-zA-Z0-9]+$/.test(value))
+    (value.length > 100 || !/^o[cnu]_[\dA-Za-z]+$/.test(value))
   )
     return '飞书地址必须为ou_/on_/oc_格式ID';
   if (!['email', 'feishu'].includes(channel)) return '请选择邮件或飞书渠道';

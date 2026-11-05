@@ -992,3 +992,17 @@ MonitorConfig的Name统一为1..255、InstanceKey（历史API字段instance_ip�
 - 首次CLI比较器将文件suite的合成line0/column0当成真实源码位置而失败；保留失败记录，修正为原样保留该sentinel后完整比较实际exit0。只修/tmp验证工具，未改测试metadata或snapshot。此前readonly探针的非async snippet解析与遗漏item fixture错误也已保留，修正后分别独立执行成功；不以末命令成功掩盖前序失败。
 - actual11文件lint391→354 errors，0 warnings，净减37，逐文件各规则无新增。3个相关Namespace/Secret现有测试文件22项通过；全Web167文件3692项单测、app及真实node配置类型检查均exit0。这两个既有tsconfig不冒称完整静态覆盖全部E2E spec，后者另由实际CLI transform/collection与完整AST验收，没有运行真实业务E2E。
 - 未修改CI/workflow、规则、依赖、lock、MonitorConfig、backend或53个排除项，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。Root随后实际执行完整boundary扫描，确认1130文件7072 errors/5 warnings、protected/parser均0、directive audit41；结果来自/tmp/cloudops-stage97-root-boundaries.log，不是目标净减的减法推导。
+
+## 阶段九十八：ASCII数字字符类的统一简写
+
+当前定向实际47文件75条better-regex，选取25个生产文件（18个TS、7个SFC）的37个完整正则literal：将ASCII的0–9字符范围统一为\d，必要的字符类元素排列由同一冻结fix完成。原flags、捕获/反向引用、quantifier、anchor和其它表达式保持，不重组UUID的重复段或其它复杂pattern。测试文件、MonitorConfig、/v/字符串字符集及不属于该单码点集合合同的fix均保留。
+
+- 40个初始parser候选进一步排除3处：Secret YAML的一处fix会增加no-useless-escape，Cloud地域两处会增加Prettier诊断；这些原literal与相关格式保持。没有为清规则增加ignore、弱化规则、修改测试断言或采用整文件autofix。
+- regexpp将Character、CharacterClassRange与\d等单码点元素规范化为区间union，证明每个纳入字符集合完全相同；其余正则AST、全部flags raw和捕获/反向引用顺序保持。实际37处只有无flag、i或g，UnicodeSets、多字符class字符串和捕获重组不在范围；相同基础集合在相同ignoreCase规则下仍相同，不把\d扩展为Unicode全部数字。范围、UnicodeNd、flags、anchor、capture、negation、quantifier等负控均检出。
+- 在actualHEAD c65264ee逐文件核before全字节一致后落盘，未因proposal原审计HEAD较早而覆盖其它工作。actual disk精确等于冻结proposal；原范围外bytes保持，完整TS源码AST仅允许已验证regex leaf变化。forEachChild callback全部void，非首个深层语义mutation与const/let声明种类mutation均检出。7个SFC实际磁盘对照，dev/prod的script AST及binding一致（仅已审正则leaf归一），模板/style原文保持，DOM/SSR共28组编译代码一致；无类型变更，本轮没有重复全仓708宏探针，也不声称实际JS/bundle/hash/sourceMap字节不变。
+- 从实际磁盘按插入偏移重新提取37个literal，配合一个sticky/named capture/indices控制，以52组输入和多种起始lastIndex补充对照：39520次exec、9880次test、520次global matchAll、19760次字符串/回调replace比较的输出、捕获、offset、callback参数及lastIndex均一致。有限样本仅补充集合/结构证明，不替代全域依据；lastIndex差异负控可检出。
+- 正则.source/toString文本明确变化，不能称任意反射或prototype覆写都不可观察。当前已审消费者按native test、Secret严格base64验证和global token matchAll使用，Form pattern带既有message并沿实际async-validator的test/reset-lastIndex合同；未发现选中局部pattern的source/toString/JSON逃逸。本阶段不更改或泛化外部反射合同，原YAML replaceAll回调正则属于冲突排除项，未改写。
+- actual25文件lint1891→1849 errors、0 warnings，better-regex净减37，同一literal修改顺带消除regexp/prefer-d的5条，逐文件各规则无新增。K8s全部（含Secret/SecretData四组）、Cloud及managed-operation、Cron、Notification、RCA与Prometheus现有相关55文件2004项回归及应用类型检查均exit0。没有新增镜像测试，未修改任何现有test/CI/规则/依赖/lock或backend。
+- 未操作preview、数据库、凭据、真实集群、通知、模型或业务API，未上线。净42仅为上述目标实扫结果，不以减法声称新的全仓总量；后续完整Web及boundary交由冻结后的整合检查执行。
+
+Stage98 Root整合：全170文件3731项单元测试通过；实际全仓扫描1135文件7030 errors、5 warnings，protected-rule违规/解析工具失败均0，directive审计41文件。此为真实扫描结果，未按目标42条减法推算；剩余lint未清零。

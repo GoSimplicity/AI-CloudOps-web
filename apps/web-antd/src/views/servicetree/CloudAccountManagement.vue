@@ -302,7 +302,7 @@ function buildProviderCredentials(
   const { project_id, service_account_json } = providerCredentialDraft;
   if (editing && !project_id && !service_account_json) return undefined;
   if (
-    !/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(project_id) ||
+    !/^[a-z][\da-z-]{4,28}[\da-z]$/.test(project_id) ||
     !service_account_json ||
     new TextEncoder().encode(service_account_json).length > 16_384
   )
@@ -401,7 +401,7 @@ const formRules = computed(() => ({
         if (
           changedRegions &&
           formData.value.provider === CloudProvider.Azure &&
-          value.some((item) => !/^[a-z0-9]+$/.test(item.region))
+          value.some((item) => !/^[\da-z]+$/.test(item.region))
         )
           throw new Error('Azure 地域代码格式无效，例如 eastus');
         if (

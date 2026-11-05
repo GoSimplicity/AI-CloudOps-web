@@ -162,7 +162,7 @@ export function useConfigMapPage() {
     name: [
       { required: true, message: '请输入 ConfigMap 名称', trigger: 'blur' },
       {
-        pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
+        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         message:
           'ConfigMap 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
         trigger: 'blur',
@@ -680,7 +680,7 @@ export function useConfigMapPage() {
             result[key] = '';
           } else {
             const cleanValue = trimmedValue.replaceAll(/\s/g, '');
-            if (/^[A-Za-z0-9+/]*={0,2}$/.test(cleanValue)) {
+            if (/^[\d+/A-Za-z]*={0,2}$/.test(cleanValue)) {
               if (cleanValue.length % 4 === 0) {
                 result[key] = cleanValue;
               } else {

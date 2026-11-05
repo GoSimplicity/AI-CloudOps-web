@@ -165,7 +165,7 @@ export function usePVPage() {
     name: [
       { required: true, message: '请输入 PV 名称', trigger: 'blur' },
       {
-        pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
+        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         message:
           'PV 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
         trigger: 'blur',
@@ -175,7 +175,7 @@ export function usePVPage() {
     capacity: [
       { required: true, message: '请输入存储容量', trigger: 'blur' },
       {
-        pattern: /^[0-9]+[KMGTPE]i?$/,
+        pattern: /^\d+[EGKMPT]i?$/,
         message: '请输入有效的存储容量，如: 1Gi, 100Mi',
         trigger: 'blur',
       },

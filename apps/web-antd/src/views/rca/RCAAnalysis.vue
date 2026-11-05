@@ -399,7 +399,7 @@ const startAnalysis = async () => {
 
   // 验证命名空间格式
   const namespace = formData.namespace.trim();
-  if (!/^[a-z0-9-]+$/.test(namespace)) {
+  if (!/^[\da-z-]+$/.test(namespace)) {
     message.error('命名空间格式不正确，只能包含小写字母、数字和连字符');
     return;
   }

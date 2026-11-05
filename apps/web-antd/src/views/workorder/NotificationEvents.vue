@@ -74,11 +74,11 @@ const dateText = (value: unknown) => {
 const masked = (channel: unknown, value: unknown) => {
   if (typeof value !== 'string') return '暂无脱敏标识';
   if (channel === 'email' && /^(?:[\p{L}\p{N}]|\*)\*{3}@(?:[\p{L}\p{N}]|\*)\*{3}$/u.test(value)) return value;
-  if (channel === 'feishu' && /^(ou_|on_|oc_)\*{3}(?:[a-zA-Z0-9]{4})?$/.test(value)) return value;
-  if (channel === 'in_app' && /^用户\*{3}(?:[0-9]{4})?$/.test(value)) return value;
+  if (channel === 'feishu' && /^(ou_|on_|oc_)\*{3}(?:[\dA-Za-z]{4})?$/.test(value)) return value;
+  if (channel === 'in_app' && /^用户\*{3}(?:\d{4})?$/.test(value)) return value;
   return '暂无脱敏标识';
 };
-const hashText = (value: unknown) => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value) ? value : '—';
+const hashText = (value: unknown) => typeof value === 'string' && /^[\da-f]{64}$/.test(value) ? value : '—';
 const actionTitle: Record<Action, string> = { cancel: '取消待处理排期', retry: '重试失败事件', delivered: '确认已送达', redeliver: '确认重新投递' };
 const actionWarning: Record<Action, string> = {
   cancel: '只能取消尚未领取的排期。发送中或结果未知时无法保证撤回，请先核对状态。',

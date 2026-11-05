@@ -4,7 +4,7 @@ import type {
 } from '#/api/core/tree/tree_cloud';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const resourceID = /^[A-Za-z0-9][A-Za-z0-9-]{1,99}$/;
+const resourceID = /^[\dA-Za-z][\dA-Za-z-]{1,99}$/;
 const positive = (value: unknown): value is number =>
   typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
 export function validManagedResult(

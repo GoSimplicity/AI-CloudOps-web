@@ -184,7 +184,7 @@ export function usePVCPage() {
     name: [
       { required: true, message: '请输入 PVC 名称', trigger: 'blur' },
       {
-        pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
+        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         message:
           'PVC 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
         trigger: 'blur',
@@ -198,7 +198,7 @@ export function usePVCPage() {
       request_storage: [
         { required: true, message: '请输入请求存储容量', trigger: 'blur' },
         {
-          pattern: /^[0-9]+[KMGTPE]i?$/,
+          pattern: /^\d+[EGKMPT]i?$/,
           message: '请输入有效的存储容量，如: 1Gi, 100Mi',
           trigger: 'blur',
         },
@@ -232,7 +232,7 @@ export function usePVCPage() {
     new_capacity: [
       { required: true, message: '请输入新容量', trigger: 'blur' },
       {
-        pattern: /^[0-9]+[KMGTPE]i?$/,
+        pattern: /^\d+[EGKMPT]i?$/,
         message: '请输入有效的存储容量，如: 10Gi, 200Mi',
         trigger: 'blur',
       },

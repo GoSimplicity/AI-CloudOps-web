@@ -104,7 +104,7 @@ let permissionTicket = 0;
 let historyTicket = 0;
 const safeId = (value: unknown): value is number =>
   typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
-const idPattern = /^[A-Za-z0-9][A-Za-z0-9-]{1,99}$/;
+const idPattern = /^[\dA-Za-z][\dA-Za-z-]{1,99}$/;
 const can = (code: string) =>
   !!permissions.value &&
   (permissions.value.super_admin === true ||

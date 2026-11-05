@@ -5,7 +5,7 @@ export interface ManagedOperationMarker {
   resource_ids: string[];
 }
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const resourceID = /^[A-Za-z0-9][A-Za-z0-9-]{1,99}$/;
+const resourceID = /^[\dA-Za-z][\dA-Za-z-]{1,99}$/;
 export function parseManagedMarker(
   raw: null | string,
 ): ManagedOperationMarker | null {

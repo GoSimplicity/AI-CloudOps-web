@@ -180,7 +180,7 @@ const validateHttpRequestURL = async (
     const parsed = new URL(value);
     const invalidCharacters = /[\u0000-\u0020\\\u007f]/.test(value);
     const explicitAuthority = /^https?:\/\/[^#/?]+/i.test(value);
-    const invalidEscape = /%(?![0-9a-f]{2})/i.test(value);
+    const invalidEscape = /%(?![\da-f]{2})/i.test(value);
     const httpProtocol = ['http:', 'https:'].includes(parsed.protocol);
     const validPort =
       !parsed.port ||
