@@ -8,6 +8,13 @@ import WorkorderComments from './WorkorderComments.vue';
 
 const client = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
+vi.mock('@vben/stores', () => ({
+  useAccessStore: () => ({ accessToken: 'local-fixture' }),
+  useUserStore: () => ({ userInfo: { userId: '1' } }),
+}));
+vi.mock('#/store', () => ({
+  useAuthStore: () => ({ getAuthGeneration: () => 0 }),
+}));
 
 function comment(
   id: number,

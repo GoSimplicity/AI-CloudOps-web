@@ -40,3 +40,19 @@
 本轮是JSDOM中的真实组件挂载，不冒称真实浏览器像素或生产工单验收；API全部Fake，未操作preview、数据库、通知、模型或实际工单。未重复全Web单测，交由源码冻结后的整合检查执行。局部线程补全不宣称同时修复旧评论窗口全部请求代际问题，后续如有可复现竞态另行记录。
 
 Root整合复验：全Web169文件3707项单元测试通过；实际全扫1133文件7072 errors/5 warnings，保护规则违规与解析/工具失败均0，directive审计41文件。这里仍不代表全仓lint零错误。后端树修复已单独交付50894edf，远端固定组合后续再锁定验收；JSDOM挂载不冒称浏览器像素或完整部署验收。
+
+## 2026-11-05：评论窗口的请求归属
+
+修复同一主体内的窗口竞态：打开实例A并开始读取，关闭后打开B，A的迟到成功曾覆盖B；旧添加评论可能关闭新表单，旧快速评论和回复可能清掉新草稿、结束新busy或刷新当前新实例。合法A42/B43的真实AntD挂载已先复现迟到读取覆盖，再验证修复。这里是UI上下文错误，不是已证明的后端跨实例越权或跨主体数据交付；服务端parent同实例授权检查保持不变。
+
+评论查看与添加窗口分别捕获instanceId、窗口代际及既有RequestOwnerContext，沿用createRequestOwnerScope的UID/authGeneration/authenticated边界。每次打开、关闭、KeepAlive停用或卸载使旧窗口失效；查看窗口的每次读取另有latest序号，全部成功、catch和finally均核对原窗口与请求。添加、快速评论与各节点回复捕获原body和独立动作票据，提交后不读取新的live目标；旧回执不能改新草稿、关闭新窗、发组件toast或commentAdded、清新busy、串到新实例刷新。发送期间继续编辑的新草稿保留，原动作自己的busy仍正常收尾。
+
+UID、全局登录代际（含同UID重登）或认证状态变化时同步清理两窗和旧正文/草稿，不自动请求；普通token轮换不丢当前草稿。现有Layout ownerEpoch与请求层已经提供主体隔离，这里的watch是独立评论组件的防御，不宣称此前全站存在跨主体泄露。已外发请求没有被撤销，也没有自动重试；全局HTTP错误拦截器原有提示策略保持，本轮隔离的是组件自己的回执副作用，不能保证旧HTTP请求的全局提示全部静默。
+
+同时移除查看Modal的唯一空title属性，使本来已定义的自定义header插槽、刷新和排序真实可见；不重设计其结构或样式。引用的nextTick与延后focus、复制完成后的组件提示也只作用于原查看窗口。请求body、parent_id、正文formatter与上一阶段的迭代线程展开算法保持不变，没有新增权限接口或放宽权限。
+
+24项新增真实AntD上下文回归覆盖关闭→换实例、同实例重开、读取成功/失败与并行刷新、三类旧提交成功/失败、同窗继续编辑、reply取消重开、busy/事件归属、UID与同UID登录代际、普通token轮换、无效目标、卸载/KeepAlive停用、引用nextTick及原body正常成功。与上一阶段线程及formatter合计16文件318项相关回归、应用类型检查通过；评论专项3文件39项通过。新增上下文helper/测试与调整后的线程测试lint均为0，原组件逐规则诊断计数不增加。
+
+首次相关回归的22项Instance挂载失败源于旧fixture只替换access store、没有为新增真实子组件提供user/auth store，出现getActivePinia错误；只补配对user-a/user-b主体与auth代际fixture，未stub子组件或在生产代码吞掉缺失Pinia。原22项测试调用全文、请求Fake和业务断言保持，修后318项正式通过。线程展开helper与正文formatter同HEAD字节一致。验证均为本机Fake API/JSDOM，不冒称真实服务写入、浏览器像素或取消远端操作；源码冻结后全Web与boundary由整合阶段运行。
+
+Root最终整合：全170文件3731项单元测试通过；实际全仓1135文件7072 errors/5 warnings，protected-rule违规和parser/tool失败均0，directive审计41文件。剩余lint仍未清零，新窗口阶段没有新增诊断。

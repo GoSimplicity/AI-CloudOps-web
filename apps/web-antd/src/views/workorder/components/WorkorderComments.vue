@@ -18,6 +18,10 @@ import { getOwnLookupValue } from '#/utils/own-lookup';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 import { flattenCommentReplies } from './comment-thread';
+import {
+  type CommentWindowTicket,
+  useCommentWindowContext,
+} from './use-comment-window-context';
 
 withDefaults(defineProps<Props>(), {
   instance: undefined,
@@ -56,13 +60,16 @@ interface Props {
 }
 
 // 状态数据
-const loading = ref(false);
+const commentsLoading = ref(false);
+const savingComment = ref(false);
 const commentsList = ref<WorkorderInstanceCommentItem[]>([]);
 const quickCommenting = ref(false);
 const quickCommentText = ref('');
 const highlightCommentId = ref<null | number>(null);
 const commentsContentRef = ref<HTMLElement>();
 const sortOrder = ref<'newest' | 'oldest'>('newest');
+const quotedComment = ref<null | WorkorderInstanceCommentItem>(null);
+const quickTextareaRef = ref();
 
 // 回复相关状态
 const replyInputVisible = ref<Record<number, boolean>>({});
@@ -85,6 +92,71 @@ const commentsViewDialog = reactive({
   visible: false,
   instanceId: 0,
 });
+
+let viewTicket: CommentWindowTicket | undefined;
+let formTicket: CommentWindowTicket | undefined;
+let commentsRequest = 0;
+let formRequest = 0;
+let quickRequest = 0;
+let replyRequest = 0;
+const replyTickets = new Map<number, number>();
+const context = useCommentWindowContext(resetForOwner);
+
+function resetViewState() {
+  viewTicket = undefined;
+  commentsRequest += 1;
+  quickRequest += 1;
+  commentsViewDialog.visible = false;
+  commentsViewDialog.instanceId = 0;
+  commentsList.value = [];
+  commentsLoading.value = false;
+  quickCommenting.value = false;
+  quickCommentText.value = '';
+  quotedComment.value = null;
+  highlightCommentId.value = null;
+  replyInputVisible.value = {};
+  replyText.value = {};
+  replySubmitting.value = {};
+  repliesExpanded.value = {};
+  replyTickets.clear();
+}
+function resetFormState() {
+  formTicket = undefined;
+  formRequest += 1;
+  commentDialog.visible = false;
+  commentDialog.form = { content: '', instance_id: 0, is_system: 0 };
+  savingComment.value = false;
+}
+function closeCommentsView() {
+  context.view.invalidate();
+  resetViewState();
+}
+function closeCommentDialog() {
+  context.form.invalidate();
+  resetFormState();
+}
+function resetForOwner() {
+  resetViewState();
+  resetFormState();
+}
+function currentView(
+  ticket: CommentWindowTicket | undefined,
+): ticket is CommentWindowTicket {
+  return (
+    context.view.current(ticket) &&
+    commentsViewDialog.visible &&
+    ticket?.instanceId === commentsViewDialog.instanceId
+  );
+}
+function currentForm(
+  ticket: CommentWindowTicket | undefined,
+): ticket is CommentWindowTicket {
+  return (
+    context.form.current(ticket) &&
+    commentDialog.visible &&
+    ticket?.instanceId === commentDialog.form.instance_id
+  );
+}
 
 // 响应式对话框宽度
 const dialogWidth = computed(() => {
@@ -210,45 +282,46 @@ const focusComment = (commentId: number) => {
 
 // 主要方法
 const showCommentDialog = (instanceId: number) => {
+  closeCommentDialog();
+  const ticket = context.form.open(instanceId);
+  if (!ticket) return;
+  formTicket = ticket;
   commentDialog.form = {
-    instance_id: instanceId,
+    instance_id: ticket.instanceId,
     content: '',
     is_system: 0,
   };
   commentDialog.visible = true;
 };
 
-// 加载评论
-const loadComments = async (instanceId: number) => {
+// Only the latest read of the captured window may publish data or finish its spinner.
+const loadComments = async (ticket: CommentWindowTicket) => {
+  if (!currentView(ticket)) return;
+  const request = ++commentsRequest;
+  const current = () => currentView(ticket) && request === commentsRequest;
+  commentsLoading.value = true;
   try {
-    loading.value = true;
-    const params: GetInstanceCommentsTreeReq = { id: instanceId };
+    const params: GetInstanceCommentsTreeReq = { id: ticket.instanceId };
     const res = await getInstanceCommentsTree(params);
-
-    if (res) {
-      commentsList.value = res;
-      // 初始化回复展开状态
-      res.forEach((comment: WorkorderInstanceCommentItem) => {
-        if (comment.children && comment.children.length > 0) {
-          repliesExpanded.value[comment.id] = false;
-        }
-      });
-    } else {
-      commentsList.value = [];
+    if (!current()) return;
+    commentsList.value = res || [];
+    for (const comment of commentsList.value) {
+      if (comment.children && comment.children.length > 0)
+        repliesExpanded.value[comment.id] = false;
     }
   } catch (error: any) {
+    if (!current()) return;
     if (shouldNotifyPageError(error))
       message.error(`加载评论失败: ${error.message || '未知错误'}`);
     commentsList.value = [];
   } finally {
-    loading.value = false;
+    if (current()) commentsLoading.value = false;
   }
 };
 
 const refreshComments = async () => {
-  if (commentsViewDialog.instanceId) {
-    await loadComments(commentsViewDialog.instanceId);
-  }
+  const ticket = viewTicket;
+  if (currentView(ticket)) await loadComments(ticket);
 };
 
 // 快速操作
@@ -262,51 +335,79 @@ const insertSuggestion = () => {
 };
 
 // 回复相关方法
+const hasComment = (commentId: number) =>
+  Number.isSafeInteger(commentId) &&
+  commentId > 0 &&
+  commentsList.value.some(
+    (root) =>
+      root.id === commentId ||
+      replyThreads.value
+        .get(root.id)
+        ?.some((row) => row.comment.id === commentId),
+  );
 const showReplyInput = (commentId: number) => {
+  if (
+    !currentView(viewTicket) ||
+    !hasComment(commentId) ||
+    replySubmitting.value[commentId]
+  )
+    return;
   replyInputVisible.value[commentId] = true;
   replyText.value[commentId] = '';
-  nextTick(() => {
-    // 聚焦到回复输入框
-  });
 };
 
 const cancelReply = (commentId: number) => {
+  replyTickets.delete(commentId);
   replyInputVisible.value[commentId] = false;
   replyText.value[commentId] = '';
+  replySubmitting.value[commentId] = false;
 };
 
 const submitReply = async (commentId: number) => {
-  if (!replyText.value[commentId]?.trim()) {
+  const ticket = viewTicket;
+  if (
+    !currentView(ticket) ||
+    !hasComment(commentId) ||
+    replySubmitting.value[commentId]
+  )
+    return;
+  const draft = replyText.value[commentId];
+  if (!draft?.trim()) {
     message.warning('请输入回复内容');
     return;
   }
-
+  const request = ++replyRequest;
+  replyTickets.set(commentId, request);
+  const current = () =>
+    currentView(ticket) && replyTickets.get(commentId) === request;
+  replySubmitting.value[commentId] = true;
+  const replyData: CreateWorkorderInstanceCommentReq = {
+    instance_id: ticket.instanceId,
+    content: draft.trim(),
+    parent_id: commentId,
+    type: 'normal',
+    is_system: 0,
+  };
   try {
-    replySubmitting.value[commentId] = true;
-
-    // 创建回复评论
-    const replyData: CreateWorkorderInstanceCommentReq = {
-      instance_id: commentsViewDialog.instanceId,
-      content: replyText.value[commentId].trim(),
-      parent_id: commentId,
-      type: 'normal',
-      is_system: 0,
-    };
-
     await createWorkorderInstanceComment(replyData);
-
+    if (!current() || replyText.value[commentId] !== draft) return;
     message.success('回复成功');
     replyInputVisible.value[commentId] = false;
     replyText.value[commentId] = '';
-    await refreshComments();
-
-    // 触发父组件的评论添加事件
-    emit('commentAdded');
+    await loadComments(ticket);
+    if (current()) emit('commentAdded');
   } catch (error: any) {
-    if (shouldNotifyPageError(error))
+    if (
+      current() &&
+      replyText.value[commentId] === draft &&
+      shouldNotifyPageError(error)
+    )
       message.error(`回复失败: ${error.message || '未知错误'}`);
   } finally {
-    replySubmitting.value[commentId] = false;
+    if (current()) {
+      replySubmitting.value[commentId] = false;
+      replyTickets.delete(commentId);
+    }
   }
 };
 
@@ -315,37 +416,40 @@ const toggleReplies = (commentId: number) => {
   repliesExpanded.value[commentId] = !repliesExpanded.value[commentId];
 };
 
-// 引用评论相关状态
-const quotedComment = ref<null | WorkorderInstanceCommentItem>(null);
-const quickTextareaRef = ref();
-
 // 快速评论
 const submitQuickComment = async () => {
-  if (!quickCommentText.value.trim()) {
+  const ticket = viewTicket;
+  if (!currentView(ticket) || quickCommenting.value) return;
+  const draft = quickCommentText.value;
+  if (!draft.trim()) {
     message.warning('请输入评论内容');
     return;
   }
-
+  const request = ++quickRequest;
+  const current = () => currentView(ticket) && quickRequest === request;
+  quickCommenting.value = true;
+  const commentData: CreateWorkorderInstanceCommentReq = {
+    instance_id: ticket.instanceId,
+    content: draft,
+    is_system: 0,
+  };
   try {
-    quickCommenting.value = true;
-    const commentData: CreateWorkorderInstanceCommentReq = {
-      instance_id: commentsViewDialog.instanceId,
-      content: quickCommentText.value,
-      is_system: 0,
-    };
-
     await createWorkorderInstanceComment(commentData);
-
+    if (!current() || quickCommentText.value !== draft) return;
     quickCommentText.value = '';
-    quotedComment.value = null; // 清除引用状态
+    quotedComment.value = null;
     message.success('评论发布成功');
-    await refreshComments();
-    emit('commentAdded');
+    await loadComments(ticket);
+    if (current()) emit('commentAdded');
   } catch (error: any) {
-    if (shouldNotifyPageError(error))
+    if (
+      current() &&
+      quickCommentText.value === draft &&
+      shouldNotifyPageError(error)
+    )
       message.error(`发布评论失败: ${error.message || '未知错误'}`);
   } finally {
-    quickCommenting.value = false;
+    if (current()) quickCommenting.value = false;
   }
 };
 
@@ -372,7 +476,9 @@ const formatQuotedContent = (comment: WorkorderInstanceCommentItem): string => {
 
 // 滚动到快速评论输入框
 const scrollToQuickComment = () => {
-  const quickCommentElement = document.querySelector('.quick-comment-section');
+  const quickCommentElement = commentsContentRef.value?.querySelector(
+    '.quick-comment-section',
+  );
   if (quickCommentElement) {
     quickCommentElement.scrollIntoView({
       behavior: 'smooth',
@@ -382,8 +488,9 @@ const scrollToQuickComment = () => {
 };
 
 // 聚焦快速评论输入框
-const focusQuickComment = () => {
+const focusQuickComment = (ticket: CommentWindowTicket) => {
   nextTick(() => {
+    if (!currentView(ticket)) return;
     if (quickTextareaRef.value) {
       quickTextareaRef.value.focus();
       // 将光标移动到末尾
@@ -398,6 +505,8 @@ const focusQuickComment = () => {
 
 // 其他功能 - 优化后的引用评论功能
 const quoteComment = async (comment: WorkorderInstanceCommentItem) => {
+  const ticket = viewTicket;
+  if (!currentView(ticket) || !hasComment(comment.id)) return;
   // 格式化引用内容
   const quotedContent = formatQuotedContent(comment);
 
@@ -415,8 +524,9 @@ const quoteComment = async (comment: WorkorderInstanceCommentItem) => {
 
   // 自动滚动到快速评论输入框并聚焦
   await nextTick();
+  if (!currentView(ticket)) return;
   scrollToQuickComment();
-  focusQuickComment();
+  focusQuickComment(ticket);
 
   // 显示成功反馈
   message.success(`已引用 ${comment.operator_name} 的评论`);
@@ -461,11 +571,13 @@ const truncateText = (text: string, maxLength: number): string => {
 };
 
 const copyComment = async (content: string) => {
+  const ticket = viewTicket;
+  if (!currentView(ticket)) return;
   try {
     await navigator.clipboard.writeText(content);
-    message.success('内容已复制到剪贴板');
+    if (currentView(ticket)) message.success('内容已复制到剪贴板');
   } catch {
-    message.error('复制失败');
+    if (currentView(ticket)) message.error('复制失败');
   }
 };
 
@@ -475,31 +587,41 @@ const handleSortChange = ({ key }: { key: string }) => {
 };
 
 const saveComment = async () => {
+  const ticket = formTicket;
+  if (!currentForm(ticket) || savingComment.value) return;
+  const body = { ...commentDialog.form };
+  if (!body.content.trim()) {
+    message.error('请输入评论内容');
+    return;
+  }
+  const request = ++formRequest;
+  const current = () => currentForm(ticket) && formRequest === request;
+  const sameDraft = () =>
+    commentDialog.form.content === body.content &&
+    commentDialog.form.is_system === body.is_system;
+  savingComment.value = true;
   try {
-    if (!commentDialog.form.content.trim()) {
-      message.error('请输入评论内容');
-      return;
-    }
-
-    loading.value = true;
-    await createWorkorderInstanceComment(commentDialog.form);
-
+    await createWorkorderInstanceComment(body);
+    if (!current() || !sameDraft()) return;
     message.success('评论添加成功');
-    commentDialog.visible = false;
+    closeCommentDialog();
     emit('commentAdded');
   } catch (error: any) {
-    if (shouldNotifyPageError(error))
+    if (current() && sameDraft() && shouldNotifyPageError(error))
       message.error(`添加评论失败: ${error.message || '未知错误'}`);
   } finally {
-    loading.value = false;
+    if (current()) savingComment.value = false;
   }
 };
 
 const showCommentsView = async (instanceId: number) => {
-  commentsViewDialog.instanceId = instanceId;
+  closeCommentsView();
+  const ticket = context.view.open(instanceId);
+  if (!ticket) return;
+  viewTicket = ticket;
+  commentsViewDialog.instanceId = ticket.instanceId;
   commentsViewDialog.visible = true;
-  quickCommentText.value = '';
-  await loadComments(instanceId);
+  await loadComments(ticket);
 };
 
 // 导出方法供父组件调用
@@ -513,7 +635,7 @@ defineExpose({
   <div>
     <!-- 快速评论对话框 -->
     <a-modal
-      :confirm-loading="loading"
+      :confirm-loading="savingComment"
       :destroy-on-close="true"
       :open="commentDialog.visible"
       :width="dialogWidth"
@@ -521,11 +643,7 @@ defineExpose({
       class="responsive-modal comment-modal"
       ok-text="发布评论"
       title="添加评论"
-      @cancel="
-        () => {
-          commentDialog.visible = false;
-        }
-      "
+      @cancel="closeCommentDialog"
       @ok="saveComment"
     >
       <div class="comment-form-wrapper">
@@ -577,12 +695,7 @@ defineExpose({
       :width="previewDialogWidth"
       centered
       class="comments-dialog responsive-modal"
-      title=""
-      @cancel="
-        () => {
-          commentsViewDialog.visible = false;
-        }
-      "
+      @cancel="closeCommentsView"
     >
       <template #title>
         <div class="comments-dialog-header">
@@ -670,7 +783,7 @@ defineExpose({
 
         <!-- 评论列表 -->
         <div
-          v-if="commentsList.length === 0 && !loading"
+          v-if="commentsList.length === 0 && !commentsLoading"
           class="empty-comments"
         >
           <a-empty>
@@ -688,7 +801,7 @@ defineExpose({
           </a-empty>
         </div>
 
-        <a-spin :spinning="loading" tip="加载评论中...">
+        <a-spin :spinning="commentsLoading" tip="加载评论中...">
           <div v-if="commentsList.length > 0" class="comments-list">
             <div
               v-for="(comment, index) in sortedComments"

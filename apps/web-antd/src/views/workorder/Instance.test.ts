@@ -20,8 +20,20 @@ vi.mock('@vben/stores', async (original) => {
   const actual = await original<typeof import('@vben/stores')>();
   const { reactive } = await import('vue');
   const state = reactive({ accessToken: 'user-a' });
-  return { ...actual, useAccessStore: () => state };
+  return {
+    ...actual,
+    useAccessStore: () => state,
+    useUserStore: () => ({
+      get userInfo() {
+        return { userId: state.accessToken === 'user-a' ? '1' : '2' };
+      },
+    }),
+  };
 });
+
+vi.mock('#/store', () => ({
+  useAuthStore: () => ({ getAuthGeneration: () => 0 }),
+}));
 
 // FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
 vi.mock('#/utils/permission', async (importOriginal) => ({
