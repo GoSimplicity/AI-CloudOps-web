@@ -1,4 +1,4 @@
-import type { UserConfig } from 'vite';
+import type { CSSOptions, UserConfig } from 'vite';
 
 import type { DefineApplicationOptions } from '../typing';
 
@@ -94,24 +94,26 @@ function defineApplicationConfig(userConfigPromise?: DefineApplicationOptions) {
   });
 }
 
-function createCssOptions(injectGlobalScss = true) {
+function createCssOptions(injectGlobalScss = true): CSSOptions {
+  if (!injectGlobalScss) {
+    return {};
+  }
+
   const root = findMonorepoRoot();
   return {
-    preprocessorOptions: injectGlobalScss
-      ? {
-          scss: {
-            api: 'modern-compiler',
-            additionalData: (content: string, filepath: string) => {
-              const relativePath = relative(root, filepath);
-              // apps下的包注入全局样式
-              if (relativePath.startsWith(`apps${path.sep}`)) {
-                return `@use "@vben/styles/global" as *;\n${content}`;
-              }
-              return content;
-            },
-          },
-        }
-      : {},
+    preprocessorOptions: {
+      scss: {
+        additionalData: (content: string, filepath: string) => {
+          const relativePath = relative(root, filepath);
+          // apps下的包注入全局样式
+          if (relativePath.startsWith(`apps${path.sep}`)) {
+            return `@use "@vben/styles/global" as *;\n${content}`;
+          }
+          return content;
+        },
+        api: 'modern-compiler',
+      },
+    },
   };
 }
 
