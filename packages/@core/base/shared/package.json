@@ -64,7 +64,7 @@
     "@tanstack/vue-store": "^0.5.5",
     "@vue/shared": "^3.5.3",
     "clsx": "^2.1.1",
-    "defu": "^6.1.4",
+    "defu": "^6.1.7",
     "lodash.clonedeep": "^4.5.0",
     "nprogress": "^0.2.0",
     "tailwind-merge": "^2.5.2",
