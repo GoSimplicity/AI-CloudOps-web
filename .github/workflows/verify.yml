@@ -24,6 +24,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Audit production dependencies
         run: pnpm audit --prod --audit-level=high
+      # 全部依赖（含 devDependencies，Vite 在其中）的 critical 只报警。
+      # 生产 high 门禁暂时放不过时的豁免写法见 SECURITY.md。
+      - name: Audit all dependencies for critical issues
+        continue-on-error: true
+        run: pnpm audit --audit-level=critical
       - run: pnpm check:layout
       - run: pnpm check:eslint-boundaries
       - run: pnpm -F @vben/eslint-config typecheck

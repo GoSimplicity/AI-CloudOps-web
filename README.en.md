@@ -125,7 +125,7 @@ VITE_PROXY_TARGET=http://127.0.0.1:17889 pnpm -F @vben/web-antd exec vite --mode
 CLOUDOPS_WEB_URL=http://127.0.0.1:5667 CLOUDOPS_TEST_ENV_FILE=/absolute/path/to/isolated/.env pnpm test:e2e
 ```
 
-The tests use local Chrome by default. Set `PLAYWRIGHT_CHANNEL=chromium` to use Playwright's Chromium. CI (`.github/workflows/verify.yml`) runs typecheck, unit tests, the production build and the production login check.
+The tests use local Chrome by default. Set `PLAYWRIGHT_CHANNEL=chromium` to use Playwright's Chromium. CI (`.github/workflows/verify.yml`) runs typecheck, unit tests, the production build and the production login check. It also fails on high or critical production-dependency advisories (`pnpm audit --prod --audit-level=high`). A second audit of every dependency, including devDependencies, reports critical issues without failing the job. If a new production high cannot be fixed yet, record a temporary exception as described in [SECURITY.md](SECURITY.md).
 
 ## Deployment
 

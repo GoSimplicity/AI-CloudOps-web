@@ -15,3 +15,24 @@
 依据：[ECharts 官方安全公告](https://lists.apache.org/thread/1g6xk7gd9vg1c6zyqqt2lnko10zomc3o)、[DOMPurify 官方文档](https://github.com/cure53/DOMPurify)、[Axios 变更记录](https://github.com/axios/axios/blob/v1.x/CHANGELOG.md)。
 
 复查命令：`pnpm audit --prod --registry=https://registry.npmjs.org`。镜像源不一定提供审计接口。
+
+CI（`.github/workflows/verify.yml`）有两道审计：
+
+- `pnpm audit --prod --audit-level=high` 只看生产依赖，出现 high 或 critical 就失败。
+- `pnpm audit --audit-level=critical` 看全部依赖，包括 `devDependencies` 里的 Vite。这一步 `continue-on-error: true`，只在日志里报警，不拦截合并。
+
+生产门禁出现暂时修不了的新 high 时，不要关掉这道检查。在根 `package.json` 的 `pnpm.auditConfig.ignoreGhsas` 里加入该 GHSA，并在 `pnpm-workspace.yaml` 用注释写明原因和到期日（`package.json` 不能写注释）。到期后删除这条忽略并重新审计。
+
+```yaml
+# GHSA-xxxx-xxxx-xxxx：<原因>。到期 YYYY-MM-DD，到期后从 package.json 删除并重新审计。
+```
+
+```json
+"pnpm": {
+  "auditConfig": {
+    "ignoreGhsas": ["GHSA-xxxx-xxxx-xxxx"]
+  }
+}
+```
+
+仓库锁定的 pnpm 是 9.9.0。这个版本的 `pnpm audit` 只读取 `pnpm.auditConfig.ignoreCves`，不读取 `ignoreGhsas`（从 pnpm 9.10.0 起才读取）。在升级 pnpm 之前，同一条豁免还要把公告上的 CVE 放进 `ignoreCves`，否则生产门禁仍然失败。没有 CVE 编号的 GHSA 无法用 9.9.0 忽略。
