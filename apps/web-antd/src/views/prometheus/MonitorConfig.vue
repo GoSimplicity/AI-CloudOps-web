@@ -243,6 +243,26 @@ const formRules = {
   ],
 };
 
+const SECRET_PLACEHOLDER = '<secret>';
+const HIDDEN_CONFIG_CONTENT = '配置解析失败，已隐藏内容';
+const secretKeepHint =
+  '保留 <secret> 表示沿用原凭据，要改就填真实值。修改 Alertmanager 发送目标，或凭据位于自定义配置段时，需要重新填写真实凭据，不能保留 <secret>。';
+const hiddenConfigHint =
+  '原配置无法解析，内容已隐藏；不改内容直接保存会保留原配置，若在此填写新内容将整体替换原配置。';
+const createSecretMessage = '创建配置不能包含凭据占位符，请填写真实凭据';
+const createHiddenMessage = '配置内容为隐藏占位，请填写完整配置';
+
+const containsSecretPlaceholder = (content: string) =>
+  content.includes(SECRET_PLACEHOLDER);
+const isHiddenConfigContent = (content: string) =>
+  content.trim() === HIDDEN_CONFIG_CONTENT;
+const editKeepsSecret = computed(() =>
+  containsSecretPlaceholder(editForm.config_content),
+);
+const editContentHidden = computed(() =>
+  isHiddenConfigContent(editForm.config_content),
+);
+
 const getConfigTypeName = (type: ConfigType): string => {
   const typeNames: Record<ConfigType, string> = {
     [ConfigType.Prometheus]: 'Prometheus',
@@ -588,6 +608,14 @@ const handleAdd = async (): Promise<void> => {
       !validConfigStatus(status)
     ) {
       message.warning('请选择有效的实例池、配置类型和状态');
+      return;
+    }
+    if (containsSecretPlaceholder(addForm.config_content)) {
+      message.warning(createSecretMessage);
+      return;
+    }
+    if (isHiddenConfigContent(addForm.config_content)) {
+      message.warning(createHiddenMessage);
       return;
     }
     const params: CreateMonitorConfigParams = {
@@ -1254,6 +1282,20 @@ onMounted(() => {
               :rows="12"
               placeholder="请输入配置内容"
             />
+            <a-alert
+              v-if="editKeepsSecret"
+              :message="secretKeepHint"
+              class="config-content-alert"
+              show-icon
+              type="info"
+            />
+            <a-alert
+              v-if="editContentHidden"
+              :message="hiddenConfigHint"
+              class="config-content-alert"
+              show-icon
+              type="warning"
+            />
           </a-form-item>
         </div>
 
@@ -1702,5 +1744,9 @@ onMounted(() => {
 .responsive-modal :deep(.ant-modal) {
   max-width: calc(100vw - 16px);
   margin: 8px;
+}
+
+.config-content-alert {
+  margin-top: 12px;
 }
 </style>
