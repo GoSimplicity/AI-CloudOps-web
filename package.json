@@ -153,6 +153,7 @@
       "serialize-javascript@6": "7.1.4",
       "source-map-js@1": "1.2.2",
       "svgo@4": "4.1.0",
+      "tinypool": "2.1.2",
       "undici@6": "6.29.1",
       "vue-i18n": "11.4.18"
     },
