@@ -146,17 +146,17 @@ describe('登录 429 / 503', () => {
     },
   );
 
-  it('retry-After 为 1 时只显示秒，不显示分钟', async () => {
+  it('retry-After 为 1 时原样提示后端 message，倒计时只按 1 秒', async () => {
     const error = await post(
       '/user/login',
       429,
       { code: 1, data: {}, message: '登录失败次数过多，请 1 分钟后再试' },
       new AxiosHeaders({ 'Retry-After': '1' }),
     );
-    expectNotice('请 1 秒后再试');
-    expect(JSON.stringify(notices.error.mock.calls)).not.toContain('分钟');
+    expectNotice('登录失败次数过多，请 1 分钟后再试');
     expect(readLoginLockState(error).seconds).toBe(1);
     expect(formatLoginLockCountdown(1)).toBe('请 1 秒后再试');
+    expect(formatLoginLockCountdown(1)).not.toMatch(/分钟/);
   });
 
   it.each([{}, null])(

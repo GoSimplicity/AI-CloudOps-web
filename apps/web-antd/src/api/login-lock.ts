@@ -1,11 +1,11 @@
 /**
  * 登录接口 `/user/login` 的失败展示。
  *
- * 账号锁定与 nginx 限流都是 HTTP 429，倒计时只认 Retry-After 的剩余秒数。
- * 不足一分钟只显示秒，避免 message 里向上取整的「X 分钟」把 1 秒说成 1 分钟。
- * 读不到秒数，或正文不是 JSON（例如 nginx 的 HTML）时，提示「请求过于频繁，请稍后再试」，
- * 并按 1 秒倒计时。Redis 不可用是 HTTP 503 且正文为 JSON，只提示服务暂不可用，不倒计时。
- * 信封里的 data 字段不参与判断，`{}` 和 `null` 都一样。
+ * 账号锁定与网关限流都是 HTTP 429。读到 Retry-After 时，提示原文 message，
+ * 倒计时只用这个秒数（不足一分钟只显示秒），并禁用登录按钮。
+ * 网关不暴露 CORS 头；读不到秒数，或正文不是 JSON 时，提示「请求过于频繁，请稍后再试」并按 1 秒倒计时。
+ * Redis 不可用是 HTTP 503 且正文为 JSON，只提示服务暂不可用，不倒计时。
+ * 失败响应的 data 固定为 {}，判断时不读这个字段。
  * 秒数在请求层包装、丢掉响应头之前记在 Symbol 上。
  */
 import { $t } from '@vben/locales';
@@ -17,9 +17,6 @@ export const LOGIN_RETRY_DEFAULT_SECONDS = 1;
 
 /** 只匹配登录接口本身，不匹配查询串里碰巧出现的路径 */
 const LOGIN_ENDPOINT = /(?:^|\/)user\/login\/?$/i;
-
-/** 锁定文案里的分钟是向上取整，不足一分钟时不能拿来展示 */
-const CEILING_MINUTES = /请\s*\d+\s*分钟/;
 
 const UNAVAILABLE = 'unavailable';
 
@@ -191,10 +188,6 @@ export function formatLoginLockCountdown(totalSeconds: number): string {
 
 function jsonRetryMessage(error: unknown, seconds: number): string {
   const message = backendMessageOf(error);
-  // 不足一分钟时，向上取整的「请 X 分钟」会把 1 秒说成 1 分钟
-  if (seconds < 60 && CEILING_MINUTES.test(message)) {
-    return formatLoginLockCountdown(seconds);
-  }
   if (message) return message;
   if (seconds < 60) return formatLoginLockCountdown(seconds);
   return $t('authentication.loginRateLimited');

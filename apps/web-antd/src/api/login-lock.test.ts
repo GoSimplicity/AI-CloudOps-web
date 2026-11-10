@@ -131,14 +131,17 @@ describe('登录锁定文案与 Retry-After', () => {
     },
   );
 
-  it('不足一分钟时不展示向上取整的分钟，只显示秒', () => {
+  it('retry-After 为 1 时原文提示分钟文案，倒计时只显示秒', () => {
     const error = loginError({
       body: envelope('登录失败次数过多，请 1 分钟后再试', {}),
       headers: new AxiosHeaders({ 'Retry-After': '1' }),
     });
-    expect(resolveLoginHttpErrorMessage(error)).toBe('请 1 秒后再试');
-    expect(resolveLoginHttpErrorMessage(error)).not.toMatch(/分钟/);
+    expect(resolveLoginHttpErrorMessage(error)).toBe(
+      '登录失败次数过多，请 1 分钟后再试',
+    );
     expect(readLoginLockState(error).seconds).toBe(1);
+    expect(formatLoginLockCountdown(1)).toBe('请 1 秒后再试');
+    expect(formatLoginLockCountdown(1)).not.toMatch(/分钟/);
   });
 
   it.each([{}, null] as const)(
