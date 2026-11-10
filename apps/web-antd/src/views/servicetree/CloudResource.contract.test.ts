@@ -43,6 +43,11 @@ const client = vi.hoisted(() => ({
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
+// 每条用例挂载完整云资源页并打开真实同步表单（Select / Checkbox / Modal）。
+// 渲染是 CPU 工作，默认 testTimeout 5s 在工人与其他测试抢核时会被墙钟掐断。
+// 失败只表现为 “Test timed out in 5000ms”，单独重跑断言成立，因此只放宽本文件的 testTimeout。
+vi.setConfig({ testTimeout: 20_000 });
 const account = (id = 7) => ({
   id,
   name: id === 7 ? '主阿里账户' : '第二阿里账户',
