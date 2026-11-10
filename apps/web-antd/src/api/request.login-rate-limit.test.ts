@@ -15,7 +15,8 @@ import { HTTP_ERROR_MESSAGE_KEY_PREFIX, requestClient } from './request';
 /**
  * 登录防爆破：只改 /user/login 的 429 / 503。
  * 账号锁定带真实剩余秒数；nginx 限流是 JSON 429 且 Retry-After: 1。
- * 没有秒数或正文不是 JSON 时提示「请求过于频繁，请稍后再试」并倒计时 1 秒。
+ * 429 没有秒数或正文不是 JSON 时提示「请求过于频繁，请稍后再试」并倒计时 1 秒。
+ * 登录 503（JSON 或 HTML）提示服务暂不可用，不倒计时。
  * 不读取信封里的 data。
  */
 const notices = vi.hoisted(() => ({
@@ -209,17 +210,21 @@ describe('登录 429 / 503', () => {
     },
   );
 
-  it('503 的 HTML 按频率限制兜底，不倒计时到分钟', async () => {
+  it('登录 503 的 HTML 提示服务暂不可用，不倒计时', async () => {
     const error = await post(
       '/user/login',
       503,
       '<html><body>503 Service Unavailable</body></html>',
+      { 'Retry-After': '30' },
     );
-    expectNotice('请求过于频繁，请稍后再试');
+    expectNotice('登录服务暂不可用，请稍后重试');
     expect(JSON.stringify(notices.error.mock.calls)).not.toContain(
       '503 Service',
     );
-    expect(readLoginLockState(error).seconds).toBe(1);
+    expect(JSON.stringify(notices.error.mock.calls)).not.toContain(
+      '请求过于频繁',
+    );
+    expect(readLoginLockState(error).seconds).toBe(0);
   });
 
   it('英文环境下 503 走 i18n，而不是后端中文', async () => {

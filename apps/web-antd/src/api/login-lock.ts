@@ -3,8 +3,8 @@
  *
  * 账号锁定与网关限流都是 HTTP 429。读到 Retry-After 时，提示原文 message，
  * 倒计时只用这个秒数（不足一分钟只显示秒），并禁用登录按钮。
- * 网关不暴露 CORS 头；读不到秒数，或正文不是 JSON 时，提示「请求过于频繁，请稍后再试」并按 1 秒倒计时。
- * Redis 不可用是 HTTP 503 且正文为 JSON，只提示服务暂不可用，不倒计时。
+ * 网关不暴露 CORS 头；429 读不到秒数，或正文不是 JSON 时，提示「请求过于频繁，请稍后再试」并按 1 秒倒计时。
+ * 登录接口的 HTTP 503（JSON 或 HTML）都是服务暂不可用，不倒计时、不禁用按钮。
  * 失败响应的 data 固定为 {}，判断时不读这个字段。
  * 秒数在请求层包装、丢掉响应头之前记在 Symbol 上。
  */
@@ -142,8 +142,7 @@ function classifyLoginFailure(
   if (!isLoginRequest(error)) return undefined;
   const status = responseOf(error).status;
   if (!isLoginStatus(status)) return undefined;
-  if (status === 503 && isLoginJsonBody(responseBody(error)))
-    return UNAVAILABLE;
+  if (status === 503) return UNAVAILABLE;
   const retryAfter = retryAfterOf(error);
   if (typeof retryAfter === 'number') return retryAfter > 0 ? retryAfter : 0;
   return LOGIN_RETRY_DEFAULT_SECONDS;
@@ -151,7 +150,7 @@ function classifyLoginFailure(
 
 /**
  * 登录 429 / 503 在离开拦截器之前调用。
- * 数字是倒计时秒数（含默认 1 秒）；`unavailable` 表示 Redis 不可用，不倒计时。
+ * 数字是倒计时秒数（含 429 默认的 1 秒）；`unavailable` 表示登录 503，不倒计时。
  */
 export function rememberLoginRetryAfter(error: unknown) {
   if (!isRecord(error)) return;
@@ -195,7 +194,8 @@ function jsonRetryMessage(error: unknown, seconds: number): string {
 
 /**
  * 登录 429 / 503 的请求层提示。其它接口返回 undefined，沿用原来的文案。
- * 有可读秒数且正文是 JSON 时用后端 message；否则用频率限制兜底，503 JSON 用服务不可用。
+ * 有可读秒数且正文是 JSON 的 429 用后端 message；429 兜底用频率限制文案。
+ * 登录 503 一律提示服务暂不可用，不看正文是不是 JSON。
  */
 export function resolveLoginHttpErrorMessage(
   error: unknown,
@@ -203,9 +203,7 @@ export function resolveLoginHttpErrorMessage(
   if (!isLoginRequest(error)) return undefined;
   const status = responseOf(error).status;
   if (!isLoginStatus(status)) return undefined;
-  if (status === 503 && isLoginJsonBody(responseBody(error))) {
-    return $t('authentication.loginUnavailable');
-  }
+  if (status === 503) return $t('authentication.loginUnavailable');
   const retryAfter = retryAfterOf(error);
   if (
     status === 429 &&

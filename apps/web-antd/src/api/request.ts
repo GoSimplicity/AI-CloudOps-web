@@ -150,7 +150,7 @@ export function isSensitiveRequest(error: any): boolean {
  *   敏感接口除外（isSensitiveRequest：autofix 与 Secret 相关路径，仍用通用文案，incr4 P2-1）；
  * - 409 / 429：专门文案（不带错误码）；登录接口的 429 / 503 另算（见 login-lock.ts）：
  *   有 Retry-After 时原样展示后端 message，倒计时用秒数；没有秒数或正文不是 JSON 时用
- *   「请求过于频繁，请稍后再试」并按 1 秒倒计时；Redis 不可用的 JSON 503 只提示服务暂不可用；
+ *   「请求过于频繁，请稍后再试」并按 1 秒倒计时；登录 503（含 HTML）只提示服务暂不可用；
  * - 浏览器中止请求（xhr onabort / onloadend status 0 → AxiosError code ECONNABORTED，没有 response）：
  *   packages 里既不算网络错误也不算超时，落到「内部服务器错误」；这里按网络异常提示。
  *   只看 code 与「不是超时」，不依赖 'Request aborted' 原文（incr3 P3-2，axios 1.20 行为由用例锁定）；

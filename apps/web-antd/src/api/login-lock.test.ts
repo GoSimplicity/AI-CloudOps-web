@@ -199,16 +199,18 @@ describe('登录锁定文案与 Retry-After', () => {
     },
   );
 
-  it('503 的 HTML 按频率限制兜底，不把正文当错误抛出', () => {
+  it('登录 503 的 HTML 提示服务暂不可用，不倒计时', () => {
     const error = loginError({
       body: '<html><body>503 Service Unavailable</body></html>',
+      headers: { 'Retry-After': '30' },
       status: 503,
     });
     expect(() => readLoginLockState(error)).not.toThrow();
     expect(resolveLoginHttpErrorMessage(error)).toBe(
-      '请求过于频繁，请稍后再试',
+      '登录服务暂不可用，请稍后重试',
     );
-    expect(readLoginLockState(error).seconds).toBe(1);
+    expect(resolveLoginHttpErrorMessage(error)).not.toContain('<html');
+    expect(readLoginLockState(error).seconds).toBe(0);
   });
 
   it('其它接口的 429 不进入登录倒计时', () => {
