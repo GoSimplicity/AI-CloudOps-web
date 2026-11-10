@@ -21,8 +21,9 @@ defineOptions({
   name: 'AuthenticationLogin',
 });
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   codeLoginPath: '/auth/code-login',
+  disabled: false,
   forgetPasswordPath: '/auth/forget-password',
   loading: false,
   passwordPlaceholder: '',
@@ -34,6 +35,7 @@ withDefaults(defineProps<Props>(), {
   showRegister: true,
   showRememberMe: true,
   showThirdPartyLogin: true,
+  submitHint: '',
   subTitle: '',
   title: '',
   usernamePlaceholder: '',
@@ -65,6 +67,8 @@ const passwordStatus = computed(() => {
 });
 
 function handleSubmit() {
+  if (props.disabled) return;
+
   formState.submitted = true;
 
   if (
@@ -110,8 +114,8 @@ function handleGo(path: string) {
       :label="$t('authentication.username')"
       :placeholder="usernamePlaceholder || $t('authentication.username')"
       :status="usernameStatus"
-      name="username"
       autocomplete="username"
+      name="username"
       required
       type="text"
     />
@@ -121,8 +125,8 @@ function handleGo(path: string) {
       :label="$t('authentication.password')"
       :placeholder="passwordPlaceholder || $t('authentication.password')"
       :status="passwordStatus"
-      name="password"
       autocomplete="current-password"
+      name="password"
       required
       type="password"
     />
@@ -145,7 +149,20 @@ function handleGo(path: string) {
         {{ $t('authentication.forgetPassword') }}
       </span>
     </div>
-    <VbenButton :loading="loading" class="w-full" @click="handleSubmit">
+    <p
+      v-if="submitHint"
+      aria-live="polite"
+      class="text-destructive mb-4 text-sm"
+      role="status"
+    >
+      {{ submitHint }}
+    </p>
+    <VbenButton
+      :disabled="disabled"
+      :loading="loading"
+      class="w-full"
+      @click="handleSubmit"
+    >
       {{ $t('common.login') }}
     </VbenButton>
 

@@ -14,6 +14,16 @@ interface AuthenticationProps {
   loading?: boolean;
 
   /**
+   * @zh_CN 禁止提交（登录被临时锁定时）
+   */
+  disabled?: boolean;
+
+  /**
+   * @zh_CN 提交按钮上方的提示，例如登录锁定倒计时
+   */
+  submitHint?: string;
+
+  /**
    * @zh_CN 密码占位符
    */
   passwordPlaceholder?: string;

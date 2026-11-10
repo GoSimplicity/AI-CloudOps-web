@@ -4,5 +4,12 @@
       "title": "演示",
       "antd": "Ant Design Vue"
     }
+  },
+  "authentication": {
+    "loginRateLimited": "登录失败次数过多，请稍后再试",
+    "loginTooManyRequests": "请求过于频繁，请稍后再试",
+    "loginUnavailable": "登录服务暂不可用，请稍后重试",
+    "loginRetryAfter": "请 {minutes} 分 {seconds} 秒后再试",
+    "loginRetryAfterSeconds": "请 {seconds} 秒后再试"
   }
 }
