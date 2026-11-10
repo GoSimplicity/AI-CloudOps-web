@@ -9,6 +9,7 @@ import { openWindow } from '@vben/utils';
 
 import { $t } from '#/locales';
 import { useAuthStore } from '#/store';
+import { useLoginLockPresentation } from '#/store/use-login-lock';
 import AI from '#/views/ai/ai.vue';
 
 import DemoModeNotice from './components/DemoModeNotice.vue';
@@ -51,6 +52,7 @@ const menus = computed(() => [
 ]);
 
 const { loginLoading } = storeToRefs(authStore);
+const { lockHint, loginLocked } = useLoginLockPresentation();
 
 const avatar = computed(() => {
   return userStore.userInfo?.avatar || '';
@@ -82,7 +84,9 @@ async function handleLogout() {
       <AuthenticationLoginExpiredModal
         v-model:open="accessStore.loginExpired"
         :avatar
+        :disabled="loginLocked"
         :loading="loginLoading"
+        :submit-hint="lockHint"
         :username-placeholder="userStore.userInfo?.username || '请输入账号'"
         password-placeholder="请输入密码"
         @submit="authStore.authLogin"

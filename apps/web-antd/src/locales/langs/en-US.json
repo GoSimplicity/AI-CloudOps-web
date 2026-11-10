@@ -4,5 +4,12 @@
       "title": "Demos",
       "antd": "Ant Design Vue"
     }
+  },
+  "authentication": {
+    "loginRateLimited": "Too many login attempts. Please try again later.",
+    "loginTooManyRequests": "Too many requests. Please try again shortly.",
+    "loginUnavailable": "Login is temporarily unavailable. Please try again later.",
+    "loginRetryAfter": "Try again in {minutes} min {seconds} sec",
+    "loginRetryAfterSeconds": "Try again in {seconds} sec"
   }
 }

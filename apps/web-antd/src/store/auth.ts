@@ -1,7 +1,7 @@
 import type { LoginAndRegisterParams } from '@vben/common-ui';
 import type { UserInfo } from '@vben/types';
 
-import { ref } from 'vue';
+import { onScopeDispose, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { DEFAULT_HOME_PATH, LOGIN_PATH } from '@vben/constants';
@@ -19,6 +19,7 @@ import { notification } from 'ant-design-vue';
 import { defineStore } from 'pinia';
 
 import { getAccessCodesApi, getUserInfoApi, loginApi, logoutApi } from '#/api';
+import { readLoginLockState } from '#/api/login-lock';
 import { $t } from '#/locales';
 
 export const useAuthStore = defineStore('auth', () => {
@@ -28,6 +29,56 @@ export const useAuthStore = defineStore('auth', () => {
 
   const loginLoading = ref(false);
   const authGeneration = ref(0);
+  /** Retry-After 剩余秒数。大于 0 时登录按钮禁用，到 0 后恢复 */
+  const loginLockRemainingSeconds = ref(0);
+  /** 不倒计时时的页面提示。登录 429 的兜底改走 1 秒倒计时，这里通常为空 */
+  const loginLockHint = ref('');
+  let loginLockedUntil = 0;
+  let loginLockTimer: ReturnType<typeof setInterval> | undefined;
+
+  function clearLoginLockTimer() {
+    if (loginLockTimer === undefined) return;
+    clearInterval(loginLockTimer);
+    loginLockTimer = undefined;
+  }
+
+  function syncLoginLock() {
+    const remaining = Math.ceil((loginLockedUntil - Date.now()) / 1000);
+    if (remaining <= 0) {
+      loginLockedUntil = 0;
+      loginLockRemainingSeconds.value = 0;
+      clearLoginLockTimer();
+      return;
+    }
+    loginLockRemainingSeconds.value = remaining;
+  }
+
+  function startLoginLock(seconds: number) {
+    loginLockHint.value = '';
+    loginLockedUntil = Date.now() + seconds * 1000;
+    syncLoginLock();
+    if (loginLockTimer !== undefined) return;
+    // 用截止时间换算剩余秒，间隔只负责刷新，避免定时器漂移改掉 Retry-After
+    loginLockTimer = setInterval(syncLoginLock, 250);
+  }
+
+  function clearLoginLock() {
+    loginLockedUntil = 0;
+    loginLockRemainingSeconds.value = 0;
+    loginLockHint.value = '';
+    clearLoginLockTimer();
+  }
+
+  function applyLoginLock(error: unknown) {
+    const next = readLoginLockState(error);
+    if (next.seconds > 0) {
+      startLoginLock(next.seconds);
+      return;
+    }
+    if (next.hint) loginLockHint.value = next.hint;
+  }
+
+  onScopeDispose(clearLoginLockTimer);
 
   function clearAccountAccess() {
     accessStore.setIsAccessChecked(false);
@@ -48,6 +99,8 @@ export const useAuthStore = defineStore('auth', () => {
     params: LoginAndRegisterParams,
     onSuccess?: () => Promise<void> | void,
   ) {
+    if (loginLockRemainingSeconds.value > 0) return { userInfo: null };
+    loginLockHint.value = '';
     // 异步处理用户登录操作并获取 accessToken
     let userInfo: null | UserInfo = null;
     const generation = ++authGeneration.value;
@@ -98,6 +151,9 @@ export const useAuthStore = defineStore('auth', () => {
           });
         }
       }
+    } catch (error) {
+      applyLoginLock(error);
+      throw error;
     } finally {
       if (generation === authGeneration.value) loginLoading.value = false;
     }
@@ -163,6 +219,7 @@ export const useAuthStore = defineStore('auth', () => {
   function $reset() {
     authGeneration.value++;
     loginLoading.value = false;
+    clearLoginLock();
   }
 
   return {
@@ -171,6 +228,8 @@ export const useAuthStore = defineStore('auth', () => {
     fetchUserInfo,
     getAuthGeneration: () => authGeneration.value,
     loginLoading,
+    loginLockHint,
+    loginLockRemainingSeconds,
     logout,
   };
 });
