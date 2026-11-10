@@ -2339,7 +2339,6 @@ const handleCloseFileManagerModal = () => {
               >
                 <a-select-option value="/bin/bash">/bin/bash</a-select-option>
                 <a-select-option value="/bin/sh">/bin/sh</a-select-option>
-                <a-select-option value="/bin/zsh">/bin/zsh</a-select-option>
               </a-select>
             </a-form-item>
             <a-form-item>
