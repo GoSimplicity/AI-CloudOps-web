@@ -360,11 +360,10 @@ export function useNamespacePage() {
       };
       const res = await getClustersListApi(params);
       // 如果是第一页，直接赋值；否则追加到现有数据
-      if (clustersPage.value === 1) {
-        clusters.value = res?.items || [];
-      } else {
-        clusters.value = [...clusters.value, ...(res?.items || [])];
-      }
+      clusters.value =
+        clustersPage.value === 1
+          ? res?.items || []
+          : [...clusters.value, ...(res?.items || [])];
       clustersTotal.value = res?.total || 0;
 
       // 如果当前没有选择集群且有可用集群，自动选择第一个

@@ -1,109 +1,114 @@
 /* ==================== Deployment 页面特定样式 ==================== */
+
 /* 
  * Note: 本文件只包含 Deployment 特有样式
  * 共通样式已移至 k8s-common.css
  */
 
 /* Deployment 表格行状态指示器 */
-.deployment-table :deep(.ant-table-tbody > tr[data-deployment-status="Running"]) {
+.deployment-table
+  :deep(.ant-table-tbody > tr[data-deployment-status='Running']) {
   border-left: 3px solid #52c41a;
 }
 
-.deployment-table :deep(.ant-table-tbody > tr[data-deployment-status="Stopped"]) {
+.deployment-table
+  :deep(.ant-table-tbody > tr[data-deployment-status='Stopped']) {
   border-left: 3px solid var(--ops-border);
 }
 
-.deployment-table :deep(.ant-table-tbody > tr[data-deployment-status="Paused"]) {
+.deployment-table
+  :deep(.ant-table-tbody > tr[data-deployment-status='Paused']) {
   border-left: 3px solid #faad14;
 }
 
-.deployment-table :deep(.ant-table-tbody > tr[data-deployment-status="Error"]) {
+.deployment-table :deep(.ant-table-tbody > tr[data-deployment-status='Error']) {
   border-left: 3px solid #ff4d4f;
 }
 
 /* Deployment 特定操作按钮样式 */
+
 /* YAML 操作按钮 - 紫色主题 */
-.deployment-table .ant-btn[title*="YAML"] {
+.deployment-table .ant-btn[title*='YAML'] {
   background: #f9f0ff;
   border-color: #d3adf7;
   color: #722ed1;
 }
 
-.deployment-table .ant-btn[title*="YAML"]:hover {
+.deployment-table .ant-btn[title*='YAML']:hover {
   background: #efdbff;
   border-color: #b37feb;
   color: #531dab;
-  box-shadow: 0 6px 16px rgba(114, 46, 209, 0.25);
+  box-shadow: 0 6px 16px rgb(114 46 209 / 25%);
 }
 
 /* 伸缩按钮 - 青色主题 */
-.deployment-table .ant-btn[title*="伸缩"] {
+.deployment-table .ant-btn[title*='伸缩'] {
   background: #e6fffb;
   border-color: #87e8de;
   color: #13c2c2;
 }
 
-.deployment-table .ant-btn[title*="伸缩"]:hover {
+.deployment-table .ant-btn[title*='伸缩']:hover {
   background: #b5f5ec;
   border-color: #5cdbd3;
   color: #08979c;
-  box-shadow: 0 6px 16px rgba(19, 194, 194, 0.25);
+  box-shadow: 0 6px 16px rgb(19 194 194 / 25%);
 }
 
 /* 重启按钮 - 橙色主题 */
-.deployment-table .ant-btn[title*="重启"] {
+.deployment-table .ant-btn[title*='重启'] {
   background: #fff7e6;
   border-color: #ffec3d;
   color: #fa8c16;
 }
 
-.deployment-table .ant-btn[title*="重启"]:hover {
+.deployment-table .ant-btn[title*='重启']:hover {
   background: #ffd591;
   border-color: #fadb14;
   color: #d46b08;
-  box-shadow: 0 6px 16px rgba(250, 140, 22, 0.25);
+  box-shadow: 0 6px 16px rgb(250 140 22 / 25%);
 }
 
 /* 暂停按钮 - 灰色主题 */
-.deployment-table .ant-btn[title*="暂停"] {
+.deployment-table .ant-btn[title*='暂停'] {
   background: var(--ops-ground);
   border-color: var(--ops-border);
   color: var(--ops-muted);
 }
 
-.deployment-table .ant-btn[title*="暂停"]:hover {
+.deployment-table .ant-btn[title*='暂停']:hover {
   background: var(--ops-border);
   border-color: #bfbfbf;
   color: var(--ops-muted);
-  box-shadow: 0 6px 16px rgba(140, 140, 140, 0.25);
+  box-shadow: 0 6px 16px rgb(140 140 140 / 25%);
 }
 
 /* 恢复按钮 - 绿色主题 */
-.deployment-table .ant-btn[title*="恢复"] {
+.deployment-table .ant-btn[title*='恢复'] {
   background: #f6ffed;
   border-color: #b7eb8f;
   color: #52c41a;
 }
 
-.deployment-table .ant-btn[title*="恢复"]:hover {
+.deployment-table .ant-btn[title*='恢复']:hover {
   background: #d9f7be;
   border-color: #95de64;
   color: #389e0d;
-  box-shadow: 0 6px 16px rgba(82, 196, 26, 0.25);
+  box-shadow: 0 6px 16px rgb(82 196 26 / 25%);
 }
 
 /* Pod 查看按钮 - 蓝色主题 */
-.deployment-table .ant-btn[title*="Pod"] {
+.deployment-table .ant-btn[title*='Pod'] {
   background: #e6f7ff;
   border-color: #91d5ff;
   color: #1890ff;
 }
 
-.deployment-table .ant-btn[title*="Pod"]:hover {
+.deployment-table .ant-btn[title*='Pod']:hover {
   background: #bae7ff;
   border-color: #69c0ff;
   color: #096dd9;
-  box-shadow: 0 6px 16px rgba(24, 144, 255, 0.25);
+  box-shadow: 0 6px 16px rgb(24 144 255 / 25%);
 }
 
 /* 伸缩模态框特定样式 */
@@ -124,7 +129,7 @@
     gap: 4px;
     min-width: 120px;
   }
-  
+
   .deployment-table .k8s-action-column .ant-btn {
     width: 100%;
     height: 28px;
@@ -145,14 +150,16 @@
   0% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.05);
   }
+
   100% {
     transform: scale(1);
   }
 }
 
-.deployment-table .ant-btn[title*="重启"]:active {
+.deployment-table .ant-btn[title*='重启']:active {
   animation: pulse 0.3s ease-in-out;
 }

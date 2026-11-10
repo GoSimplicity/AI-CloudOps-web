@@ -1003,7 +1003,58 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* 继承用户页面的样式风格 */
+@media (max-width: 1200px) {
+  .search-left {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .search-input {
+    max-width: none;
+  }
+
+  .method-select,
+  .access-select {
+    width: 100%;
+  }
+
+  .search-right {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .search-right {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .api-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .preview-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1135,7 +1186,7 @@ onUnmounted(() => {
 }
 
 .detail-section h3 {
-  margin: 0 0 16px 0;
+  margin: 0 0 16px;
   font-size: 16px;
   font-weight: 600;
   color: var(--ops-ink);
@@ -1230,55 +1281,5 @@ onUnmounted(() => {
   background: #fff2f0;
 }
 
-@media (max-width: 1200px) {
-  .search-left {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .search-input {
-    max-width: none;
-  }
-
-  .method-select,
-  .access-select {
-    width: 100%;
-  }
-
-  .search-right {
-    justify-content: flex-end;
-  }
-}
-
-@media (max-width: 768px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .search-right {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .detail-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .action-buttons {
-    flex-direction: column;
-    width: 100%;
-  }
-
-  .api-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .preview-content {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-}
+/* 继承用户页面的样式风格 */
 </style>

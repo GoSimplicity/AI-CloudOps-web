@@ -148,7 +148,7 @@ const retryWithBackoff = async (fn, maxRetries = 3, baseDelay = 1000) => {
       }
 
       // 指数退避
-      const delay = baseDelay * Math.pow(2, attempt - 1);
+      const delay = baseDelay * 2 ** (attempt - 1);
 
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
@@ -1233,7 +1233,7 @@ marked.setOptions({
   headerIds: false, // 禁用header id生成
   mangle: false, // 禁用header mangle
   sanitize: false, // 交给DOMPurify处理
-  highlight: function (code, lang) {
+  highlight(code, lang) {
     const highlightedCode = highlightCode(code, lang);
     const escapedCode = escapeHtml(code);
     return `<pre class="language-${lang || 'text'}" data-code="${escapedCode}">
@@ -1711,7 +1711,8 @@ onBeforeUnmount(() => {
         <div
           v-for="(msg, index) in chatMessages"
           :key="`msg-${index}-${msg.time}`"
-          :class="['message', msg.type]"
+          class="message"
+          :class="[msg.type]"
         >
           <div class="message-wrapper">
             <div class="avatar">
@@ -1989,6 +1990,84 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes typing {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.8) translateY(0);
+    opacity: 0.5;
+  }
+
+  40% {
+    transform: scale(1.3) translateY(-2px);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-subtle {
+  0%,
+  100% {
+    box-shadow: 0 4px 12px rgb(59 130 246 / 10%);
+  }
+
+  50% {
+    box-shadow: 0 4px 16px rgb(59 130 246 / 20%);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .ai-float-window {
+    width: calc(100vw - 20px) !important;
+    height: calc(100vh - 20px) !important;
+    left: 10px !important;
+    top: 10px !important;
+  }
+
+  .assistant-float-button {
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+  }
+
+  .header-actions {
+    gap: 4px;
+  }
+
+  .action-button {
+    width: 28px;
+    height: 28px;
+  }
+
+  .status-left {
+    gap: 8px;
+  }
+
+  .mode-button {
+    padding: 3px 6px;
+    font-size: 10px;
+  }
+}
+
 .ai-assistant-container {
   position: relative;
   z-index: 9999;
@@ -2006,14 +2085,14 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 16px rgb(59 130 246 / 30%);
   transition: all 0.3s ease;
   z-index: 10000;
 }
 
 .assistant-float-button:hover {
   transform: translateY(-3px);
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 6px 20px rgb(59 130 246 / 40%);
 }
 
 .assistant-float-button.active {
@@ -2039,7 +2118,7 @@ onBeforeUnmount(() => {
   font-size: 14px;
   font-weight: 500;
   white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
   border: 1px solid #374151;
   display: flex;
   align-items: center;
@@ -2065,11 +2144,8 @@ onBeforeUnmount(() => {
 
 .float-window-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
+  inset: 0;
+  background: rgb(0 0 0 / 30%);
   z-index: 9998;
 }
 
@@ -2077,7 +2153,7 @@ onBeforeUnmount(() => {
   position: fixed;
   background: var(--ops-ink);
   border-radius: var(--ops-radius);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 40px rgb(0 0 0 / 30%);
   border: 1px solid #374151;
   display: flex;
   flex-direction: column;
@@ -2154,7 +2230,7 @@ onBeforeUnmount(() => {
 
 .action-button:hover {
   color: var(--ops-ground);
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(255 255 255 / 10%);
 }
 
 .action-button:disabled {
@@ -2231,7 +2307,7 @@ onBeforeUnmount(() => {
 
 .mode-button:hover {
   color: var(--ops-ground);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgb(255 255 255 / 5%);
 }
 
 .mode-button.active {
@@ -2265,13 +2341,13 @@ onBeforeUnmount(() => {
 .mode-indicator.rag {
   color: #3b82f6;
   border-color: #3b82f6;
-  background: rgba(59, 130, 246, 0.1);
+  background: rgb(59 130 246 / 10%);
 }
 
 .mode-indicator.mcp {
   color: #10b981;
   border-color: #10b981;
-  background: rgba(16, 185, 129, 0.1);
+  background: rgb(16 185 129 / 10%);
 }
 
 .error-banner {
@@ -2298,7 +2374,7 @@ onBeforeUnmount(() => {
 }
 
 .error-close:hover {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgb(239 68 68 / 10%);
 }
 
 .error-retry {
@@ -2315,7 +2391,7 @@ onBeforeUnmount(() => {
 }
 
 .error-retry:hover {
-  background: rgba(239, 68, 68, 0.08);
+  background: rgb(239 68 68 / 8%);
 }
 
 .chat-messages {
@@ -2334,7 +2410,7 @@ onBeforeUnmount(() => {
 }
 
 .chat-messages::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.3);
+  background: rgb(156 163 175 / 30%);
   border-radius: 2px;
 }
 
@@ -2347,17 +2423,6 @@ onBeforeUnmount(() => {
 .message-wrapper {
   display: flex;
   gap: 12px;
-}
-
-@keyframes messageSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .avatar-container {
@@ -2426,7 +2491,7 @@ onBeforeUnmount(() => {
 .text :deep(h4),
 .text :deep(h5),
 .text :deep(h6) {
-  margin: 16px 0 8px 0;
+  margin: 16px 0 8px;
   font-weight: 600;
   line-height: 1.4;
   color: var(--ops-ground);
@@ -2437,20 +2502,25 @@ onBeforeUnmount(() => {
   border-bottom: 2px solid #374151;
   padding-bottom: 8px;
 }
+
 .text :deep(h2) {
   font-size: 20px;
   border-bottom: 1px solid #374151;
   padding-bottom: 6px;
 }
+
 .text :deep(h3) {
   font-size: 18px;
 }
+
 .text :deep(h4) {
   font-size: 16px;
 }
+
 .text :deep(h5) {
   font-size: 14px;
 }
+
 .text :deep(h6) {
   font-size: 13px;
   color: #9ca3af;
@@ -2492,7 +2562,7 @@ onBeforeUnmount(() => {
   margin: 12px 0;
   padding: 8px 16px;
   border-left: 4px solid #3b82f6;
-  background: rgba(59, 130, 246, 0.1);
+  background: rgb(59 130 246 / 10%);
   border-radius: 0 4px 4px 0;
   font-style: italic;
   color: var(--ops-border);
@@ -2503,7 +2573,7 @@ onBeforeUnmount(() => {
   padding: 2px 6px;
   border-radius: 4px;
   font-family:
-    'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Courier New', monospace;
+    'SF Mono', Monaco, Inconsolata, 'Roboto Mono', 'Courier New', monospace;
   font-size: 13px;
   color: #93c5fd;
   border: 1px solid #374151;
@@ -2554,7 +2624,7 @@ onBeforeUnmount(() => {
 .text :deep(.code-copy-btn:hover) {
   color: #3b82f6;
   border-color: #3b82f6;
-  background: rgba(59, 130, 246, 0.1);
+  background: rgb(59 130 246 / 10%);
 }
 
 .text :deep(pre code) {
@@ -2572,18 +2642,23 @@ onBeforeUnmount(() => {
 .text :deep(pre.language-javascript) {
   border-left: 4px solid #f7df1e;
 }
+
 .text :deep(pre.language-python) {
   border-left: 4px solid #3776ab;
 }
+
 .text :deep(pre.language-bash) {
   border-left: 4px solid #4eaa25;
 }
+
 .text :deep(pre.language-json) {
   border-left: 4px solid #ff6b6b;
 }
+
 .text :deep(pre.language-yaml) {
   border-left: 4px solid #cb171e;
 }
+
 .text :deep(pre.language-sql) {
   border-left: 4px solid #336791;
 }
@@ -2706,7 +2781,7 @@ onBeforeUnmount(() => {
 
 .message-action-btn:hover {
   color: #3b82f6;
-  background: rgba(59, 130, 246, 0.1);
+  background: rgb(59 130 246 / 10%);
 }
 
 .message-action-btn .liked {
@@ -2737,7 +2812,7 @@ onBeforeUnmount(() => {
   border-radius: 50%;
   display: block;
   animation: typing 1.4s infinite ease-in-out;
-  box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 8px rgb(59 130 246 / 30%);
 }
 
 .typing-animation span:nth-child(1) {
@@ -2773,18 +2848,18 @@ onBeforeUnmount(() => {
 }
 
 .mode-badge {
-  background: rgba(59, 130, 246, 0.15);
+  background: rgb(59 130 246 / 15%);
   color: #3b82f6;
   padding: 2px 8px;
   border-radius: var(--ops-radius);
   font-weight: 600;
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  border: 1px solid rgb(59 130 246 / 30%);
 }
 
 .mode-badge.mcp {
-  background: rgba(16, 185, 129, 0.15);
+  background: rgb(16 185 129 / 15%);
   color: #10b981;
-  border-color: rgba(16, 185, 129, 0.3);
+  border-color: rgb(16 185 129 / 30%);
 }
 
 .session-info {
@@ -2794,36 +2869,13 @@ onBeforeUnmount(() => {
   opacity: 0.8;
 }
 
-@keyframes typing {
-  0%,
-  80%,
-  100% {
-    transform: scale(0.8) translateY(0);
-    opacity: 0.5;
-  }
-  40% {
-    transform: scale(1.3) translateY(-2px);
-    opacity: 1;
-  }
-}
-
-@keyframes pulse-subtle {
-  0%,
-  100% {
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
-  }
-  50% {
-    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
-  }
-}
-
 /* 消息来源样式 */
 .message-sources {
   margin-top: 12px;
   padding: 12px;
-  background: rgba(59, 130, 246, 0.1);
+  background: rgb(59 130 246 / 10%);
   border-radius: var(--ops-radius);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  border: 1px solid rgb(59 130 246 / 20%);
 }
 
 .sources-header {
@@ -2843,10 +2895,10 @@ onBeforeUnmount(() => {
 }
 
 .source-item {
-  background: rgba(59, 130, 246, 0.05);
+  background: rgb(59 130 246 / 5%);
   padding: 8px;
   border-radius: 6px;
-  border: 1px solid rgba(59, 130, 246, 0.15);
+  border: 1px solid rgb(59 130 246 / 15%);
 }
 
 .source-title {
@@ -2859,7 +2911,7 @@ onBeforeUnmount(() => {
 .source-preview {
   font-size: 12px;
   color: #d1d5db;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgb(0 0 0 / 20%);
   padding: 6px 8px;
   border-radius: 4px;
   line-height: 1.4;
@@ -2871,10 +2923,10 @@ onBeforeUnmount(() => {
   font-size: 11px;
   color: #10b981;
   font-weight: 600;
-  background: rgba(16, 185, 129, 0.1);
+  background: rgb(16 185 129 / 10%);
   padding: 2px 6px;
   border-radius: 4px;
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  border: 1px solid rgb(16 185 129 / 30%);
   display: inline-block;
 }
 
@@ -2882,9 +2934,9 @@ onBeforeUnmount(() => {
 .follow-up-questions {
   margin-top: 12px;
   padding: 12px;
-  background: rgba(16, 185, 129, 0.1);
+  background: rgb(16 185 129 / 10%);
   border-radius: var(--ops-radius);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  border: 1px solid rgb(16 185 129 / 20%);
 }
 
 .follow-up-header {
@@ -2904,8 +2956,8 @@ onBeforeUnmount(() => {
 }
 
 .follow-up-question {
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgb(16 185 129 / 10%);
+  border: 1px solid rgb(16 185 129 / 30%);
   color: #34d399;
   border-radius: var(--ops-radius);
   padding: 8px 12px;
@@ -2917,8 +2969,8 @@ onBeforeUnmount(() => {
 }
 
 .follow-up-question:hover:not(:disabled) {
-  background: rgba(16, 185, 129, 0.2);
-  border-color: rgba(16, 185, 129, 0.5);
+  background: rgb(16 185 129 / 20%);
+  border-color: rgb(16 185 129 / 50%);
   transform: translateY(-1px);
 }
 
@@ -2942,8 +2994,8 @@ onBeforeUnmount(() => {
 }
 
 .quick-action-btn {
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: rgb(59 130 246 / 10%);
+  border: 1px solid rgb(59 130 246 / 30%);
   color: #60a5fa;
   border-radius: var(--ops-radius);
   padding: 6px 12px;
@@ -2957,8 +3009,8 @@ onBeforeUnmount(() => {
 }
 
 .quick-action-btn:hover {
-  background: rgba(59, 130, 246, 0.2);
-  border-color: rgba(59, 130, 246, 0.5);
+  background: rgb(59 130 246 / 20%);
+  border-color: rgb(59 130 246 / 50%);
   transform: translateY(-1px);
 }
 
@@ -3028,7 +3080,7 @@ onBeforeUnmount(() => {
 .advanced-options-btn.active {
   color: #3b82f6;
   border-color: #3b82f6;
-  background: rgba(59, 130, 246, 0.1);
+  background: rgb(59 130 246 / 10%);
 }
 
 /* 高级选项面板 */
@@ -3113,13 +3165,13 @@ onBeforeUnmount(() => {
 }
 
 .stop-button:hover {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgb(239 68 68 / 10%);
 }
 
 .loading-spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid rgb(255 255 255 / 30%);
   border-radius: 50%;
   border-top-color: var(--ops-surface);
   animation: spin 1s linear infinite;
@@ -3128,12 +3180,6 @@ onBeforeUnmount(() => {
 /* 刷新按钮动画 */
 .refresh-btn .spinning {
   animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* 输入提示 */
@@ -3200,7 +3246,7 @@ onBeforeUnmount(() => {
 .session-button:hover {
   color: #3b82f6;
   border-color: #3b82f6;
-  background: rgba(59, 130, 246, 0.1);
+  background: rgb(59 130 246 / 10%);
 }
 
 .session-panel {
@@ -3212,7 +3258,7 @@ onBeforeUnmount(() => {
   border-radius: var(--ops-radius);
   width: 220px;
   z-index: 10001;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 10px 20px rgb(0 0 0 / 30%);
 }
 
 .sessions-header {
@@ -3243,7 +3289,7 @@ onBeforeUnmount(() => {
 .sessions-new:hover {
   color: #3b82f6;
   border-color: #3b82f6;
-  background: rgba(59, 130, 246, 0.1);
+  background: rgb(59 130 246 / 10%);
 }
 
 .sessions-list {
@@ -3263,11 +3309,11 @@ onBeforeUnmount(() => {
 }
 
 .session-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgb(255 255 255 / 5%);
 }
 
 .session-item.active {
-  background: rgba(59, 130, 246, 0.1);
+  background: rgb(59 130 246 / 10%);
 }
 
 .session-name {
@@ -3297,41 +3343,6 @@ onBeforeUnmount(() => {
 .session-action-btn:hover {
   color: #3b82f6;
   border-color: #3b82f6;
-  background: rgba(59, 130, 246, 0.1);
-}
-
-/* 响应式调整 */
-@media (max-width: 768px) {
-  .ai-float-window {
-    width: calc(100vw - 20px) !important;
-    height: calc(100vh - 20px) !important;
-    left: 10px !important;
-    top: 10px !important;
-  }
-
-  .assistant-float-button {
-    bottom: 20px;
-    right: 20px;
-    width: 50px;
-    height: 50px;
-  }
-
-  .header-actions {
-    gap: 4px;
-  }
-
-  .action-button {
-    width: 28px;
-    height: 28px;
-  }
-
-  .status-left {
-    gap: 8px;
-  }
-
-  .mode-button {
-    padding: 3px 6px;
-    font-size: 10px;
-  }
+  background: rgb(59 130 246 / 10%);
 }
 </style>

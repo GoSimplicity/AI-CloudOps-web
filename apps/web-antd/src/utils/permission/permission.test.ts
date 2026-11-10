@@ -3,19 +3,6 @@ import { useAccessStore, useUserStore } from '@vben/stores';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-/** U3 开关：默认取常量文件的真实值，个别用例临时打开以验证「获批后」状态 */
-const u3 = vi.hoisted(() => ({ override: undefined as boolean | undefined }));
-vi.mock('#/constants/permission-codes', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('#/constants/permission-codes')>();
-  return {
-    ...actual,
-    get U3_SCOPE_APPROVED() {
-      return u3.override ?? actual.U3_SCOPE_APPROVED;
-    },
-  };
-});
-
 import {
   ALL_PERMISSION_CODES,
   FE02_SUPPLEMENT_PERMISSION_CODES,
@@ -40,6 +27,19 @@ import {
   isForbiddenResponse,
   isPermissionDeniedError,
 } from './forbidden';
+
+/** U3 开关：默认取常量文件的真实值，个别用例临时打开以验证「获批后」状态 */
+const u3 = vi.hoisted(() => ({ override: undefined as boolean | undefined }));
+vi.mock('#/constants/permission-codes', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('#/constants/permission-codes')>();
+  return {
+    ...actual,
+    get U3_SCOPE_APPROVED() {
+      return u3.override ?? actual.U3_SCOPE_APPROVED;
+    },
+  };
+});
 
 const ALL_KEYS = Object.keys(PERMISSION_CODES) as PermissionKey[];
 /** S3（U3 表）：受开关控制的 19 个 key */

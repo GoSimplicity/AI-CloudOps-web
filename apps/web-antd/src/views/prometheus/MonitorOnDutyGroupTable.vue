@@ -173,11 +173,9 @@ const getUserName = (userId: number): string => {
 
 // 更新统计数据
 const updateStats = (): void => {
-  if (dutyGroupDetail.value) {
-    stats.totalMembers = dutyGroupDetail.value.users?.length || 0;
-  } else {
-    stats.totalMembers = 0;
-  }
+  stats.totalMembers = dutyGroupDetail.value
+    ? dutyGroupDetail.value.users?.length || 0
+    : 0;
 
   // 今日值班 - 显示值班人姓名
   const todayStr = dayjs().format('YYYY-MM-DD');
@@ -272,7 +270,7 @@ const fetchDutySchedule = async (): Promise<void> => {
 
         // 处理用户信息和换班标识
         let user: null | User = null;
-        let originUser: string | undefined = undefined;
+        let originUser: string | undefined;
         let isAdjusted = false;
 
         if (detail) {
@@ -300,10 +298,10 @@ const fetchDutySchedule = async (): Promise<void> => {
 
         days.push({
           date: dateStr,
-          user: user,
-          originUser: originUser,
+          user,
+          originUser,
           isCurrentMonth,
-          isAdjusted: isAdjusted,
+          isAdjusted,
         });
       }
 
@@ -500,11 +498,9 @@ const loadChangeRecords = async (page = 1, append = false): Promise<void> => {
       }
     }
 
-    if (append) {
-      changeRecordsList.value = [...changeRecordsList.value, ...changeData];
-    } else {
-      changeRecordsList.value = changeData;
-    }
+    changeRecordsList.value = append
+      ? [...changeRecordsList.value, ...changeData]
+      : changeData;
 
     changeRecordsPagination.total = total;
     changeRecordsPagination.hasMore =
@@ -789,7 +785,7 @@ const exportSchedule = async (): Promise<void> => {
       ),
     ].join('\n');
 
-    const blob = new Blob(['\ufeff' + csvContent], {
+    const blob = new Blob(['\uFEFF' + csvContent], {
       type: 'text/csv;charset=utf-8;',
     });
     const link = document.createElement('a');
@@ -1410,7 +1406,76 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-/* 保持原有样式不变 */
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .search-section {
+    flex-direction: column;
+  }
+
+  .search-input,
+  .filter-select {
+    width: 100%;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .calendar-header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .calendar-day {
+    min-height: 80px;
+  }
+
+  .date-display {
+    flex-direction: column;
+    text-align: center;
+    gap: 8px;
+  }
+
+  .day-detail-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .users-change {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .arrow {
+    transform: rotate(90deg);
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-day {
+    min-height: 70px;
+  }
+
+  .duty-name {
+    font-size: 11px;
+  }
+
+  .day-number {
+    font-size: 14px;
+  }
+
+  .stat-number {
+    font-size: 20px;
+  }
+
+  .date-large {
+    font-size: 28px;
+  }
+}
 
 /* 页面头部 */
 
@@ -1894,74 +1959,5 @@ onMounted(async () => {
   color: var(--ops-muted);
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .search-section {
-    flex-direction: column;
-  }
-
-  .search-input,
-  .filter-select {
-    width: 100%;
-  }
-
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .calendar-header {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .calendar-day {
-    min-height: 80px;
-  }
-
-  .date-display {
-    flex-direction: column;
-    text-align: center;
-    gap: 8px;
-  }
-
-  .day-detail-header {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .users-change {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .arrow {
-    transform: rotate(90deg);
-  }
-}
-
-@media (max-width: 480px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .calendar-day {
-    min-height: 70px;
-  }
-
-  .duty-name {
-    font-size: 11px;
-  }
-
-  .day-number {
-    font-size: 14px;
-  }
-
-  .stat-number {
-    font-size: 20px;
-  }
-
-  .date-large {
-    font-size: 28px;
-  }
-}
+/* 保持原有样式不变 */
 </style>

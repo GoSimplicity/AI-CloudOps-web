@@ -350,11 +350,10 @@ export function usePVPage() {
         size: clustersSize.value,
       };
       const res = await getClustersListApi(params);
-      if (clustersPage.value === 1) {
-        clusters.value = res?.items || [];
-      } else {
-        clusters.value = [...clusters.value, ...(res?.items || [])];
-      }
+      clusters.value =
+        clustersPage.value === 1
+          ? res?.items || []
+          : [...clusters.value, ...(res?.items || [])];
       clustersTotal.value = res?.total || 0;
 
       // 如果当前没有选择集群且有可用集群，自动选择第一个
@@ -709,7 +708,7 @@ export function usePVPage() {
           const params: DeletePVReq = {
             cluster_id: clusterId,
             name: record.name,
-            force: force,
+            force,
           };
 
           await deleteK8sPV(params);

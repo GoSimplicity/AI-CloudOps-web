@@ -293,7 +293,7 @@ onMounted(async () => {
               </a-select-option>
               <a-select-option
                 v-if="clusters.length > 0 && clusters.length < clustersTotal"
-                :value="'__load_more__'"
+                value="__load_more__"
                 disabled
                 style="text-align: center; color: #999"
               >

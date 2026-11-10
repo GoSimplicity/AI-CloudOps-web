@@ -82,7 +82,7 @@ export function useClusterPage() {
         trigger: 'blur',
       },
       {
-        pattern: /^[a-zA-Z0-9\u4e00-\u9fa5_-]+$/,
+        pattern: /^[a-zA-Z0-9\u4E00-\u9FA5_-]+$/,
         message: '集群名称只能包含字母、数字、中文、下划线和横线',
         trigger: 'blur',
       },

@@ -1,4 +1,5 @@
 /* ==================== Node 页面特定样式 ==================== */
+
 /*
  * Note: 本文件只包含 Node 特有样式
  * 共通样式已移至 k8s-common.css
@@ -74,57 +75,58 @@
 }
 
 /* 节点表格行状态指示器 */
-.node-table :deep(.ant-table-tbody > tr[data-node-status="Ready"]) {
+.node-table :deep(.ant-table-tbody > tr[data-node-status='Ready']) {
   border-left: 3px solid #52c41a;
 }
 
-.node-table :deep(.ant-table-tbody > tr[data-node-status="NotReady"]) {
+.node-table :deep(.ant-table-tbody > tr[data-node-status='NotReady']) {
   border-left: 3px solid #ff4d4f;
   background-color: #fff2f0;
 }
 
-.node-table :deep(.ant-table-tbody > tr[data-node-status="SchedulingDisabled"]) {
+.node-table
+  :deep(.ant-table-tbody > tr[data-node-status='SchedulingDisabled']) {
   border-left: 3px solid #faad14;
   background-color: #fffbe6;
 }
 
 /* 节点表格列特定样式 */
-.node-table :deep(.ant-table-tbody td[data-index="0"]) {
+.node-table :deep(.ant-table-tbody td[data-index='0']) {
   font-weight: 600;
   color: #1677ff;
 }
 
-.node-table :deep(.ant-table-tbody td[data-index="3"]) {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+.node-table :deep(.ant-table-tbody td[data-index='3']) {
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 12px;
   color: var(--ops-muted);
 }
 
-.node-table :deep(.ant-table-tbody td[data-index="4"]) {
+.node-table :deep(.ant-table-tbody td[data-index='4']) {
   font-weight: 500;
   color: #52c41a;
 }
 
-.node-table :deep(.ant-table-tbody td[data-index="5"]),
-.node-table :deep(.ant-table-tbody td[data-index="6"]) {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+.node-table :deep(.ant-table-tbody td[data-index='5']),
+.node-table :deep(.ant-table-tbody td[data-index='6']) {
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 11px;
 }
 
-.node-table :deep(.ant-table-tbody td[data-index="6"]) {
+.node-table :deep(.ant-table-tbody td[data-index='6']) {
   color: #52c41a;
 }
 
 /* 节点操作按钮样式 */
-.k8s-action-column .ant-btn[data-action="drain"] {
+.k8s-action-column .ant-btn[data-action='drain'] {
   border-color: #ff4d4f;
 }
 
-.k8s-action-column .ant-btn[data-action="cordon"] {
+.k8s-action-column .ant-btn[data-action='cordon'] {
   border-color: #faad14;
 }
 
-.k8s-action-column .ant-btn[data-action="uncordon"] {
+.k8s-action-column .ant-btn[data-action='uncordon'] {
   border-color: #52c41a;
 }
 

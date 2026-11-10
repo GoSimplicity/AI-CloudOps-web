@@ -76,9 +76,9 @@ describe('定时任务请求与操作边界', () => {
       if (!('validator' in rule) || typeof rule.validator !== 'function')
         throw new Error('URL validator missing');
       const result = rule.validator({}, url as string);
-      if (valid) await expect(result).resolves.toBeUndefined();
-      else
-        await expect(result).rejects.toThrow('请输入有效的 HTTP 或 HTTPS URL');
+      await (valid
+        ? expect(result).resolves.toBeUndefined()
+        : expect(result).rejects.toThrow('请输入有效的 HTTP 或 HTTPS URL'));
     }
   });
 

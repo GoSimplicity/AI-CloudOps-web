@@ -131,7 +131,7 @@ export function useTemplatePage() {
     name: [
       { required: true, message: '请输入模板名称', trigger: 'blur' },
       {
-        pattern: /^[a-zA-Z0-9-_\u4e00-\u9fa5]+$/,
+        pattern: /^[a-zA-Z0-9-_\u4E00-\u9FA5]+$/,
         message: '模板名称只能包含中英文、数字、下划线和连字符',
         trigger: 'blur',
       },
@@ -147,7 +147,7 @@ export function useTemplatePage() {
     name: [
       { required: true, message: '请输入模板名称', trigger: 'blur' },
       {
-        pattern: /^[a-zA-Z0-9-_\u4e00-\u9fa5]+$/,
+        pattern: /^[a-zA-Z0-9-_\u4E00-\u9FA5]+$/,
         message: '模板名称只能包含中英文、数字、下划线和连字符',
         trigger: 'blur',
       },
@@ -302,11 +302,10 @@ export function useTemplatePage() {
         size: clustersSize.value,
       };
       const res = await getClustersListApi(params);
-      if (clustersPage.value === 1) {
-        clusters.value = res?.items || [];
-      } else {
-        clusters.value = [...clusters.value, ...(res?.items || [])];
-      }
+      clusters.value =
+        clustersPage.value === 1
+          ? res?.items || []
+          : [...clusters.value, ...(res?.items || [])];
       clustersTotal.value = res?.total || 0;
 
       // 如果当前没有选择集群且有可用集群，自动选择第一个
@@ -551,7 +550,7 @@ export function useTemplatePage() {
           createFormModel.value.name ||
           editFormModel.value.name ||
           'temp-check',
-        content: content,
+        content,
         cluster_id: clusterId,
       };
 

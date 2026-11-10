@@ -1,13 +1,16 @@
 <script lang="ts" setup>
 import OpsPage from '#/components/ops/OpsPage.vue';
 
-import { namespacedResourceKey } from '../shared/utils';
+import {
+  formatDateTime,
+  getRelativeTime,
+  namespacedResourceKey,
+} from '../shared/utils';
 import { onMounted, ref } from 'vue';
 
 import { message, Modal } from 'ant-design-vue';
 
 import { useIngressPage } from './Ingress';
-import { formatDateTime, getRelativeTime } from '../shared/utils';
 
 import yaml from 'js-yaml';
 import {

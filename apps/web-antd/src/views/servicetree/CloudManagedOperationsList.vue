@@ -65,8 +65,8 @@ function clearSelection() {
   emit('busy', false);
 }
 async function load(resetPage = false) {
-  const epoch = generation,
-    ticket = ++request;
+  const epoch = generation;
+  const ticket = ++request;
   records.value = [];
   total.value = 0;
   error.value = '';
@@ -419,6 +419,7 @@ onBeforeUnmount(() => {
   display: grid;
   gap: var(--ops-space-md);
 }
+
 .managed-operation-list p,
 .managed-operation-list :deep(.ant-descriptions-item-content) {
   overflow-wrap: anywhere;

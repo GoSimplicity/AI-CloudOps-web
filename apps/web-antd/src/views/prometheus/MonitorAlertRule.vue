@@ -1238,10 +1238,8 @@ onMounted(() => {
 
             <template v-if="column.key === 'severity'">
               <a-tag
-                :class="[
-                  'tech-tag',
-                  `severity-${severityText(record.severity)}`,
-                ]"
+                class="tech-tag"
+                :class="[`severity-${severityText(record.severity)}`]"
               >
                 {{ severityLabel(record.severity) }}
               </a-tag>
@@ -1809,10 +1807,8 @@ onMounted(() => {
           <h2>{{ currentRecord.name }}</h2>
           <div class="detail-badges">
             <a-tag
-              :class="[
-                'tech-tag',
-                `severity-${severityText(currentRecord.severity)}`,
-              ]"
+              class="tech-tag"
+              :class="[`severity-${severityText(currentRecord.severity)}`]"
             >
               {{ severityLabel(currentRecord.severity) }}
             </a-tag>
@@ -1864,6 +1860,81 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .search-filters {
+    width: 100%;
+  }
+
+  .search-input {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .filter-select {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .stats-card :deep(.ant-statistic-title) {
+    font-size: 12px;
+  }
+
+  .stats-card :deep(.ant-statistic-content) {
+    font-size: 16px;
+  }
+
+  .action-buttons {
+    gap: 2px;
+  }
+
+  .action-buttons .ant-btn {
+    padding: 0 4px;
+    font-size: 12px;
+  }
+
+  .detail-footer {
+    justify-content: center;
+  }
+
+  .detail-footer .ant-btn {
+    flex: 1;
+    max-width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .creator-info {
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .creator-name {
+    font-size: 12px;
+  }
+
+  .date-info {
+    text-align: center;
+  }
+
+  .date {
+    font-size: 12px;
+  }
+
+  .time {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .responsive-modal :deep(.ant-modal-body) {
+    padding: 16px;
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+  }
+}
+
 .search-filters {
   display: flex;
   flex-wrap: wrap;
@@ -1934,7 +2005,7 @@ onMounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-family: 'Monaco', 'Menlo', monospace;
+  font-family: Monaco, Menlo, monospace;
   background: #f8f9fa;
   padding: 4px 8px;
   border-radius: 4px;
@@ -1955,7 +2026,7 @@ onMounted(() => {
   font-size: 12px;
   font-weight: 500;
   border: none;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 10%);
 }
 
 .severity-critical {
@@ -2098,7 +2169,7 @@ onMounted(() => {
 }
 
 .tech-switch {
-  background-color: rgba(0, 0, 0, 0.25);
+  background-color: rgb(0 0 0 / 25%);
 }
 
 .tech-switch.ant-switch-checked {
@@ -2215,73 +2286,6 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .search-filters {
-    width: 100%;
-  }
-
-  .search-input {
-    width: 100%;
-    min-width: auto;
-  }
-
-  .filter-select {
-    width: 100%;
-    min-width: auto;
-  }
-
-  .stats-card :deep(.ant-statistic-title) {
-    font-size: 12px;
-  }
-
-  .stats-card :deep(.ant-statistic-content) {
-    font-size: 16px;
-  }
-
-  .action-buttons {
-    gap: 2px;
-  }
-
-  .action-buttons .ant-btn {
-    padding: 0 4px;
-    font-size: 12px;
-  }
-
-  .detail-footer {
-    justify-content: center;
-  }
-
-  .detail-footer .ant-btn {
-    flex: 1;
-    max-width: 120px;
-  }
-}
-
-@media (max-width: 480px) {
-  .creator-info {
-    flex-direction: column;
-    gap: 4px;
-    align-items: center;
-  }
-
-  .creator-name {
-    font-size: 12px;
-  }
-
-  .date-info {
-    text-align: center;
-  }
-
-  .date {
-    font-size: 12px;
-  }
-
-  .time {
-    font-size: 10px;
-  }
-}
-
 /* 表格滚动优化 */
 .table-container :deep(.ant-table-wrapper) {
   overflow: auto;
@@ -2299,13 +2303,5 @@ onMounted(() => {
 .responsive-modal :deep(.ant-modal) {
   max-width: calc(100vw - 16px);
   margin: 8px;
-}
-
-@media (max-width: 768px) {
-  .responsive-modal :deep(.ant-modal-body) {
-    padding: 16px;
-    max-height: calc(100vh - 160px);
-    overflow-y: auto;
-  }
 }
 </style>

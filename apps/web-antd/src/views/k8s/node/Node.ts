@@ -66,7 +66,9 @@ export async function runWithConcurrency<T, R>(
   limit: number,
   worker: (item: T, index: number) => Promise<R>,
 ): Promise<PromiseSettledResult<R>[]> {
-  const results: PromiseSettledResult<R>[] = new Array(items.length);
+  const results: PromiseSettledResult<R>[] = Array.from({
+    length: items.length,
+  });
   let next = 0;
   const runner = async () => {
     while (next < items.length) {
@@ -355,11 +357,10 @@ export function useNodePage() {
         size: clustersSize.value,
       };
       const res = await getClustersListApi(params);
-      if (clustersPage.value === 1) {
-        clusters.value = res?.items || [];
-      } else {
-        clusters.value = [...clusters.value, ...(res?.items || [])];
-      }
+      clusters.value =
+        clustersPage.value === 1
+          ? res?.items || []
+          : [...clusters.value, ...(res?.items || [])];
       clustersTotal.value = res?.total || 0;
 
       // 如果当前没有选择集群且有可用集群，自动选择第一个

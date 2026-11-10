@@ -1,4 +1,5 @@
 /* ==================== DaemonSet 页面特定样式 ==================== */
+
 /*
  * Note: 本文件只包含 DaemonSet 特有样式
  * 共通样式已移至 k8s-common.css
@@ -101,7 +102,7 @@
 }
 
 /* DaemonSet 更新策略标签样式 */
-.ant-tag[color="cyan"] {
+.ant-tag[color='cyan'] {
   background: #e6fffb;
   border-color: #87e8de;
   color: #13c2c2;
@@ -134,7 +135,7 @@
   .daemonset-availability {
     gap: 2px;
   }
-  
+
   .daemonset-availability .ant-tag {
     font-size: 11px;
     padding: 1px 6px;
@@ -147,10 +148,9 @@
     align-items: stretch;
     gap: 8px;
   }
-  
+
   .daemonset-availability {
-    flex-direction: row;
-    flex-wrap: wrap;
+    flex-flow: row wrap;
     justify-content: center;
     gap: 4px;
   }

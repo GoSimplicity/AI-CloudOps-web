@@ -377,6 +377,58 @@ onMounted(() => {
 </template>
 
 <style scoped>
+@media (max-width: 768px) {
+  .knowledge-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .upload-area {
+    .upload-dragger {
+      padding: 24px 16px;
+
+      .ant-upload-text {
+        font-size: 14px;
+      }
+
+      .ant-upload-hint {
+        font-size: 12px;
+      }
+    }
+  }
+
+  .log-container {
+    max-height: 300px;
+
+    .log-list {
+      .log-item {
+        padding: 8px 0;
+
+        .log-icon {
+          font-size: 14px;
+          margin-right: 10px;
+        }
+
+        .log-content {
+          .log-message {
+            font-size: 13px;
+          }
+
+          .log-time {
+            font-size: 11px;
+          }
+        }
+      }
+    }
+  }
+}
+
 .index-note {
   color: var(--ops-muted);
   margin: 0;
@@ -513,58 +565,6 @@ onMounted(() => {
               font-size: 12px;
               color: var(--ops-muted);
             }
-          }
-        }
-      }
-    }
-  }
-}
-
-@media (max-width: 768px) {
-  .knowledge-header {
-    flex-direction: column;
-    gap: 16px;
-    align-items: stretch;
-  }
-
-  .stats-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .upload-area {
-    .upload-dragger {
-      padding: 24px 16px;
-
-      .ant-upload-text {
-        font-size: 14px;
-      }
-
-      .ant-upload-hint {
-        font-size: 12px;
-      }
-    }
-  }
-
-  .log-container {
-    max-height: 300px;
-
-    .log-list {
-      .log-item {
-        padding: 8px 0;
-
-        .log-icon {
-          font-size: 14px;
-          margin-right: 10px;
-        }
-
-        .log-content {
-          .log-message {
-            font-size: 13px;
-          }
-
-          .log-time {
-            font-size: 11px;
           }
         }
       }

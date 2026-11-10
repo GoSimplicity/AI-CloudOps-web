@@ -633,7 +633,54 @@ onBeforeUnmount(() => accountScope.invalidate());
 </template>
 
 <style scoped>
-/* 页面头部 */
+@media (max-width: 768px) {
+  .search-area {
+    max-width: none;
+  }
+
+  .history-meta {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+
+    .meta-item {
+      gap: 8px;
+    }
+  }
+
+  .quick-action-item {
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+
+    .action-content {
+      .action-title {
+        font-size: 14px;
+      }
+
+      .action-desc {
+        font-size: 12px;
+      }
+    }
+  }
+}
+
+@media (max-width: 575px) {
+  .page-content .chat-history,
+  .page-content .chat-input,
+  .sidebar-card .card-content {
+    padding: var(--ops-space-md);
+  }
+
+  .message-content {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .session-actions :deep(.ant-space) {
+    flex-wrap: wrap;
+  }
+}
 
 .session-content {
   .search-card {
@@ -712,7 +759,7 @@ onBeforeUnmount(() => accountScope.invalidate());
               gap: 12px;
 
               .session-id {
-                font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+                font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
                 font-weight: 600;
                 color: #1890ff;
                 font-size: 14px;
@@ -806,58 +853,17 @@ onBeforeUnmount(() => accountScope.invalidate());
   }
 }
 
-@media (max-width: 768px) {
-  .search-area {
-    max-width: none;
-  }
-
-  .history-meta {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
-
-    .meta-item {
-      gap: 8px;
-    }
-  }
-
-  .quick-action-item {
-    flex-direction: column;
-    text-align: center;
-    gap: 12px;
-
-    .action-content {
-      .action-title {
-        font-size: 14px;
-      }
-
-      .action-desc {
-        font-size: 12px;
-      }
-    }
-  }
-}
 .accent-icon {
   color: var(--ops-accent);
 }
+
 .muted-icon {
   color: var(--ops-muted);
 }
+
 .session-error {
   margin-bottom: var(--ops-space-lg);
 }
-@media (max-width: 575px) {
-  .page-content .chat-history,
-  .page-content .chat-input,
-  .sidebar-card .card-content {
-    padding: var(--ops-space-md);
-  }
-  .message-content {
-    min-width: 0;
-    overflow-wrap: anywhere;
-  }
-  .session-actions :deep(.ant-space) {
-    flex-wrap: wrap;
-  }
-}
+
+/* 页面头部 */
 </style>

@@ -19,8 +19,8 @@ for (const name of fs.readdirSync(dir).filter((x) => x.endsWith('.ts'))) {
     if (ts.isObjectLiteralExpression(node)) {
       const props = node.properties.filter(ts.isPropertyAssignment);
       const find = (n) => props.find((p) => p.name.getText(source) === n);
-      const route = find('path'),
-        component = find('component');
+      const route = find('path');
+      const component = find('component');
       const view = component?.initializer
         .getText(source)
         .match(/import\(["']#\/views\/([^"']+)["']\)/)?.[1];

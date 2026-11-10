@@ -78,12 +78,6 @@ import WorkorderFlow from './components/WorkorderFlow.vue';
 
 import { getUserList, type GetUserListReq } from '#/api/core/system/user';
 
-interface UserListItem {
-  id: number;
-  username: string;
-  real_name?: string;
-}
-
 import {
   detailWorkorderProcess,
   type DetailWorkorderProcessReq,
@@ -118,6 +112,12 @@ import {
   shouldNotifyPageError,
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
+
+interface UserListItem {
+  id: number;
+  username: string;
+  real_name?: string;
+}
 
 const { can, hasPerm } = usePermission();
 const accessStore = useAccessStore();
@@ -476,18 +476,14 @@ const loadProcessStepsNavigation = async (instance: WorkorderInstanceItem) => {
 
       if (currentStepIndex >= 0) {
         // 获取前一步骤
-        if (currentStepIndex > 0) {
-          detailDialog.previousStep = sortedSteps[currentStepIndex - 1];
-        } else {
-          detailDialog.previousStep = null;
-        }
+        detailDialog.previousStep =
+          currentStepIndex > 0 ? sortedSteps[currentStepIndex - 1] : null;
 
         // 获取下一步骤
-        if (currentStepIndex < sortedSteps.length - 1) {
-          detailDialog.nextStep = sortedSteps[currentStepIndex + 1];
-        } else {
-          detailDialog.nextStep = null;
-        }
+        detailDialog.nextStep =
+          currentStepIndex < sortedSteps.length - 1
+            ? sortedSteps[currentStepIndex + 1]
+            : null;
       } else {
         detailDialog.previousStep = null;
         detailDialog.nextStep = null;
@@ -990,9 +986,10 @@ const initializeVisualFormData = (): void => {
           case FormFieldType.Password:
           case FormFieldType.Textarea:
           case FormFieldType.Select:
-          case FormFieldType.Radio:
+          case FormFieldType.Radio: {
             newData[field.name] = '';
             break;
+          }
           case FormFieldType.Number: {
             newData[field.name] = undefined;
             break;
@@ -2312,11 +2309,9 @@ const getStepMessage = (): string => {
   const isApprove = approvalDialog.type === 'approve';
 
   if (isApprove) {
-    if (isEndStep) {
-      return `当前步骤：${stepName}（最后一步）。审批通过后将完成整个工单流程。`;
-    } else {
-      return `当前步骤：${stepName}。审批通过后将流转到下一个处理步骤。`;
-    }
+    return isEndStep
+      ? `当前步骤：${stepName}（最后一步）。审批通过后将完成整个工单流程。`
+      : `当前步骤：${stepName}。审批通过后将流转到下一个处理步骤。`;
   } else {
     return `当前步骤：${stepName}。拒绝后工单将退回到上一步或结束流程。`;
   }
@@ -3045,7 +3040,7 @@ onMounted(() => {
 
                 <a-select-option
                   v-if="processPagination.hasMore"
-                  :value="'__load_more_process__'"
+                  value="__load_more_process__"
                   class="load-more-option"
                   disabled
                 >
@@ -3128,7 +3123,7 @@ onMounted(() => {
 
                 <a-select-option
                   v-if="userPagination.hasMore"
-                  :value="'__load_more_user__'"
+                  value="__load_more_user__"
                   class="load-more-option"
                   disabled
                 >
@@ -4372,20 +4367,309 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-filters {
+    width: 100%;
+  }
+
+  .search-input {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .status-filter,
+  .priority-filter,
+  .process-filter {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .btn-create {
+    padding: 4px 8px;
+    min-width: auto;
+  }
+
+  .stats-card :deep(.ant-statistic-title) {
+    font-size: 12px;
+  }
+
+  .stats-card :deep(.ant-statistic-content) {
+    font-size: 16px;
+  }
+
+  .action-buttons {
+    gap: 2px;
+  }
+
+  .action-buttons .ant-btn {
+    padding: 0 4px;
+    font-size: 12px;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-actions {
+    justify-content: center;
+  }
+
+  .json-editor {
+    font-size: 12px;
+  }
+
+  .visual-form-editor {
+    padding: 12px;
+  }
+
+  .visual-form-fields {
+    max-height: 300px;
+    padding-right: 4px;
+  }
+
+  .form-field-col {
+    margin-bottom: 12px;
+  }
+
+  .section-header .ant-segmented {
+    transform: scale(0.9);
+    transform-origin: right center;
+  }
+
+  .detail-footer {
+    justify-content: center;
+  }
+
+  .detail-footer .ant-btn {
+    flex: 1;
+    max-width: 120px;
+  }
+
+  .meta-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .load-more-content {
+    padding: 6px 8px;
+  }
+
+  .comment-header,
+  .reply-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .status-change {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}
+
+/* 平板端适配 */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .search-input {
+    width: 250px;
+  }
+}
+
+/* 超小屏幕适配 */
+@media (max-width: 480px) {
+  .header-actions {
+    gap: 8px;
+  }
+
+  .operator-info,
+  .assignee-info {
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .operator-name,
+  .assignee-name {
+    font-size: 12px;
+  }
+
+  .date-info {
+    text-align: center;
+  }
+
+  .date {
+    font-size: 12px;
+  }
+
+  .time {
+    font-size: 10px;
+  }
+
+  .instance-title-cell {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .priority-badge {
+    align-self: flex-start;
+  }
+
+  .process-desc,
+  .user-real-name {
+    max-width: 120px;
+  }
+
+  .load-more-content {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .navigation-steps {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .nav-step {
+    max-width: none;
+    min-width: auto;
+  }
+
+  .progress-bar {
+    justify-content: center;
+  }
+
+  .progress-item {
+    min-width: 60px;
+  }
+
+  .progress-label {
+    font-size: 10px;
+    max-width: 60px;
+  }
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .current-step-section {
+    margin-left: -8px;
+    margin-right: -8px;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  .step-header {
+    padding: 16px 20px 12px;
+  }
+
+  .step-title {
+    font-size: 16px;
+  }
+
+  .step-indicator {
+    width: 32px;
+    height: 32px;
+  }
+
+  .step-icon {
+    font-size: 14px;
+  }
+
+  .step-content {
+    padding: 16px 20px;
+  }
+
+  .step-details-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .step-detail-item {
+    padding: 12px;
+  }
+
+  .detail-icon {
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+  }
+
+  .no-step {
+    padding: 30px 20px;
+  }
+
+  .no-step-icon {
+    font-size: 40px;
+  }
+
+  .available-actions-section {
+    margin-left: -8px;
+    margin-right: -8px;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  .actions-buttons {
+    justify-content: center;
+  }
+
+  .actions-buttons .ant-btn {
+    flex: 1;
+    min-width: 80px;
+    max-width: 120px;
+  }
+
+  .detail-footer {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .footer-right {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .footer-right .ant-btn {
+    flex: 1;
+    max-width: 100px;
+  }
+
+  .approval-step-info .ant-alert {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+}
+
 .search-input {
   width: 300px;
   min-width: 200px;
 }
+
 .status-filter,
 .priority-filter,
 .process-filter {
   width: 150px;
   min-width: 100px;
 }
+
 .table-container :deep(.ant-table-wrapper) {
   min-width: 0;
   overflow: auto;
 }
+
 .instance-title-cell {
   display: flex;
   align-items: center;
@@ -4596,7 +4880,7 @@ onMounted(() => {
 }
 
 .json-editor {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 13px;
   line-height: 1.5;
   border: 1px solid var(--ops-border);
@@ -4640,7 +4924,7 @@ onMounted(() => {
 }
 
 .title-section h2 {
-  margin: 0 0 12px 0;
+  margin: 0 0 12px;
   font-size: 24px;
   color: var(--ops-ink);
   word-break: break-all;
@@ -4669,7 +4953,7 @@ onMounted(() => {
 }
 
 .form-data-preview h3 {
-  margin: 0 0 16px 0;
+  margin: 0 0 16px;
   color: var(--ops-ink);
   font-size: 18px;
 }
@@ -4682,7 +4966,7 @@ onMounted(() => {
 }
 
 .json-content {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 13px;
   line-height: 1.5;
   color: var(--ops-ink);
@@ -4708,173 +4992,6 @@ onMounted(() => {
 .instance-form-modal :deep(.ant-modal-body) {
   max-height: 70vh;
   overflow-y: auto;
-}
-
-/* 移动端适配 */
-@media (max-width: 768px) {
-  .header-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .search-filters {
-    width: 100%;
-  }
-
-  .search-input {
-    width: 100%;
-    min-width: auto;
-  }
-
-  .status-filter,
-  .priority-filter,
-  .process-filter {
-    width: 100%;
-    min-width: auto;
-  }
-
-  .btn-create {
-    padding: 4px 8px;
-    min-width: auto;
-  }
-
-  .stats-card :deep(.ant-statistic-title) {
-    font-size: 12px;
-  }
-
-  .stats-card :deep(.ant-statistic-content) {
-    font-size: 16px;
-  }
-
-  .action-buttons {
-    gap: 2px;
-  }
-
-  .action-buttons .ant-btn {
-    padding: 0 4px;
-    font-size: 12px;
-  }
-
-  .section-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .header-actions {
-    justify-content: center;
-  }
-
-  .json-editor {
-    font-size: 12px;
-  }
-
-  .visual-form-editor {
-    padding: 12px;
-  }
-
-  .visual-form-fields {
-    max-height: 300px;
-    padding-right: 4px;
-  }
-
-  .form-field-col {
-    margin-bottom: 12px;
-  }
-
-  .section-header .ant-segmented {
-    transform: scale(0.9);
-    transform-origin: right center;
-  }
-
-  .detail-footer {
-    justify-content: center;
-  }
-
-  .detail-footer .ant-btn {
-    flex: 1;
-    max-width: 120px;
-  }
-
-  .meta-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .load-more-content {
-    padding: 6px 8px;
-  }
-
-  .comment-header,
-  .reply-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-
-  .status-change {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-}
-
-/* 平板端适配 */
-@media (max-width: 1024px) and (min-width: 769px) {
-  .search-input {
-    width: 250px;
-  }
-}
-
-/* 超小屏幕适配 */
-@media (max-width: 480px) {
-  .header-actions {
-    gap: 8px;
-  }
-
-  .operator-info,
-  .assignee-info {
-    flex-direction: column;
-    gap: 4px;
-    align-items: center;
-  }
-
-  .operator-name,
-  .assignee-name {
-    font-size: 12px;
-  }
-
-  .date-info {
-    text-align: center;
-  }
-
-  .date {
-    font-size: 12px;
-  }
-
-  .time {
-    font-size: 10px;
-  }
-
-  .instance-title-cell {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-
-  .priority-badge {
-    align-self: flex-start;
-  }
-
-  .process-desc,
-  .user-real-name {
-    max-width: 120px;
-  }
-
-  .load-more-content {
-    padding: 4px 6px;
-    font-size: 12px;
-  }
 }
 
 /* 表格滚动优化 */
@@ -5246,32 +5363,6 @@ onMounted(() => {
   color: hsl(var(--success));
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .navigation-steps {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .nav-step {
-    max-width: none;
-    min-width: auto;
-  }
-
-  .progress-bar {
-    justify-content: center;
-  }
-
-  .progress-item {
-    min-width: 60px;
-  }
-
-  .progress-label {
-    font-size: 10px;
-    max-width: 60px;
-  }
-}
-
 /* 可用动作样式 */
 .available-actions-section {
   margin-top: 20px;
@@ -5283,7 +5374,7 @@ onMounted(() => {
 }
 
 .available-actions-section h3 {
-  margin: 0 0 16px 0;
+  margin: 0 0 16px;
   color: var(--ops-ink);
   font-size: 16px;
   font-weight: 600;
@@ -5363,99 +5454,6 @@ onMounted(() => {
 .approval-step-info .ant-alert-message {
   color: var(--ops-ink);
   font-weight: 500;
-}
-
-/* 移动端优化 */
-@media (max-width: 768px) {
-  .current-step-section {
-    margin-left: -8px;
-    margin-right: -8px;
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
-  }
-
-  .step-header {
-    padding: 16px 20px 12px;
-  }
-
-  .step-title {
-    font-size: 16px;
-  }
-
-  .step-indicator {
-    width: 32px;
-    height: 32px;
-  }
-
-  .step-icon {
-    font-size: 14px;
-  }
-
-  .step-content {
-    padding: 16px 20px;
-  }
-
-  .step-details-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .step-detail-item {
-    padding: 12px;
-  }
-
-  .detail-icon {
-    width: 24px;
-    height: 24px;
-    font-size: 12px;
-  }
-
-  .no-step {
-    padding: 30px 20px;
-  }
-
-  .no-step-icon {
-    font-size: 40px;
-  }
-
-  .available-actions-section {
-    margin-left: -8px;
-    margin-right: -8px;
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
-  }
-
-  .actions-buttons {
-    justify-content: center;
-  }
-
-  .actions-buttons .ant-btn {
-    flex: 1;
-    min-width: 80px;
-    max-width: 120px;
-  }
-
-  .detail-footer {
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .footer-right {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .footer-right .ant-btn {
-    flex: 1;
-    max-width: 100px;
-  }
-
-  .approval-step-info .ant-alert {
-    font-size: 13px;
-    padding: 8px 12px;
-  }
 }
 
 /* 通知记录对话框样式 */

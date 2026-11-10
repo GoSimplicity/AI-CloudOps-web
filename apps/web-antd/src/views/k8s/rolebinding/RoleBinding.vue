@@ -1,11 +1,14 @@
 <script lang="ts" setup>
 import OpsPage from '#/components/ops/OpsPage.vue';
 
-import { namespacedResourceKey } from '../shared/utils';
+import {
+  formatDateTime,
+  getRelativeTime,
+  namespacedResourceKey,
+} from '../shared/utils';
 import { onMounted, ref } from 'vue';
 
 import { useRoleBindingPage } from './RoleBinding';
-import { formatDateTime, getRelativeTime } from '../shared/utils';
 import {
   AppstoreOutlined,
   CheckCircleOutlined,

@@ -1,7 +1,12 @@
 <script lang="ts" setup>
 import OpsPage from '#/components/ops/OpsPage.vue';
 
-import { namespacedResourceKey } from '../shared/utils';
+import {
+  formatDateTime,
+  formatK8sTime,
+  getRelativeTime,
+  namespacedResourceKey,
+} from '../shared/utils';
 import { onMounted, ref } from 'vue';
 
 import { message, Modal } from 'ant-design-vue';
@@ -9,11 +14,6 @@ import { message, Modal } from 'ant-design-vue';
 import { useDaemonSetPage } from './DaemonSet';
 import { rollbackDaemonSetApi } from '#/api/core/k8s/k8s_daemonset';
 
-import {
-  formatDateTime,
-  formatK8sTime,
-  getRelativeTime,
-} from '../shared/utils';
 import {
   AppstoreOutlined,
   CheckCircleOutlined,

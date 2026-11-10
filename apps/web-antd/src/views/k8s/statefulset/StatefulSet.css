@@ -1,4 +1,5 @@
 /* ==================== StatefulSet 页面特定样式 ==================== */
+
 /*
  * Note: 本文件只包含 StatefulSet 特有样式
  * 共通样式已移至 k8s-common.css
@@ -10,31 +11,35 @@
 }
 
 /* StatefulSet 表格行状态指示器 */
-.statefulset-table :deep(.ant-table-tbody > tr[data-statefulset-status="Running"]) {
+.statefulset-table
+  :deep(.ant-table-tbody > tr[data-statefulset-status='Running']) {
   border-left: 3px solid #52c41a;
 }
 
-.statefulset-table :deep(.ant-table-tbody > tr[data-statefulset-status="Stopped"]) {
+.statefulset-table
+  :deep(.ant-table-tbody > tr[data-statefulset-status='Stopped']) {
   border-left: 3px solid var(--ops-border);
 }
 
-.statefulset-table :deep(.ant-table-tbody > tr[data-statefulset-status="Updating"]) {
+.statefulset-table
+  :deep(.ant-table-tbody > tr[data-statefulset-status='Updating']) {
   border-left: 3px solid #1890ff;
 }
 
-.statefulset-table :deep(.ant-table-tbody > tr[data-statefulset-status="Error"]) {
+.statefulset-table
+  :deep(.ant-table-tbody > tr[data-statefulset-status='Error']) {
   border-left: 3px solid #ff4d4f;
 }
 
 /* StatefulSet 服务名称标签样式 */
-.ant-tag[color="purple"] {
+.ant-tag[color='purple'] {
   background: #f9f0ff;
   border-color: #d3adf7;
   color: #722ed1;
 }
 
 /* StatefulSet 更新策略标签样式 */
-.ant-tag[color="cyan"] {
+.ant-tag[color='cyan'] {
   background: #e6fffb;
   border-color: #87e8de;
   color: #13c2c2;
@@ -200,12 +205,12 @@
     align-items: stretch;
     gap: 8px;
   }
-  
+
   .k8s-form .replica-config-item .ant-input-number,
   .k8s-form .replica-config-item .ant-select {
     width: 100%;
   }
-  
+
   /* 移动端选择器布局优化 */
   .k8s-selector-display {
     flex-direction: column;

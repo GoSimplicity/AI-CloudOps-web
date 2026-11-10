@@ -1,4 +1,5 @@
 /* ==================== Cluster 页面特定样式 ==================== */
+
 /*
  * Note: 本文件只包含 Cluster 特有样式
  * 共通样式已移至 k8s-common.css
@@ -17,7 +18,7 @@
 }
 
 .api-addr-text {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 12px;
   color: var(--ops-muted);
 }
@@ -70,7 +71,7 @@
 }
 
 .k8s-namespace-tag {
-  background: hsl(var(--primary) / 0.08);
+  background: hsl(var(--primary) / 8%);
   border: 1px solid var(--ops-border);
   color: var(--ops-accent);
   padding: 2px 8px;
@@ -92,7 +93,7 @@
 }
 
 .k8s-labels-display .k8s-label-item {
-  background: hsl(var(--primary) / 0.08);
+  background: hsl(var(--primary) / 8%);
   border: 1px solid var(--ops-border);
   color: var(--ops-accent);
   font-size: 12px;
@@ -119,7 +120,7 @@
 }
 
 .k8s-tag-key {
-  background: hsl(var(--primary) / 0.08);
+  background: hsl(var(--primary) / 8%);
   color: var(--ops-accent);
   border: 1px solid var(--ops-border);
   font-weight: 600;
@@ -171,7 +172,7 @@
 }
 
 .kubeconfig-textarea {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 12px;
   line-height: 1.4;
   background: var(--ops-ground);
@@ -218,7 +219,7 @@
 }
 
 .kubeconfig-clickable:hover {
-  background: hsl(var(--primary) / 0.08);
+  background: hsl(var(--primary) / 8%);
 }
 
 .config-preview-text {
@@ -240,10 +241,10 @@
 }
 
 .kubeconfig-clickable:hover .config-preview-text {
-  background: hsl(var(--primary) / 0.08);
+  background: hsl(var(--primary) / 8%);
   border-color: var(--ops-border);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
+  box-shadow: 0 2px 8px rgb(24 144 255 / 15%);
 }
 
 .kubeconfig-empty-state {
@@ -270,7 +271,7 @@
   padding: 8px;
   border-radius: var(--ops-radius);
   border: 1px solid #e1e8ed;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 11px;
   line-height: 1.4;
   color: #24292e;
@@ -282,18 +283,18 @@
 }
 
 /* 集群表格列样式 */
-.cluster-table :deep(.ant-table-tbody td[data-index="0"]) {
+.cluster-table :deep(.ant-table-tbody td[data-index='0']) {
   font-weight: 600;
   color: var(--ops-accent);
 }
 
-.cluster-table :deep(.ant-table-tbody td[data-index="3"]) {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+.cluster-table :deep(.ant-table-tbody td[data-index='3']) {
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 12px;
   color: var(--ops-muted);
 }
 
-.cluster-table :deep(.ant-table-tbody td[data-index="4"]) {
+.cluster-table :deep(.ant-table-tbody td[data-index='4']) {
   font-weight: 500;
   color: hsl(var(--success));
 }
@@ -312,7 +313,7 @@
     gap: 16px;
     text-align: center;
   }
-  
+
   .kubeconfig-actions {
     width: 100%;
     justify-content: center;

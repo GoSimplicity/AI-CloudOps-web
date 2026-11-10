@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
-import { onBeforeUnmount } from 'vue';
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+} from 'vue';
 import { useRouter } from 'vue-router';
 
 import { useUserStore } from '@vben/stores';
@@ -1772,6 +1779,135 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .local-resource-management {
+    padding: 8px;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-filters {
+    width: 100%;
+  }
+
+  .filter-select {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .btn-text {
+    display: inline;
+  }
+
+  .btn-create,
+  .btn-action {
+    padding: 4px 8px;
+    min-width: auto;
+  }
+
+  .stats-card :deep(.ant-statistic-title) {
+    font-size: 12px;
+  }
+
+  .stats-card :deep(.ant-statistic-content) {
+    font-size: 16px;
+  }
+
+  .action-buttons {
+    gap: 2px;
+  }
+
+  .action-buttons .ant-btn {
+    padding: 0 4px;
+    font-size: 12px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .server-form .add-tag {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .server-form .form-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .server-form .form-actions .ant-btn {
+    margin-left: 0 !important;
+    width: 100%;
+  }
+
+  .drawer-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .drawer-actions .ant-btn-group {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .drawer-actions .ant-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-actions {
+    gap: 8px;
+  }
+
+  .stats-card {
+    text-align: center;
+  }
+
+  .creator-info {
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .creator-name {
+    font-size: 12px;
+  }
+
+  .date-info {
+    text-align: center;
+  }
+
+  .date {
+    font-size: 12px;
+  }
+
+  .time {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .responsive-modal :deep(.ant-modal-body) {
+    padding: 16px;
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .table-container :deep(.ant-pagination) {
+    text-align: center;
+  }
+}
+
 .local-resource-management {
   padding: 16px;
   min-height: 100vh;
@@ -2089,121 +2225,6 @@ onBeforeUnmount(() => {
   border-top: 1px solid var(--ops-border);
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .local-resource-management {
-    padding: 8px;
-  }
-
-  .header-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .search-filters {
-    width: 100%;
-  }
-
-  .filter-select {
-    width: 100%;
-    min-width: auto;
-  }
-
-  .btn-text {
-    display: inline;
-  }
-
-  .btn-create,
-  .btn-action {
-    padding: 4px 8px;
-    min-width: auto;
-  }
-
-  .stats-card :deep(.ant-statistic-title) {
-    font-size: 12px;
-  }
-
-  .stats-card :deep(.ant-statistic-content) {
-    font-size: 16px;
-  }
-
-  .action-buttons {
-    gap: 2px;
-  }
-
-  .action-buttons .ant-btn {
-    padding: 0 4px;
-    font-size: 12px;
-  }
-
-  .form-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .server-form .add-tag {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .server-form .form-actions {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .server-form .form-actions .ant-btn {
-    margin-left: 0 !important;
-    width: 100%;
-  }
-
-  .drawer-actions {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .drawer-actions .ant-btn-group {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-  }
-
-  .drawer-actions .ant-btn {
-    width: 100%;
-  }
-}
-
-@media (max-width: 480px) {
-  .header-actions {
-    gap: 8px;
-  }
-
-  .stats-card {
-    text-align: center;
-  }
-
-  .creator-info {
-    flex-direction: column;
-    gap: 4px;
-    align-items: center;
-  }
-
-  .creator-name {
-    font-size: 12px;
-  }
-
-  .date-info {
-    text-align: center;
-  }
-
-  .date {
-    font-size: 12px;
-  }
-
-  .time {
-    font-size: 10px;
-  }
-}
-
 /* 表格滚动优化 */
 .table-container :deep(.ant-table-wrapper) {
   overflow: auto;
@@ -2230,15 +2251,7 @@ onBeforeUnmount(() => {
 
 .responsive-modal :deep(.ant-modal-content) {
   border-radius: var(--ops-radius);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-}
-
-@media (max-width: 768px) {
-  .responsive-modal :deep(.ant-modal-body) {
-    padding: 16px;
-    max-height: calc(100vh - 160px);
-    overflow-y: auto;
-  }
+  box-shadow: 0 4px 16px rgb(0 0 0 / 10%);
 }
 
 /* 动画效果 */
@@ -2266,12 +2279,6 @@ onBeforeUnmount(() => {
 .table-container :deep(.ant-pagination) {
   margin: 16px;
   text-align: right;
-}
-
-@media (max-width: 768px) {
-  .table-container :deep(.ant-pagination) {
-    text-align: center;
-  }
 }
 </style>
 

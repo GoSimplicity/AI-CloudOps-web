@@ -1,13 +1,16 @@
 <script lang="ts" setup>
 import OpsPage from '#/components/ops/OpsPage.vue';
 
-import { clusterResourceKey } from '../shared/utils';
+import {
+  clusterResourceKey,
+  formatDateTime,
+  getRelativeTime,
+} from '../shared/utils';
 import { onMounted, ref } from 'vue';
 
 import { message } from 'ant-design-vue';
 
 import { useNodePage } from './Node';
-import { formatDateTime, getRelativeTime } from '../shared/utils';
 import {
   CheckOutlined,
   DeleteOutlined,
@@ -399,7 +402,7 @@ onMounted(async () => {
               </a-select-option>
               <a-select-option
                 v-if="clusters.length > 0 && clusters.length < clustersTotal"
-                :value="'__load_more__'"
+                value="__load_more__"
                 disabled
                 style="text-align: center; color: var(--ops-muted)"
               >
@@ -874,7 +877,7 @@ onMounted(async () => {
             具有相应的容忍度（Tolerations）。
             <div style="margin-top: 8px">
               <strong>污点效果说明：</strong>
-              <ul style="margin: 4px 0 0 0; padding-left: 20px">
+              <ul style="margin: 4px 0 0; padding-left: 20px">
                 <li>
                   <code>NoSchedule</code>: 禁止新 Pod 调度，不影响已有 Pod
                 </li>
@@ -1036,7 +1039,7 @@ onMounted(async () => {
           <template #description>
             <div>
               驱逐（Drain）操作会：
-              <ul style="margin: 8px 0 0 0; padding-left: 20px">
+              <ul style="margin: 8px 0 0; padding-left: 20px">
                 <li>先将节点标记为不可调度（Cordon）</li>
                 <li>然后安全地驱逐节点上的所有 Pod</li>
                 <li>等待 Pod 在其他节点上重新调度</li>

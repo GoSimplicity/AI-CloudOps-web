@@ -28,8 +28,8 @@ test('welcome displays local metrics, read-only refresh and compact themed mobil
     !privatePassword,
     'Requires an explicitly configured isolated local administrator',
   );
-  const forbidden: string[] = [],
-    errors: string[] = [];
+  const forbidden: string[] = [];
+  const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('request', (request) => {
     const path = new URL(request.url()).pathname;

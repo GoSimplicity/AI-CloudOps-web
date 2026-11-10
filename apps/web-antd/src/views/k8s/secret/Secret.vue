@@ -1,19 +1,19 @@
 <script lang="ts" setup>
 import OpsPage from '#/components/ops/OpsPage.vue';
 
-import { namespacedResourceKey } from '../shared/utils';
+import {
+  formatDateTime,
+  formatK8sAge,
+  formatK8sTime,
+  getRelativeTime,
+  namespacedResourceKey,
+} from '../shared/utils';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 
 import { message } from 'ant-design-vue';
 
 import { useSecretPage } from './Secret';
 import { BINARY_VALUE_NOTICE } from './secret-data';
-import {
-  formatDateTime,
-  formatK8sAge,
-  formatK8sTime,
-  getRelativeTime,
-} from '../shared/utils';
 import {
   AppstoreOutlined,
   CheckCircleOutlined,
@@ -1902,8 +1902,7 @@ onMounted(async () => {
                         border-radius: 4px;
                         max-height: 400px;
                         overflow-y: auto;
-                        font-family:
-                          'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+                        font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
                         font-size: 12px;
                         line-height: 1.4;
                       "
@@ -2118,13 +2117,13 @@ onMounted(async () => {
 @import '../shared/k8s-common.css';
 
 .k8s-config-textarea {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 13px;
   line-height: 1.4;
 }
 
 .k8s-config-textarea :deep(.ant-input) {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 13px;
   line-height: 1.4;
 }
@@ -2132,7 +2131,7 @@ onMounted(async () => {
 /* Secret 数据显示样式 */
 .secret-data-key-row {
   padding: 8px 0;
-  border-bottom: 1px solid var(--ops-border, rgba(0, 0, 0, 0.06));
+  border-bottom: 1px solid var(--ops-border, rgb(0 0 0 / 6%));
 }
 
 .secret-data-key-header {

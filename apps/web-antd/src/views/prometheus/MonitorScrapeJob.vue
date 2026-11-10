@@ -1675,8 +1675,8 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
               <a-form-item label="启用状态" name="enable">
                 <a-switch
                   v-model:checked="formDialog.form.enableSwitch"
-                  :checked-children="'启用'"
-                  :un-checked-children="'禁用'"
+                  checked-children="启用"
+                  un-checked-children="禁用"
                   class="tech-switch"
                 />
               </a-form-item>
@@ -2202,6 +2202,90 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
 </template>
 
 <style scoped>
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .search-input {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .filter-select {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .stats-card :deep(.ant-statistic-title) {
+    font-size: 12px;
+  }
+
+  .stats-card :deep(.ant-statistic-content) {
+    font-size: 16px;
+  }
+
+  .action-buttons {
+    gap: 2px;
+  }
+
+  .action-buttons .ant-btn {
+    padding: 0 4px;
+    font-size: 12px;
+  }
+
+  .detail-footer {
+    justify-content: center;
+  }
+
+  .detail-footer .ant-btn {
+    flex: 1;
+    max-width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-card {
+    text-align: center;
+  }
+
+  .creator-info {
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .creator-name {
+    font-size: 12px;
+  }
+
+  .date-info {
+    text-align: center;
+  }
+
+  .date {
+    font-size: 12px;
+  }
+
+  .time {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .responsive-modal :deep(.ant-modal-body) {
+    padding: 16px;
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+  }
+
+  .yaml-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .yaml-toolbar .ant-btn {
+    justify-content: center;
+  }
+}
+
 .credential-status {
   color: var(--ops-muted);
   margin: 0 0 var(--ops-space-sm);
@@ -2228,7 +2312,7 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
 
 .stats-card {
   border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 5%);
   height: 100%;
 }
 
@@ -2293,7 +2377,7 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
   font-size: 12px;
   font-weight: 500;
   border: none;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 10%);
 }
 
 .config-info {
@@ -2373,7 +2457,7 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
 }
 
 .tech-switch {
-  background-color: rgba(0, 0, 0, 0.25);
+  background-color: rgb(0 0 0 / 25%);
 }
 
 .tech-switch.ant-switch-checked {
@@ -2421,73 +2505,6 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
   justify-content: flex-end;
   gap: 12px;
   flex-wrap: wrap;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .search-input {
-    width: 100%;
-    min-width: auto;
-  }
-
-  .filter-select {
-    width: 100%;
-    min-width: auto;
-  }
-
-  .stats-card :deep(.ant-statistic-title) {
-    font-size: 12px;
-  }
-
-  .stats-card :deep(.ant-statistic-content) {
-    font-size: 16px;
-  }
-
-  .action-buttons {
-    gap: 2px;
-  }
-
-  .action-buttons .ant-btn {
-    padding: 0 4px;
-    font-size: 12px;
-  }
-
-  .detail-footer {
-    justify-content: center;
-  }
-
-  .detail-footer .ant-btn {
-    flex: 1;
-    max-width: 120px;
-  }
-}
-
-@media (max-width: 480px) {
-  .stats-card {
-    text-align: center;
-  }
-
-  .creator-info {
-    flex-direction: column;
-    gap: 4px;
-    align-items: center;
-  }
-
-  .creator-name {
-    font-size: 12px;
-  }
-
-  .date-info {
-    text-align: center;
-  }
-
-  .date {
-    font-size: 12px;
-  }
-
-  .time {
-    font-size: 10px;
-  }
 }
 
 /* 表格滚动优化 */
@@ -2550,22 +2567,5 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
 .responsive-modal :deep(.ant-modal) {
   max-width: calc(100vw - 16px);
   margin: 8px;
-}
-
-@media (max-width: 768px) {
-  .responsive-modal :deep(.ant-modal-body) {
-    padding: 16px;
-    max-height: calc(100vh - 160px);
-    overflow-y: auto;
-  }
-
-  .yaml-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .yaml-toolbar .ant-btn {
-    justify-content: center;
-  }
 }
 </style>

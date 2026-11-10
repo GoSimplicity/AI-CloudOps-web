@@ -1869,13 +1869,13 @@ onMounted(async () => {
 @import '../shared/k8s-common.css';
 
 .k8s-config-textarea {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 13px;
   line-height: 1.4;
 }
 
 .k8s-config-textarea :deep(.ant-input) {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 13px;
   line-height: 1.4;
 }

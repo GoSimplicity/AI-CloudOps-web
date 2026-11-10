@@ -63,10 +63,12 @@ function add() {
 
 <style scoped>
 @import '../shared/cron-common.css';
+
 .k8s-key-value-row :deep(.ant-input-affix-wrapper) {
   flex: 1 1 160px;
   min-width: 0;
 }
+
 @media (max-width: 640px) {
   .k8s-key-value-row :deep(.ant-input-affix-wrapper) {
     flex-basis: 100%;

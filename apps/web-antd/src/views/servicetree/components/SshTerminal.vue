@@ -90,6 +90,7 @@ const listPath = computed(() =>
   gap: var(--ops-space-md);
   min-width: 0;
 }
+
 .ssh-terminal__toolbar,
 .ssh-terminal__status,
 .ssh-terminal__actions {
@@ -98,17 +99,21 @@ const listPath = computed(() =>
   align-items: center;
   gap: var(--ops-space-sm);
 }
+
 .ssh-terminal__toolbar {
   justify-content: space-between;
 }
+
 .ssh-terminal__identity,
 .ssh-terminal__hint {
   color: var(--ops-muted);
   font-size: 13px;
 }
+
 .ssh-terminal__hint {
   margin: 0;
 }
+
 .ssh-terminal__viewport {
   min-width: 0;
   width: 100%;
@@ -119,13 +124,16 @@ const listPath = computed(() =>
   border-radius: var(--ops-radius);
   background: #0d1117;
 }
+
 @media (max-width: 640px) {
   .ssh-terminal__toolbar {
     align-items: flex-start;
   }
+
   .ssh-terminal__actions {
     width: 100%;
   }
+
   .ssh-terminal__actions :deep(.ant-btn) {
     flex: 1;
   }

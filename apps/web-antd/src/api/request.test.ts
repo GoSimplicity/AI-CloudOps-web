@@ -1,6 +1,15 @@
 import { type AxiosAdapter, AxiosError } from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  createForbiddenResponseInterceptor,
+  isPermissionDeniedError,
+  PERMISSION_DENIED_MESSAGE,
+  PERMISSION_DENIED_MESSAGE_KEY,
+} from '#/utils/permission/forbidden';
+
+import { requestClient } from './request';
+
 const notices = vi.hoisted(() => ({
   error: vi.fn(),
   warning: vi.fn(),
@@ -23,15 +32,6 @@ vi.mock('#/store', () => ({
   useAuthStore: () => ({ getAuthGeneration: () => 1, logout: vi.fn() }),
 }));
 vi.mock('./core', () => ({ refreshTokenApi: vi.fn() }));
-
-import {
-  createForbiddenResponseInterceptor,
-  isPermissionDeniedError,
-  PERMISSION_DENIED_MESSAGE,
-  PERMISSION_DENIED_MESSAGE_KEY,
-} from '#/utils/permission/forbidden';
-
-import { requestClient } from './request';
 
 function replyWith(status: number, data: unknown): AxiosAdapter {
   return async (config) => {

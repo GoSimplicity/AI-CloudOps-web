@@ -128,12 +128,12 @@ describe('sSH PTY交互合同', () => {
     socket.open();
     expect(socket.binaryType).toBe('arraybuffer');
     const terminal = transport.terminals[0];
-    terminal.input('中\r\x03\x1b[A\x7f\0');
+    terminal.input('中\r\u0003\u001B[A\u007F\0');
     const binary = socket.send.mock.calls.filter(
       (call) => typeof call[0] !== 'string',
     );
     expect(new TextDecoder().decode(required(binary[0])[0])).toBe(
-      '中\r\x03\x1b[A\x7f\0',
+      '中\r\u0003\u001B[A\u007F\0',
     );
     expect(terminal.write).not.toHaveBeenCalled();
   });

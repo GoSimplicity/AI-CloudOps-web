@@ -437,7 +437,115 @@ const formatStatusMessage = (message?: string) => {
 </template>
 
 <style scoped>
-/* 页面头部 */
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .overview-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+  }
+
+  .operations-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .details-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 576px) {
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .operation-card {
+    padding: 16px;
+  }
+
+  .detail-card {
+    padding: 16px;
+  }
+
+  .cache-check-steps {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .cache-step-item {
+    flex-direction: row;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .cache-step-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .loading-main-icon {
+    font-size: 60px;
+  }
+
+  .loading-title {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 575px) {
+  .overview-grid,
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--ops-space-sm);
+  }
+
+  .overview-card,
+  .metric-card {
+    min-width: 0;
+    padding: var(--ops-space-md);
+    gap: var(--ops-space-sm);
+    flex-wrap: wrap;
+  }
+
+  .card-icon {
+    font-size: 20px;
+  }
+
+  .card-value,
+  .metric-value {
+    overflow-wrap: anywhere;
+  }
+
+  .section-header {
+    flex-wrap: wrap;
+    gap: var(--ops-space-sm);
+  }
+}
 
 /* 加载状态 */
 .loading-state-card {
@@ -465,29 +573,8 @@ const formatStatusMessage = (message?: string) => {
   animation: pulse 2s ease-in-out infinite;
 }
 
-@keyframes pulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.1);
-    opacity: 0.8;
-  }
-}
-
 .rotate-animation {
   animation: rotate 1s linear infinite;
-}
-
-@keyframes rotate {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .loading-title {
@@ -523,8 +610,8 @@ const formatStatusMessage = (message?: string) => {
 
 .cache-step-item.active {
   opacity: 1;
-  background: rgba(24, 144, 255, 0.05);
-  border: 1px solid rgba(24, 144, 255, 0.2);
+  background: rgb(24 144 255 / 5%);
+  border: 1px solid rgb(24 144 255 / 20%);
 }
 
 .cache-step-icon {
@@ -782,7 +869,7 @@ const formatStatusMessage = (message?: string) => {
   font-size: 14px;
   font-weight: 600;
   color: var(--ops-ink);
-  margin: 0 0 16px 0;
+  margin: 0 0 16px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--ops-border);
 }
@@ -831,7 +918,7 @@ const formatStatusMessage = (message?: string) => {
 
 .cache-key {
   flex: 1;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 13px;
   color: var(--ops-ink);
   word-break: break-all;
@@ -895,7 +982,7 @@ const formatStatusMessage = (message?: string) => {
   border-radius: 6px;
   padding: 16px;
   margin-top: 12px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 12px;
   color: var(--ops-muted);
   max-height: 200px;
@@ -1027,7 +1114,7 @@ const formatStatusMessage = (message?: string) => {
 }
 
 .clear-all-warning p {
-  margin: 0 0 8px 0;
+  margin: 0 0 8px;
   color: var(--ops-muted);
   line-height: 1.5;
 }
@@ -1037,86 +1124,5 @@ const formatStatusMessage = (message?: string) => {
   font-weight: 500;
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .overview-grid {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 16px;
-  }
-
-  .operations-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .details-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-}
-
-@media (max-width: 576px) {
-  .overview-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .operation-card {
-    padding: 16px;
-  }
-
-  .detail-card {
-    padding: 16px;
-  }
-
-  .cache-check-steps {
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .cache-step-item {
-    flex-direction: row;
-    gap: 12px;
-    padding: 12px;
-  }
-
-  .cache-step-icon {
-    width: 32px;
-    height: 32px;
-    font-size: 14px;
-  }
-
-  .loading-main-icon {
-    font-size: 60px;
-  }
-
-  .loading-title {
-    font-size: 20px;
-  }
-}
-
-@media (max-width: 575px) {
-  .overview-grid,
-  .metrics-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--ops-space-sm);
-  }
-  .overview-card,
-  .metric-card {
-    min-width: 0;
-    padding: var(--ops-space-md);
-    gap: var(--ops-space-sm);
-    flex-wrap: wrap;
-  }
-  .card-icon {
-    font-size: 20px;
-  }
-  .card-value,
-  .metric-value {
-    overflow-wrap: anywhere;
-  }
-  .section-header {
-    flex-wrap: wrap;
-    gap: var(--ops-space-sm);
-  }
-}
+/* 页面头部 */
 </style>

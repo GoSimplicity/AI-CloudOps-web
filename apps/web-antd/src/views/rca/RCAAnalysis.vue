@@ -16,17 +16,6 @@ import {
   TooltipComponent,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
-
-// 注册必需的组件
-echarts.use([
-  BarChart,
-  PieChart,
-  GridComponent,
-  TooltipComponent,
-  LegendComponent,
-  TitleComponent,
-  CanvasRenderer,
-]);
 import { message } from 'ant-design-vue';
 import {
   AlertOutlined,
@@ -46,6 +35,17 @@ import {
   type RCAAnalysisResponse,
   type RCAAnalyzeRequest,
 } from '../../api/core/aiops/rca';
+
+// 注册必需的组件
+echarts.use([
+  BarChart,
+  PieChart,
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  TitleComponent,
+  CanvasRenderer,
+]);
 
 // 响应式数据
 const analysisError = ref('');
@@ -1117,7 +1117,157 @@ onUnmounted(() => {
   </OpsPage>
 </template>
 <style scoped>
-/* 页面头部 */
+/* 动画效果 */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  /* 加载状态响应式 */
+  .loading-container {
+    padding: 40px 20px;
+  }
+
+  .loading-icon {
+    font-size: 48px;
+  }
+
+  .loading-title {
+    font-size: 18px;
+  }
+
+  .loading-steps {
+    padding: 0 10px;
+  }
+
+  .step-item {
+    padding: 10px 12px;
+  }
+
+  .step-text {
+    font-size: 13px;
+  }
+
+  .loading-tips {
+    font-size: 12px;
+    padding: 12px;
+  }
+
+  .error-name {
+    flex: 0 0 120px;
+  }
+
+  .chart-container {
+    height: 200px;
+  }
+
+  .chart-container-small {
+    height: 180px;
+  }
+
+  /* 小屏幕下的滑块标记样式 */
+  .time-window-slider :deep(.ant-slider-mark-text) {
+    font-size: 10px;
+  }
+
+  .time-window-slider :deep(.ant-slider-mark) {
+    margin-top: 12px;
+  }
+}
+
+@media (max-width: 576px) {
+  /* 小屏幕加载状态 */
+  .loading-container {
+    padding: 30px 16px;
+  }
+
+  .loading-icon {
+    font-size: 40px;
+  }
+
+  .loading-title {
+    font-size: 16px;
+  }
+
+  .loading-subtitle {
+    font-size: 13px;
+  }
+
+  .loading-steps {
+    padding: 0 5px;
+    gap: 12px;
+  }
+
+  .step-item {
+    padding: 8px 10px;
+  }
+
+  .step-text {
+    font-size: 12px;
+  }
+
+  .loading-tips {
+    font-size: 11px;
+    padding: 10px;
+  }
+
+  .cause-type {
+    max-width: 200px;
+  }
+
+  .error-freq-item {
+    flex-wrap: wrap;
+  }
+
+  .error-name {
+    flex: 0 0 100%;
+    margin-bottom: 8px;
+  }
+}
+
+@media (max-width: 575px) {
+  .overview-grid,
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--ops-space-sm);
+  }
+
+  .overview-card,
+  .metric-card {
+    min-width: 0;
+    padding: var(--ops-space-md);
+  }
+
+  .card-value,
+  .metric-value {
+    overflow-wrap: anywhere;
+  }
+
+  .section-header {
+    flex-wrap: wrap;
+    gap: var(--ops-space-sm);
+  }
+}
 
 /* 卡片样式 */
 .config-card,
@@ -1229,28 +1379,6 @@ onUnmounted(() => {
 .loading-tips .iconify {
   font-size: 16px;
   flex-shrink: 0;
-}
-
-/* 动画效果 */
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.8;
-    transform: scale(1.05);
-  }
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .status-card {
@@ -1483,7 +1611,7 @@ onUnmounted(() => {
 }
 
 .chart-title {
-  margin: 0 0 12px 0;
+  margin: 0 0 12px;
   font-size: 14px;
   font-weight: 500;
   color: var(--ops-ink);
@@ -1509,7 +1637,7 @@ onUnmounted(() => {
 }
 
 .section-title {
-  margin: 0 0 12px 0;
+  margin: 0 0 12px;
   font-size: 14px;
   font-weight: 500;
   color: var(--ops-ink);
@@ -1710,128 +1838,5 @@ onUnmounted(() => {
   transform: translateX(-100%);
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-  /* 加载状态响应式 */
-  .loading-container {
-    padding: 40px 20px;
-  }
-
-  .loading-icon {
-    font-size: 48px;
-  }
-
-  .loading-title {
-    font-size: 18px;
-  }
-
-  .loading-steps {
-    padding: 0 10px;
-  }
-
-  .step-item {
-    padding: 10px 12px;
-  }
-
-  .step-text {
-    font-size: 13px;
-  }
-
-  .loading-tips {
-    font-size: 12px;
-    padding: 12px;
-  }
-
-  .error-name {
-    flex: 0 0 120px;
-  }
-
-  .chart-container {
-    height: 200px;
-  }
-
-  .chart-container-small {
-    height: 180px;
-  }
-
-  /* 小屏幕下的滑块标记样式 */
-  .time-window-slider :deep(.ant-slider-mark-text) {
-    font-size: 10px;
-  }
-
-  .time-window-slider :deep(.ant-slider-mark) {
-    margin-top: 12px;
-  }
-}
-
-@media (max-width: 576px) {
-  /* 小屏幕加载状态 */
-  .loading-container {
-    padding: 30px 16px;
-  }
-
-  .loading-icon {
-    font-size: 40px;
-  }
-
-  .loading-title {
-    font-size: 16px;
-  }
-
-  .loading-subtitle {
-    font-size: 13px;
-  }
-
-  .loading-steps {
-    padding: 0 5px;
-    gap: 12px;
-  }
-
-  .step-item {
-    padding: 8px 10px;
-  }
-
-  .step-text {
-    font-size: 12px;
-  }
-
-  .loading-tips {
-    font-size: 11px;
-    padding: 10px;
-  }
-
-  .cause-type {
-    max-width: 200px;
-  }
-
-  .error-freq-item {
-    flex-wrap: wrap;
-  }
-
-  .error-name {
-    flex: 0 0 100%;
-    margin-bottom: 8px;
-  }
-}
-
-@media (max-width: 575px) {
-  .overview-grid,
-  .metrics-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--ops-space-sm);
-  }
-  .overview-card,
-  .metric-card {
-    min-width: 0;
-    padding: var(--ops-space-md);
-  }
-  .card-value,
-  .metric-value {
-    overflow-wrap: anywhere;
-  }
-  .section-header {
-    flex-wrap: wrap;
-    gap: var(--ops-space-sm);
-  }
-}
+/* 页面头部 */
 </style>

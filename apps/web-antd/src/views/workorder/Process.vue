@@ -1329,17 +1329,61 @@ onMounted(() => {
 </template>
 
 <style scoped>
+@media (max-width: 768px) {
+  .header-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .search-filters {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .search-input {
+    min-width: auto;
+  }
+
+  .stats-card :deep(.ant-statistic-title) {
+    font-size: 12px;
+  }
+
+  .stats-card :deep(.ant-statistic-content) {
+    font-size: 16px;
+  }
+
+  .action-buttons {
+    gap: 4px;
+  }
+
+  .action-buttons .ant-btn {
+    padding: 0 4px;
+    font-size: 12px;
+  }
+
+  .detail-footer {
+    justify-content: center;
+  }
+
+  .detail-footer .ant-btn {
+    flex: 1;
+    max-width: 120px;
+  }
+
+  .responsive-modal :deep(.ant-modal-body) {
+    padding: 12px;
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+  }
+}
+
 .header-actions {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 12px;
   align-items: center;
-}
-
-@media (max-width: 768px) {
-  .header-actions {
-    grid-template-columns: 1fr;
-  }
 }
 
 .btn-create {
@@ -1354,12 +1398,6 @@ onMounted(() => {
   align-items: center;
 }
 
-@media (max-width: 768px) {
-  .search-filters {
-    grid-template-columns: 1fr;
-  }
-}
-
 .search-input {
   min-width: 200px;
 }
@@ -1370,7 +1408,7 @@ onMounted(() => {
 
 .stats-card {
   border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 5%);
   height: 100%;
 }
 
@@ -1478,7 +1516,7 @@ onMounted(() => {
 }
 
 .process-preview h3 {
-  margin: 24px 0 16px 0;
+  margin: 24px 0 16px;
   color: var(--ops-ink);
   font-size: 18px;
   font-weight: 600;
@@ -1488,9 +1526,8 @@ onMounted(() => {
   background: var(--ops-ground);
   padding: 16px;
   border-radius: 4px;
-  overflow-x: auto;
+  overflow: auto;
   max-height: 400px;
-  overflow-y: auto;
 }
 
 .detail-footer {
@@ -1521,43 +1558,5 @@ onMounted(() => {
   max-height: 80vh;
   overflow-y: auto;
   padding: 16px;
-}
-
-@media (max-width: 768px) {
-  .search-input {
-    min-width: auto;
-  }
-
-  .stats-card :deep(.ant-statistic-title) {
-    font-size: 12px;
-  }
-
-  .stats-card :deep(.ant-statistic-content) {
-    font-size: 16px;
-  }
-
-  .action-buttons {
-    gap: 4px;
-  }
-
-  .action-buttons .ant-btn {
-    padding: 0 4px;
-    font-size: 12px;
-  }
-
-  .detail-footer {
-    justify-content: center;
-  }
-
-  .detail-footer .ant-btn {
-    flex: 1;
-    max-width: 120px;
-  }
-
-  .responsive-modal :deep(.ant-modal-body) {
-    padding: 12px;
-    max-height: calc(100vh - 160px);
-    overflow-y: auto;
-  }
 }
 </style>

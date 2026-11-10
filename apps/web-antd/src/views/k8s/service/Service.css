@@ -9,7 +9,7 @@
 }
 
 .port-tag {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 11px;
   font-weight: 500;
   background: #f0f7ff;
@@ -29,7 +29,7 @@
 
 /* Service IP 显示样式 */
 .service-ip {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 12px;
   font-weight: 500;
   color: #1890ff;
@@ -49,7 +49,7 @@
 }
 
 .ip-tag {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 11px;
   font-weight: 500;
   margin: 0;
@@ -69,7 +69,7 @@
 }
 
 .service-addresses .ant-tag {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 11px;
   font-weight: 500;
   margin: 0;
@@ -206,12 +206,12 @@
     align-items: flex-start;
     gap: 2px;
   }
-  
+
   .port-tag,
   .ip-tag {
     font-size: 10px;
   }
-  
+
   .service-ip {
     font-size: 11px;
   }
@@ -223,7 +223,7 @@
     align-items: stretch;
     gap: 8px;
   }
-  
+
   .k8s-form .port-config-item .ant-input-number,
   .k8s-form .port-config-item .ant-select {
     width: 100%;

@@ -50,6 +50,7 @@ function toggleTheme() {
   display: flex;
   flex-direction: column;
 }
+
 .ops-auth-header,
 .ops-auth-footer {
   display: flex;
@@ -57,17 +58,21 @@ function toggleTheme() {
   align-items: center;
   padding: 24px 5vw;
 }
+
 .ops-auth-header {
   border-bottom: 1px solid var(--ops-border);
 }
+
 .ops-wordmark {
   font-size: 21px;
   font-weight: 800;
   letter-spacing: -0.04em;
 }
+
 .ops-wordmark span {
   color: var(--ops-accent);
 }
+
 .ops-theme-switch {
   font-size: 13px;
   border: 1px solid var(--ops-border);
@@ -75,6 +80,7 @@ function toggleTheme() {
   border-radius: var(--ops-radius);
   background: var(--ops-surface);
 }
+
 .ops-auth-main {
   flex: 1;
   display: grid;
@@ -84,6 +90,7 @@ function toggleTheme() {
   width: min(1080px, 90vw);
   margin: 48px auto;
 }
+
 .ops-eyebrow {
   font:
     12px SFMono-Regular,
@@ -92,6 +99,7 @@ function toggleTheme() {
   letter-spacing: 0.12em;
   color: var(--ops-accent);
 }
+
 .ops-auth-intro h1 {
   font-size: clamp(32px, 4vw, 48px);
   font-weight: 650;
@@ -99,11 +107,13 @@ function toggleTheme() {
   letter-spacing: -0.035em;
   margin: 24px 0;
 }
+
 .ops-auth-intro > p:last-of-type {
   color: var(--ops-muted);
   font-size: 15px;
   line-height: 1.8;
 }
+
 .ops-auth-scope {
   display: flex;
   gap: 24px;
@@ -113,12 +123,14 @@ function toggleTheme() {
   font-size: 12px;
   color: var(--ops-muted);
 }
+
 .ops-auth-form {
   padding: 36px;
   border: 1px solid var(--ops-border);
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
 }
+
 .ops-auth-help {
   font-size: 12px;
   color: var(--ops-muted);
@@ -127,19 +139,23 @@ function toggleTheme() {
   padding-top: 24px;
   margin-top: 24px;
 }
+
 .ops-auth-footer {
   color: var(--ops-muted);
   font-size: 12px;
 }
+
 @media (max-width: 760px) {
   .ops-auth-main {
     grid-template-columns: 1fr;
     max-width: 440px;
     gap: 32px;
   }
+
   .ops-auth-intro {
     display: none;
   }
+
   .ops-auth-form {
     padding: 28px;
   }

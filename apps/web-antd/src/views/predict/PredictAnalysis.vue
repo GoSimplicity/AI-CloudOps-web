@@ -32,18 +32,6 @@ import {
   TooltipComponent,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
-
-// 注册必需的组件
-echarts.use([
-  LineChart,
-  GridComponent,
-  TooltipComponent,
-  LegendComponent,
-  TitleComponent,
-  DataZoomComponent,
-  MarkLineComponent,
-  CanvasRenderer,
-]);
 import { message } from 'ant-design-vue';
 import {
   ApiOutlined,
@@ -67,6 +55,18 @@ import {
   predictQps,
   type QpsPredictionRequest,
 } from '#/api/core/aiops/predict';
+
+// 注册必需的组件
+echarts.use([
+  LineChart,
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  TitleComponent,
+  DataZoomComponent,
+  MarkLineComponent,
+  CanvasRenderer,
+]);
 
 const analyzing = ref(false);
 const predictionError = ref('');
@@ -306,8 +306,9 @@ const getCurrentValueMax = () => {
   switch (formData.predictionType) {
     case 'cpu':
     case 'memory':
-    case 'disk':
+    case 'disk': {
       return 100;
+    }
     case 'qps': {
       return 10_000;
     }
@@ -332,8 +333,9 @@ const getCurrentValueUnit = () => {
   switch (formData.predictionType) {
     case 'cpu':
     case 'memory':
-    case 'disk':
+    case 'disk': {
       return '%';
+    }
     case 'qps': {
       return '/s';
     }
@@ -856,7 +858,40 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* 页面头部 */
+@media (max-width: 1200px) {
+  .predict-analysis :deep(.ant-col-lg-8) {
+    margin-bottom: var(--ops-space-lg);
+  }
+}
+
+@media (max-width: 768px) {
+  .chart-container {
+    height: 300px;
+  }
+
+  .recommendations-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 575px) {
+  .metric-name {
+    overflow-wrap: anywhere;
+  }
+
+  .metric-value {
+    font-size: 18px;
+  }
+
+  .cost-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-container,
+  .chart-container-small {
+    min-width: 0;
+  }
+}
 
 .config-card,
 .result-card,
@@ -980,40 +1015,11 @@ onUnmounted(() => {
   color: var(--ops-ink);
 }
 
-@media (max-width: 1200px) {
-  .predict-analysis :deep(.ant-col-lg-8) {
-    margin-bottom: var(--ops-space-lg);
-  }
-}
-
-@media (max-width: 768px) {
-  .chart-container {
-    height: 300px;
-  }
-
-  .recommendations-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 575px) {
-  .metric-name {
-    overflow-wrap: anywhere;
-  }
-  .metric-value {
-    font-size: 18px;
-  }
-  .cost-overview {
-    grid-template-columns: 1fr;
-  }
-  .chart-container,
-  .chart-container-small {
-    min-width: 0;
-  }
-}
 .request-note {
   color: var(--ops-muted);
   font-size: 12px;
   margin: var(--ops-space-md) 0 0;
 }
+
+/* 页面头部 */
 </style>

@@ -378,7 +378,68 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* 页面头部 */
+@media (max-width: 768px) {
+  .status-card {
+    .status-item {
+      gap: 16px;
+
+      .status-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 20px;
+      }
+
+      .status-content {
+        .status-value {
+          font-size: 18px;
+        }
+      }
+    }
+  }
+
+  .capabilities-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+
+    .capability-item {
+      .capability-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+      }
+
+      .capability-text {
+        font-size: 12px;
+      }
+    }
+  }
+
+  .endpoint-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .endpoint-url {
+    font-size: 11px;
+    padding: 8px 10px;
+  }
+
+  .config-value {
+    font-size: 11px;
+    padding: 10px;
+  }
+
+  .meta-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+
+    .meta-item {
+      font-size: 11px;
+    }
+  }
+}
 
 .info-content {
   .status-overview {
@@ -535,7 +596,7 @@ onMounted(() => {
     }
 
     .endpoint-url {
-      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
       font-size: 12px;
       color: var(--ops-ink);
       background: var(--ops-ground);
@@ -554,7 +615,7 @@ onMounted(() => {
       border-radius: var(--ops-radius);
       padding: 12px;
       margin: 0;
-      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
       font-size: 12px;
       line-height: 1.5;
       color: var(--ops-ink);
@@ -585,66 +646,5 @@ onMounted(() => {
   }
 }
 
-@media (max-width: 768px) {
-  .status-card {
-    .status-item {
-      gap: 16px;
-
-      .status-icon {
-        width: 48px;
-        height: 48px;
-        font-size: 20px;
-      }
-
-      .status-content {
-        .status-value {
-          font-size: 18px;
-        }
-      }
-    }
-  }
-
-  .capabilities-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-
-    .capability-item {
-      .capability-icon {
-        width: 40px;
-        height: 40px;
-        font-size: 18px;
-      }
-
-      .capability-text {
-        font-size: 12px;
-      }
-    }
-  }
-
-  .endpoint-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .endpoint-url {
-    font-size: 11px;
-    padding: 8px 10px;
-  }
-
-  .config-value {
-    font-size: 11px;
-    padding: 10px;
-  }
-
-  .meta-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-
-    .meta-item {
-      font-size: 11px;
-    }
-  }
-}
+/* 页面头部 */
 </style>

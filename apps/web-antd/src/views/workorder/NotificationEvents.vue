@@ -299,11 +299,18 @@ onBeforeUnmount(() => { alive = false; session++; listGeneration++; detailGenera
 
 <style scoped>
 .notification-events { display: grid; gap: var(--ops-space-md); }
+
 .events-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--ops-space-md); flex-wrap: wrap; }
+
 .events-heading h2, .audit-list h3 { margin: 0 0 4px; }
+
 .events-heading p { margin: 0; color: var(--ops-muted); }
+
 .events-pagination { justify-self: end; margin-top: var(--ops-space-sm); }
+
 .hash { display: block; max-width: 200px; overflow-wrap: anywhere; color: var(--ops-muted); }
+
 .audit-list { margin-top: var(--ops-space-lg); display: grid; gap: 6px; }
+
 .reason-label { display: block; margin: var(--ops-space-md) 0 var(--ops-space-xs); }
 </style>

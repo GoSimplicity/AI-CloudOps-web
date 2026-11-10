@@ -2,8 +2,14 @@
 import OpsPage from '#/components/ops/OpsPage.vue';
 
 import CloudManagedResources from './CloudManagedResources.vue';
-import { onBeforeUnmount } from 'vue';
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+} from 'vue';
 import { useRouter } from 'vue-router';
 
 import { Empty, message, Modal } from 'ant-design-vue';
@@ -1586,7 +1592,8 @@ const closeDetails = () => {
                 <span
                   v-if="!record.public_ip && !record.private_ip"
                   class="empty-text"
-                  >-</span>
+                  >-</span
+                >
               </div>
             </template>
 
@@ -1909,7 +1916,8 @@ const closeDetails = () => {
               color="blue"
               @close="removeTag(index)"
             >
-              <strong>{{ tag.key }}</strong>: {{ tag.value }}
+              <strong>{{ tag.key }}</strong
+              >: {{ tag.value }}
             </a-tag>
           </div>
           <div class="tag-input-group">
@@ -2131,7 +2139,9 @@ const closeDetails = () => {
                 v-model:checked="syncForm.auto_bind"
                 :disabled="syncLoading"
               />
-              <span style="margin-left: 12px">自动将同步的资源绑定到指定节点</span>
+              <span style="margin-left: 12px"
+                >自动将同步的资源绑定到指定节点</span
+              >
             </a-col>
           </a-row>
         </a-form-item>
@@ -2169,7 +2179,7 @@ const closeDetails = () => {
           <a-tree-select
             v-model:value="selectedTreeNodeIds"
             :field-names="{ children: 'children', label: 'name', value: 'id' }"
-            :show-checked-strategy="'SHOW_PARENT'"
+            show-checked-strategy="SHOW_PARENT"
             :tree-data="treeData"
             allow-clear
             multiple
@@ -2346,10 +2356,12 @@ const closeDetails = () => {
                 <TagOutlined /> <strong>字段：</strong>{{ record.field_name }}
               </div>
               <div v-if="record.old_value" class="change-old">
-                <ArrowLeftOutlined /> <strong>旧值：</strong>{{ record.old_value }}
+                <ArrowLeftOutlined /> <strong>旧值：</strong
+                >{{ record.old_value }}
               </div>
               <div v-if="record.new_value" class="change-new">
-                <ArrowRightOutlined /> <strong>新值：</strong>{{ record.new_value }}
+                <ArrowRightOutlined /> <strong>新值：</strong
+                >{{ record.new_value }}
               </div>
             </div>
           </template>
@@ -2589,7 +2601,8 @@ const closeDetails = () => {
                     class="detail-tag"
                     color="blue"
                   >
-                    <strong>{{ tag.key }}</strong>: {{ tag.value }}
+                    <strong>{{ tag.key }}</strong
+                    >: {{ tag.value }}
                   </a-tag>
                 </template>
                 <a-empty
@@ -2674,6 +2687,85 @@ const closeDetails = () => {
   padding: 12px;
   min-height: 100vh;
 
+  @media (max-width: 768px) {
+    padding: 8px;
+
+    .header-actions {
+      flex-direction: column;
+      align-items: stretch;
+
+      .btn-text {
+        display: inline;
+      }
+    }
+
+    .stats-card :deep(.ant-statistic-title) {
+      font-size: 12px;
+    }
+
+    .stats-card :deep(.ant-statistic-content) {
+      font-size: 16px;
+    }
+
+    .filter-section {
+      .filter-form {
+        :deep(.ant-form-item) {
+          margin-right: 0;
+          margin-bottom: 12px;
+          width: 100%;
+
+          .ant-input,
+          .ant-select {
+            width: 100% !important;
+          }
+        }
+      }
+    }
+
+    .action-buttons {
+      gap: 2px;
+
+      .ant-btn {
+        padding: 0 4px;
+        font-size: 12px;
+      }
+    }
+
+    .drawer-actions {
+      flex-direction: column;
+      gap: 8px;
+
+      .ant-btn-group {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+      }
+
+      .ant-btn {
+        width: 100%;
+      }
+    }
+
+    .modern-modal :deep(.ant-modal-body) {
+      padding: 16px;
+      max-height: calc(100vh - 160px);
+      overflow-y: auto;
+    }
+  }
+
+  @media (max-width: 480px) {
+    padding: 4px;
+
+    .stats-card {
+      text-align: center;
+    }
+
+    .modern-modal :deep(.ant-modal) {
+      margin: 4px;
+      max-width: calc(100vw - 8px);
+    }
+  }
+
   .page-header {
     margin-bottom: 20px;
   }
@@ -2703,7 +2795,7 @@ const closeDetails = () => {
 
   .stats-card {
     border-radius: var(--ops-radius);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 5%);
     height: 100%;
   }
 
@@ -2866,7 +2958,7 @@ const closeDetails = () => {
     }
 
     .ip-text {
-      font-family: 'Monaco', 'Consolas', monospace;
+      font-family: Monaco, Consolas, monospace;
       font-size: 12px;
     }
 
@@ -2946,7 +3038,7 @@ const closeDetails = () => {
 
     :deep(.ant-modal-content) {
       border-radius: var(--ops-radius);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 16px rgb(0 0 0 / 10%);
     }
 
     :deep(.ant-modal-header) {
@@ -2965,7 +3057,7 @@ const closeDetails = () => {
     }
 
     :deep(.ant-divider-horizontal.ant-divider-with-text-left) {
-      margin: 20px 0 12px 0;
+      margin: 20px 0 12px;
       font-weight: 600;
       color: #374151;
     }
@@ -3156,85 +3248,6 @@ const closeDetails = () => {
       margin-top: 24px;
       padding-top: 16px;
       border-top: 1px solid var(--ops-border);
-    }
-  }
-
-  @media (max-width: 768px) {
-    padding: 8px;
-
-    .header-actions {
-      flex-direction: column;
-      align-items: stretch;
-
-      .btn-text {
-        display: inline;
-      }
-    }
-
-    .stats-card :deep(.ant-statistic-title) {
-      font-size: 12px;
-    }
-
-    .stats-card :deep(.ant-statistic-content) {
-      font-size: 16px;
-    }
-
-    .filter-section {
-      .filter-form {
-        :deep(.ant-form-item) {
-          margin-right: 0;
-          margin-bottom: 12px;
-          width: 100%;
-
-          .ant-input,
-          .ant-select {
-            width: 100% !important;
-          }
-        }
-      }
-    }
-
-    .action-buttons {
-      gap: 2px;
-
-      .ant-btn {
-        padding: 0 4px;
-        font-size: 12px;
-      }
-    }
-
-    .drawer-actions {
-      flex-direction: column;
-      gap: 8px;
-
-      .ant-btn-group {
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-      }
-
-      .ant-btn {
-        width: 100%;
-      }
-    }
-
-    .modern-modal :deep(.ant-modal-body) {
-      padding: 16px;
-      max-height: calc(100vh - 160px);
-      overflow-y: auto;
-    }
-  }
-
-  @media (max-width: 480px) {
-    padding: 4px;
-
-    .stats-card {
-      text-align: center;
-    }
-
-    .modern-modal :deep(.ant-modal) {
-      margin: 4px;
-      max-width: calc(100vw - 8px);
     }
   }
 }

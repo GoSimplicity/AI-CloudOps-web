@@ -11,20 +11,65 @@
   --ops-space-md: 12px;
   --ops-space-lg: 16px;
   --ops-space-xl: 24px;
-  --ops-font-data: SFMono-Regular, Consolas, monospace;
+  --ops-font-data: sfmono-regular, consolas, monospace;
 }
-body { font-variant-numeric: tabular-nums; }
-:focus-visible { outline: 2px solid var(--ops-accent); outline-offset: 3px; }
-.ant-card, .ant-modal-content, .ant-drawer-content { border-radius: var(--ops-radius); }
-.ant-table-tbody > tr > td { transition: background-color var(--ops-duration) ease-out; }
-.ant-table-tbody > tr:hover > td:first-child { box-shadow: inset 2px 0 var(--ops-accent); }
-.ant-table-wrapper { max-width: 100%; overflow-x: auto; }
-.ant-table-cell { overflow-wrap: anywhere; }
-.ant-empty-description { color: var(--ops-muted); }
-code, pre { font-family: var(--ops-font-data); }
-@media (pointer: coarse) { .ant-btn, .ant-input, .ant-select-selector { min-height: 40px; } }
+
+body {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ops-accent);
+  outline-offset: 3px;
+}
+
+.ant-card,
+.ant-modal-content,
+.ant-drawer-content {
+  border-radius: var(--ops-radius);
+}
+
+.ant-table-tbody > tr > td {
+  transition: background-color var(--ops-duration) ease-out;
+}
+
+.ant-table-tbody > tr:hover > td:first-child {
+  box-shadow: inset 2px 0 var(--ops-accent);
+}
+
+.ant-table-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.ant-table-cell {
+  overflow-wrap: anywhere;
+}
+
+.ant-empty-description {
+  color: var(--ops-muted);
+}
+
+code,
+pre {
+  font-family: var(--ops-font-data);
+}
+
+@media (pointer: coarse) {
+  .ant-btn,
+  .ant-input,
+  .ant-select-selector {
+    min-height: 40px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @media (max-width: 640px) {
@@ -33,10 +78,12 @@ code, pre { font-family: var(--ops-font-data); }
   .ops-page__content .ant-table-cell-fix-right {
     position: static !important;
   }
+
   .ops-page__content .ant-table-cell-fix-left-last::after,
   .ops-page__content .ant-table-cell-fix-right-first::after {
     display: none;
   }
+
   .layout-floating-preferences,
   .ai-assistant-container {
     display: none;

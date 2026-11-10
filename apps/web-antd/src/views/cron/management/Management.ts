@@ -178,7 +178,7 @@ const validateHttpRequestURL = async (
   if (!value) return;
   try {
     const parsed = new URL(value);
-    const invalidCharacters = /[\u0000-\u0020\\\u007f]/.test(value);
+    const invalidCharacters = /[\u0000-\u0020\\\u007F]/.test(value);
     const explicitAuthority = /^https?:\/\/[^#/?]+/i.test(value);
     const invalidEscape = /%(?![\da-f]{2})/i.test(value);
     const httpProtocol = ['http:', 'https:'].includes(parsed.protocol);

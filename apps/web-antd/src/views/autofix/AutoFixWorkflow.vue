@@ -727,19 +727,23 @@ const actionColumns = [
 .operation-card {
   margin-bottom: var(--ops-space-lg);
 }
+
 .operation-card :deep(.ant-card-body) {
   display: grid;
   gap: var(--ops-space-sm);
 }
+
 .operation-id,
 .operation-hint {
   margin: 0;
   overflow-wrap: anywhere;
   color: var(--ops-muted);
 }
+
 .operation-summary {
   color: var(--ops-muted);
 }
+
 .operation-history {
   display: grid;
   gap: var(--ops-space-sm);
@@ -747,6 +751,7 @@ const actionColumns = [
   margin: 0;
   list-style: none;
 }
+
 .operation-history li {
   display: flex;
   flex-wrap: wrap;
@@ -757,6 +762,7 @@ const actionColumns = [
   border: 1px solid var(--ops-border);
   border-radius: var(--ops-radius);
 }
+
 .operation-history code {
   overflow-wrap: anywhere;
 }
@@ -871,19 +877,24 @@ const actionColumns = [
   border: 1px solid var(--ops-border);
   border-radius: var(--ops-radius);
 }
+
 .summary-card > div:last-child {
   min-width: 0;
 }
+
 .summary-icon {
   flex-shrink: 0;
   color: var(--ops-muted);
 }
+
 .summary-card.status .summary-icon {
   color: var(--ops-accent);
 }
+
 .summary-value {
   overflow-wrap: anywhere;
 }
+
 .summary-value :deep(.ant-tag) {
   margin: 0;
   white-space: normal;

@@ -28,8 +28,8 @@ test('local resource metadata preserves credentials and persists structured tags
   const route = (path: string) =>
     process.env.CLOUDOPS_ROUTER_HISTORY === 'hash' ? `/#${path}` : path;
   const nonce = `local-ui-${randomUUID().replaceAll('-', '').slice(0, 12)}`;
-  let token = '',
-    id = 0;
+  let token = '';
+  let id = 0;
   const errors: string[] = [];
   const sshConnections: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));

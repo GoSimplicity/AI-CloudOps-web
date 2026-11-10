@@ -156,7 +156,7 @@
   border-top: none;
   border-radius: 0 0 8px 8px;
   padding: 8px 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
   max-height: 120px;
   overflow-y: auto;
 }
@@ -176,7 +176,7 @@
 
 .k8s-form .k8s-key-value-row:hover {
   border-color: var(--ops-border);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 4%);
 }
 
 /* 主体类型选择器 */
@@ -201,7 +201,7 @@
 }
 
 .labels-filter-form h4 {
-  margin: 0 0 12px 0;
+  margin: 0 0 12px;
   font-size: 14px;
   font-weight: 600;
   color: var(--ops-ink);
@@ -462,12 +462,12 @@
 
 .subject-detail-item:focus-within {
   border-color: #1677ff;
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+  box-shadow: 0 0 0 2px rgb(22 119 255 / 10%);
 }
 
 /* ==================== YAML文本区域样式 ==================== */
 .k8s-config-textarea {
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-family: Consolas, Monaco, 'Courier New', monospace;
   font-size: 12px;
   line-height: 1.5;
 }

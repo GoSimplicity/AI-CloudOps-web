@@ -49,9 +49,11 @@ const methodLabel = computed(() => {
   color: var(--text-color-secondary, #666);
   font-size: 12px;
 }
+
 .prediction-provenance strong {
   color: var(--text-color, #222);
 }
+
 .notice {
   color: var(--ops-warning, #ad6800);
 }

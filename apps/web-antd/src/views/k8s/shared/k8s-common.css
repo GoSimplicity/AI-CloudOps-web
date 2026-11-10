@@ -153,7 +153,7 @@
 
 .k8s-filter-select.ant-select-focused :deep(.ant-select-selector) {
   background: var(--ops-surface);
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+  box-shadow: 0 0 0 2px rgb(22 119 255 / 10%);
 }
 
 .k8s-search-input {
@@ -170,14 +170,14 @@
 .k8s-search-input:hover {
   border-color: #1677ff;
   background: #fafbff;
-  box-shadow: 0 2px 8px rgba(22, 119, 255, 0.08);
+  box-shadow: 0 2px 8px rgb(22 119 255 / 8%);
 }
 
 .k8s-search-input:focus,
 .k8s-search-input.ant-input-focused {
   border-color: #1677ff;
   background: var(--ops-surface);
-  box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.15);
+  box-shadow: 0 0 0 3px rgb(22 119 255 / 15%);
   outline: none;
 }
 
@@ -241,7 +241,7 @@
   background: #ff7875;
   border-color: #ff7875;
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(255, 77, 79, 0.3);
+  box-shadow: 0 2px 8px rgb(255 77 79 / 30%);
 }
 
 .k8s-toolbar-btn:disabled {
@@ -517,14 +517,14 @@
   background: #f8f9fa;
   color: #6c757d;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 6%);
   position: relative;
   overflow: hidden;
 }
 
 .k8s-action-column .ant-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
 }
 
 .k8s-action-column .ant-btn[title*='查看'],
@@ -539,7 +539,7 @@
   background: #bbdefb;
   border-color: #42a5f5;
   color: #0d47a1;
-  box-shadow: 0 6px 16px rgba(25, 118, 210, 0.25);
+  box-shadow: 0 6px 16px rgb(25 118 210 / 25%);
 }
 
 .k8s-action-column .ant-btn[title*='编辑'],
@@ -558,7 +558,7 @@
   background: #c8e6c9;
   border-color: #66bb6a;
   color: #1b5e20;
-  box-shadow: 0 6px 16px rgba(46, 125, 50, 0.25);
+  box-shadow: 0 6px 16px rgb(46 125 50 / 25%);
 }
 
 /* 操作按钮 - 橙色主题 */
@@ -580,7 +580,7 @@
   background: #ffe0b2;
   border-color: #ffb74d;
   color: #e65100;
-  box-shadow: 0 6px 16px rgba(245, 124, 0, 0.25);
+  box-shadow: 0 6px 16px rgb(245 124 0 / 25%);
 }
 
 /* 危险操作按钮 - 红色主题 */
@@ -598,7 +598,7 @@
   background: #ffcdd2;
   border-color: #e57373;
   color: #b71c1c;
-  box-shadow: 0 6px 16px rgba(211, 47, 47, 0.25);
+  box-shadow: 0 6px 16px rgb(211 47 47 / 25%);
 }
 
 /* 图标样式优化 */
@@ -638,6 +638,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -859,7 +860,7 @@
 .k8s-form-input:hover {
   border-color: #1677ff;
   background: var(--ops-surface);
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+  box-shadow: 0 0 0 2px rgb(22 119 255 / 10%);
 }
 
 .k8s-form-input.ant-select {
@@ -934,7 +935,7 @@
   font-size: 14px;
   border-radius: var(--ops-radius);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 8%);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -949,7 +950,7 @@
 .k8s-header-actions .ant-btn-primary:hover {
   background: #4096ff;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.3);
+  box-shadow: 0 4px 12px rgb(22 119 255 / 30%);
 }
 
 .k8s-header-actions .ant-btn:not(.ant-btn-primary) {
@@ -963,7 +964,7 @@
   color: #1677ff;
   background: #f0f7ff;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.15);
+  box-shadow: 0 4px 12px rgb(22 119 255 / 15%);
 }
 
 .k8s-header-actions .ant-btn:active {
@@ -1021,7 +1022,7 @@
 
 .k8s-key-value-row:hover {
   border-color: var(--ops-border);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 5%);
 }
 
 .k8s-key-value-row:last-child {
@@ -1040,7 +1041,7 @@
 
 .k8s-key-value-row .k8s-form-input:focus {
   border-color: #1677ff;
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+  box-shadow: 0 0 0 2px rgb(22 119 255 / 10%);
   outline: none;
 }
 
@@ -1058,7 +1059,7 @@
   justify-content: center;
   background: var(--ops-surface);
   border: 1px solid var(--ops-border);
-  color: #999999;
+  color: #999;
   transition: all 0.2s ease;
 }
 
@@ -1100,7 +1101,7 @@
 .k8s-key-value-inputs .k8s-empty-state {
   text-align: center;
   padding: 24px 16px;
-  color: #999999;
+  color: #999;
   background: var(--ops-surface);
   border-radius: 4px;
   border: 1px dashed var(--ops-border);
@@ -1115,7 +1116,7 @@
 
 .k8s-empty-state .empty-text {
   font-size: 13px;
-  color: #999999;
+  color: #999;
   line-height: 1.4;
 }
 
@@ -1449,7 +1450,7 @@
 }
 
 .k8s-config-textarea {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 12px;
   line-height: 1.4;
   background: #f8f9fa;
@@ -1461,14 +1462,14 @@
 }
 
 .k8s-config-textarea :deep(.ant-input) {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 12px;
   line-height: 1.4;
 }
 
 .k8s-config-textarea:focus-within {
   border-color: #1677ff;
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+  box-shadow: 0 0 0 2px rgb(22 119 255 / 10%);
   background: var(--ops-surface);
 }
 
@@ -1514,17 +1515,17 @@
   align-items: center;
   gap: 6px;
   padding: 0 16px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 5%);
 }
 
 .yaml-toolbar-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 8px rgb(0 0 0 / 12%);
 }
 
 .yaml-toolbar-btn:active {
   transform: translateY(0);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
 }
 
 .yaml-btn-template {
@@ -1649,7 +1650,7 @@
   border-radius: 6px;
   padding: 8px;
   margin-top: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
 }
 
 .k8s-labels-filter .active-filters::-webkit-scrollbar {
@@ -1758,7 +1759,7 @@
 }
 
 .k8s-image-tag {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 11px;
   font-weight: 500;
   background: #f0f5ff;
@@ -1807,7 +1808,7 @@
 }
 
 .k8s-replicas-text {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 12px;
   font-weight: 600;
   color: var(--ops-ink);

@@ -248,11 +248,7 @@ const loadFlow = async (instanceId: number) => {
       }
     }
 
-    if (allFlows.length > 0) {
-      flowList.value = allFlows;
-    } else {
-      flowList.value = [];
-    }
+    flowList.value = allFlows.length > 0 ? allFlows : [];
   } catch (error: any) {
     if (shouldNotifyPageError(error))
       message.error(`加载流转记录失败: ${error.message || '未知错误'}`);
@@ -783,7 +779,216 @@ defineExpose({
 </template>
 
 <style scoped>
-/* 流转对话框样式 */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseEffect {
+  0% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+
+  50% {
+    transform: scale(1.3);
+    opacity: 0.1;
+  }
+
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .flow-dialog-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 16px 20px;
+  }
+
+  .header-actions {
+    align-self: stretch;
+    justify-content: center;
+  }
+
+  .flow-stats {
+    padding: 16px;
+  }
+
+  .stats-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 12px;
+  }
+
+  .stat-number {
+    font-size: 18px;
+  }
+
+  .timeline-view {
+    padding: 20px 16px;
+  }
+
+  .flow-timeline::before {
+    left: 16px;
+  }
+
+  .flow-timeline-item {
+    gap: 16px;
+  }
+
+  .timeline-node {
+    width: 40px;
+    height: 40px;
+  }
+
+  .flow-card {
+    max-width: 100%;
+  }
+
+  .flow-card-header {
+    padding: 16px;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .flow-card-content {
+    padding: 16px;
+  }
+
+  .operator-section {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .status-flow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .list-view {
+    padding: 16px;
+  }
+
+  .table-header,
+  .table-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .table-header {
+    display: none;
+  }
+
+  .table-row {
+    flex-direction: column;
+    padding: 12px;
+    border: 1px solid #e8f0fe;
+    border-radius: var(--ops-radius);
+    margin-bottom: 8px;
+  }
+
+  .body-cell {
+    justify-content: space-between;
+    padding: 4px 0;
+    border-bottom: 1px solid #f0f2f5;
+  }
+
+  .body-cell:last-child {
+    border-bottom: none;
+  }
+
+  .body-cell::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 12px;
+  }
+}
+
+/* 超小屏幕适配 */
+@media (max-width: 480px) {
+  .flow-stats {
+    padding: 12px;
+  }
+
+  .stats-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .timeline-view {
+    padding: 16px 12px;
+  }
+
+  .flow-timeline-item {
+    gap: 12px;
+  }
+
+  .timeline-node {
+    width: 36px;
+    height: 36px;
+  }
+
+  .flow-card-header {
+    padding: 12px;
+  }
+
+  .flow-card-content {
+    padding: 12px;
+  }
+
+  .comment-section {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .status-flow {
+    gap: 6px;
+  }
+
+  .from-status,
+  .to-status {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+
+  .list-view {
+    padding: 12px;
+  }
+
+  .table-row {
+    padding: 8px;
+  }
+}
+
 .flow-dialog :deep(.ant-modal) {
   border-radius: var(--ops-radius);
   overflow: hidden;
@@ -815,16 +1020,6 @@ defineExpose({
   animation: pulse 2s infinite;
 }
 
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
 .header-text {
   display: flex;
   flex-direction: column;
@@ -850,15 +1045,15 @@ defineExpose({
 
 .header-actions .ant-btn {
   color: hsl(var(--primary-foreground));
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgb(255 255 255 / 30%);
+  background: rgb(255 255 255 / 10%);
   border-radius: var(--ops-radius);
   transition: all 0.3s ease;
 }
 
 .header-actions .ant-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: rgb(255 255 255 / 20%);
+  border-color: rgb(255 255 255 / 50%);
   transform: translateY(-1px);
 }
 
@@ -898,7 +1093,7 @@ defineExpose({
 
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 8%);
   border-color: #d9ecf5;
 }
 
@@ -983,17 +1178,6 @@ defineExpose({
   animation-fill-mode: both;
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 .flow-timeline-item.important-flow {
   z-index: 2;
 }
@@ -1004,7 +1188,7 @@ defineExpose({
 
 .flow-timeline-item.important-flow .flow-card {
   border-color: #52c41a;
-  box-shadow: 0 8px 24px rgba(82, 196, 26, 0.15);
+  box-shadow: 0 8px 24px rgb(82 196 26 / 15%);
 }
 
 /* 时间线节点 */
@@ -1018,7 +1202,7 @@ defineExpose({
   justify-content: center;
   background: var(--ops-surface);
   border: 4px solid;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
   transition: all 0.3s ease;
   z-index: 5;
   flex-shrink: 0;
@@ -1038,21 +1222,6 @@ defineExpose({
   background: inherit;
   opacity: 0.3;
   animation: pulseEffect 2s infinite;
-}
-
-@keyframes pulseEffect {
-  0% {
-    transform: scale(1);
-    opacity: 0.3;
-  }
-  50% {
-    transform: scale(1.3);
-    opacity: 0.1;
-  }
-  100% {
-    transform: scale(1.5);
-    opacity: 0;
-  }
 }
 
 /* 不同操作类型的节点样式 */
@@ -1098,14 +1267,14 @@ defineExpose({
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
   border: 1px solid #e8f0fe;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 8%);
   overflow: hidden;
   transition: all 0.3s ease;
 }
 
 .flow-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 32px rgb(0 0 0 / 12%);
 }
 
 .flow-card-header {
@@ -1209,7 +1378,7 @@ defineExpose({
 
 .operator-avatar {
   border: 2px solid var(--ops-surface);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
 }
 
 .operator-info {
@@ -1347,7 +1516,7 @@ defineExpose({
 /* 绝对时间戳 */
 .absolute-timestamp {
   padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgb(255 255 255 / 90%);
   border: 1px solid #e8f0fe;
   border-radius: var(--ops-radius);
   font-size: 11px;
@@ -1596,176 +1765,6 @@ defineExpose({
   padding: 0;
 }
 
-/* 移动端适配 */
-@media (max-width: 768px) {
-  .flow-dialog-header {
-    flex-direction: column;
-    gap: 16px;
-    align-items: flex-start;
-    padding: 16px 20px;
-  }
-
-  .header-actions {
-    align-self: stretch;
-    justify-content: center;
-  }
-
-  .flow-stats {
-    padding: 16px;
-  }
-
-  .stats-row {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-  }
-
-  .stat-card {
-    padding: 12px;
-  }
-
-  .stat-number {
-    font-size: 18px;
-  }
-
-  .timeline-view {
-    padding: 20px 16px;
-  }
-
-  .flow-timeline::before {
-    left: 16px;
-  }
-
-  .flow-timeline-item {
-    gap: 16px;
-  }
-
-  .timeline-node {
-    width: 40px;
-    height: 40px;
-  }
-
-  .flow-card {
-    max-width: 100%;
-  }
-
-  .flow-card-header {
-    padding: 16px;
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
-  }
-
-  .flow-card-content {
-    padding: 16px;
-  }
-
-  .operator-section {
-    padding: 12px;
-    gap: 10px;
-  }
-
-  .status-flow {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .list-view {
-    padding: 16px;
-  }
-
-  .table-header,
-  .table-row {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  .table-header {
-    display: none;
-  }
-
-  .table-row {
-    flex-direction: column;
-    padding: 12px;
-    border: 1px solid #e8f0fe;
-    border-radius: var(--ops-radius);
-    margin-bottom: 8px;
-  }
-
-  .body-cell {
-    justify-content: space-between;
-    padding: 4px 0;
-    border-bottom: 1px solid #f0f2f5;
-  }
-
-  .body-cell:last-child {
-    border-bottom: none;
-  }
-
-  .body-cell::before {
-    content: attr(data-label);
-    font-weight: 600;
-    color: #2c3e50;
-    font-size: 12px;
-  }
-}
-
-/* 超小屏幕适配 */
-@media (max-width: 480px) {
-  .flow-stats {
-    padding: 12px;
-  }
-
-  .stats-row {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  .timeline-view {
-    padding: 16px 12px;
-  }
-
-  .flow-timeline-item {
-    gap: 12px;
-  }
-
-  .timeline-node {
-    width: 36px;
-    height: 36px;
-  }
-
-  .flow-card-header {
-    padding: 12px;
-  }
-
-  .flow-card-content {
-    padding: 12px;
-  }
-
-  .comment-section {
-    padding: 12px;
-    margin-bottom: 12px;
-  }
-
-  .status-flow {
-    gap: 6px;
-  }
-
-  .from-status,
-  .to-status {
-    font-size: 11px;
-    padding: 3px 8px;
-  }
-
-  .list-view {
-    padding: 12px;
-  }
-
-  .table-row {
-    padding: 8px;
-  }
-}
-
 /* 滚动条样式 */
 .flow-content::-webkit-scrollbar {
   width: 8px;
@@ -1784,4 +1783,6 @@ defineExpose({
 .flow-content::-webkit-scrollbar-thumb:hover {
   background: var(--ops-accent);
 }
+
+/* 流转对话框样式 */
 </style>
