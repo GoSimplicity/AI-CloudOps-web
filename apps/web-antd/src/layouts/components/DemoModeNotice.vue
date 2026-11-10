@@ -36,9 +36,11 @@ const visible =
   font: inherit;
   white-space: nowrap;
 }
+
 .demo-mode-notice strong {
   color: var(--ops-accent);
 }
+
 @media (max-width: 900px) {
   .demo-mode-notice__detail {
     display: none;

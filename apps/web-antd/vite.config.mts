@@ -15,7 +15,8 @@ export default defineConfig(async (environment) => {
     environment?.command === 'serve' &&
     environment.mode === 'demo' &&
     !environment.isPreview &&
-    loadEnv(environment.mode, process.cwd(), 'VITE_').VITE_CLOUDOPS_DEMO === 'true';
+    loadEnv(environment.mode, process.cwd(), 'VITE_').VITE_CLOUDOPS_DEMO ===
+      'true';
   const proxyTarget = demo
     ? 'http://127.0.0.1:18089'
     : process.env.VITE_PROXY_TARGET || 'http://localhost:8889';

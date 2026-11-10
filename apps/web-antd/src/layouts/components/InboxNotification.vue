@@ -194,8 +194,7 @@ async function perform(kind: 'delete' | 'read' | 'readAll', id?: number) {
       await markAllInboxRead();
     } else {
       if (!safeId(id)) return;
-      if (kind === 'read') await markInboxRead(id);
-      else await deleteInboxMessage(id);
+      await (kind === 'read' ? markInboxRead(id) : deleteInboxMessage(id));
     }
     if (!current(epoch)) return;
     await Promise.all([refreshCount(), refreshList()]);
@@ -391,6 +390,7 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 10px;
 }
+
 .inbox-header,
 .inbox-item-header,
 .inbox-footer {
@@ -399,11 +399,13 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
 }
+
 .inbox-count {
   margin-left: 8px;
   color: var(--ops-muted);
   font-size: 12px;
 }
+
 .inbox-list {
   list-style: none;
   margin: 0;
@@ -411,22 +413,27 @@ onBeforeUnmount(() => {
   max-height: min(50vh, 420px);
   overflow-y: auto;
 }
+
 .inbox-item {
   padding: 10px 0;
   border-bottom: 1px solid var(--ops-border);
 }
+
 .inbox-item-header strong {
   overflow-wrap: anywhere;
 }
+
 .inbox-content {
   margin: 6px 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
 .inbox-footer {
   color: var(--ops-muted);
   font-size: 12px;
 }
+
 .inbox-empty {
   text-align: center;
   padding: 24px 0;
@@ -443,6 +450,7 @@ onBeforeUnmount(() => {
     top: 54px !important;
     width: auto !important;
   }
+
   .inbox-popover .ant-popover-arrow {
     display: none;
   }

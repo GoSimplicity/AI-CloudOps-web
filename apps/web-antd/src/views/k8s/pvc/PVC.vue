@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 
-import { namespacedResourceKey } from '../shared/utils';
+import {
+  formatDateTime,
+  getRelativeTime,
+  namespacedResourceKey,
+} from '../shared/utils';
 
 import { onMounted } from 'vue';
 
@@ -27,7 +31,6 @@ import {
 } from '@ant-design/icons-vue';
 
 import { usePVCPage } from './PVC';
-import { formatDateTime, getRelativeTime } from '../shared/utils';
 import { usePermission } from '#/utils/permission';
 
 const { can } = usePermission();

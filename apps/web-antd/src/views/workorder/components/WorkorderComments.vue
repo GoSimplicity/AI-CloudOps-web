@@ -539,7 +539,7 @@ const clearQuote = () => {
   if (quickCommentText.value) {
     // 简单的处理方式：清除以 "**引用" 开头的内容块
     const lines = quickCommentText.value.split('\n');
-    let filteredLines: string[] = [];
+    const filteredLines: string[] = [];
     let inQuoteBlock = false;
 
     for (const line of lines) {
@@ -1054,7 +1054,120 @@ defineExpose({
 </template>
 
 <style scoped>
-/* 评论对话框样式增强 */
+@keyframes slideInDown {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 加载动画 */
+@keyframes slideInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .comments-dialog-header {
+    padding: 12px 16px;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .comment-wrapper {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .user-avatar {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .comment-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .commenter-info {
+    gap: 8px;
+  }
+
+  .comment-text {
+    padding: 16px;
+    font-size: 14px;
+  }
+
+  .quick-comment-section {
+    padding: 16px;
+  }
+
+  .quick-textarea {
+    padding: 12px;
+  }
+
+  .comments-list {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .reply-item {
+    padding: 12px;
+  }
+
+  .reply-avatar .ant-avatar {
+    width: 28px !important;
+    height: 28px !important;
+  }
+}
+
+/* 超小屏幕适配 */
+@media (max-width: 480px) {
+  .comment-wrapper {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .comment-avatar {
+    align-self: flex-start;
+  }
+
+  .comment-text {
+    padding: 12px;
+    font-size: 13px;
+  }
+
+  .reply-item {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .quick-comment-actions {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .keyboard-hint {
+    text-align: center;
+  }
+}
+
 .comment-modal :deep(.ant-modal-header) {
   background: var(--ops-accent);
   border-radius: 12px 12px 0 0;
@@ -1072,7 +1185,7 @@ defineExpose({
 }
 
 .comment-modal :deep(.ant-modal-close:hover) {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgb(255 255 255 / 20%);
   border-radius: 6px;
 }
 
@@ -1088,7 +1201,7 @@ defineExpose({
 
 .comment-textarea:focus {
   border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: 0 0 0 3px rgb(102 126 234 / 10%);
 }
 
 .comment-options {
@@ -1150,7 +1263,7 @@ defineExpose({
 }
 
 .comment-count {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgb(255 255 255 / 20%);
   color: hsl(var(--primary-foreground));
 }
 
@@ -1161,11 +1274,11 @@ defineExpose({
 
 .header-actions .ant-btn {
   color: hsl(var(--primary-foreground));
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgb(255 255 255 / 30%);
 }
 
 .header-actions .ant-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgb(255 255 255 / 20%);
 }
 
 /* 评论内容区域 */
@@ -1196,23 +1309,12 @@ defineExpose({
   animation: slideInDown 0.3s ease;
 }
 
-@keyframes slideInDown {
-  from {
-    transform: translateY(-10px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
 .quote-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: rgba(102, 126, 234, 0.08);
+  background: rgb(102 126 234 / 8%);
   border-bottom: 1px solid #e1ecf4;
 }
 
@@ -1234,7 +1336,7 @@ defineExpose({
 .quote-time {
   font-size: 12px;
   color: var(--ops-muted);
-  background: rgba(255, 255, 255, 0.7);
+  background: rgb(255 255 255 / 70%);
   padding: 2px 8px;
   border-radius: var(--ops-radius);
   white-space: nowrap;
@@ -1253,7 +1355,7 @@ defineExpose({
 }
 
 .quote-close:hover {
-  background: rgba(255, 77, 79, 0.1);
+  background: rgb(255 77 79 / 10%);
   color: #ff4d4f;
 }
 
@@ -1265,7 +1367,7 @@ defineExpose({
   font-size: 13px;
   color: #5a6c7d;
   line-height: 1.5;
-  background: rgba(255, 255, 255, 0.7);
+  background: rgb(255 255 255 / 70%);
   padding: 8px 12px;
   border-radius: var(--ops-radius);
   border-left: 3px solid #667eea;
@@ -1282,7 +1384,7 @@ defineExpose({
 
 .quick-comment-input:focus-within {
   border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: 0 0 0 3px rgb(102 126 234 / 10%);
 }
 
 .quick-textarea {
@@ -1326,17 +1428,17 @@ defineExpose({
   overflow: hidden;
   transition: all 0.3s ease;
   position: relative;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 12px rgb(0 0 0 / 4%);
 }
 
 .comment-item:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 8%);
 }
 
 .comment-highlight {
   border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: 0 0 0 3px rgb(102 126 234 / 10%);
 }
 
 .comment-wrapper {
@@ -1352,7 +1454,7 @@ defineExpose({
 
 .user-avatar {
   border: 3px solid var(--ops-surface);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
   transition: all 0.3s ease;
 }
 
@@ -1463,7 +1565,7 @@ defineExpose({
 
 .comment-text :deep(.mention) {
   color: #667eea;
-  background: rgba(102, 126, 234, 0.1);
+  background: rgb(102 126 234 / 10%);
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: 600;
@@ -1471,7 +1573,7 @@ defineExpose({
 
 .comment-text :deep(.hashtag) {
   color: #52c41a;
-  background: rgba(82, 196, 26, 0.1);
+  background: rgb(82 196 26 / 10%);
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: 600;
@@ -1500,7 +1602,7 @@ defineExpose({
 
 .like-btn.liked {
   color: #ff4d4f;
-  background: rgba(255, 77, 79, 0.1);
+  background: rgb(255 77 79 / 10%);
   border-color: #ffcccb;
 }
 
@@ -1527,7 +1629,7 @@ defineExpose({
 
 .reply-textarea:focus {
   border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: 0 0 0 3px rgb(102 126 234 / 10%);
 }
 
 .reply-actions {
@@ -1665,18 +1767,6 @@ defineExpose({
   padding: 0;
 }
 
-/* 加载动画 */
-@keyframes slideInUp {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
 .comment-item {
   animation: slideInUp 0.4s ease-out;
 }
@@ -1685,102 +1775,13 @@ defineExpose({
   animation: slideInUp 0.3s ease-out;
 }
 
-/* 移动端适配 */
-@media (max-width: 768px) {
-  .comments-dialog-header {
-    padding: 12px 16px;
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
-  }
-
-  .comment-wrapper {
-    padding: 16px;
-    gap: 12px;
-  }
-
-  .user-avatar {
-    width: 32px !important;
-    height: 32px !important;
-  }
-
-  .comment-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .commenter-info {
-    gap: 8px;
-  }
-
-  .comment-text {
-    padding: 16px;
-    font-size: 14px;
-  }
-
-  .quick-comment-section {
-    padding: 16px;
-  }
-
-  .quick-textarea {
-    padding: 12px;
-  }
-
-  .comments-list {
-    padding: 16px;
-    gap: 16px;
-  }
-
-  .reply-item {
-    padding: 12px;
-  }
-
-  .reply-avatar .ant-avatar {
-    width: 28px !important;
-    height: 28px !important;
-  }
-}
-
-/* 超小屏幕适配 */
-@media (max-width: 480px) {
-  .comment-wrapper {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .comment-avatar {
-    align-self: flex-start;
-  }
-
-  .comment-text {
-    padding: 12px;
-    font-size: 13px;
-  }
-
-  .reply-item {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .quick-comment-actions {
-    flex-direction: column;
-    gap: 8px;
-    align-items: stretch;
-  }
-
-  .keyboard-hint {
-    text-align: center;
-  }
-}
-
 /* 滚动条样式 */
 .comments-content::-webkit-scrollbar {
   width: 6px;
 }
 
 .comments-content::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgb(0 0 0 / 5%);
   border-radius: 3px;
 }
 
@@ -1792,4 +1793,6 @@ defineExpose({
 .comments-content::-webkit-scrollbar-thumb:hover {
   background: var(--ops-accent);
 }
+
+/* 评论对话框样式增强 */
 </style>

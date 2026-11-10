@@ -512,7 +512,7 @@ onBeforeUnmount(() => {
                         "
                         class="source-documents"
                       >
-                        <a-divider style="margin: 12px 0 8px 0" />
+                        <a-divider style="margin: 12px 0 8px" />
                         <div class="source-title">
                           <Icon
                             class="muted-icon"
@@ -544,7 +544,7 @@ onBeforeUnmount(() => {
                         "
                         class="follow-up-questions"
                       >
-                        <a-divider style="margin: 12px 0 8px 0" />
+                        <a-divider style="margin: 12px 0 8px" />
                         <div class="follow-up-title">
                           <Icon
                             class="muted-icon"
@@ -743,7 +743,22 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* 页面头部 */
+@media (max-width: 575px) {
+  .page-content .chat-history,
+  .page-content .chat-input,
+  .sidebar-card .card-content {
+    padding: var(--ops-space-md);
+  }
+
+  .message-content {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .session-actions :deep(.ant-space) {
+    flex-wrap: wrap;
+  }
+}
 
 /* 内容区域 */
 .page-content {
@@ -805,7 +820,7 @@ onBeforeUnmount(() => {
       color: var(--ops-muted);
 
       p {
-        margin: 16px 0 0 0;
+        margin: 16px 0 0;
         font-size: 14px;
       }
     }
@@ -873,7 +888,7 @@ onBeforeUnmount(() => {
           :deep(h4),
           :deep(h5),
           :deep(h6) {
-            margin: 8px 0 4px 0;
+            margin: 8px 0 4px;
             font-weight: 600;
           }
 
@@ -1044,7 +1059,7 @@ onBeforeUnmount(() => {
   overflow-y: auto;
 
   h4 {
-    margin: 0 0 12px 0;
+    margin: 0 0 12px;
     color: var(--text-color-primary, var(--ops-ink));
     font-weight: 600;
   }
@@ -1080,27 +1095,18 @@ onBeforeUnmount(() => {
 .chat-history::-webkit-scrollbar-thumb:hover {
   background: var(--ops-muted);
 }
+
 .accent-icon {
   color: var(--ops-accent);
 }
+
 .muted-icon {
   color: var(--ops-muted);
 }
+
 .session-error {
   margin-bottom: var(--ops-space-lg);
 }
-@media (max-width: 575px) {
-  .page-content .chat-history,
-  .page-content .chat-input,
-  .sidebar-card .card-content {
-    padding: var(--ops-space-md);
-  }
-  .message-content {
-    min-width: 0;
-    overflow-wrap: anywhere;
-  }
-  .session-actions :deep(.ant-space) {
-    flex-wrap: wrap;
-  }
-}
+
+/* 页面头部 */
 </style>

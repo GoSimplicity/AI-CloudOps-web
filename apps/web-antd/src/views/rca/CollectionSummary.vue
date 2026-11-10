@@ -51,15 +51,19 @@ function validCount(count?: number) {
   gap: 12px;
   margin-bottom: 16px;
 }
+
 .coverage {
   color: var(--text-color-secondary, #666);
 }
+
 .coverage strong {
   color: var(--text-color, #222);
 }
+
 .coverage span {
   font-size: 12px;
 }
+
 .sources {
   display: grid;
   gap: 8px;
@@ -67,15 +71,18 @@ function validCount(count?: number) {
   padding: 0;
   list-style: none;
 }
+
 .sources li {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: baseline;
 }
+
 .sources li > span:first-child {
   min-width: 3em;
 }
+
 .sources li > span:last-child {
   color: var(--text-color-secondary, #666);
 }

@@ -1124,8 +1124,7 @@ it.each([
     await action('添加账户');
     await chooseProvider(label);
     await fill('请输入云账户名称', `${label}账户`);
-    if (provider === 5) await fillAzure();
-    else await fillGCP();
+    await (provider === 5 ? fillAzure() : fillGCP());
     expect(
       (
         document.querySelector(
@@ -1194,8 +1193,7 @@ it.each([
     );
     await action('更新', '.ant-modal-footer button');
     expect(client.put).not.toHaveBeenCalled();
-    if (provider === 5) await fillAzure();
-    else await fillGCP();
+    await (provider === 5 ? fillAzure() : fillGCP());
     await action('更新', '.ant-modal-footer button');
     const body = required(client.put.mock.calls.at(-1))[1];
     expect(body).toHaveProperty('provider_credentials');

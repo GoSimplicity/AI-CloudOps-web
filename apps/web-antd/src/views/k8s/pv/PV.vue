@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 
-import { clusterResourceKey } from '../shared/utils';
+import {
+  clusterResourceKey,
+  formatDateTime,
+  getRelativeTime,
+} from '../shared/utils';
 
 import { onMounted } from 'vue';
 
@@ -23,7 +27,6 @@ import {
 } from '@ant-design/icons-vue';
 
 import { usePVPage } from './PV';
-import { formatDateTime, getRelativeTime } from '../shared/utils';
 import { usePermission } from '#/utils/permission';
 
 const { can } = usePermission();
@@ -307,7 +310,7 @@ onMounted(async () => {
               </a-select-option>
               <a-select-option
                 v-if="clusters.length > 0 && clusters.length < clustersTotal"
-                :value="'__load_more__'"
+                value="__load_more__"
                 disabled
                 style="text-align: center; color: var(--ops-muted)"
               >

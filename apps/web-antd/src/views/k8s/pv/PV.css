@@ -132,13 +132,13 @@
   border-color: #1677ff;
   background: #f0f7ff;
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(22, 119, 255, 0.15);
+  box-shadow: 0 2px 8px rgb(22 119 255 / 15%);
 }
 
 .pv-volume-type-card.active {
   border-color: #1677ff;
   background: #e6f4ff;
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.2);
+  box-shadow: 0 0 0 2px rgb(22 119 255 / 20%);
 }
 
 .pv-volume-type-name {
@@ -244,13 +244,13 @@
   font-weight: 600;
   color: var(--ops-ink);
   min-width: 120px;
-  font-family: 'Monaco', 'Menlo', monospace;
+  font-family: Monaco, Menlo, monospace;
   font-size: 13px;
 }
 
 .pv-detail-config-value {
   flex: 1;
-  font-family: 'Monaco', 'Menlo', monospace;
+  font-family: Monaco, Menlo, monospace;
   font-size: 13px;
   color: var(--ops-muted);
   word-break: break-all;
@@ -271,7 +271,7 @@
   color: #d46b08 !important;
   border-color: #ffa940 !important;
   background: #ffe7ba !important;
-  box-shadow: 0 2px 8px rgba(250, 140, 22, 0.25) !important;
+  box-shadow: 0 2px 8px rgb(250 140 22 / 25%) !important;
 }
 
 .pv-action-force-delete {
@@ -284,7 +284,7 @@
   color: #cf1322 !important;
   border-color: #ff7875 !important;
   background: #ffccc7 !important;
-  box-shadow: 0 2px 8px rgba(255, 77, 79, 0.25) !important;
+  box-shadow: 0 2px 8px rgb(255 77 79 / 25%) !important;
 }
 
 /* 详情模态框样式 */
@@ -415,7 +415,7 @@
   border-radius: 6px;
   padding: 8px;
   margin-top: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
 }
 
 /* 标签过滤器模态框样式 */
@@ -479,7 +479,7 @@
 .add-input-row:hover {
   border-color: #1677ff;
   background: #f0f7ff;
-  box-shadow: 0 2px 8px rgba(22, 119, 255, 0.1);
+  box-shadow: 0 2px 8px rgb(22 119 255 / 10%);
 }
 
 /* 键值对输入通用样式 */
@@ -494,7 +494,7 @@
 
 .k8s-key-value-inputs:hover {
   border-color: var(--ops-border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 5%);
 }
 
 .k8s-key-value-inputs .k8s-key-value-row {
@@ -511,7 +511,7 @@
 
 .k8s-key-value-inputs .k8s-key-value-row:hover {
   border-color: var(--ops-border);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 8%);
   transform: translateY(-1px);
 }
 
@@ -527,7 +527,7 @@
 
 .k8s-key-value-inputs .k8s-key-value-row .ant-input:focus {
   border-color: #1677ff;
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+  box-shadow: 0 0 0 2px rgb(22 119 255 / 10%);
 }
 
 .k8s-key-value-inputs .k8s-key-value-row .ant-btn {
@@ -540,7 +540,7 @@
 
 .k8s-key-value-inputs .k8s-key-value-row .k8s-remove-btn:hover {
   transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(255, 77, 79, 0.3);
+  box-shadow: 0 2px 8px rgb(255 77 79 / 30%);
 }
 
 /* 表格样式 */
@@ -585,87 +585,90 @@
 }
 
 /* PV 特定操作按钮样式 */
+
 /* 回收按钮 - 橙色主题 */
-.pv-table .ant-btn[title*="回收"] {
+.pv-table .ant-btn[title*='回收'] {
   background: #fff7e6;
   border-color: #ffd591;
   color: #fa8c16;
   transition: all 0.3s ease;
 }
 
-.pv-table .ant-btn[title*="回收"]:hover {
+.pv-table .ant-btn[title*='回收']:hover {
   background: #ffe7ba;
   border-color: #ffa940;
   color: #d46b08;
-  box-shadow: 0 6px 16px rgba(250, 140, 22, 0.25);
+  box-shadow: 0 6px 16px rgb(250 140 22 / 25%);
   transform: translateY(-2px);
 }
 
 /* 查看 YAML 按钮 - 紫色主题 */
-.pv-table .ant-btn[title*="YAML"] {
+.pv-table .ant-btn[title*='YAML'] {
   background: #f9f0ff;
   border-color: #d3adf7;
   color: #722ed1;
   transition: all 0.3s ease;
 }
 
-.pv-table .ant-btn[title*="YAML"]:hover {
+.pv-table .ant-btn[title*='YAML']:hover {
   background: #efdbff;
   border-color: #b37feb;
   color: #531dab;
-  box-shadow: 0 6px 16px rgba(114, 46, 209, 0.25);
+  box-shadow: 0 6px 16px rgb(114 46 209 / 25%);
   transform: translateY(-2px);
 }
 
 /* 查看详情按钮 - 蓝色主题 */
-.pv-table .ant-btn[title*="详情"] {
+.pv-table .ant-btn[title*='详情'] {
   background: #e6f7ff;
   border-color: #91d5ff;
   color: #1890ff;
   transition: all 0.3s ease;
 }
 
-.pv-table .ant-btn[title*="详情"]:hover {
+.pv-table .ant-btn[title*='详情']:hover {
   background: #bae7ff;
   border-color: #69c0ff;
   color: #096dd9;
-  box-shadow: 0 6px 16px rgba(24, 144, 255, 0.25);
+  box-shadow: 0 6px 16px rgb(24 144 255 / 25%);
   transform: translateY(-2px);
 }
 
 /* 编辑按钮 - 青色主题 */
-.pv-table .ant-btn[title*="编辑"] {
+.pv-table .ant-btn[title*='编辑'] {
   background: #e6fffb;
   border-color: #87e8de;
   color: #13c2c2;
   transition: all 0.3s ease;
 }
 
-.pv-table .ant-btn[title*="编辑"]:hover {
+.pv-table .ant-btn[title*='编辑']:hover {
   background: #b5f5ec;
   border-color: #5cdbd3;
   color: #08979c;
-  box-shadow: 0 6px 16px rgba(19, 194, 194, 0.25);
+  box-shadow: 0 6px 16px rgb(19 194 194 / 25%);
   transform: translateY(-2px);
 }
 
-/* 删除按钮保持红色主题（由 Ant Design danger 属性控制）*/
-.pv-table .ant-btn[title*="删除"]:hover {
+/* 删除按钮保持红色主题（由 Ant Design danger 属性控制） */
+.pv-table .ant-btn[title*='删除']:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(255, 77, 79, 0.25);
+  box-shadow: 0 6px 16px rgb(255 77 79 / 25%);
 }
 
 /* 动画效果 */
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.05);
   }
 }
 
-.pv-table .ant-btn[title*="回收"]:active {
+.pv-table .ant-btn[title*='回收']:active {
   animation: pulse 0.3s ease-in-out;
 }
 

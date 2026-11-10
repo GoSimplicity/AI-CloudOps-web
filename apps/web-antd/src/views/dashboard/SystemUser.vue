@@ -711,7 +711,7 @@ const handleChangePasswordSubmit = async () => {
       new_password: formData.newPassword,
       confirm_password: formData.confirmPassword,
     };
-    //message.info(JSON.stringify(changePasswordData))
+    // message.info(JSON.stringify(changePasswordData))
     await changePassword(changePasswordData);
     message.success('更新成功');
     pwdModalVisible.value = false;
@@ -1369,7 +1369,83 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* 原有样式保持不变 */
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1200px) {
+  .search-left {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .search-input {
+    max-width: none;
+  }
+
+  .status-select,
+  .type-select {
+    width: 100%;
+  }
+
+  .search-right {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .search-right {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .user-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .avatar-upload {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .avatar-preview {
+    width: 60px;
+    height: 60px;
+  }
+
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .detail-avatar {
+    width: 50px;
+    height: 50px;
+  }
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1458,7 +1534,7 @@ onMounted(() => {
   overflow: hidden;
   flex-shrink: 0;
   position: relative;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid rgb(0 0 0 / 10%);
 }
 
 .user-avatar img {
@@ -1544,11 +1620,8 @@ onMounted(() => {
 
 .upload-loading {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.8);
+  inset: 0;
+  background: rgb(255 255 255 / 80%);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1559,15 +1632,6 @@ onMounted(() => {
   animation: rotate 1s linear infinite;
   font-size: 24px;
   color: #1890ff;
-}
-
-@keyframes rotate {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .avatar-upload-actions {
@@ -1591,7 +1655,7 @@ onMounted(() => {
 }
 
 .detail-section h3 {
-  margin: 0 0 16px 0;
+  margin: 0 0 16px;
   font-size: 16px;
   font-weight: 600;
   color: var(--ops-ink);
@@ -1735,73 +1799,6 @@ onMounted(() => {
   background: #fff2f0;
 }
 
-@media (max-width: 1200px) {
-  .search-left {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .search-input {
-    max-width: none;
-  }
-
-  .status-select,
-  .type-select {
-    width: 100%;
-  }
-
-  .search-right {
-    justify-content: flex-end;
-  }
-}
-
-@media (max-width: 768px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .search-right {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .detail-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .action-buttons {
-    flex-direction: column;
-    width: 100%;
-  }
-
-  .user-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .avatar-upload {
-    flex-direction: column;
-    gap: 12px;
-    text-align: center;
-  }
-
-  .avatar-preview {
-    width: 60px;
-    height: 60px;
-  }
-
-  .user-avatar {
-    width: 32px;
-    height: 32px;
-  }
-
-  .detail-avatar {
-    width: 50px;
-    height: 50px;
-  }
-}
-
 .role-list::-webkit-scrollbar {
   width: 6px;
 }
@@ -1819,4 +1816,6 @@ onMounted(() => {
 .role-list::-webkit-scrollbar-thumb:hover {
   background: #bfbfbf;
 }
+
+/* 原有样式保持不变 */
 </style>

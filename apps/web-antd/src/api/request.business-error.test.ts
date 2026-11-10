@@ -3,6 +3,19 @@ import { $t } from '@vben/locales';
 import { type AxiosAdapter, AxiosError } from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  BUSINESS_ERROR_MESSAGE_KEY_PREFIX,
+  getBusinessErrorMessage,
+  isBusinessError,
+} from '#/utils/permission/business-error';
+import {
+  isPermissionDeniedError,
+  PERMISSION_DENIED_MESSAGE,
+  PERMISSION_DENIED_MESSAGE_KEY,
+} from '#/utils/permission/forbidden';
+
+import { HTTP_ERROR_MESSAGE_KEY_PREFIX, requestClient } from './request';
+
 /**
  * 业务错误（HTTP 200 + code≠0）只提示一次：走真实 requestClient 拦截器链
  */
@@ -44,19 +57,6 @@ vi.mock('#/store', () => ({
   useAuthStore: () => ({ getAuthGeneration: () => 1, logout: vi.fn() }),
 }));
 vi.mock('./core', () => ({ refreshTokenApi }));
-
-import {
-  BUSINESS_ERROR_MESSAGE_KEY_PREFIX,
-  getBusinessErrorMessage,
-  isBusinessError,
-} from '#/utils/permission/business-error';
-import {
-  isPermissionDeniedError,
-  PERMISSION_DENIED_MESSAGE,
-  PERMISSION_DENIED_MESSAGE_KEY,
-} from '#/utils/permission/forbidden';
-
-import { HTTP_ERROR_MESSAGE_KEY_PREFIX, requestClient } from './request';
 
 const BACKEND_MESSAGE = '本地执行已禁用，请联系管理员开启 allow_local_exec';
 

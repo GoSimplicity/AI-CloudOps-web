@@ -111,6 +111,7 @@ const { can } = usePermission();
   border-radius: var(--ops-radius);
   background: var(--ops-surface);
 }
+
 .confirm-panel-header,
 .confirm-action-item,
 .confirm-action-meta {
@@ -118,23 +119,28 @@ const { can } = usePermission();
   align-items: center;
   gap: var(--ops-space-sm);
 }
+
 .confirm-action-item {
   align-items: flex-start;
   padding: var(--ops-space-sm) 0;
 }
+
 .confirm-action-list,
 .confirm-action-content {
   min-width: 0;
 }
+
 .confirm-action-meta {
   flex-wrap: wrap;
   color: var(--ops-muted);
 }
+
 .confirm-action-reasons,
 .approval-expiry {
   color: var(--ops-muted);
   overflow-wrap: anywhere;
 }
+
 .approval-expiry {
   margin: 0;
 }

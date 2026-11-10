@@ -364,7 +364,7 @@ onMounted(async () => {
 
 .json-error {
   border-color: #ff4d4f !important;
-  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2) !important;
+  box-shadow: 0 0 0 2px rgb(255 77 79 / 20%) !important;
 }
 
 .json-error-message {

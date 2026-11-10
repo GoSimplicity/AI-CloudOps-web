@@ -22,19 +22,6 @@ import {
   TooltipComponent,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
-
-// 注册必需的组件
-echarts.use([
-  LineChart,
-  BarChart,
-  PieChart,
-  GridComponent,
-  TooltipComponent,
-  LegendComponent,
-  TitleComponent,
-  DataZoomComponent,
-  CanvasRenderer,
-]);
 import {
   ApiOutlined,
   ArrowDownOutlined,
@@ -55,6 +42,19 @@ import {
   predictQps,
   type ScalingRecommendation,
 } from '#/api/core/aiops/predict';
+
+// 注册必需的组件
+echarts.use([
+  LineChart,
+  BarChart,
+  PieChart,
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  TitleComponent,
+  DataZoomComponent,
+  CanvasRenderer,
+]);
 
 // 响应式数据
 const loading = ref(false);
@@ -691,7 +691,7 @@ onUnmounted(() => {
     <!-- 关键指标卡片 -->
     <a-row :gutter="[16, 16]" class="metrics-overview">
       <a-col v-for="metric in metricCards" :key="metric.type" :lg="6" :xs="12">
-        <a-card :class="['metric-card', `metric-${metric.type}`]">
+        <a-card class="metric-card" :class="[`metric-${metric.type}`]">
           <div class="metric-content">
             <div class="metric-header">
               <div class="metric-icon">
@@ -718,10 +718,8 @@ onUnmounted(() => {
                 <span class="trend-label">预测趋势:</span>
                 <span
                   v-if="predictionCache[metric.type] && metric.trend !== null"
-                  :class="[
-                    'trend-value',
-                    metric.trend > 0 ? 'trend-up' : 'trend-down',
-                  ]"
+                  class="trend-value"
+                  :class="[metric.trend > 0 ? 'trend-up' : 'trend-down']"
                 >
                   <component
                     :is="metric.trend > 0 ? ArrowUpOutlined : ArrowDownOutlined"
@@ -874,7 +872,62 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* 页面头部 */
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .metric-header {
+    gap: 12px;
+  }
+
+  .metric-icon {
+    width: 24px;
+    height: 24px;
+    font-size: 20px;
+  }
+
+  .metric-value {
+    font-size: 20px;
+  }
+
+  .chart-container,
+  .chart-container-small {
+    height: 250px;
+  }
+
+  .cost-overview {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 575px) {
+  .metric-name,
+  .metric-value {
+    overflow-wrap: anywhere;
+  }
+
+  .metric-header {
+    gap: var(--ops-space-sm);
+    align-items: flex-start;
+  }
+
+  .metric-trend {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .metric-value {
+    font-size: 18px;
+  }
+
+  .cost-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-container,
+  .chart-container-small {
+    min-width: 0;
+  }
+}
 
 .input-card {
   margin-bottom: var(--ops-space-lg);
@@ -899,6 +952,7 @@ onUnmounted(() => {
 .metric-card :deep(.ant-card-body) {
   padding: var(--ops-space-md);
 }
+
 .metric-content {
   min-width: 0;
 }
@@ -1118,63 +1172,15 @@ onUnmounted(() => {
   color: #52c41a;
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .metric-header {
-    gap: 12px;
-  }
-
-  .metric-icon {
-    width: 24px;
-    height: 24px;
-    font-size: 20px;
-  }
-
-  .metric-value {
-    font-size: 20px;
-  }
-
-  .chart-container,
-  .chart-container-small {
-    height: 250px;
-  }
-
-  .cost-overview {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 575px) {
-  .metric-name,
-  .metric-value {
-    overflow-wrap: anywhere;
-  }
-  .metric-header {
-    gap: var(--ops-space-sm);
-    align-items: flex-start;
-  }
-  .metric-trend {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-  .metric-value {
-    font-size: 18px;
-  }
-  .cost-overview {
-    grid-template-columns: 1fr;
-  }
-  .chart-container,
-  .chart-container-small {
-    min-width: 0;
-  }
-}
 .request-note {
   color: var(--ops-muted);
   font-size: 12px;
   margin: var(--ops-space-md) 0 0;
 }
+
 .cost-entry {
   margin-bottom: var(--ops-space-lg);
 }
+
+/* 页面头部 */
 </style>

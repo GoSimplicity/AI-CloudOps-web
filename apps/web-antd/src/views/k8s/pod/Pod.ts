@@ -520,11 +520,10 @@ export function usePodPage() {
         filterClusterId.value !== clusterId
       )
         return;
-      if (namespacesPage.value === 1) {
-        namespaces.value = res?.items || [];
-      } else {
-        namespaces.value = [...namespaces.value, ...(res?.items || [])];
-      }
+      namespaces.value =
+        namespacesPage.value === 1
+          ? res?.items || []
+          : [...namespaces.value, ...(res?.items || [])];
       namespacesTotal.value = res?.total || 0;
     } catch (error) {
       if (
@@ -626,11 +625,10 @@ export function usePodPage() {
         size: clustersSize.value,
       };
       const res = await getClustersListApi(params);
-      if (clustersPage.value === 1) {
-        clusters.value = res?.items || [];
-      } else {
-        clusters.value = [...clusters.value, ...(res?.items || [])];
-      }
+      clusters.value =
+        clustersPage.value === 1
+          ? res?.items || []
+          : [...clusters.value, ...(res?.items || [])];
       clustersTotal.value = res?.total || 0;
 
       // 如果当前没有选择集群且有可用集群，自动选择第一个
@@ -1473,7 +1471,7 @@ export function usePodPage() {
 
         const currentToken = accessStore.accessToken;
         if (currentToken) {
-          headers['Authorization'] = `Bearer ${currentToken}`;
+          headers.Authorization = `Bearer ${currentToken}`;
         }
 
         const response = await fetch(url, {
@@ -2412,7 +2410,7 @@ export function usePodPage() {
         cluster_id: currentOperationPod.value.cluster_id,
         namespace: currentOperationPod.value.namespace,
         pod_name: currentOperationPod.value.name,
-        container: container,
+        container,
         file_path: filePath,
       };
       await uploadK8sPodFile(params, file);
@@ -2434,7 +2432,7 @@ export function usePodPage() {
         cluster_id: currentOperationPod.value.cluster_id,
         namespace: currentOperationPod.value.namespace,
         pod_name: currentOperationPod.value.name,
-        container: container,
+        container,
         file_path: filePath,
       };
 

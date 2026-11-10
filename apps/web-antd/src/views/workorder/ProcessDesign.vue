@@ -1264,6 +1264,43 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+@media (max-width: 640px) {
+  .edit-mode-tabs,
+  .process-canvas,
+  .preview-container {
+    padding: var(--ops-space-sm);
+  }
+
+  .visual-designer,
+  .process-canvas,
+  .empty-canvas,
+  .json-editor {
+    min-height: 240px;
+    height: auto;
+  }
+
+  .designer-toolbar,
+  .json-toolbar {
+    padding: var(--ops-space-sm);
+  }
+
+  .step-title {
+    font-size: 14px;
+  }
+
+  .step-detail-panel {
+    margin-top: var(--ops-space-lg);
+    padding-top: var(--ops-space-lg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .process-design-engine :deep(*) {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 .process-design-engine {
   min-height: 500px;
 }
@@ -1471,7 +1508,7 @@ onBeforeUnmount(() => {
 }
 
 .json-textarea {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 13px;
   line-height: 1.4;
 }
@@ -1548,7 +1585,6 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-
   margin-top: 16px;
 }
 
@@ -1574,6 +1610,7 @@ onBeforeUnmount(() => {
 .process-design-engine :deep(.ant-space) {
   flex-wrap: wrap;
 }
+
 .edit-mode-tabs {
   min-width: 0;
   background: var(--ops-surface);
@@ -1581,50 +1618,23 @@ onBeforeUnmount(() => {
   border-radius: var(--ops-radius);
   padding: var(--ops-space-lg);
 }
+
 .basic-info-form {
   background: var(--ops-surface);
   padding: var(--ops-space-sm);
 }
+
 .process-step {
   text-align: left;
 }
+
 .step-info,
 .preview-step-info {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
 .json-textarea {
   font-family: SFMono-Regular, Consolas, monospace;
-}
-@media (max-width: 640px) {
-  .edit-mode-tabs,
-  .process-canvas,
-  .preview-container {
-    padding: var(--ops-space-sm);
-  }
-  .visual-designer,
-  .process-canvas,
-  .empty-canvas,
-  .json-editor {
-    min-height: 240px;
-    height: auto;
-  }
-  .designer-toolbar,
-  .json-toolbar {
-    padding: var(--ops-space-sm);
-  }
-  .step-title {
-    font-size: 14px;
-  }
-  .step-detail-panel {
-    margin-top: var(--ops-space-lg);
-    padding-top: var(--ops-space-lg);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .process-design-engine :deep(*) {
-    animation: none !important;
-    transition: none !important;
-  }
 }
 </style>

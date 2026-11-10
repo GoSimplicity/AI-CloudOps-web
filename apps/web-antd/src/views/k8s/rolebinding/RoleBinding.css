@@ -134,7 +134,7 @@
   border-top: none;
   border-radius: 0 0 8px 8px;
   padding: 8px 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
   max-height: 120px;
   overflow-y: auto;
 }
@@ -154,7 +154,7 @@
 
 .k8s-form .k8s-key-value-row:hover {
   border-color: var(--ops-border);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 4%);
 }
 
 /* 主体类型选择器 */
@@ -179,7 +179,7 @@
 }
 
 .labels-filter-form h4 {
-  margin: 0 0 12px 0;
+  margin: 0 0 12px;
   font-size: 14px;
   font-weight: 600;
   color: var(--ops-ink);
@@ -418,7 +418,7 @@
 
 .subject-detail-item:focus-within {
   border-color: #1677ff;
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+  box-shadow: 0 0 0 2px rgb(22 119 255 / 10%);
 }
 
 /* ==================== 高对比度模式支持 ==================== */
@@ -453,7 +453,7 @@
   background: #e6f7ff;
   border-color: #91d5ff;
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(47, 84, 235, 0.2);
+  box-shadow: 0 2px 4px rgb(47 84 235 / 20%);
 }
 
 /* ==================== 角色类型徽章样式 ==================== */
@@ -499,6 +499,7 @@
     opacity: 0;
     transform: scale(0.8);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -514,6 +515,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -522,7 +524,7 @@
 
 /* ==================== YAML文本区域样式 ==================== */
 .k8s-config-textarea {
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-family: Consolas, Monaco, 'Courier New', monospace;
   font-size: 12px;
   line-height: 1.5;
 }
@@ -534,7 +536,11 @@
 }
 
 .rolebinding-table .ant-table-tbody > tr:hover .rolebinding-role-ref .ant-tag,
-.rolebinding-table .ant-table-tbody > tr:hover .rolebinding-subjects .subject-tag {
+.rolebinding-table
+  .ant-table-tbody
+  > tr:hover
+  .rolebinding-subjects
+  .subject-tag {
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 10%);
 }

@@ -256,7 +256,7 @@ defineExpose({
   border-radius: var(--ops-radius);
   padding: 32px;
   border: 1px solid var(--ops-border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 4%);
 }
 
 .form-field {
@@ -286,13 +286,13 @@ defineExpose({
 
 .form-input:hover {
   border-color: #93c5fd;
-  box-shadow: 0 2px 4px rgba(147, 197, 253, 0.1);
+  box-shadow: 0 2px 4px rgb(147 197 253 / 10%);
 }
 
 .form-input:focus,
 .form-input:focus-within {
   border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 10%);
 }
 
 .radio-group,
@@ -334,7 +334,7 @@ defineExpose({
   border-color: #3b82f6;
   background: #eff6ff;
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 2px 4px rgb(59 130 246 / 10%);
 }
 
 .radio-option :deep(.ant-radio-checked .ant-radio-inner),
@@ -358,14 +358,14 @@ defineExpose({
   height: 48px;
   padding: 0 32px;
   font-size: 16px;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 4px 12px rgb(59 130 246 / 20%);
   transition: all 0.3s ease;
 }
 
 .submit-btn:hover {
   background: var(--ops-accent);
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 6px 16px rgb(59 130 246 / 30%);
 }
 
 .reset-btn {
@@ -383,7 +383,7 @@ defineExpose({
   border-color: #9ca3af;
   color: #374151;
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
 }
 
 @media (max-width: 768px) {
@@ -460,6 +460,7 @@ defineExpose({
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

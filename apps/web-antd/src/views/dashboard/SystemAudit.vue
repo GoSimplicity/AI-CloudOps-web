@@ -863,7 +863,51 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* 保持原有样式不变 */
+@media (max-width: 1200px) {
+  .search-left {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .search-input {
+    max-width: none;
+  }
+
+  .status-select,
+  .type-select,
+  .date-picker {
+    width: 100%;
+  }
+
+  .search-right {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .search-right {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1041,7 +1085,7 @@ onMounted(() => {
 }
 
 .detail-section h3 {
-  margin: 0 0 16px 0;
+  margin: 0 0 16px;
   font-size: 16px;
   font-weight: 600;
   color: var(--ops-ink);
@@ -1132,48 +1176,5 @@ onMounted(() => {
   color: #a8071a;
 }
 
-@media (max-width: 1200px) {
-  .search-left {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .search-input {
-    max-width: none;
-  }
-
-  .status-select,
-  .type-select,
-  .date-picker {
-    width: 100%;
-  }
-
-  .search-right {
-    justify-content: flex-end;
-  }
-}
-
-@media (max-width: 768px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .search-right {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .detail-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .action-buttons {
-    flex-direction: column;
-    width: 100%;
-  }
-
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-}
+/* 保持原有样式不变 */
 </style>

@@ -214,9 +214,9 @@ function formatBytes(bytes: unknown): string {
 function formatUptime(seconds: unknown): string {
   const value = finite(seconds);
   if (value === null) return '未知';
-  const days = Math.floor(value / 86_400),
-    hours = Math.floor((value % 86_400) / 3600),
-    minutes = Math.floor((value % 3600) / 60);
+  const days = Math.floor(value / 86_400);
+  const hours = Math.floor((value % 86_400) / 3600);
+  const minutes = Math.floor((value % 3600) / 60);
   return days
     ? `${days}天 ${hours}小时`
     : hours
@@ -224,8 +224,8 @@ function formatUptime(seconds: unknown): string {
       : `${minutes}分钟`;
 }
 function pair(used: unknown, total: unknown, multiplier: number) {
-  const left = finite(used),
-    right = finite(total);
+  const left = finite(used);
+  const right = finite(total);
   return `${formatBytes(left === null ? null : left * multiplier)} / ${formatBytes(right === null ? null : right * multiplier)}`;
 }
 const resources = computed(() => [
@@ -719,7 +719,7 @@ onBeforeUnmount(() => {
             v-if="resource.usage !== null"
             :percent="resource.usage"
             :show-info="false"
-            :stroke-color="'var(--ops-accent)'"
+            stroke-color="var(--ops-accent)"
           />
           <p class="section-note">{{ resource.detail }}</p>
         </section>
@@ -732,15 +732,18 @@ onBeforeUnmount(() => {
 .dashboard-container {
   min-width: 0;
 }
+
 .sample-status {
   color: var(--ops-muted);
   font-size: 13px;
 }
+
 .status-error,
 .status-warning {
   color: var(--ops-ink);
   font-weight: 600;
 }
+
 .metric-card {
   min-width: 0;
   padding: var(--ops-space-md);
@@ -748,29 +751,35 @@ onBeforeUnmount(() => {
   border: 1px solid var(--ops-border);
   border-radius: var(--ops-radius);
 }
+
 .metric-label {
   color: var(--ops-muted);
   font-size: 12px;
 }
+
 .metric-reading {
   display: flex;
   align-items: baseline;
   gap: 4px;
   margin-top: var(--ops-space-sm);
 }
+
 .metric-value {
   color: var(--ops-ink);
   font-size: 24px;
   font-weight: 600;
 }
+
 .metric-unit {
   color: var(--ops-muted);
   font-size: 12px;
 }
+
 .metric-chart {
   height: 32px;
   margin-top: var(--ops-space-sm);
 }
+
 .sample-meta {
   display: flex;
   flex-wrap: wrap;
@@ -778,6 +787,7 @@ onBeforeUnmount(() => {
   color: var(--ops-muted);
   font-size: 12px;
 }
+
 .surface-card {
   min-width: 0;
   height: 100%;
@@ -786,54 +796,64 @@ onBeforeUnmount(() => {
   border: 1px solid var(--ops-border);
   border-radius: var(--ops-radius);
 }
+
 h2 {
   margin: 0 0 var(--ops-space-md);
   font-size: 14px;
   font-weight: 600;
   color: var(--ops-ink);
 }
+
 .system-info-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--ops-space-lg);
 }
+
 .info-item {
   display: flex;
   min-width: 0;
   flex-direction: column;
   gap: 4px;
 }
+
 .info-label,
 .section-note {
   color: var(--ops-muted);
   font-size: 12px;
 }
+
 .info-value {
   color: var(--ops-ink);
   font-size: 13px;
   overflow-wrap: anywhere;
 }
+
 .section-note {
   margin: var(--ops-space-sm) 0 0;
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
+
 .network-values {
   margin: var(--ops-space-sm) 0 0;
   color: var(--ops-ink);
   font-size: 13px;
   overflow-wrap: anywhere;
 }
+
 .chart-container {
   width: 100%;
   height: 300px;
   min-width: 0;
 }
+
 .chart-container-small {
   width: 100%;
   height: 220px;
   min-width: 0;
 }
+
 .event-item {
   display: flex;
   align-items: flex-start;
@@ -843,12 +863,14 @@ h2 {
   font-size: 13px;
   overflow-wrap: anywhere;
 }
+
 .event-icon {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
   color: var(--ops-muted);
 }
+
 .resource-header {
   display: flex;
   align-items: baseline;
@@ -856,20 +878,25 @@ h2 {
   gap: var(--ops-space-sm);
   font-size: 13px;
 }
+
 @media (max-width: 575px) {
   .metric-value {
     font-size: 22px;
   }
+
   .metric-chart {
     height: 26px;
   }
+
   .system-info-grid {
     grid-template-columns: 1fr;
     gap: var(--ops-space-md);
   }
+
   .chart-container {
     height: 260px;
   }
+
   .chart-container-small {
     height: 200px;
   }

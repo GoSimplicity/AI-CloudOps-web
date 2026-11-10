@@ -325,8 +325,8 @@ async function chooseAccount(value?: number) {
     !can(codes.accountDetail)
   )
     return;
-  const epoch = session,
-    ticket = selection;
+  const epoch = session;
+  const ticket = selection;
   regionLoading.value = true;
   try {
     const account = await getCloudAccountDetailApi(value);
@@ -358,10 +358,10 @@ async function chooseAccount(value?: number) {
   }
 }
 async function loadRecords() {
-  const target = scope.value,
-    epoch = session,
-    selectionAtStart = selection,
-    ticket = ++listTicket;
+  const target = scope.value;
+  const epoch = session;
+  const selectionAtStart = selection;
+  const ticket = ++listTicket;
   if (!target || !current(epoch, selectionAtStart) || !can(codes.list)) return;
   loading.value = true;
   try {
@@ -443,10 +443,10 @@ function clearReviewedMarker(
   }
 }
 async function loadHistory() {
-  const target = scope.value,
-    epoch = session,
-    selectedScope = selection,
-    ticket = ++historyTicket;
+  const target = scope.value;
+  const epoch = session;
+  const selectedScope = selection;
+  const ticket = ++historyTicket;
   if (!target || !current(epoch, selectedScope) || !can(codes.history)) {
     historyBlocked.value = true;
     return false;
@@ -552,10 +552,10 @@ function changePage(next: number) {
   void loadRecords();
 }
 async function showDetail(item: ManagedCloudResource) {
-  const target = scope.value,
-    epoch = session,
-    ticket = ++detailTicket,
-    selectionAtStart = selection;
+  const target = scope.value;
+  const epoch = session;
+  const ticket = ++detailTicket;
+  const selectionAtStart = selection;
   if (!target || !safeId(item.id) || !can(codes.detail)) return;
   detailError.value = '';
   selected.value = null;
@@ -589,10 +589,10 @@ function closeDetail() {
   selected.value = null;
 }
 async function sync() {
-  const target = scope.value,
-    epoch = session,
-    selectionAtStart = selection,
-    userId = owner.value.id;
+  const target = scope.value;
+  const epoch = session;
+  const selectionAtStart = selection;
+  const userId = owner.value.id;
   if (!target || !userId || !canSync.value) return;
   if (idsText.value.length > 12_000) {
     message.warning('资源 ID 文本不能超过12000字符');
@@ -717,10 +717,10 @@ async function acknowledgeOperation(
   operationID: string,
   operationOwner: number,
 ) {
-  const target = scope.value,
-    epoch = session,
-    selectedScope = selection,
-    userId = owner.value.id;
+  const target = scope.value;
+  const epoch = session;
+  const selectedScope = selection;
+  const userId = owner.value.id;
   if (!target || !userId) return;
   if (!(await loadHistory()) || !current(epoch, selectedScope)) return;
   if (
@@ -758,10 +758,10 @@ function openReview(entry: ManagedCloudHistory) {
   reviewUncertain.value = false;
 }
 async function submitReview() {
-  const entry = reviewEntry.value,
-    target = scope.value,
-    epoch = session,
-    selectedScope = selection;
+  const entry = reviewEntry.value;
+  const target = scope.value;
+  const epoch = session;
+  const selectedScope = selection;
   if (
     !entry ||
     !target ||
@@ -1270,31 +1270,37 @@ onBeforeUnmount(() => {
   gap: var(--ops-space-md);
   margin: var(--ops-space-lg) 0;
 }
+
 .managed-resources h2,
 .managed-resources h3 {
   margin: 0;
 }
+
 .managed-filters {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--ops-space-sm);
 }
+
 .managed-sync {
   display: grid;
   gap: var(--ops-space-xs);
   justify-items: start;
 }
+
 .managed-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: var(--ops-space-sm);
 }
+
 .managed-history {
   margin: 0;
   padding-left: 20px;
   overflow-wrap: anywhere;
 }
+
 @media (max-width: 720px) {
   .managed-filters {
     grid-template-columns: 1fr;

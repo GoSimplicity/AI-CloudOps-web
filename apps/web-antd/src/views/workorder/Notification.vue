@@ -410,7 +410,7 @@ const validRecipientIds = (values: string[]) =>
   );
 const addressError = (channel: string, raw: string) => {
   const value = raw.trim();
-  if (!value || /[\u0000-\u001f\u007f-\u009f]/.test(value))
+  if (!value || /[\u0000-\u001F\u007F-\u009F]/.test(value))
     return '接收地址不能为空或包含控制字符';
   if (channel === 'email' && (value.length > 254 || !value.includes('@')))
     return '请输入有效邮箱地址';
@@ -3257,27 +3257,33 @@ onMounted(() => {
   border: 1px solid var(--ops-border);
   border-radius: var(--ops-radius);
 }
+
 .recipient-address-row legend {
   width: auto;
   padding: 0 4px;
   color: var(--ops-muted);
   font-size: 12px;
 }
+
 @media (max-width: 640px) {
   .recipient-address-row {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
 .search-input {
   width: 260px;
   min-width: 200px;
 }
+
 .channel-filter {
   width: 160px;
 }
+
 .status-filter {
   width: 120px;
 }
+
 .name-cell,
 .form-option,
 .form-url-cell,
@@ -3289,19 +3295,23 @@ onMounted(() => {
   gap: var(--ops-space-sm);
   min-width: 0;
 }
+
 .form-option {
   justify-content: space-between;
 }
+
 .name-text,
 .form-name,
 .date {
   color: var(--ops-ink);
   font-weight: 500;
 }
+
 .name-text,
 .recipients-cell {
   overflow-wrap: anywhere;
 }
+
 .channels-cell,
 .channels-display,
 .recipients-display {
@@ -3309,20 +3319,24 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 4px;
 }
+
 .channel-tag {
   display: inline-flex;
   align-items: center;
   border-radius: var(--ops-radius);
 }
+
 .date-info {
   display: flex;
   flex-direction: column;
 }
+
 .time,
 .text-gray {
   color: var(--ops-muted);
   font-size: 12px;
 }
+
 .form-category {
   padding: 2px 6px;
   border: 1px solid var(--ops-border);
@@ -3331,6 +3345,7 @@ onMounted(() => {
   background: var(--ops-ground);
   font-size: 12px;
 }
+
 .action-buttons {
   display: flex;
   align-items: center;
@@ -3338,39 +3353,48 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 4px;
 }
+
 .action-buttons :deep(.ant-btn) {
   color: var(--ops-muted);
   background: var(--ops-surface);
   border-color: var(--ops-border);
   box-shadow: none;
 }
+
 .action-buttons :deep(.ant-btn:hover) {
   color: var(--ops-accent);
   border-color: var(--ops-accent);
 }
+
 .table-container :deep(.ant-table-wrapper) {
   min-width: 0;
   overflow: auto;
 }
+
 .table-container :deep(.ant-table-thead th) {
   white-space: nowrap;
 }
+
 .table-container :deep(.ant-table-tbody td) {
   overflow-wrap: anywhere;
 }
+
 .notification-config-modal :deep(.ant-modal-body),
 .send-logs {
   max-height: 70vh;
   overflow-y: auto;
 }
+
 .send-logs {
   display: flex;
   flex-direction: column;
   gap: var(--ops-space-md);
 }
+
 .notification-details {
   margin-bottom: var(--ops-space-lg);
 }
+
 .detail-header {
   display: flex;
   align-items: center;
@@ -3384,30 +3408,37 @@ onMounted(() => {
   border: 1px solid var(--ops-border);
   border-radius: var(--ops-radius);
 }
+
 .detail-header h2 {
   margin: 0;
   font-size: 20px;
   overflow-wrap: anywhere;
 }
+
 .form-url-display {
   flex-wrap: wrap;
 }
+
 .form-url-display :deep(.ant-input),
 .url-input {
   font-family: var(--ops-font-mono, monospace);
 }
+
 .recipients-help,
 .template-help {
   margin-top: var(--ops-space-sm);
 }
+
 .message-template-preview {
   margin-top: var(--ops-space-lg);
 }
+
 .message-template-preview h3 {
   margin-bottom: var(--ops-space-sm);
   font-size: 15px;
   color: var(--ops-ink);
 }
+
 .template-content {
   padding: var(--ops-space-lg);
   white-space: pre-wrap;
@@ -3418,6 +3449,7 @@ onMounted(() => {
   border-radius: var(--ops-radius);
   line-height: 1.6;
 }
+
 .detail-footer {
   display: flex;
   flex-wrap: wrap;
@@ -3427,26 +3459,31 @@ onMounted(() => {
   padding-top: var(--ops-space-lg);
   border-top: 1px solid var(--ops-border);
 }
+
 .template-variables-help {
   max-height: 300px;
   overflow-y: auto;
   font-size: 12px;
   line-height: 1.5;
 }
+
 .variable-group {
   margin-bottom: var(--ops-space-md);
 }
+
 .variable-group strong {
   display: block;
   margin-bottom: 6px;
   color: var(--ops-ink);
   font-size: 13px;
 }
+
 .variable-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 4px 8px;
 }
+
 .variable-item {
   display: block;
   padding: 4px 8px;
@@ -3458,15 +3495,18 @@ onMounted(() => {
   font-size: 11px;
   overflow-wrap: anywhere;
 }
+
 .variable-deprecated {
   margin-top: var(--ops-space-sm);
   padding-top: var(--ops-space-sm);
   border-top: 1px solid var(--ops-border);
 }
+
 .variable-list.deprecated .variable-item {
   color: hsl(var(--destructive));
   text-decoration: line-through;
 }
+
 @media (max-width: 640px) {
   .search-input,
   .channel-filter,
@@ -3474,15 +3514,18 @@ onMounted(() => {
     width: 100%;
     min-width: 0;
   }
+
   .form-url-cell,
   .form-url-display,
   .detail-header {
     align-items: stretch;
     flex-direction: column;
   }
+
   .variable-list {
     grid-template-columns: 1fr;
   }
+
   .template-variables-help {
     max-height: 200px;
   }

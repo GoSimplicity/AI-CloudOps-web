@@ -16,18 +16,6 @@ import {
   TooltipComponent,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
-
-// 注册必需的组件
-echarts.use([
-  BarChart,
-  LineChart,
-  PieChart,
-  GridComponent,
-  TooltipComponent,
-  LegendComponent,
-  TitleComponent,
-  CanvasRenderer,
-]);
 import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
 import type {
@@ -43,6 +31,18 @@ import {
   getEventPatterns,
   quickDiagnosis,
 } from '#/api/core/aiops/rca';
+
+// 注册必需的组件
+echarts.use([
+  BarChart,
+  LineChart,
+  PieChart,
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  TitleComponent,
+  CanvasRenderer,
+]);
 
 // 响应式数据
 const loading = ref(false);
@@ -343,7 +343,7 @@ const refreshAllDiagnosis = async () => {
       promises.push(
         getEventPatterns({
           namespace,
-          hours: hours,
+          hours,
         }).catch((_error) => {
           // Event patterns analysis failed
           return null;
@@ -357,7 +357,7 @@ const refreshAllDiagnosis = async () => {
       promises.push(
         getErrorSummary({
           namespace,
-          hours: hours,
+          hours,
         }).catch((_error) => {
           // Error summary analysis failed
           return null;
@@ -930,6 +930,151 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .config-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .config-item {
+    margin-bottom: 8px;
+  }
+
+  .issues-container {
+    grid-template-columns: 1fr;
+  }
+
+  .charts-section {
+    grid-template-columns: 1fr;
+  }
+
+  .rca-content {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .chart-content {
+    height: 250px;
+  }
+
+  .loading-container {
+    min-height: 300px;
+  }
+
+  .loading-content {
+    padding: 20px;
+  }
+
+  .loading-main-icon {
+    font-size: 60px;
+  }
+
+  .loading-title {
+    font-size: 20px;
+  }
+
+  .diagnosis-steps {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .step-item {
+    flex-direction: row;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .step-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 576px) {
+  .config-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-card {
+    padding: 16px;
+  }
+
+  .metric-icon {
+    font-size: 28px;
+  }
+
+  .metric-value {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 575px) {
+  .overview-grid,
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--ops-space-sm);
+  }
+
+  .overview-card,
+  .metric-card {
+    min-width: 0;
+    padding: var(--ops-space-md);
+    gap: var(--ops-space-sm);
+    flex-wrap: wrap;
+  }
+
+  .metric-icon {
+    font-size: 20px;
+  }
+
+  .card-value,
+  .metric-value {
+    overflow-wrap: anywhere;
+  }
+
+  .section-header {
+    flex-wrap: wrap;
+    gap: var(--ops-space-sm);
+  }
+}
+
 .trend-unknown {
   color: var(--ops-muted);
   background: var(--ops-ground);
@@ -1148,29 +1293,8 @@ onUnmounted(() => {
   animation: pulse 2s ease-in-out infinite;
 }
 
-@keyframes pulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.1);
-    opacity: 0.8;
-  }
-}
-
 .rotate-animation {
   animation: rotate 1s linear infinite;
-}
-
-@keyframes rotate {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .loading-title {
@@ -1206,8 +1330,8 @@ onUnmounted(() => {
 
 .step-item.active {
   opacity: 1;
-  background: rgba(24, 144, 255, 0.05);
-  border: 1px solid rgba(24, 144, 255, 0.2);
+  background: rgb(24 144 255 / 5%);
+  border: 1px solid rgb(24 144 255 / 20%);
 }
 
 .step-icon {
@@ -1614,123 +1738,5 @@ onUnmounted(() => {
   padding: 40px;
   color: #bfbfbf;
   font-size: 14px;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .metrics-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .config-grid {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-
-  .config-item {
-    margin-bottom: 8px;
-  }
-
-  .issues-container {
-    grid-template-columns: 1fr;
-  }
-
-  .charts-section {
-    grid-template-columns: 1fr;
-  }
-
-  .rca-content {
-    grid-template-columns: 1fr;
-  }
-
-  .summary-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .chart-content {
-    height: 250px;
-  }
-
-  .loading-container {
-    min-height: 300px;
-  }
-
-  .loading-content {
-    padding: 20px;
-  }
-
-  .loading-main-icon {
-    font-size: 60px;
-  }
-
-  .loading-title {
-    font-size: 20px;
-  }
-
-  .diagnosis-steps {
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .step-item {
-    flex-direction: row;
-    gap: 12px;
-    padding: 12px;
-  }
-
-  .step-icon {
-    width: 32px;
-    height: 32px;
-    font-size: 14px;
-  }
-}
-
-@media (max-width: 576px) {
-  .config-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .summary-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .metric-card {
-    padding: 16px;
-  }
-
-  .metric-icon {
-    font-size: 28px;
-  }
-
-  .metric-value {
-    font-size: 20px;
-  }
-}
-
-@media (max-width: 575px) {
-  .overview-grid,
-  .metrics-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--ops-space-sm);
-  }
-  .overview-card,
-  .metric-card {
-    min-width: 0;
-    padding: var(--ops-space-md);
-    gap: var(--ops-space-sm);
-    flex-wrap: wrap;
-  }
-  .metric-icon {
-    font-size: 20px;
-  }
-  .card-value,
-  .metric-value {
-    overflow-wrap: anywhere;
-  }
-  .section-header {
-    flex-wrap: wrap;
-    gap: var(--ops-space-sm);
-  }
 }
 </style>

@@ -1412,7 +1412,7 @@ onMounted(async () => {
 
                 <a-select-option
                   v-if="categoryPagination.hasMore"
-                  :value="'__load_more__'"
+                  value="__load_more__"
                   class="load-more-option"
                   disabled
                 >
@@ -1485,7 +1485,7 @@ onMounted(async () => {
 
                 <a-select-option
                   v-if="processPagination.hasMore"
-                  :value="'__load_more_process__'"
+                  value="__load_more_process__"
                   class="load-more-option"
                   disabled
                 >
@@ -1558,7 +1558,7 @@ onMounted(async () => {
 
                 <a-select-option
                   v-if="formPagination.hasMore"
-                  :value="'__load_more_form__'"
+                  value="__load_more_form__"
                   class="load-more-option"
                   disabled
                 >
@@ -1686,6 +1686,121 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-filters {
+    width: 100%;
+  }
+
+  .search-input {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .status-filter,
+  .category-filter {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .btn-create {
+    padding: 4px 8px;
+    min-width: auto;
+  }
+
+  .stats-card :deep(.ant-statistic-title) {
+    font-size: 12px;
+  }
+
+  .stats-card :deep(.ant-statistic-content) {
+    font-size: 16px;
+  }
+
+  .action-buttons {
+    gap: 2px;
+  }
+
+  .action-buttons .ant-btn {
+    padding: 0 4px;
+    font-size: 12px;
+  }
+
+  .detail-footer {
+    justify-content: center;
+  }
+
+  .detail-footer .ant-btn {
+    flex: 1;
+    max-width: 120px;
+  }
+
+  .category-desc,
+  .process-desc,
+  .form-desc {
+    max-width: 150px;
+  }
+
+  .load-more-content {
+    padding: 6px 8px;
+  }
+}
+
+/* 平板端适配 */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .search-input {
+    width: 200px;
+  }
+}
+
+/* 超小屏幕适配 */
+@media (max-width: 480px) {
+  .header-actions {
+    gap: 8px;
+  }
+
+  .stats-card {
+    text-align: center;
+  }
+
+  .creator-info {
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .creator-name {
+    font-size: 12px;
+  }
+
+  .date-info {
+    text-align: center;
+  }
+
+  .date {
+    font-size: 12px;
+  }
+
+  .time {
+    font-size: 10px;
+  }
+
+  .category-desc,
+  .process-desc,
+  .form-desc {
+    max-width: 120px;
+  }
+
+  .load-more-content {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+}
+
 .header-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1724,7 +1839,7 @@ onMounted(async () => {
 
 .stats-card {
   border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 5%);
   height: 100%;
 }
 
@@ -1904,121 +2019,6 @@ onMounted(async () => {
 .template-form-modal :deep(.ant-modal-body) {
   max-height: 70vh;
   overflow-y: auto;
-}
-
-/* 移动端适配 */
-@media (max-width: 768px) {
-  .header-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .search-filters {
-    width: 100%;
-  }
-
-  .search-input {
-    width: 100%;
-    min-width: auto;
-  }
-
-  .status-filter,
-  .category-filter {
-    width: 100%;
-    min-width: auto;
-  }
-
-  .btn-create {
-    padding: 4px 8px;
-    min-width: auto;
-  }
-
-  .stats-card :deep(.ant-statistic-title) {
-    font-size: 12px;
-  }
-
-  .stats-card :deep(.ant-statistic-content) {
-    font-size: 16px;
-  }
-
-  .action-buttons {
-    gap: 2px;
-  }
-
-  .action-buttons .ant-btn {
-    padding: 0 4px;
-    font-size: 12px;
-  }
-
-  .detail-footer {
-    justify-content: center;
-  }
-
-  .detail-footer .ant-btn {
-    flex: 1;
-    max-width: 120px;
-  }
-
-  .category-desc,
-  .process-desc,
-  .form-desc {
-    max-width: 150px;
-  }
-
-  .load-more-content {
-    padding: 6px 8px;
-  }
-}
-
-/* 平板端适配 */
-@media (max-width: 1024px) and (min-width: 769px) {
-  .search-input {
-    width: 200px;
-  }
-}
-
-/* 超小屏幕适配 */
-@media (max-width: 480px) {
-  .header-actions {
-    gap: 8px;
-  }
-
-  .stats-card {
-    text-align: center;
-  }
-
-  .creator-info {
-    flex-direction: column;
-    gap: 4px;
-    align-items: center;
-  }
-
-  .creator-name {
-    font-size: 12px;
-  }
-
-  .date-info {
-    text-align: center;
-  }
-
-  .date {
-    font-size: 12px;
-  }
-
-  .time {
-    font-size: 10px;
-  }
-
-  .category-desc,
-  .process-desc,
-  .form-desc {
-    max-width: 120px;
-  }
-
-  .load-more-content {
-    padding: 4px 6px;
-    font-size: 12px;
-  }
 }
 
 /* 表格滚动优化 */

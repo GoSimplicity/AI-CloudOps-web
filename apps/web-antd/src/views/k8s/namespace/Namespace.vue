@@ -396,7 +396,7 @@ onMounted(async () => {
             </a-select-option>
             <a-select-option
               v-if="clusters.length > 0 && clusters.length < clustersTotal"
-              :value="'__load_more__'"
+              value="__load_more__"
               disabled
               style="text-align: center; color: #999"
             >
@@ -572,7 +572,7 @@ onMounted(async () => {
             <div class="k8s-uid-display">
               <span :title="text" class="uid-text">{{ text }}</span>
               <a-button
-                :title="'复制 UID'"
+                title="复制 UID"
                 class="uid-copy-btn"
                 size="small"
                 type="text"

@@ -36,7 +36,7 @@
 }
 
 .result-preview {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 11px;
   line-height: 1.4;
   color: var(--ops-ink);
@@ -54,7 +54,7 @@
 
 /* 执行结果详情样式 */
 .apply-result-detail {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 12px;
   line-height: 1.5;
   color: var(--ops-ink);
@@ -175,10 +175,12 @@
     transform: scale(0.8);
     opacity: 0.8;
   }
+
   50% {
     transform: scale(1.2);
     opacity: 0.6;
   }
+
   100% {
     transform: scale(0.8);
     opacity: 0.8;
@@ -204,45 +206,45 @@
 }
 
 /* 任务操作按钮特殊样式 */
-.task-table .k8s-action-column .ant-btn[title*="执行"] {
+.task-table .k8s-action-column .ant-btn[title*='执行'] {
   background: #e8f5e8;
   border-color: #52c41a;
   color: #2e7d32;
 }
 
-.task-table .k8s-action-column .ant-btn[title*="执行"]:hover:not(:disabled) {
+.task-table .k8s-action-column .ant-btn[title*='执行']:hover:not(:disabled) {
   background: #d4edda;
   border-color: #389e0d;
   color: #1b5e20;
-  box-shadow: 0 6px 16px rgba(82, 196, 26, 0.25);
+  box-shadow: 0 6px 16px rgb(82 196 26 / 25%);
 }
 
-.task-table .k8s-action-column .ant-btn[title*="执行"]:disabled {
+.task-table .k8s-action-column .ant-btn[title*='执行']:disabled {
   background: var(--ops-ground) !important;
   border-color: var(--ops-border) !important;
   color: #bfbfbf !important;
 }
 
 /* 批量操作按钮特殊样式 */
-.k8s-toolbar .k8s-action-buttons .ant-btn[title*="执行"] {
+.k8s-toolbar .k8s-action-buttons .ant-btn[title*='执行'] {
   background: #52c41a;
   border: none;
   color: hsl(var(--primary-foreground));
 }
 
-.k8s-toolbar .k8s-action-buttons .ant-btn[title*="执行"]:hover {
+.k8s-toolbar .k8s-action-buttons .ant-btn[title*='执行']:hover {
   background: #73d13d;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(82, 196, 26, 0.3);
+  box-shadow: 0 4px 12px rgb(82 196 26 / 30%);
 }
 
 /* 模板选择器特殊样式 */
-.k8s-filter-select[aria-placeholder*="模板"] {
+.k8s-filter-select[aria-placeholder*='模板'] {
   background: #f0f7ff;
   border-color: #bae0ff;
 }
 
-.k8s-filter-select[aria-placeholder*="模板"]:hover {
+.k8s-filter-select[aria-placeholder*='模板']:hover {
   background: #e6f4ff;
   border-color: #91caff;
 }
@@ -252,47 +254,47 @@
   .task-variables {
     max-width: 150px;
   }
-  
+
   .variable-tag {
     font-size: 11px;
     max-width: 80px;
   }
-  
+
   .apply-result-preview {
     max-width: 200px;
     max-height: 60px;
   }
-  
+
   .result-preview {
     font-size: 10px;
     padding: 4px;
   }
-  
+
   .apply-result-detail {
     font-size: 11px;
     padding: 12px;
     max-height: 250px;
   }
-  
+
   .task-time {
     font-size: 12px;
   }
-  
+
   .task-variables-config {
     padding: 12px;
   }
-  
+
   .variable-input-row {
     flex-direction: column;
     align-items: stretch;
     gap: 8px;
   }
-  
+
   .info-item {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .info-label {
     min-width: auto;
     margin-right: 0;
@@ -304,30 +306,30 @@
   .task-variables {
     max-width: 120px;
   }
-  
+
   .variable-tag {
     font-size: 10px;
     max-width: 60px;
   }
-  
+
   .apply-result-preview {
     max-width: 150px;
     max-height: 50px;
   }
-  
+
   .result-preview {
     font-size: 9px;
     padding: 3px;
   }
-  
+
   .task-info-display {
     padding: 12px;
   }
-  
+
   .variable-input-row .k8s-form-input {
     height: 32px;
   }
-  
+
   .variable-input-row .ant-btn {
     height: 32px;
     min-width: 32px;
@@ -362,55 +364,63 @@
 }
 
 @keyframes task-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* 任务状态徽章样式优化 */
 .ant-badge-status-success {
   background-color: #52c41a;
-  box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.2);
+  box-shadow: 0 0 0 2px rgb(82 196 26 / 20%);
 }
 
 .ant-badge-status-processing {
   background-color: #1677ff;
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.2);
+  box-shadow: 0 0 0 2px rgb(22 119 255 / 20%);
 }
 
 .ant-badge-status-error {
   background-color: #ff4d4f;
-  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2);
+  box-shadow: 0 0 0 2px rgb(255 77 79 / 20%);
 }
 
 .ant-badge-status-warning {
   background-color: #faad14;
-  box-shadow: 0 0 0 2px rgba(250, 173, 20, 0.2);
+  box-shadow: 0 0 0 2px rgb(250 173 20 / 20%);
 }
 
 .ant-badge-status-default {
   background-color: var(--ops-border);
-  box-shadow: 0 0 0 2px rgba(217, 217, 217, 0.2);
+  box-shadow: 0 0 0 2px rgb(217 217 217 / 20%);
 }
 
 /* 任务创建/编辑表单优化 */
-.k8s-form .ant-form-item-label > label[title*="模板"] {
+.k8s-form .ant-form-item-label > label[title*='模板'] {
   font-weight: 600;
   color: #1677ff;
 }
 
-.k8s-form .ant-form-item-label > label[title*="变量"] {
+.k8s-form .ant-form-item-label > label[title*='变量'] {
   font-weight: 600;
   color: #52c41a;
 }
 
-.k8s-form .ant-form-item[class*="name"] .ant-input:focus {
+.k8s-form .ant-form-item[class*='name'] .ant-input:focus {
   border-color: #722ed1;
-  box-shadow: 0 0 0 2px rgba(114, 46, 209, 0.1);
+  box-shadow: 0 0 0 2px rgb(114 46 209 / 10%);
 }
 
-.k8s-form .ant-form-item[class*="template"] .ant-select:focus .ant-select-selector {
+.k8s-form
+  .ant-form-item[class*='template']
+  .ant-select:focus
+  .ant-select-selector {
   border-color: #1677ff;
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+  box-shadow: 0 0 0 2px rgb(22 119 255 / 10%);
 }
 
 /* 详情模态框优化 */
@@ -463,15 +473,21 @@
 }
 
 /* 成功和错误状态优化 */
-.ant-message .ant-message-notice-content .ant-message-custom-content.ant-message-success {
+.ant-message
+  .ant-message-notice-content
+  .ant-message-custom-content.ant-message-success {
   color: #52c41a;
 }
 
-.ant-message .ant-message-notice-content .ant-message-custom-content.ant-message-error {
+.ant-message
+  .ant-message-notice-content
+  .ant-message-custom-content.ant-message-error {
   color: #ff4d4f;
 }
 
-.ant-message .ant-message-notice-content .ant-message-custom-content.ant-message-info {
+.ant-message
+  .ant-message-notice-content
+  .ant-message-custom-content.ant-message-info {
   color: #1677ff;
 }
 
@@ -495,17 +511,17 @@
     border: 1px solid #ddd;
     background: var(--ops-surface);
   }
-  
+
   .apply-result-detail {
     border: 1px solid #ddd;
     background: var(--ops-surface);
     color: black;
   }
-  
+
   .task-time {
     color: black;
   }
-  
+
   .variable-tag {
     border: 1px solid #ddd;
     background: var(--ops-surface);

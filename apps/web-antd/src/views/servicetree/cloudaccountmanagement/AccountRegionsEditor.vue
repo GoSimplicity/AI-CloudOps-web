@@ -320,11 +320,13 @@ const options = computed(() => {
   display: grid;
   gap: var(--ops-space-sm);
 }
+
 .region-hint {
   margin: 0;
   color: var(--ops-muted);
   font-size: 12px;
 }
+
 .project-field {
   display: grid;
   gap: var(--ops-space-xs);

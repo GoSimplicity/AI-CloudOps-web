@@ -6,9 +6,10 @@
  * This is a known issue with Ant Design Vue focus management
  * See: https://w3c.github.io/aria/#aria-hidden
  */
-div[aria-hidden="true"][tabindex="0"] {
+div[aria-hidden='true'][tabindex='0'] {
   /* Remove focus capability from aria-hidden elements */
   pointer-events: none !important;
+
   /* Hide from tab navigation */
   tabindex: -1 !important;
 }
@@ -42,7 +43,7 @@ div[aria-hidden="true"][tabindex="0"] {
   background: #f6ffed;
   border: 1px solid #b7eb8f;
   color: #389e0d;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 11px;
   font-weight: 500;
   border-radius: 4px;
@@ -50,29 +51,29 @@ div[aria-hidden="true"][tabindex="0"] {
 }
 
 /* Pod 表格样式 */
-.pod-table :deep(.ant-table-tbody td[data-index="0"]) {
+.pod-table :deep(.ant-table-tbody td[data-index='0']) {
   font-weight: 600;
   color: #1677ff;
 }
 
-.pod-table :deep(.ant-table-tbody td[data-index="1"]) {
+.pod-table :deep(.ant-table-tbody td[data-index='1']) {
   font-weight: 500;
   color: #52c41a;
 }
 
-.pod-table :deep(.ant-table-tbody td[data-index="2"]) {
+.pod-table :deep(.ant-table-tbody td[data-index='2']) {
   text-align: center;
 }
 
-.pod-table :deep(.ant-table-tbody td[data-index="3"]) {
+.pod-table :deep(.ant-table-tbody td[data-index='3']) {
   text-align: center;
 }
 
-.pod-table :deep(.ant-table-tbody td[data-index="4"]) {
+.pod-table :deep(.ant-table-tbody td[data-index='4']) {
   text-align: center;
 }
 
-.pod-table :deep(.ant-table-tbody td[data-index="5"]) {
+.pod-table :deep(.ant-table-tbody td[data-index='5']) {
   text-align: center;
 }
 
@@ -98,34 +99,34 @@ div[aria-hidden="true"][tabindex="0"] {
 }
 
 /* 日志查看按钮 - 绿色主题 */
-.pod-table .ant-btn[title*="日志"] {
+.pod-table .ant-btn[title*='日志'] {
   background: #f6ffed;
   border-color: #b7eb8f;
   color: #52c41a;
 }
 
-.pod-table .ant-btn[title*="日志"]:hover {
+.pod-table .ant-btn[title*='日志']:hover {
   background: #d9f7be;
   border-color: #95de64;
   color: #389e0d;
-  box-shadow: 0 6px 16px rgba(82, 196, 26, 0.25);
+  box-shadow: 0 6px 16px rgb(82 196 26 / 25%);
 }
 
 /* 执行命令按钮 - 紫色主题 */
-.pod-table .ant-btn[title*="命令"] {
+.pod-table .ant-btn[title*='命令'] {
   background: #f9f0ff;
   border-color: #d3adf7;
   color: #722ed1;
 }
 
-.pod-table .ant-btn[title*="命令"]:hover {
+.pod-table .ant-btn[title*='命令']:hover {
   background: #efdbff;
   border-color: #b37feb;
   color: #531dab;
-  box-shadow: 0 6px 16px rgba(114, 46, 209, 0.25);
+  box-shadow: 0 6px 16px rgb(114 46 209 / 25%);
 }
 
-.pod-table .ant-btn[title*="命令"]:disabled {
+.pod-table .ant-btn[title*='命令']:disabled {
   background: var(--ops-ground) !important;
   border-color: var(--ops-border) !important;
   color: #bfbfbf !important;
@@ -133,20 +134,20 @@ div[aria-hidden="true"][tabindex="0"] {
 }
 
 /* 端口转发按钮 - 青色主题 */
-.pod-table .ant-btn[title*="转发"] {
+.pod-table .ant-btn[title*='转发'] {
   background: #e6fffb;
   border-color: #87e8de;
   color: #13c2c2;
 }
 
-.pod-table .ant-btn[title*="转发"]:hover {
+.pod-table .ant-btn[title*='转发']:hover {
   background: #b5f5ec;
   border-color: #5cdbd3;
   color: #08979c;
-  box-shadow: 0 6px 16px rgba(19, 194, 194, 0.25);
+  box-shadow: 0 6px 16px rgb(19 194 194 / 25%);
 }
 
-.pod-table .ant-btn[title*="转发"]:disabled {
+.pod-table .ant-btn[title*='转发']:disabled {
   background: var(--ops-ground) !important;
   border-color: var(--ops-border) !important;
   color: #bfbfbf !important;
@@ -154,20 +155,20 @@ div[aria-hidden="true"][tabindex="0"] {
 }
 
 /* 文件管理按钮 - 橙色主题 */
-.pod-table .ant-btn[title*="文件"] {
+.pod-table .ant-btn[title*='文件'] {
   background: #fff7e6;
   border-color: #ffec3d;
   color: #fa8c16;
 }
 
-.pod-table .ant-btn[title*="文件"]:hover {
+.pod-table .ant-btn[title*='文件']:hover {
   background: #ffd591;
   border-color: #fadb14;
   color: #d46b08;
-  box-shadow: 0 6px 16px rgba(250, 140, 22, 0.25);
+  box-shadow: 0 6px 16px rgb(250 140 22 / 25%);
 }
 
-.pod-table .ant-btn[title*="文件"]:disabled {
+.pod-table .ant-btn[title*='文件']:disabled {
   background: var(--ops-ground) !important;
   border-color: var(--ops-border) !important;
   color: #bfbfbf !important;
@@ -175,17 +176,17 @@ div[aria-hidden="true"][tabindex="0"] {
 }
 
 /* YAML 操作按钮 - 蓝紫色主题 */
-.pod-table .ant-btn[title*="YAML"] {
+.pod-table .ant-btn[title*='YAML'] {
   background: #e6f7ff;
   border-color: #91d5ff;
   color: #1890ff;
 }
 
-.pod-table .ant-btn[title*="YAML"]:hover {
+.pod-table .ant-btn[title*='YAML']:hover {
   background: #bae7ff;
   border-color: #69c0ff;
   color: #096dd9;
-  box-shadow: 0 6px 16px rgba(24, 144, 255, 0.25);
+  box-shadow: 0 6px 16px rgb(24 144 255 / 25%);
 }
 
 /* 重启次数标签样式 */
@@ -198,19 +199,19 @@ div[aria-hidden="true"][tabindex="0"] {
 }
 
 /* QoS等级标签样式 */
-.pod-table .ant-tag[data-qos="Guaranteed"] {
+.pod-table .ant-tag[data-qos='Guaranteed'] {
   background: #f6ffed;
   border-color: #b7eb8f;
   color: #52c41a;
 }
 
-.pod-table .ant-tag[data-qos="Burstable"] {
+.pod-table .ant-tag[data-qos='Burstable'] {
   background: #fff7e6;
   border-color: #ffd591;
   color: #fa8c16;
 }
 
-.pod-table .ant-tag[data-qos="BestEffort"] {
+.pod-table .ant-tag[data-qos='BestEffort'] {
   background: #e6f7ff;
   border-color: #91d5ff;
   color: #1890ff;
@@ -264,7 +265,7 @@ div[aria-hidden="true"][tabindex="0"] {
 
 .container-config-item:hover {
   border-color: var(--ops-border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 6%);
 }
 
 .container-config-item:last-child {
@@ -446,7 +447,7 @@ div[aria-hidden="true"][tabindex="0"] {
 }
 
 .logs-content {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Courier New', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', Consolas, 'Courier New', monospace;
   font-size: 13px;
   line-height: 1.5;
   background: var(--ops-ground);
@@ -459,13 +460,13 @@ div[aria-hidden="true"][tabindex="0"] {
   overflow-y: auto;
   border-radius: var(--ops-radius);
   border: 1px solid #e1e8ed;
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: inset 0 2px 8px rgb(0 0 0 / 5%);
   transition: all 0.3s ease;
 }
 
 .logs-content:hover {
   border-color: #d1d9e0;
-  box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 2px 12px rgb(0 0 0 / 8%);
 }
 
 .logs-content::-webkit-scrollbar {
@@ -562,7 +563,7 @@ div[aria-hidden="true"][tabindex="0"] {
   border-radius: 6px;
   padding: 8px;
   margin-top: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
 }
 
 /* 标签过滤器模态框样式 */
@@ -604,7 +605,7 @@ div[aria-hidden="true"][tabindex="0"] {
 
 /* YAML 编辑器样式 */
 .k8s-config-textarea {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 12px;
   line-height: 1.4;
   background: #f8f9fa;
@@ -617,7 +618,7 @@ div[aria-hidden="true"][tabindex="0"] {
 
 .k8s-config-textarea:focus {
   border-color: #1677ff;
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+  box-shadow: 0 0 0 2px rgb(22 119 255 / 10%);
   background: var(--ops-surface);
 }
 
@@ -639,18 +640,18 @@ div[aria-hidden="true"][tabindex="0"] {
     gap: 4px;
     min-width: 140px;
   }
-  
+
   .pod-table .k8s-action-column .ant-btn {
     width: 100%;
     height: 28px;
     min-width: 120px;
     justify-content: center;
   }
-  
+
   .pod-ready .ant-progress {
     max-width: 60px;
   }
-  
+
   .pod-labels-filter .active-filters {
     position: relative;
     top: auto;
@@ -661,23 +662,23 @@ div[aria-hidden="true"][tabindex="0"] {
     box-shadow: none;
     border: 1px solid var(--ops-border);
   }
-  
+
   .container-config-item {
     padding: 12px;
   }
-  
+
   .env-var-row,
   .port-row {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .port-forward-row {
     flex-direction: column;
     align-items: stretch;
     gap: 8px;
   }
-  
+
   .port-forward-row span {
     text-align: center;
   }
@@ -688,37 +689,37 @@ div[aria-hidden="true"][tabindex="0"] {
     height: 26px;
     font-size: 12px;
   }
-  
+
   .pod-ready .ready-text {
     font-size: 11px;
   }
-  
+
   .pod-ip {
     font-size: 10px;
     padding: 1px 4px;
   }
-  
+
   .labels-filter-form .filter-input-row {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .pod-labels-filter .k8s-toolbar-btn {
     width: 100%;
     justify-content: center;
   }
-  
+
   .container-header {
     flex-direction: column;
     align-items: stretch;
     gap: 8px;
   }
-  
+
   .logs-controls .ant-row {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .logs-controls .ant-col {
     width: 100% !important;
   }
@@ -772,23 +773,23 @@ div[aria-hidden="true"][tabindex="0"] {
 }
 
 /* Pod 特有的状态样式 */
-.pod-table :deep(.ant-table-tbody > tr[data-pod-status="Pending"]) {
+.pod-table :deep(.ant-table-tbody > tr[data-pod-status='Pending']) {
   border-left: 3px solid #faad14;
 }
 
-.pod-table :deep(.ant-table-tbody > tr[data-pod-status="Running"]) {
+.pod-table :deep(.ant-table-tbody > tr[data-pod-status='Running']) {
   border-left: 3px solid #52c41a;
 }
 
-.pod-table :deep(.ant-table-tbody > tr[data-pod-status="Succeeded"]) {
+.pod-table :deep(.ant-table-tbody > tr[data-pod-status='Succeeded']) {
   border-left: 3px solid #52c41a;
 }
 
-.pod-table :deep(.ant-table-tbody > tr[data-pod-status="Failed"]) {
+.pod-table :deep(.ant-table-tbody > tr[data-pod-status='Failed']) {
   border-left: 3px solid #ff4d4f;
 }
 
-.pod-table :deep(.ant-table-tbody > tr[data-pod-status="Unknown"]) {
+.pod-table :deep(.ant-table-tbody > tr[data-pod-status='Unknown']) {
   border-left: 3px solid var(--ops-border);
 }
 
@@ -797,16 +798,18 @@ div[aria-hidden="true"][tabindex="0"] {
   0% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.05);
   }
+
   100% {
     transform: scale(1);
   }
 }
 
-.pod-table .ant-btn[title*="命令"]:active,
-.pod-table .ant-btn[title*="日志"]:active {
+.pod-table .ant-btn[title*='命令']:active,
+.pod-table .ant-btn[title*='日志']:active {
   animation: podPulse 0.3s ease-in-out;
 }
 
@@ -820,30 +823,30 @@ div[aria-hidden="true"][tabindex="0"] {
 }
 
 /* 警告状态的进度条 */
-.pod-ready .ant-progress-bg[style*="percent: 50"] {
+.pod-ready .ant-progress-bg[style*='percent: 50'] {
   background: #faad14;
 }
 
 /* Pod 阶段标签颜色映射 */
-.pod-table .ant-tag[color="success"] {
+.pod-table .ant-tag[color='success'] {
   background: #f6ffed;
   border-color: #b7eb8f;
   color: #52c41a;
 }
 
-.pod-table .ant-tag[color="warning"] {
+.pod-table .ant-tag[color='warning'] {
   background: #fff7e6;
   border-color: #ffd591;
   color: #fa8c16;
 }
 
-.pod-table .ant-tag[color="error"] {
+.pod-table .ant-tag[color='error'] {
   background: #fff2f0;
   border-color: #ffccc7;
   color: #ff4d4f;
 }
 
-.pod-table .ant-tag[color="default"] {
+.pod-table .ant-tag[color='default'] {
   background: var(--ops-ground);
   border-color: var(--ops-border);
   color: var(--ops-muted);
@@ -879,7 +882,7 @@ div[aria-hidden="true"][tabindex="0"] {
   font-size: 12px;
   font-weight: 600;
   color: var(--ops-muted);
-  margin: 0 0 8px 0;
+  margin: 0 0 8px;
 }
 
 /* 执行命令模态框样式 */
@@ -904,7 +907,7 @@ div[aria-hidden="true"][tabindex="0"] {
   padding: 16px;
   border-radius: var(--ops-radius);
   margin-bottom: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
 }
 
 .terminal-status-bar {
@@ -1008,17 +1011,17 @@ div[aria-hidden="true"][tabindex="0"] {
 }
 
 .terminal-wrapper .xterm .xterm-viewport::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(255 255 255 / 10%);
   border-radius: 4px;
 }
 
 .terminal-wrapper .xterm .xterm-viewport::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgb(255 255 255 / 30%);
   border-radius: 4px;
 }
 
 .terminal-wrapper .xterm .xterm-viewport::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.5);
+  background: rgb(255 255 255 / 50%);
 }
 
 /* 特殊强调样式 */
@@ -1038,7 +1041,7 @@ div[aria-hidden="true"][tabindex="0"] {
 }
 
 /* 节点标签特殊样式 */
-.pod-table .ant-tag[color="cyan"] {
+.pod-table .ant-tag[color='cyan'] {
   background: #e6fffb;
   border-color: #87e8de;
   color: #08979c;
@@ -1047,7 +1050,7 @@ div[aria-hidden="true"][tabindex="0"] {
   transition: all 0.2s ease;
 }
 
-.pod-table .ant-tag[color="cyan"]:hover {
+.pod-table .ant-tag[color='cyan']:hover {
   background: #b5f5ec;
   border-color: #5cdbd3;
   color: #006d75;
@@ -1056,12 +1059,17 @@ div[aria-hidden="true"][tabindex="0"] {
 
 /* 实时流日志样式 */
 .logs-content.streaming-logs {
-  background: linear-gradient(135deg, var(--ops-ink) 0%, #2d2d2d 100%) !important;
+  background: linear-gradient(
+    135deg,
+    var(--ops-ink) 0%,
+    #2d2d2d 100%
+  ) !important;
   color: var(--ops-border) !important;
   border: 2px solid #52c41a !important;
   border-radius: 8px !important;
-  box-shadow: 0 4px 20px rgba(82, 196, 26, 0.15), 
-              0 0 0 1px rgba(82, 196, 26, 0.1) !important;
+  box-shadow:
+    0 4px 20px rgb(82 196 26 / 15%),
+    0 0 0 1px rgb(82 196 26 / 10%) !important;
   transition: all 0.3s ease;
 }
 
@@ -1081,7 +1089,7 @@ div[aria-hidden="true"][tabindex="0"] {
 }
 
 .logs-content.streaming-logs::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1) !important;
+  background: rgb(255 255 255 / 10%) !important;
 }
 
 /* 连接状态栏样式 */
@@ -1092,7 +1100,7 @@ div[aria-hidden="true"][tabindex="0"] {
   padding: 12px 16px;
   margin-bottom: 12px;
   font-size: 13px;
-  box-shadow: 0 2px 8px rgba(145, 213, 255, 0.15);
+  box-shadow: 0 2px 8px rgb(145 213 255 / 15%);
   transition: all 0.3s ease;
 }
 
@@ -1100,16 +1108,18 @@ div[aria-hidden="true"][tabindex="0"] {
 .logs-status-bar.streaming {
   background: #f6ffed;
   border: 1px solid #52c41a;
-  box-shadow: 0 2px 12px rgba(82, 196, 26, 0.2);
+  box-shadow: 0 2px 12px rgb(82 196 26 / 20%);
   animation: streamingGlow 3s ease-in-out infinite;
 }
 
 @keyframes streamingGlow {
-  0%, 100% { 
-    box-shadow: 0 2px 12px rgba(82, 196, 26, 0.2); 
+  0%,
+  100% {
+    box-shadow: 0 2px 12px rgb(82 196 26 / 20%);
   }
-  50% { 
-    box-shadow: 0 4px 20px rgba(82, 196, 26, 0.35); 
+
+  50% {
+    box-shadow: 0 4px 20px rgb(82 196 26 / 35%);
   }
 }
 
@@ -1121,13 +1131,21 @@ div[aria-hidden="true"][tabindex="0"] {
 
 .streaming-indicator.active {
   color: #389e0d;
-  text-shadow: 0 0 8px rgba(82, 196, 26, 0.3);
+  text-shadow: 0 0 8px rgb(82 196 26 / 30%);
 }
 
 @keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.6; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
+
+  100% {
+    opacity: 1;
+  }
 }
 
 .logs-count {
@@ -1156,16 +1174,16 @@ div[aria-hidden="true"][tabindex="0"] {
   .pod-logs-content {
     max-height: none;
   }
-  
+
   .logs-content {
     max-height: none;
     overflow: visible;
   }
-  
+
   .container-config-item {
     break-inside: avoid;
   }
-  
+
   .logs-status-bar {
     display: none;
   }

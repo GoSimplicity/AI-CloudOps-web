@@ -425,7 +425,7 @@ const updateOption = (index: number, value: string) => {
 .field-select:focus,
 .field-select:hover {
   border-color: #1890ff;
-  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.1);
+  box-shadow: 0 2px 4px rgb(24 144 255 / 10%);
 }
 
 .option-content {
@@ -474,7 +474,7 @@ const updateOption = (index: number, value: string) => {
 
 .option-item:hover {
   border-color: #1890ff;
-  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
+  box-shadow: 0 2px 8px rgb(24 144 255 / 10%);
 }
 
 .option-header {

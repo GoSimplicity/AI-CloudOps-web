@@ -1,6 +1,20 @@
 import { type AxiosAdapter, AxiosError } from 'axios';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  LOGIN_EXPIRED_MESSAGE,
+  LOGIN_EXPIRED_MESSAGE_KEY,
+  requestClient,
+} from '#/api/request';
+
+import { effectScope } from 'vue';
+
+import {
+  STREAM_MAX_RECONNECT_ATTEMPTS,
+  STREAM_UNAUTHORIZED_REFRESH_RESET_MS,
+  usePodPage,
+} from './Pod';
+
 /**
  * W1 发版前修复：Pod 日志 SSE 与终端 exec WS 的令牌刷新与重连
  * - 每次重连读最新令牌；401 / 握手失败先走统一刷新（单飞），成功后重连
@@ -56,20 +70,6 @@ vi.mock('#/store', () => ({
   useAuthStore: () => ({ getAuthGeneration: () => 1, logout }),
 }));
 vi.mock('#/api/core', () => ({ refreshTokenApi }));
-
-import {
-  LOGIN_EXPIRED_MESSAGE,
-  LOGIN_EXPIRED_MESSAGE_KEY,
-  requestClient,
-} from '#/api/request';
-
-import { effectScope } from 'vue';
-
-import {
-  STREAM_MAX_RECONNECT_ATTEMPTS,
-  STREAM_UNAUTHORIZED_REFRESH_RESET_MS,
-  usePodPage,
-} from './Pod';
 
 function required<T>(value: null | T | undefined): T {
   if (value === null || value === undefined) {

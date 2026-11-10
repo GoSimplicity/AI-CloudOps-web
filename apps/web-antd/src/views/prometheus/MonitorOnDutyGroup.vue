@@ -803,11 +803,9 @@ const fetchOnDutyHistory = async (
     const response = await getMonitorOnDutyHistoryApi(id, apiParams);
 
     if (response && response.items) {
-      if (append) {
-        historyDialog.data = [...historyDialog.data, ...response.items];
-      } else {
-        historyDialog.data = response.items;
-      }
+      historyDialog.data = append
+        ? [...historyDialog.data, ...response.items]
+        : response.items;
       historyPaginationConfig.total = response.total || 0;
       historyPaginationConfig.current = page;
     } else {
@@ -850,11 +848,9 @@ const fetchChangeRecords = async (page = 1, append = false): Promise<void> => {
     if (!isCurrent()) return;
 
     if (response && response.items) {
-      if (append) {
-        changeDialog.data = [...changeDialog.data, ...response.items];
-      } else {
-        changeDialog.data = response.items;
-      }
+      changeDialog.data = append
+        ? [...changeDialog.data, ...response.items]
+        : response.items;
       changePaginationConfig.total = response.total || 0;
       changePaginationConfig.current = page;
     } else {
@@ -1112,7 +1108,7 @@ const exportPlan = (): void => {
     ),
   ].join('\n');
 
-  const blob = new Blob(['\ufeff' + csvContent], {
+  const blob = new Blob(['\uFEFF' + csvContent], {
     type: 'text/csv;charset=utf-8;',
   });
   const link = document.createElement('a');
@@ -1166,7 +1162,7 @@ const exportHistory = async (): Promise<void> => {
       ),
     ].join('\n');
 
-    const blob = new Blob(['\ufeff' + csvContent], {
+    const blob = new Blob(['\uFEFF' + csvContent], {
       type: 'text/csv;charset=utf-8;',
     });
     const link = document.createElement('a');
@@ -1757,8 +1753,8 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
             <template v-if="column.key === 'name'">
               <div class="group-name-cell">
                 <div
+                  class="group-badge"
                   :class="[
-                    'group-badge',
                     record.enable === 1 ? 'status-active' : 'status-inactive',
                   ]"
                 ></div>
@@ -2652,6 +2648,115 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 </template>
 
 <style scoped>
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .search-input {
+    width: calc(100% - 140px);
+    min-width: auto;
+  }
+
+  .stats-card :deep(.ant-statistic-title) {
+    font-size: 12px;
+  }
+
+  .stats-card :deep(.ant-statistic-content) {
+    font-size: 16px;
+  }
+
+  .action-buttons {
+    gap: 2px;
+  }
+
+  .action-buttons .ant-btn {
+    padding: 0 4px;
+    font-size: 12px;
+  }
+
+  .detail-footer {
+    justify-content: center;
+  }
+
+  .detail-footer .ant-btn {
+    flex: 1;
+    max-width: 120px;
+  }
+
+  .plan-filters,
+  .history-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .timeline-date {
+    text-align: left;
+    padding-right: 0;
+    margin-bottom: 8px;
+  }
+
+  .duty-user {
+    flex-wrap: wrap;
+  }
+
+  .user-change-info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .plan-header,
+  .history-header,
+  .change-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-card {
+    text-align: center;
+  }
+
+  .creator-info {
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .creator-name {
+    font-size: 12px;
+  }
+
+  .date-info {
+    text-align: center;
+  }
+
+  .date {
+    font-size: 12px;
+  }
+
+  .time {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .responsive-modal :deep(.ant-modal-body) {
+    padding: 16px;
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  :deep(.ant-timeline-item-label) {
+    width: auto !important;
+    position: relative !important;
+  }
+
+  :deep(.ant-timeline-item-content) {
+    margin-left: 0 !important;
+  }
+}
+
 .search-input {
   width: 250px;
   min-width: 200px;
@@ -2667,7 +2772,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 
 .stats-card {
   border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 5%);
   height: 100%;
 }
 
@@ -2715,7 +2820,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
   font-size: 12px;
   font-weight: 500;
   border: none;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 10%);
 }
 
 .user-tag {
@@ -3043,96 +3148,6 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
   color: var(--ops-muted);
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .search-input {
-    width: calc(100% - 140px);
-    min-width: auto;
-  }
-
-  .stats-card :deep(.ant-statistic-title) {
-    font-size: 12px;
-  }
-
-  .stats-card :deep(.ant-statistic-content) {
-    font-size: 16px;
-  }
-
-  .action-buttons {
-    gap: 2px;
-  }
-
-  .action-buttons .ant-btn {
-    padding: 0 4px;
-    font-size: 12px;
-  }
-
-  .detail-footer {
-    justify-content: center;
-  }
-
-  .detail-footer .ant-btn {
-    flex: 1;
-    max-width: 120px;
-  }
-
-  .plan-filters,
-  .history-filters {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .timeline-date {
-    text-align: left;
-    padding-right: 0;
-    margin-bottom: 8px;
-  }
-
-  .duty-user {
-    flex-wrap: wrap;
-  }
-
-  .user-change-info {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .plan-header,
-  .history-header,
-  .change-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-}
-
-@media (max-width: 480px) {
-  .stats-card {
-    text-align: center;
-  }
-
-  .creator-info {
-    flex-direction: column;
-    gap: 4px;
-    align-items: center;
-  }
-
-  .creator-name {
-    font-size: 12px;
-  }
-
-  .date-info {
-    text-align: center;
-  }
-
-  .date {
-    font-size: 12px;
-  }
-
-  .time {
-    font-size: 10px;
-  }
-}
-
 /* 表格滚动优化 */
 .table-container :deep(.ant-table-wrapper) {
   overflow: auto;
@@ -3152,14 +3167,6 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
   margin: 8px;
 }
 
-@media (max-width: 768px) {
-  .responsive-modal :deep(.ant-modal-body) {
-    padding: 16px;
-    max-height: calc(100vh - 160px);
-    overflow-y: auto;
-  }
-}
-
 /* Timeline 响应式优化 */
 :deep(.ant-timeline-item-label) {
   width: 100px !important;
@@ -3167,17 +3174,6 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 
 :deep(.ant-timeline-item-content) {
   margin-left: 120px !important;
-}
-
-@media (max-width: 768px) {
-  :deep(.ant-timeline-item-label) {
-    width: auto !important;
-    position: relative !important;
-  }
-
-  :deep(.ant-timeline-item-content) {
-    margin-left: 0 !important;
-  }
 }
 
 .empty-state {

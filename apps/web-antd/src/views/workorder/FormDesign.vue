@@ -314,11 +314,8 @@ const moveField = (index: number, direction: number) => {
 const initFormData = () => {
   const data: Record<string, any> = {};
   formSchema.fields.forEach((field) => {
-    if (field.default === undefined) {
-      data[field.name] = getDefaultValue(field.type);
-    } else {
-      data[field.name] = field.default;
-    }
+    data[field.name] =
+      field.default === undefined ? getDefaultValue(field.type) : field.default;
   });
   formData.value = data;
 };
@@ -1033,6 +1030,106 @@ const importConfig = (file: File) => {
 </template>
 
 <style scoped>
+@media (max-width: 768px) {
+  .designer-content,
+  .form-meta-config,
+  .field-controls,
+  .config-actions,
+  .field-list {
+    padding: var(--ops-space-sm);
+  }
+
+  .field-buttons,
+  .action-buttons {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .field-btn,
+  .action-btn {
+    height: 40px;
+    font-size: 12px;
+  }
+
+  .field-btn span,
+  .action-btn span {
+    font-size: 11px;
+  }
+
+  .preview-content {
+    padding: 16px;
+    margin: 8px;
+  }
+
+  .preview-header {
+    padding: 16px;
+  }
+
+  .preview-header h3 {
+    font-size: 20px;
+  }
+
+  .list-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .field-actions {
+    flex-wrap: wrap;
+  }
+
+  .category-modal-content {
+    max-height: 50vh;
+  }
+
+  .category-items {
+    max-height: 200px;
+  }
+}
+
+@media (max-width: 480px) {
+  .field-buttons,
+  .action-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .controls-header,
+  .actions-header,
+  .config-header {
+    text-align: left;
+  }
+
+  .preview-header h3 {
+    font-size: 18px;
+  }
+
+  .preview-description {
+    font-size: 14px;
+  }
+
+  .category-modal-content {
+    max-height: 65dvh;
+  }
+}
+
+@media (max-width: 640px) {
+  .field-actions {
+    flex-wrap: nowrap;
+  }
+
+  .field-panel :deep(.ant-collapse-header) {
+    gap: 4px;
+    align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dynamic-form-container :deep(*) {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
 .dynamic-form-container {
   background-color: var(--ops-ground);
   min-width: 0;
@@ -1084,7 +1181,7 @@ const importConfig = (file: File) => {
 }
 
 .config-header h4 {
-  margin: 0 0 8px 0;
+  margin: 0 0 8px;
   color: var(--ops-ink);
   font-size: 16px;
   font-weight: 600;
@@ -1105,7 +1202,7 @@ const importConfig = (file: File) => {
 }
 
 .controls-header h4 {
-  margin: 0 0 8px 0;
+  margin: 0 0 8px;
   color: var(--ops-ink);
   font-size: 16px;
   font-weight: 600;
@@ -1163,7 +1260,7 @@ const importConfig = (file: File) => {
 }
 
 .actions-header h4 {
-  margin: 0 0 8px 0;
+  margin: 0 0 8px;
   color: var(--ops-ink);
   font-size: 16px;
   font-weight: 600;
@@ -1318,21 +1415,21 @@ const importConfig = (file: File) => {
 }
 
 .preview-header h3 {
-  margin: 0 0 12px 0;
+  margin: 0 0 12px;
   font-size: 24px;
   color: var(--ops-ink);
   font-weight: 600;
 }
 
 .preview-description {
-  margin: 0 0 20px 0;
+  margin: 0 0 20px;
   color: var(--ops-muted);
   font-size: 16px;
   line-height: 1.6;
 }
 
 .preview-notice {
-  margin: 20px 0 0 0;
+  margin: 20px 0 0;
 }
 
 .json-modal :deep(.ant-modal-content) {
@@ -1357,7 +1454,7 @@ const importConfig = (file: File) => {
   border: 1px solid var(--ops-border);
   border-radius: var(--ops-radius);
   padding: 16px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
   font-size: 13px;
   line-height: 1.5;
   overflow: auto;
@@ -1481,88 +1578,6 @@ const importConfig = (file: File) => {
   background: var(--ops-muted);
 }
 
-@media (max-width: 768px) {
-  .designer-content,
-  .form-meta-config,
-  .field-controls,
-  .config-actions,
-  .field-list {
-    padding: var(--ops-space-sm);
-  }
-
-  .field-buttons,
-  .action-buttons {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .field-btn,
-  .action-btn {
-    height: 40px;
-    font-size: 12px;
-  }
-
-  .field-btn span,
-  .action-btn span {
-    font-size: 11px;
-  }
-
-  .preview-content {
-    padding: 16px;
-    margin: 8px;
-  }
-
-  .preview-header {
-    padding: 16px;
-  }
-
-  .preview-header h3 {
-    font-size: 20px;
-  }
-
-  .list-header {
-    flex-direction: column;
-    gap: 8px;
-    align-items: flex-start;
-  }
-
-  .field-actions {
-    flex-wrap: wrap;
-  }
-
-  .category-modal-content {
-    max-height: 50vh;
-  }
-
-  .category-items {
-    max-height: 200px;
-  }
-}
-
-@media (max-width: 480px) {
-  .field-buttons,
-  .action-buttons {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .controls-header,
-  .actions-header,
-  .config-header {
-    text-align: left;
-  }
-
-  .preview-header h3 {
-    font-size: 18px;
-  }
-
-  .preview-description {
-    font-size: 14px;
-  }
-
-  .category-modal-content {
-    max-height: 65dvh;
-  }
-}
-
 .field-panel {
   transition:
     border-color 120ms ease,
@@ -1595,64 +1610,60 @@ const importConfig = (file: File) => {
 .designer-error {
   margin-bottom: var(--ops-space-lg);
 }
+
 .category-trigger {
   text-align: left;
 }
+
 .field-saving {
   pointer-events: none;
   opacity: 0.75;
 }
+
 .dynamic-form-container :deep(.ant-space) {
   flex-wrap: wrap;
 }
+
 .dynamic-form-container :deep(.ant-card-head) {
   min-height: 0;
 }
+
 .dynamic-form-container :deep(.field-config .config-section),
 .dynamic-form-container :deep(.dynamic-form .form-container) {
   background: var(--ops-surface);
   border-color: var(--ops-border);
   box-shadow: none;
 }
+
 .dynamic-form-container :deep(.field-config .section-title) {
   color: var(--ops-ink);
   background: var(--ops-ground);
 }
+
 .dynamic-form-container :deep(.field-config .option-item) {
   background: var(--ops-ground);
   border-color: var(--ops-border);
   box-shadow: none;
 }
+
 .dynamic-form-container :deep(.field-config .option-index),
 .dynamic-form-container :deep(.field-config .ant-form-item-label label) {
   color: var(--ops-ink);
 }
+
 .dynamic-form-container :deep(.field-config .checkbox-item:hover) {
   background: var(--ops-ground);
   border-color: var(--ops-accent);
 }
+
 .dynamic-form-container :deep(.field-config .config-input),
 .dynamic-form-container :deep(.field-config .field-select),
 .dynamic-form-container :deep(.field-config .option-input) {
   border-radius: var(--ops-radius);
   box-shadow: none;
 }
+
 .dynamic-form-container :deep(.ant-collapse-extra) {
   flex-shrink: 0;
-}
-@media (max-width: 640px) {
-  .field-actions {
-    flex-wrap: nowrap;
-  }
-  .field-panel :deep(.ant-collapse-header) {
-    gap: 4px;
-    align-items: flex-start;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .dynamic-form-container :deep(*) {
-    transition: none !important;
-    animation: none !important;
-  }
 }
 </style>

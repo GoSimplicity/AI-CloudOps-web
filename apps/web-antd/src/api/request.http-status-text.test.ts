@@ -3,6 +3,23 @@ import { $t } from '@vben/locales';
 import axios, { type AxiosAdapter, AxiosError } from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { BUSINESS_ERROR_MESSAGE_KEY_PREFIX } from '#/utils/permission/business-error';
+import * as sharedMessages from '#/constants/http-error-messages';
+import {
+  getRequestLayerNoticeKey,
+  shouldNotifyPageError,
+} from '#/utils/permission/request-notice';
+
+import {
+  baseRequestClient,
+  HTTP_BAD_REQUEST_DETAIL_MAX_LENGTH,
+  HTTP_CONFLICT_MESSAGE,
+  HTTP_ERROR_MESSAGE_KEY_PREFIX,
+  HTTP_TOO_MANY_REQUESTS_MESSAGE,
+  requestClient,
+  requestClientAIOps,
+} from './request';
+
 /**
  * FE-02b：400 / 409 / 429 / 浏览器中止请求的请求层提示文案（应用层 request.ts 回调里改写，不改 packages）
  * - 409 →「数据已变化，请刷新后重试」，429 →「请求过于频繁，请稍后重试」（文案不带错误码，常量收口在
@@ -60,23 +77,6 @@ vi.mock('#/store', () => ({
   useAuthStore: () => ({ getAuthGeneration: () => 1, logout: vi.fn() }),
 }));
 vi.mock('./core', () => ({ refreshTokenApi }));
-
-import { BUSINESS_ERROR_MESSAGE_KEY_PREFIX } from '#/utils/permission/business-error';
-import * as sharedMessages from '#/constants/http-error-messages';
-import {
-  getRequestLayerNoticeKey,
-  shouldNotifyPageError,
-} from '#/utils/permission/request-notice';
-
-import {
-  baseRequestClient,
-  HTTP_BAD_REQUEST_DETAIL_MAX_LENGTH,
-  HTTP_CONFLICT_MESSAGE,
-  HTTP_ERROR_MESSAGE_KEY_PREFIX,
-  HTTP_TOO_MANY_REQUESTS_MESSAGE,
-  requestClient,
-  requestClientAIOps,
-} from './request';
 
 function reply(config: any, status: number, data: unknown) {
   const response = {

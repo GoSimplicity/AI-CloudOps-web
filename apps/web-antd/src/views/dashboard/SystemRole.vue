@@ -1157,7 +1157,79 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* 保持原有样式不变，只添加新的样式 */
+@media (max-width: 1200px) {
+  .search-left {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .search-input {
+    max-width: none;
+  }
+
+  .status-select,
+  .type-select {
+    width: 100%;
+  }
+
+  .search-right {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .search-right {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .role-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .role-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .api-list-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .api-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .selected-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .api-search-container {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1243,7 +1315,7 @@ onMounted(() => {
   justify-content: center;
   font-size: 16px;
   flex-shrink: 0;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid rgb(0 0 0 / 10%);
 }
 
 .role-name {
@@ -1282,7 +1354,7 @@ onMounted(() => {
 }
 
 .detail-section h3 {
-  margin: 0 0 16px 0;
+  margin: 0 0 16px;
   font-size: 16px;
   font-weight: 600;
   color: var(--ops-ink);
@@ -1639,76 +1711,5 @@ onMounted(() => {
   background: #bfbfbf;
 }
 
-@media (max-width: 1200px) {
-  .search-left {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .search-input {
-    max-width: none;
-  }
-
-  .status-select,
-  .type-select {
-    width: 100%;
-  }
-
-  .search-right {
-    justify-content: flex-end;
-  }
-}
-
-@media (max-width: 768px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .search-right {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .detail-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .action-buttons {
-    flex-direction: column;
-    width: 100%;
-  }
-
-  .role-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .role-icon {
-    width: 32px;
-    height: 32px;
-  }
-
-  .api-list-header {
-    flex-direction: column;
-    gap: 8px;
-    align-items: flex-start;
-  }
-
-  .api-actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
-
-  .selected-header {
-    flex-direction: column;
-    gap: 8px;
-    align-items: flex-start;
-  }
-
-  .api-search-container {
-    flex-direction: column;
-    gap: 8px;
-  }
-}
+/* 保持原有样式不变，只添加新的样式 */
 </style>

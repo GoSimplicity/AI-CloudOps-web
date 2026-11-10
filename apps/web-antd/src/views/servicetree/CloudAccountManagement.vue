@@ -9,8 +9,14 @@ import {
   computeProviderName,
   isSupportedAccountProvider,
 } from './cloudaccountmanagement/provider';
-import { onBeforeUnmount } from 'vue';
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+} from 'vue';
 
 import { type FormInstance, message, Modal } from 'ant-design-vue';
 import {
@@ -2090,6 +2096,85 @@ watch(
   padding: 12px;
   min-height: 100vh;
 
+  @media (max-width: 768px) {
+    padding: 8px;
+
+    .header-actions {
+      flex-direction: column;
+      align-items: stretch;
+
+      .btn-text {
+        display: inline;
+      }
+    }
+
+    .stats-card :deep(.ant-statistic-title) {
+      font-size: 12px;
+    }
+
+    .stats-card :deep(.ant-statistic-content) {
+      font-size: 16px;
+    }
+
+    .filter-section {
+      .filter-form {
+        :deep(.ant-form-item) {
+          margin-right: 0;
+          margin-bottom: 12px;
+          width: 100%;
+
+          .ant-input,
+          .ant-select {
+            width: 100% !important;
+          }
+        }
+      }
+    }
+
+    .action-buttons {
+      gap: 2px;
+
+      .ant-btn {
+        padding: 0 4px;
+        font-size: 12px;
+      }
+    }
+
+    .drawer-actions {
+      flex-direction: column;
+      gap: 8px;
+
+      .ant-btn-group {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+      }
+
+      .ant-btn {
+        width: 100%;
+      }
+    }
+
+    .modern-modal :deep(.ant-modal-body) {
+      padding: 16px;
+      max-height: calc(100vh - 160px);
+      overflow-y: auto;
+    }
+  }
+
+  @media (max-width: 480px) {
+    padding: 4px;
+
+    .stats-card {
+      text-align: center;
+    }
+
+    .modern-modal :deep(.ant-modal) {
+      margin: 4px;
+      max-width: calc(100vw - 8px);
+    }
+  }
+
   .page-header {
     margin-bottom: 20px;
   }
@@ -2119,7 +2204,7 @@ watch(
 
   .stats-card {
     border-radius: var(--ops-radius);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 5%);
     height: 100%;
   }
 
@@ -2315,7 +2400,7 @@ watch(
 
     :deep(.ant-modal-content) {
       border-radius: var(--ops-radius);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 16px rgb(0 0 0 / 10%);
     }
 
     :deep(.ant-modal-header) {
@@ -2334,7 +2419,7 @@ watch(
     }
 
     :deep(.ant-divider-horizontal.ant-divider-with-text-left) {
-      margin: 20px 0 12px 0;
+      margin: 20px 0 12px;
       font-weight: 600;
       color: #374151;
     }
@@ -2407,85 +2492,6 @@ watch(
       margin-top: 24px;
       padding-top: 16px;
       border-top: 1px solid var(--ops-border);
-    }
-  }
-
-  @media (max-width: 768px) {
-    padding: 8px;
-
-    .header-actions {
-      flex-direction: column;
-      align-items: stretch;
-
-      .btn-text {
-        display: inline;
-      }
-    }
-
-    .stats-card :deep(.ant-statistic-title) {
-      font-size: 12px;
-    }
-
-    .stats-card :deep(.ant-statistic-content) {
-      font-size: 16px;
-    }
-
-    .filter-section {
-      .filter-form {
-        :deep(.ant-form-item) {
-          margin-right: 0;
-          margin-bottom: 12px;
-          width: 100%;
-
-          .ant-input,
-          .ant-select {
-            width: 100% !important;
-          }
-        }
-      }
-    }
-
-    .action-buttons {
-      gap: 2px;
-
-      .ant-btn {
-        padding: 0 4px;
-        font-size: 12px;
-      }
-    }
-
-    .drawer-actions {
-      flex-direction: column;
-      gap: 8px;
-
-      .ant-btn-group {
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-      }
-
-      .ant-btn {
-        width: 100%;
-      }
-    }
-
-    .modern-modal :deep(.ant-modal-body) {
-      padding: 16px;
-      max-height: calc(100vh - 160px);
-      overflow-y: auto;
-    }
-  }
-
-  @media (max-width: 480px) {
-    padding: 4px;
-
-    .stats-card {
-      text-align: center;
-    }
-
-    .modern-modal :deep(.ant-modal) {
-      margin: 4px;
-      max-width: calc(100vw - 8px);
     }
   }
 }

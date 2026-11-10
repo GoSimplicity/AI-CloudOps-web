@@ -2,6 +2,13 @@ import { effectScope } from 'vue';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  LOGIN_EXPIRED_MESSAGE,
+  LOGIN_EXPIRED_MESSAGE_KEY,
+} from '#/api/request';
+
+import { STREAM_MAX_RECONNECT_ATTEMPTS, usePodPage } from './Pod';
+
 /**
  * 第一层复审 v4（窝窝头答复 5）：页面层提示
  * - 刷新失败（或刷新后仍未授权）只保留「登录已过期，请重新登录」，
@@ -89,13 +96,6 @@ vi.mock('#/store', () => ({
   useAuthStore: () => ({ getAuthGeneration: () => 1, logout }),
 }));
 vi.mock('#/api/core', () => ({ refreshTokenApi }));
-
-import {
-  LOGIN_EXPIRED_MESSAGE,
-  LOGIN_EXPIRED_MESSAGE_KEY,
-} from '#/api/request';
-
-import { STREAM_MAX_RECONNECT_ATTEMPTS, usePodPage } from './Pod';
 
 function required<T>(value: null | T | undefined): T {
   if (value === null || value === undefined) {

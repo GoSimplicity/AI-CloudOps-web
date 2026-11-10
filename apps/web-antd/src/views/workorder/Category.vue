@@ -966,6 +966,108 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .search-filters {
+    width: 100%;
+  }
+
+  .search-input {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .status-filter {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .create-btn {
+    padding: 4px 8px;
+    min-width: auto;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .stats-card :deep(.ant-statistic-title) {
+    font-size: 12px;
+  }
+
+  .stats-card :deep(.ant-statistic-content) {
+    font-size: 16px;
+  }
+
+  .action-buttons {
+    gap: 4px;
+  }
+
+  .action-buttons .ant-btn {
+    padding: 0 4px;
+    font-size: 12px;
+  }
+
+  .detail-footer {
+    justify-content: center;
+  }
+
+  .detail-footer .ant-btn {
+    flex: 1;
+    max-width: 120px;
+  }
+
+  :deep(.ant-modal-body) {
+    padding: 16px;
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+  }
+}
+
+/* 平板端适配 */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .search-input {
+    width: 200px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 超小屏幕适配 */
+@media (max-width: 480px) {
+  .operator-info {
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .operator-name {
+    font-size: 12px;
+  }
+
+  .date-info {
+    text-align: center;
+  }
+
+  .date {
+    font-size: 12px;
+  }
+
+  .time {
+    font-size: 10px;
+  }
+}
+
+/* 大屏幕优化 */
+@media (min-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 .create-btn {
   background: var(--ops-accent);
   border: none;
@@ -1074,107 +1176,5 @@ onMounted(() => {
 :deep(.ant-modal) {
   max-width: calc(100vw - 16px);
   margin: 8px;
-}
-
-/* 移动端适配 */
-@media (max-width: 768px) {
-  .search-filters {
-    width: 100%;
-  }
-
-  .search-input {
-    width: 100%;
-    min-width: auto;
-  }
-
-  .status-filter {
-    width: 100%;
-    min-width: auto;
-  }
-
-  .create-btn {
-    padding: 4px 8px;
-    min-width: auto;
-  }
-
-  .stats-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .stats-card :deep(.ant-statistic-title) {
-    font-size: 12px;
-  }
-
-  .stats-card :deep(.ant-statistic-content) {
-    font-size: 16px;
-  }
-
-  .action-buttons {
-    gap: 4px;
-  }
-
-  .action-buttons .ant-btn {
-    padding: 0 4px;
-    font-size: 12px;
-  }
-
-  .detail-footer {
-    justify-content: center;
-  }
-
-  .detail-footer .ant-btn {
-    flex: 1;
-    max-width: 120px;
-  }
-
-  :deep(.ant-modal-body) {
-    padding: 16px;
-    max-height: calc(100vh - 160px);
-    overflow-y: auto;
-  }
-}
-
-/* 平板端适配 */
-@media (max-width: 1024px) and (min-width: 769px) {
-  .search-input {
-    width: 200px;
-  }
-
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-/* 超小屏幕适配 */
-@media (max-width: 480px) {
-  .operator-info {
-    flex-direction: column;
-    gap: 4px;
-    align-items: center;
-  }
-
-  .operator-name {
-    font-size: 12px;
-  }
-
-  .date-info {
-    text-align: center;
-  }
-
-  .date {
-    font-size: 12px;
-  }
-
-  .time {
-    font-size: 10px;
-  }
-}
-
-/* 大屏幕优化 */
-@media (min-width: 1200px) {
-  .stats-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
 }
 </style>

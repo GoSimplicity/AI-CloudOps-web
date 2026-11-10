@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { refreshTokenApi } from './auth';
+
 const { post } = vi.hoisted(() => ({ post: vi.fn() }));
 vi.mock('#/api/request', () => ({
   baseRequestClient: { post },
   requestClient: { post },
 }));
-
-import { refreshTokenApi } from './auth';
 
 describe('刷新令牌响应契约', () => {
   beforeEach(() => vi.clearAllMocks());

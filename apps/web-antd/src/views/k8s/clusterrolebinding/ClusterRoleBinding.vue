@@ -1,10 +1,9 @@
 <script lang="ts" setup>
 import OpsPage from '#/components/ops/OpsPage.vue';
 
-import { clusterResourceKey } from '../shared/utils';
+import { clusterResourceKey, formatK8sTime } from '../shared/utils';
 import { onMounted, ref } from 'vue';
 
-import { formatK8sTime } from '../shared/utils';
 import { useClusterRoleBindingPage } from './ClusterRoleBinding';
 import {
   CheckCircleOutlined,
@@ -440,7 +439,7 @@ onMounted(async () => {
               </a-select-option>
               <a-select-option
                 v-if="clusters.length > 0 && clusters.length < clustersTotal"
-                :value="'__load_more__'"
+                value="__load_more__"
                 disabled
                 style="text-align: center; color: var(--ops-muted)"
               >

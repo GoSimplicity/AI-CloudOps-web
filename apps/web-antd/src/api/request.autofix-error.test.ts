@@ -3,6 +3,24 @@ import { $t } from '@vben/locales';
 import { type AxiosAdapter, AxiosError } from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  AUTOFIX_ERROR_TEXT,
+  reportAutoFixError,
+} from '#/views/autofix/autofix-errors';
+import {
+  PERMISSION_DENIED_MESSAGE,
+  PERMISSION_DENIED_MESSAGE_KEY,
+} from '#/utils/permission/forbidden';
+import { BUSINESS_ERROR_MESSAGE_KEY_PREFIX } from '#/utils/permission/business-error';
+import { HTTP_CONFLICT_MESSAGE } from '#/constants/http-error-messages';
+
+import { resetHttpErrorNoticeTracking } from './http-error-notice';
+import {
+  HTTP_ERROR_MESSAGE_KEY_PREFIX,
+  requestClient,
+  requestClientAIOps,
+} from './request';
+
 /**
  * SEC-25/26 规则 3：autofix 错误走真实 requestClientAIOps 拦截器链 + 页面 reportAutoFixError，
  * 每个错误界面上只剩一条提示（同一个 key），文案按 HTTP 状态映射。
@@ -45,24 +63,6 @@ vi.mock('#/store', () => ({
   useAuthStore: () => ({ getAuthGeneration: () => 1, logout: vi.fn() }),
 }));
 vi.mock('./core', () => ({ refreshTokenApi }));
-
-import {
-  AUTOFIX_ERROR_TEXT,
-  reportAutoFixError,
-} from '#/views/autofix/autofix-errors';
-import {
-  PERMISSION_DENIED_MESSAGE,
-  PERMISSION_DENIED_MESSAGE_KEY,
-} from '#/utils/permission/forbidden';
-import { BUSINESS_ERROR_MESSAGE_KEY_PREFIX } from '#/utils/permission/business-error';
-import { HTTP_CONFLICT_MESSAGE } from '#/constants/http-error-messages';
-
-import { resetHttpErrorNoticeTracking } from './http-error-notice';
-import {
-  HTTP_ERROR_MESSAGE_KEY_PREFIX,
-  requestClient,
-  requestClientAIOps,
-} from './request';
 
 function required<T>(value: null | T | undefined): T {
   if (value === null || value === undefined) {

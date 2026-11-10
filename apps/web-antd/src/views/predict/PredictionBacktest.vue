@@ -216,20 +216,25 @@ async function run(): Promise<void> {
 .backtest-card {
   margin-top: var(--ops-space-lg);
 }
+
 .backtest-actions {
   margin: var(--ops-space-md) 0;
 }
+
 .backtest-result {
   margin-top: var(--ops-space-lg);
 }
+
 .backtest-result dl {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: var(--ops-space-md);
 }
+
 .backtest-result dl div {
   min-width: 0;
 }
+
 .backtest-result dd {
   margin: 0;
   font-variant-numeric: tabular-nums;

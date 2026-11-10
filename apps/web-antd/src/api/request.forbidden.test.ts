@@ -1,6 +1,15 @@
 import { type AxiosAdapter, AxiosError } from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  getForbiddenBackendMessage,
+  isPermissionDeniedError,
+  PERMISSION_DENIED_MESSAGE,
+  PERMISSION_DENIED_MESSAGE_KEY,
+} from '#/utils/permission/forbidden';
+
+import { requestClient } from './request';
+
 /**
  * FE-02 P3-5：403 统一提示走完整请求链路（真实 requestClient 拦截器）的集成测试
  */
@@ -42,15 +51,6 @@ vi.mock('#/store', () => ({
   useAuthStore: () => ({ getAuthGeneration: () => 1, logout: vi.fn() }),
 }));
 vi.mock('./core', () => ({ refreshTokenApi }));
-
-import {
-  getForbiddenBackendMessage,
-  isPermissionDeniedError,
-  PERMISSION_DENIED_MESSAGE,
-  PERMISSION_DENIED_MESSAGE_KEY,
-} from '#/utils/permission/forbidden';
-
-import { requestClient } from './request';
 
 function required<T>(value: null | T | undefined): T {
   if (value === null || value === undefined) {
