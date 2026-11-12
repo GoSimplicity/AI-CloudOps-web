@@ -117,7 +117,7 @@ interface CatchBody {
 export function findCatchBodies(text: string): CatchBody[] {
   const bodies: CatchBody[] = [];
   for (const m of text.matchAll(
-    /(?<![\w$.])catch\s*(?:\(\s*(\w+)[^)]*\))?\s*\{/g,
+    /(?<![\w$.])catch\s*(?:\(\s*(\w+)[^)]*\)\s*)?\{/g,
   )) {
     const open = m.index + m[0].length - 1;
     bodies.push({
@@ -134,7 +134,8 @@ export function findCatchBodies(text: string): CatchBody[] {
     const fn =
       /^\s*(?:async\s+)?(?:\(\s*(\w*)\s*(?::[^)]*)?\)|(\w+))\s*=>\s*/.exec(
         arg,
-      ) ?? /^\s*(?:async\s+)?function\s*\w*\s*\(\s*(\w*)[^)]*\)\s*/.exec(arg);
+      ) ??
+      /^\s*(?:async\s+)?function\s*(?:\w+\s*)?\(\s*(\w*)[^)]*\)\s*/.exec(arg);
     if (!fn) continue; // `.catch(handler)` 这类引用：正文在别处（handler 自身的 catch 写法另行扫描）
     const param = fn[1] || fn[2] || '';
     let start = open + 1 + fn[0].length;
@@ -154,7 +155,7 @@ const LOCAL_MESSAGE_VARS = new Set([
   'errorMsg',
   'msg',
 ]);
-const EMPTY_VALUE = /^(?:''|""|null|undefined|false|\[\])\s*[);]*\s*$/;
+const EMPTY_VALUE = /^(?:''|""|null|undefined|false|\[\])\s*(?:[);]+\s*)?$/;
 
 /** 写入是否为 `if (… && shouldRecordPageError(param) && …) lhs = …` 结构（不允许 ||、不允许取反） */
 export function isGuardedWrite(
