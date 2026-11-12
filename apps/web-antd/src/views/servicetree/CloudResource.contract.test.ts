@@ -137,11 +137,29 @@ beforeEach(() => {
       const id = Number(path.split('/').at(-2));
       const value = account(id);
       let provider = 1;
-      if (id === 8) provider = 2;
-      else if (id === 11 || id === 15) provider = 3;
-      else if (id === 12) provider = 5;
-      else if (id === 13) provider = 4;
-      else if (id === 14) provider = 6;
+      switch (id) {
+        case 8: {
+          provider = 2;
+          break;
+        }
+        case 11:
+        case 15: {
+          provider = 3;
+          break;
+        }
+        case 12: {
+          provider = 5;
+          break;
+        }
+        case 13: {
+          provider = 4;
+          break;
+        }
+        case 14: {
+          provider = 6;
+          break;
+        }
+      }
       return Promise.resolve({
         ...value,
         credential_type: id === 15 ? 'temporary' : 'long_term',
@@ -305,9 +323,7 @@ describe('云资源真实控件合同', () => {
     await required(wrapper).find('.ant-pagination-item-2 a').trigger('click');
     await flushPromises();
     const params = required(
-      client.get.mock.calls
-        .filter((call) => call[0] === '/tree/cloud/list')
-        .at(-1),
+      client.get.mock.calls.findLast((call) => call[0] === '/tree/cloud/list'),
     )[1].params;
     expect(params).toEqual(expect.objectContaining({ page: 2, size: 10 }));
     expect(params).not.toHaveProperty('page_size');

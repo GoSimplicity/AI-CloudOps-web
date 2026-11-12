@@ -75,25 +75,6 @@ const inputData = ref({
   currentQps: null as null | number,
 });
 
-// 表单验证
-const isFormValid = computed(() => {
-  return (
-    !!scope.owner.value &&
-    Object.values(inputData.value).every((value) => Number.isFinite(value)) &&
-    inputData.value.currentQps !== null &&
-    inputData.value.currentCpu !== null &&
-    inputData.value.currentMemory !== null &&
-    inputData.value.currentDisk !== null &&
-    inputData.value.currentQps >= 0 &&
-    inputData.value.currentCpu >= 0 &&
-    inputData.value.currentCpu <= 100 &&
-    inputData.value.currentMemory >= 0 &&
-    inputData.value.currentMemory <= 100 &&
-    inputData.value.currentDisk >= 0 &&
-    inputData.value.currentDisk <= 100
-  );
-});
-
 // 图表引用
 const trendChartRef = ref<HTMLElement>();
 const utilizationChartRef = ref<HTMLElement>();
@@ -158,6 +139,24 @@ const scope = useAiRequestScope(() => {
     currentMemory: null,
     currentQps: null,
   };
+});
+// 表单验证
+const isFormValid = computed(() => {
+  return (
+    !!scope.owner.value &&
+    Object.values(inputData.value).every((value) => Number.isFinite(value)) &&
+    inputData.value.currentQps !== null &&
+    inputData.value.currentCpu !== null &&
+    inputData.value.currentMemory !== null &&
+    inputData.value.currentDisk !== null &&
+    inputData.value.currentQps >= 0 &&
+    inputData.value.currentCpu >= 0 &&
+    inputData.value.currentCpu <= 100 &&
+    inputData.value.currentMemory >= 0 &&
+    inputData.value.currentMemory <= 100 &&
+    inputData.value.currentDisk >= 0 &&
+    inputData.value.currentDisk <= 100
+  );
 });
 const predictionLane = scope.createLane();
 watch([inputData, timeRange, aiEnhanced], clearPredictions, {
@@ -330,10 +329,10 @@ const updateUtilizationChart = () => {
   );
 };
 
-const updateCharts = () => {
+function updateCharts() {
   updateTrendChart();
   updateUtilizationChart();
-};
+}
 
 // 方法定义
 const refreshAllPredictions = async () => {
@@ -425,7 +424,7 @@ const refreshAllPredictions = async () => {
   }
 };
 
-const initTrendChart = () => {
+function initTrendChart() {
   if (!trendChartRef.value) return;
 
   trendChart?.dispose();
@@ -462,16 +461,16 @@ const initTrendChart = () => {
   };
 
   trendChart.setOption(option);
-};
+}
 
-const initUtilizationChart = () => {
+function initUtilizationChart() {
   if (!utilizationChartRef.value) return;
 
   utilizationChart?.dispose();
   utilizationChart = echarts.init(utilizationChartRef.value);
 
   updateUtilizationChart();
-};
+}
 
 const getActionColor = (action: string) => {
   switch (action) {

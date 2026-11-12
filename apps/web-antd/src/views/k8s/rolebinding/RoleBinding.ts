@@ -339,14 +339,14 @@ export function useRoleBindingPage() {
         ];
         selectedRows.value = [...selectedRows.value, ...changeRows];
       } else {
-        const changeKeys = changeRows.map(
-          (row) => `${row.namespace}/${row.name}`,
+        const changeKeys = new Set(
+          changeRows.map((row) => `${row.namespace}/${row.name}`),
         );
         selectedRowKeys.value = selectedRowKeys.value.filter(
-          (key) => !changeKeys.includes(key),
+          (key) => !changeKeys.has(key),
         );
         selectedRows.value = selectedRows.value.filter(
-          (row) => !changeKeys.includes(`${row.namespace}/${row.name}`),
+          (row) => !changeKeys.has(`${row.namespace}/${row.name}`),
         );
       }
     },

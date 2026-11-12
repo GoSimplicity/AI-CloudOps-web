@@ -479,18 +479,20 @@ function applySessionHistory(info) {
   ]);
   initChatMessages();
   for (const turn of history) {
-    chatMessages.push({
-      content: turn.q,
-      time: formatTime(new Date()),
-      type: 'user',
-    });
-    chatMessages.push({
-      content: turn.a,
-      followUpQuestions: [],
-      sources: [],
-      time: formatTime(new Date()),
-      type: 'ai',
-    });
+    chatMessages.push(
+      {
+        content: turn.q,
+        time: formatTime(new Date()),
+        type: 'user',
+      },
+      {
+        content: turn.a,
+        followUpQuestions: [],
+        sources: [],
+        time: formatTime(new Date()),
+        type: 'ai',
+      },
+    );
   }
   currentMode.value = info.mode;
   isConnected.value = true;
@@ -1196,25 +1198,41 @@ const highlightCode = (code, lang) => {
   );
 
   // 高亮注释
-  if (lang === 'javascript' || lang === 'java' || lang === 'cpp') {
-    highlightedCode = highlightedCode.replaceAll(
-      /(\/\/.*$)/gm,
-      '<span class="code-comment">$1</span>',
-    );
-    highlightedCode = highlightedCode.replaceAll(
-      /(\/\*[\s\S]*?\*\/)/g,
-      '<span class="code-comment">$1</span>',
-    );
-  } else if (lang === 'python' || lang === 'bash') {
-    highlightedCode = highlightedCode.replaceAll(
-      /(#.*$)/gm,
-      '<span class="code-comment">$1</span>',
-    );
-  } else if (lang === 'sql') {
-    highlightedCode = highlightedCode.replaceAll(
-      /(--.*$)/gm,
-      '<span class="code-comment">$1</span>',
-    );
+  switch (lang) {
+    case 'bash': {
+      highlightedCode = highlightedCode.replaceAll(
+        /(#.*$)/gm,
+        '<span class="code-comment">$1</span>',
+      );
+      break;
+    }
+    case 'cpp':
+    case 'java':
+    case 'javascript': {
+      highlightedCode = highlightedCode.replaceAll(
+        /(\/\/.*$)/gm,
+        '<span class="code-comment">$1</span>',
+      );
+      highlightedCode = highlightedCode.replaceAll(
+        /(\/\*[\s\S]*?\*\/)/g,
+        '<span class="code-comment">$1</span>',
+      );
+      break;
+    }
+    case 'python': {
+      highlightedCode = highlightedCode.replaceAll(
+        /(#.*$)/gm,
+        '<span class="code-comment">$1</span>',
+      );
+      break;
+    }
+    case 'sql': {
+      highlightedCode = highlightedCode.replaceAll(
+        /(--.*$)/gm,
+        '<span class="code-comment">$1</span>',
+      );
+      break;
+    }
   }
 
   return highlightedCode;
@@ -1408,7 +1426,7 @@ watch([isMinimized, isExpanded, currentMode, showAdvancedOptions], () => {
 // 全局复制代码函数
 window.copyCode = function (button) {
   const pre = button.closest('pre');
-  const code = pre.getAttribute('data-code');
+  const code = pre.dataset.code;
   if (code) {
     navigator.clipboard
       .writeText(code)

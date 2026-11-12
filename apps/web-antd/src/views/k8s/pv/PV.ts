@@ -508,17 +508,12 @@ export function usePVPage() {
       submitLoading.value = true;
 
       // 过滤掉空值字段
-      const filteredVolumeSource = Object.entries(
+      const filteredVolumeSource: Record<string, any> = {};
+      for (const [key, value] of Object.entries(
         createFormModel.value.volume_source,
-      )
-        .filter(([_, value]) => value && value.trim() !== '')
-        .reduce(
-          (acc, [key, value]) => {
-            acc[key] = value;
-            return acc;
-          },
-          {} as Record<string, any>,
-        );
+      ).filter(([, fieldValue]) => fieldValue && fieldValue.trim() !== '')) {
+        filteredVolumeSource[key] = value;
+      }
 
       // 根据卷类型构造正确的 volume_source 结构
       const volumeSource: Record<string, any> = {
@@ -778,7 +773,7 @@ export function usePVPage() {
         try {
           const promises = selectedRows.value.map(async (record) => {
             const clusterId = validateClusterId(record);
-            if (!clusterId) return Promise.resolve();
+            if (!clusterId) return;
 
             const params: DeletePVReq = {
               cluster_id: clusterId,

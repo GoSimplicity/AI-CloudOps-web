@@ -2958,12 +2958,7 @@ onMounted(() => {
       @cancel="closeInstanceForm"
       @ok="saveInstance"
     >
-      <a-form
-        ref="formRef"
-        :model="instanceDialog.form"
-        :rules="formRules"
-        layout="vertical"
-      >
+      <a-form :model="instanceDialog.form" :rules="formRules" layout="vertical">
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item label="工单标题" name="title">

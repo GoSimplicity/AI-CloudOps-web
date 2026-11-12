@@ -66,6 +66,7 @@
     "xterm-addon-web-links": "^0.9.0"
   },
   "devDependencies": {
-    "@types/xterm": "^3.0.0"
+    "@types/xterm": "^3.0.0",
+    "typescript": "^5.5.4"
   }
 }

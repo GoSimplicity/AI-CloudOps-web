@@ -890,12 +890,7 @@ onMounted(async () => {
         type="info"
       />
 
-      <a-form
-        ref="executeFormRef"
-        :model="executeFormModel"
-        class="k8s-form"
-        layout="vertical"
-      >
+      <a-form :model="executeFormModel" class="k8s-form" layout="vertical">
         <a-form-item label="执行选项">
           <a-checkbox v-model:checked="executeFormModel.dry_run">
             预检查模式 (Dry Run)

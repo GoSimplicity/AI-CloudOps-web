@@ -95,25 +95,32 @@ const adapter: AxiosAdapter = async (config) => {
     error?: { message: string };
     message: string;
   } = { code: 1, data: null, message: 'Secret 已存在（后端原文）' };
-  if (mode === 'server') {
-    status = 502;
-    data = { code: 502, data: null, message: 'upstream 原文' };
-  } else if (mode === 'badRequest') {
-    status = 400;
-    data = {
-      code: 400,
-      data: null,
-      error: { message: RAW_ECHO },
-      message: RAW_ECHO,
-    };
-  } else if (mode === 'unprocessable') {
-    status = 422;
-    data = {
-      code: 422,
-      data: null,
-      error: { message: RAW_ECHO },
-      message: RAW_ECHO,
-    };
+  switch (mode) {
+    case 'badRequest': {
+      status = 400;
+      data = {
+        code: 400,
+        data: null,
+        error: { message: RAW_ECHO },
+        message: RAW_ECHO,
+      };
+      break;
+    }
+    case 'server': {
+      status = 502;
+      data = { code: 502, data: null, message: 'upstream 原文' };
+      break;
+    }
+    case 'unprocessable': {
+      status = 422;
+      data = {
+        code: 422,
+        data: null,
+        error: { message: RAW_ECHO },
+        message: RAW_ECHO,
+      };
+      break;
+    }
   }
   const response = {
     config,

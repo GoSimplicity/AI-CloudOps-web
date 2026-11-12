@@ -17,13 +17,16 @@ const result = ref<null | PredictionBacktestResult>(null);
 const error = ref('');
 const loading = ref(false);
 const scope = useAiRequestScope(() => {
+  resetBacktestForOwner();
+});
+const lane = scope.createLane();
+function resetBacktestForOwner() {
   lane.invalidate();
   input.value = '';
   result.value = null;
   error.value = '';
   loading.value = false;
-});
-const lane = scope.createLane();
+}
 watch(
   input,
   () => {

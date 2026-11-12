@@ -1389,7 +1389,7 @@ export function usePodPage() {
 
     // 验证URL格式
     try {
-      new URL(url, window.location.origin);
+      void new URL(url, window.location.origin).href;
     } catch {
       onError?.(new Event('error'));
       return {
@@ -2498,14 +2498,22 @@ export function usePodPage() {
       // 更详细的错误处理
       let errorMessage = '文件下载失败';
       if (error?.response?.status) {
-        if (error.response.status === 404) {
-          errorMessage = '文件不存在或路径错误';
-        } else if (error.response.status === 403) {
-          errorMessage = '权限不足，无法访问该文件';
-        } else if (error.response.status === 500) {
-          errorMessage = '服务器内部错误';
-        } else {
-          errorMessage = `下载失败 (${error.response.status}): ${error.response.statusText || error.message}`;
+        switch (error.response.status) {
+          case 403: {
+            errorMessage = '权限不足，无法访问该文件';
+            break;
+          }
+          case 404: {
+            errorMessage = '文件不存在或路径错误';
+            break;
+          }
+          case 500: {
+            errorMessage = '服务器内部错误';
+            break;
+          }
+          default: {
+            errorMessage = `下载失败 (${error.response.status}): ${error.response.statusText || error.message}`;
+          }
         }
       } else if (error?.response?.data?.message) {
         errorMessage = `下载失败: ${error.response.data.message}`;

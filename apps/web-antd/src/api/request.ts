@@ -57,7 +57,7 @@ function readBadRequestDetail(data: any): string {
   let raw = '';
   if (typeof data?.message === 'string') raw = data.message;
   else if (typeof data?.error?.message === 'string') raw = data.error.message;
-  const text = raw.replaceAll(/\s*[\n\r]+\s*/g, ' ').trim();
+  const text = raw.replaceAll(/\s*[\n\r]\s*/g, ' ').trim();
   return [...text].slice(0, HTTP_BAD_REQUEST_DETAIL_MAX_LENGTH).join('');
 }
 

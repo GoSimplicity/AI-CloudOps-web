@@ -613,13 +613,23 @@ export function useAutoFixWorkflow() {
       resultOwner.value = ticket.owner;
       resultSource = 'workflow';
       now.value = Date.now();
-      if (response.status === 'needs_human_confirmation')
-        message.warning('工作流已生成原计划，待执行动作需要明确审批');
-      else if (response.status === 'completed')
-        message.success('工作流执行完成');
-      else if (response.status === 'planned')
-        message.info('已生成计划，尚未执行修复动作');
-      else workflowError.value = '工作流未确认执行成功，请核对目标实际状态';
+      switch (response.status) {
+        case 'completed': {
+          message.success('工作流执行完成');
+          break;
+        }
+        case 'needs_human_confirmation': {
+          message.warning('工作流已生成原计划，待执行动作需要明确审批');
+          break;
+        }
+        case 'planned': {
+          message.info('已生成计划，尚未执行修复动作');
+          break;
+        }
+        default: {
+          workflowError.value = '工作流未确认执行成功，请核对目标实际状态';
+        }
+      }
     } catch (error) {
       if (!workflowLane.current(ticket)) return;
       clearResult();

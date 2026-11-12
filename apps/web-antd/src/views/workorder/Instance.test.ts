@@ -348,12 +348,12 @@ describe('工单实例真实控件', () => {
       });
       await flushPromises();
       expect(
-        client.get.mock.calls.filter(([url]) => url === endpoint).at(-1)?.[1]
-          .params.page,
+        client.get.mock.calls.findLast(([url]) => url === endpoint)?.[1].params
+          .page,
       ).toBe(2);
       if (endpoint === '/workorder/process/list')
         expect(
-          client.get.mock.calls.filter(([url]) => url === endpoint).at(-1)?.[1]
+          client.get.mock.calls.findLast(([url]) => url === endpoint)?.[1]
             .params.status,
         ).toBe(2);
     },

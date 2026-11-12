@@ -21,7 +21,9 @@ describe('kubernetes 表格资源身份', () => {
       { cluster_id: 1, name: 'web', namespace: 'beta' },
       { cluster_id: 2, name: 'web', namespace: 'alpha' },
     ];
-    expect(new Set(records.map(namespacedResourceKey)).size).toBe(3);
+    expect(
+      new Set(records.map((record) => namespacedResourceKey(record))).size,
+    ).toBe(3);
     expect(namespacedResourceKey({ ...required(records[0]) })).toBe(
       namespacedResourceKey(required(records[0])),
     );

@@ -77,12 +77,12 @@ interface CronJobPageState {
 }
 
 // 本地执行类任务：命令行(2)、脚本(4)，受后端 cron.allow_local_exec 开关控制
-const LOCAL_EXEC_JOB_TYPES: CronJobType[] = [
+const LOCAL_EXEC_JOB_TYPES = new Set<CronJobType>([
   CronJobType.COMMAND,
   CronJobType.SCRIPT,
-];
+]);
 export const isLocalExecJobType = (jobType?: CronJobType) =>
-  jobType !== undefined && LOCAL_EXEC_JOB_TYPES.includes(jobType);
+  jobType !== undefined && LOCAL_EXEC_JOB_TYPES.has(jobType);
 
 // 列表接口未返回 allow_local_exec（旧版后端没有该开关）时按允许处理：
 // 旧后端本来就能执行本地任务，前端不应凭空禁用；新后端在开关关闭时会显式返回 false，且写入/触发由后端兜底拒绝

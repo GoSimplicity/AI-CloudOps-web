@@ -206,7 +206,9 @@ export function useClusterPage() {
       };
       const res = await getClustersListApi(params);
       if (requestId !== listRequestId) return;
-      clusters.value = (res?.items || []).map(stripKubeConfig);
+      clusters.value = (res?.items || []).map((cluster: K8sCluster) =>
+        stripKubeConfig(cluster),
+      );
       total.value = res?.total || 0;
     } catch {
       if (requestId !== listRequestId) return;

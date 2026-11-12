@@ -140,7 +140,7 @@ export async function getCloudAccountDetailApi(id: number) {
 
 // 创建云账户
 export async function createCloudAccountApi(data: CreateCloudAccountReq) {
-  return requestClient.post<void>('/tree/cloud/account/create', data);
+  return requestClient.post<undefined>('/tree/cloud/account/create', data);
 }
 
 // 更新云账户

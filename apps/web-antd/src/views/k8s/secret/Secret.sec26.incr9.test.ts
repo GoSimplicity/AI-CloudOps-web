@@ -279,7 +279,7 @@ describe('incr9 P3-D：查看 YAML 丢弃迟到的响应；加载中禁用按钮
   });
 
   it('secret.vue：「查看 YAML」按钮绑定 :disabled="isYamlLoading"，且从 useSecretPage 取出 isYamlLoading', () => {
-    const button = /<a-button\b[^>]*title="查看 YAML"[^>]*>/.exec(
+    const button = /<a-button\b[^>]+title="查看 YAML"[^>]*>/.exec(
       secretVueSource,
     )?.[0];
     expect(button).toBeDefined();

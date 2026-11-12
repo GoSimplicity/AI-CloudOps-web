@@ -82,6 +82,10 @@ let refreshTimer: null | ReturnType<typeof setInterval> = null;
 const diagnosisError = ref('');
 const diagnosisContext = ref<{ hours: number; namespace: string } | null>(null);
 const scope = useAiRequestScope(() => {
+  resetDiagnosisForOwner();
+});
+const diagnosisLane = scope.createLane();
+function resetDiagnosisForOwner() {
   diagnosisLane.invalidate();
   stopAutoRefresh();
   autoRefresh.value = false;
@@ -99,8 +103,7 @@ const scope = useAiRequestScope(() => {
   errorTrendsChart = null;
   errorCategoriesChart?.dispose();
   errorCategoriesChart = null;
-});
-const diagnosisLane = scope.createLane();
+}
 useChartAppearance(() => {
   if (hasInitialData.value) initCharts();
 });
@@ -288,14 +291,14 @@ const initErrorCategoriesChart = () => {
 };
 
 // 初始化图表
-const initCharts = () => {
+function initCharts() {
   try {
     initErrorTrendsChart();
     initErrorCategoriesChart();
   } catch {
     message.warning('图表渲染失败，但不影响诊断结果');
   }
-};
+}
 
 // 获取当前诊断步骤
 const refreshAllDiagnosis = async () => {

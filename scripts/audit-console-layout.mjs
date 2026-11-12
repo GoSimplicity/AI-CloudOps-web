@@ -17,7 +17,9 @@ for (const name of fs.readdirSync(dir).filter((x) => x.endsWith('.ts'))) {
   );
   function visit(node) {
     if (ts.isObjectLiteralExpression(node)) {
-      const props = node.properties.filter(ts.isPropertyAssignment);
+      const props = node.properties.filter((node) =>
+        ts.isPropertyAssignment(node),
+      );
       const find = (n) => props.find((p) => p.name.getText(source) === n);
       const route = find('path');
       const component = find('component');

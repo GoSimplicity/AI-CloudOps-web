@@ -146,7 +146,10 @@ const sessionMetadata = (
 
 // 保存历史记录到本地存储
 const saveHistoryToStorage = () => {
-  accountScope.write('history', sessionHistory.value.map(sessionMetadata));
+  accountScope.write(
+    'history',
+    sessionHistory.value.map((session) => sessionMetadata(session)),
+  );
 };
 
 // 搜索会话
@@ -302,7 +305,7 @@ const loadHistoryFromStorage = () => {
   try {
     const stored = accountScope.read<SessionInfoResponse[]>('history');
     sessionHistory.value = Array.isArray(stored)
-      ? stored.map(sessionMetadata)
+      ? stored.map((session) => sessionMetadata(session))
       : [];
     if (Array.isArray(stored)) saveHistoryToStorage();
   } catch {}

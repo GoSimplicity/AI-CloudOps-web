@@ -28,52 +28,63 @@ export function buildNotificationSchedule(
 ): NotificationSchedulePayload {
   const trigger = form.triggerType as NotificationTriggerType;
   const payload: NotificationSchedulePayload = { trigger_type: trigger };
-  if (trigger === NotificationTrigger.DELAYED) {
-    const delayMinutes = form.delayMinutes;
-    if (
-      typeof delayMinutes !== 'number' ||
-      !Number.isInteger(delayMinutes) ||
-      delayMinutes < 1 ||
-      delayMinutes > 10_080
-    )
-      throw new Error('延迟分钟须为1至10080的整数');
-    payload.delay_minutes = delayMinutes;
-  } else if (trigger === NotificationTrigger.SCHEDULED) {
-    if (!form.scheduledTime?.isValid())
-      throw new Error('请选择有效的定时发送时间');
-    const scheduled = form.scheduledTime.toISOString();
-    const instant = Date.parse(scheduled);
-    if (instant <= now || instant > now + 366 * 24 * 60 * 60 * 1000)
-      throw new Error('定时发送时间须在未来366天内');
-    payload.scheduled_time = scheduled;
-  } else if (trigger === NotificationTrigger.CONDITIONAL) {
-    let value: unknown;
-    try {
-      value = JSON.parse(form.triggerCondition);
-    } catch {
-      throw new Error('条件必须是有效JSON对象');
-    }
-    if (!value || typeof value !== 'object' || Array.isArray(value))
-      throw new Error('条件必须是JSON对象');
-    const fields = Object.entries(value);
-    if (
-      fields.length === 0 ||
-      fields.some(
-        ([key, number]) =>
-          (key !== 'status' && key !== 'priority') ||
-          typeof number !== 'number' ||
-          !Number.isInteger(number) ||
-          number < 1 ||
-          number > (key === 'status' ? 6 : 3),
+  switch (trigger) {
+    case NotificationTrigger.CONDITIONAL: {
+      let value: unknown;
+      try {
+        value = JSON.parse(form.triggerCondition);
+      } catch {
+        throw new Error('条件必须是有效JSON对象');
+      }
+      if (!value || typeof value !== 'object' || Array.isArray(value))
+        throw new Error('条件必须是JSON对象');
+      const fields = Object.entries(value);
+      if (
+        fields.length === 0 ||
+        fields.some(
+          ([key, number]) =>
+            (key !== 'status' && key !== 'priority') ||
+            typeof number !== 'number' ||
+            !Number.isInteger(number) ||
+            number < 1 ||
+            number > (key === 'status' ? 6 : 3),
+        )
       )
-    )
-      throw new Error('条件仅支持 status（1至6）和 priority（1至3）的整数');
-    payload.trigger_condition = Object.fromEntries(fields) as Record<
-      string,
-      number
-    >;
-  } else if (trigger !== NotificationTrigger.IMMEDIATE) {
-    throw new Error('不支持的触发类型');
+        throw new Error('条件仅支持 status（1至6）和 priority（1至3）的整数');
+      payload.trigger_condition = Object.fromEntries(fields) as Record<
+        string,
+        number
+      >;
+      break;
+    }
+    case NotificationTrigger.DELAYED: {
+      const delayMinutes = form.delayMinutes;
+      if (
+        typeof delayMinutes !== 'number' ||
+        !Number.isInteger(delayMinutes) ||
+        delayMinutes < 1 ||
+        delayMinutes > 10_080
+      )
+        throw new Error('延迟分钟须为1至10080的整数');
+      payload.delay_minutes = delayMinutes;
+      break;
+    }
+    case NotificationTrigger.IMMEDIATE: {
+      break;
+    }
+    case NotificationTrigger.SCHEDULED: {
+      if (!form.scheduledTime?.isValid())
+        throw new Error('请选择有效的定时发送时间');
+      const scheduled = form.scheduledTime.toISOString();
+      const instant = Date.parse(scheduled);
+      if (instant <= now || instant > now + 366 * 24 * 60 * 60 * 1000)
+        throw new Error('定时发送时间须在未来366天内');
+      payload.scheduled_time = scheduled;
+      break;
+    }
+    default: {
+      throw new Error('不支持的触发类型');
+    }
   }
   if (
     (form.repeatInterval === null || form.repeatInterval === undefined) !==

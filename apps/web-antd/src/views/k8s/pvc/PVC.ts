@@ -895,7 +895,7 @@ export function usePVCPage() {
         try {
           const promises = selectedRows.value.map(async (record) => {
             const clusterId = validateClusterId(record);
-            if (!clusterId) return Promise.resolve();
+            if (!clusterId) return;
 
             const params: DeletePVCReq = {
               cluster_id: clusterId,

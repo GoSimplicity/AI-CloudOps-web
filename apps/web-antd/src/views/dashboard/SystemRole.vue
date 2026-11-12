@@ -158,8 +158,8 @@ const filteredRoles = computed(() => {
 const availableApis = computed(() => {
   if (!currentRole.value) return [];
 
-  const assignedIds = assignedApis.value.map((api) => api.id);
-  return apiList.value.filter((api) => !assignedIds.includes(api.id));
+  const assignedIds = new Set(assignedApis.value.map((api) => api.id));
+  return apiList.value.filter((api) => !assignedIds.has(api.id));
 });
 
 // API选择相关函数
