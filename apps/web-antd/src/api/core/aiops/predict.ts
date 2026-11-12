@@ -2,24 +2,24 @@ import { requestClientAIOps } from '#/api/request';
 
 // 预测类型枚举
 export enum PredictionType {
-  QPS = 'qps',
   CPU = 'cpu',
-  MEMORY = 'memory',
   DISK = 'disk',
+  MEMORY = 'memory',
+  QPS = 'qps',
 }
 
 // 预测时间粒度枚举
 export enum PredictionGranularity {
-  MINUTE = 'minute',
-  HOUR = 'hour',
   DAY = 'day',
+  HOUR = 'hour',
+  MINUTE = 'minute',
 }
 
 // 扩缩容建议动作枚举
 export enum ScalingAction {
-  SCALE_UP = 'scale_up',
-  SCALE_DOWN = 'scale_down',
   MAINTAIN = 'maintain',
+  SCALE_DOWN = 'scale_down',
+  SCALE_UP = 'scale_up',
 }
 
 // 资源约束配置接口

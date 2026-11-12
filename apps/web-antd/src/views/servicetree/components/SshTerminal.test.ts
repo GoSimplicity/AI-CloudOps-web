@@ -1,7 +1,6 @@
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
-
 import { reactive } from 'vue';
 
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import SshTerminal from './SshTerminal.vue';
@@ -24,17 +23,17 @@ vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('xterm', () => ({
   Terminal: class {
     cols = 96;
-    rows = 37;
-    input?: (data: string) => void;
-    resized?: () => void;
-    write = vi.fn();
-    reset = vi.fn();
-    open = vi.fn();
-    focus = vi.fn();
-    loadAddon = vi.fn();
     dispose = vi.fn();
+    focus = vi.fn();
+    input?: (data: string) => void;
     inputDisposed = vi.fn();
+    loadAddon = vi.fn();
+    open = vi.fn();
+    reset = vi.fn();
+    resized?: () => void;
+    rows = 37;
     sizeDisposed = vi.fn();
+    write = vi.fn();
     constructor() {
       transport.terminals.push(this);
     }
@@ -54,19 +53,19 @@ vi.mock('xterm-addon-fit', () => ({
   },
 }));
 class Socket {
-  static OPEN = 1;
-  static CONNECTING = 0;
   static CLOSED = 3;
-  readyState = 0;
+  static CONNECTING = 0;
+  static OPEN = 1;
   binaryType = '';
-  onopen: (() => void) | null = null;
-  onclose: (() => void) | null = null;
-  onerror: (() => void) | null = null;
-  onmessage: ((event: { data: unknown }) => void) | null = null;
-  send = vi.fn();
+  readyState = 0;
   close = vi.fn(() => {
     this.readyState = Socket.CLOSED;
   });
+  onclose: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  onmessage: ((event: { data: unknown }) => void) | null = null;
+  onopen: (() => void) | null = null;
+  send = vi.fn();
   constructor(url: string, protocols: string[]) {
     transport.connections(url, protocols, this);
   }
@@ -80,8 +79,8 @@ const latest = () =>
   required(transport.connections.mock.calls.at(-1))[2] as Socket;
 function render(resourceId = '42') {
   wrapper = mount(SshTerminal, {
-    props: { kind: 'local', resourceId },
     attachTo: document.body,
+    props: { kind: 'local', resourceId },
   });
   return wrapper;
 }
@@ -101,8 +100,8 @@ beforeEach(() => {
   vi.stubGlobal(
     'ResizeObserver',
     class {
-      observe() {}
       disconnect() {}
+      observe() {}
     },
   );
 });

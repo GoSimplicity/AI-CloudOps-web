@@ -17,11 +17,11 @@ function required<T>(value: null | T | undefined): T {
 }
 
 const api = vi.hoisted(() => ({
-  getAssistantInfo: vi.fn(),
+  addDocument: vi.fn(),
   getAssistantConfig: vi.fn(),
+  getAssistantInfo: vi.fn(),
   refreshKnowledgeBase: vi.fn(),
   uploadKnowledgeFile: vi.fn(),
-  addDocument: vi.fn(),
 }));
 vi.mock('#/api/core/aiops/assistant', () => api);
 let wrapper: undefined | VueWrapper;
@@ -31,8 +31,8 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -41,25 +41,25 @@ beforeEach(() => {
     style(element),
   );
   api.getAssistantInfo.mockResolvedValue({
-    service: 'assistant',
-    status: 'initialized',
     capabilities: [],
     endpoints: {},
+    service: 'assistant',
+    status: 'initialized',
   });
   api.getAssistantConfig.mockResolvedValue({ config: {} });
   api.refreshKnowledgeBase.mockResolvedValue({
-    refreshed: true,
     documents_count: 7,
-    vector_count: 14,
-    timestamp: '2026-10-23T12:00:00Z',
     message: '索引完成',
+    refreshed: true,
+    timestamp: '2026-10-23T12:00:00Z',
+    vector_count: 14,
   });
   api.uploadKnowledgeFile.mockResolvedValue({
-    uploaded: true,
-    filename: 'guide.md',
-    file_size: 4,
     document_id: 'document',
+    file_size: 4,
+    filename: 'guide.md',
     message: '已索引',
+    uploaded: true,
   });
   api.addDocument.mockResolvedValue({
     added: true,
@@ -116,17 +116,17 @@ describe('助手服务信息真实控件', () => {
   it('刷新失败清空旧资料并支持重试', async () => {
     api.getAssistantInfo
       .mockResolvedValueOnce({
-        service: '旧服务资料',
-        status: 'initialized',
         capabilities: [],
         endpoints: {},
+        service: '旧服务资料',
+        status: 'initialized',
       })
       .mockRejectedValueOnce(new Error('离线信息失败'))
       .mockResolvedValue({
-        service: '恢复服务',
-        status: 'not_initialized',
         capabilities: [],
         endpoints: {},
+        service: '恢复服务',
+        status: 'not_initialized',
       });
     await screen(AssistantInfo);
     await button('刷新信息').trigger('click');
@@ -143,14 +143,14 @@ describe('助手服务信息真实控件', () => {
   it('服务器新快照缺失字段不保留旧版本或约束', async () => {
     api.getAssistantInfo
       .mockResolvedValueOnce({
+        constraints: { legacy: '旧约束' },
         service: 'assistant',
         version: '旧版本快照',
-        constraints: { legacy: '旧约束' },
       })
       .mockResolvedValue({
-        service: 'assistant',
         capabilities: [],
         endpoints: {},
+        service: 'assistant',
       });
     await screen(AssistantInfo);
     await button('刷新信息').trigger('click');
@@ -171,7 +171,7 @@ describe('知识库上传与显式索引边界', () => {
     '实际选择的 %s 文件在网络前被拒绝',
     async (extension) => {
       await screen(AssistantKnowledge);
-      await upload(new File(['unsupported'], 'guide.' + extension));
+      await upload(new File(['unsupported'], `guide.${extension}`));
       expect(api.uploadKnowledgeFile).not.toHaveBeenCalled();
     },
   );
@@ -210,9 +210,9 @@ describe('知识库上传与显式索引边界', () => {
     await flushPromises();
     expect(api.addDocument).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: '测试文档',
-        file_name: 'guide.md',
         content: '仅当前文档索引',
+        file_name: 'guide.md',
+        title: '测试文档',
       }),
     );
     expect(api.refreshKnowledgeBase).not.toHaveBeenCalled();

@@ -1,15 +1,15 @@
+import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import process from 'node:process';
 
-import { withFixtureCleanup } from '../../internal/test-utils/fixture-cleanup';
 import { expect, test } from '@playwright/test';
-import { readFileSync } from 'node:fs';
-import { randomUUID } from 'node:crypto';
 
+import { withFixtureCleanup } from '../../internal/test-utils/fixture-cleanup';
 import { requireFixtureValue } from '../../internal/test-utils/required-fixture-value';
 
 test('local resource metadata preserves credentials and persists structured tags', async ({
-  page,
   baseURL,
+  page,
 }) => {
   test.setTimeout(90_000);
   page.setDefaultTimeout(15_000);
@@ -39,12 +39,12 @@ test('local resource metadata preserves credentials and persists structured tags
   });
   async function api(path: string, data?: unknown, method = 'GET') {
     const response = await fetch(`http://127.0.0.1:18080/api${path}`, {
-      method,
+      body: data === undefined ? undefined : JSON.stringify(data),
       headers: {
         Authorization: `Bearer ${token}`,
         ...(data === undefined ? {} : { 'Content-Type': 'application/json' }),
       },
-      body: data === undefined ? undefined : JSON.stringify(data),
+      method,
       signal: AbortSignal.timeout(15_000),
     });
     const result = await response.json();
@@ -54,7 +54,7 @@ test('local resource metadata preserves credentials and persists structured tags
   }
   await withFixtureCleanup(
     async () => {
-      await page.setViewportSize({ width: 1440, height: 1000 });
+      await page.setViewportSize({ height: 1000, width: 1440 });
       await page.goto(route('/auth/login'));
       await page.getByLabel('账号', { exact: true }).fill('admin');
       await page
@@ -73,15 +73,15 @@ test('local resource metadata preserves credentials and persists structured tags
       await api(
         '/tree/local/create',
         {
-          name: nonce,
-          ip_addr: `198.51.100.${1 + Math.floor(Math.random() * 254)}`,
-          port: 22,
-          username: 'root',
-          os_type: 'linux',
           auth_mode: 2,
-          key: `fake-private-key-${nonce}`,
-          tags: [{ key: 'owner', value: nonce }],
           description: nonce,
+          ip_addr: `198.51.100.${1 + Math.floor(Math.random() * 254)}`,
+          key: `fake-private-key-${nonce}`,
+          name: nonce,
+          os_type: 'linux',
+          port: 22,
+          tags: [{ key: 'owner', value: nonce }],
+          username: 'root',
         },
         'POST',
       );
@@ -147,16 +147,16 @@ test('local resource metadata preserves credentials and persists structured tags
       expect(cleared.tags).toEqual([]);
       await expect(dialog).not.toBeVisible();
       await page.getByLabel('深色', { exact: true }).click();
-      await page.setViewportSize({ width: 390, height: 844 });
+      await page.setViewportSize({ height: 844, width: 390 });
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth,
         ),
       ).toBe(true);
       await page.screenshot({
-        path: '.cache/ui-verification/local-contract-mobile-dark.png',
-        fullPage: true,
         animations: 'disabled',
+        fullPage: true,
+        path: '.cache/ui-verification/local-contract-mobile-dark.png',
       });
       expect(sshConnections).toEqual([]);
       expect(errors).toEqual([]);

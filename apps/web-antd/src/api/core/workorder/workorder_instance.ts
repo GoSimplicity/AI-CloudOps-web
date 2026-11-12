@@ -7,25 +7,25 @@ import { requestClient } from '#/api/request';
 
 // 工单状态常量
 export const InstanceStatus = {
+  Cancelled: 6, // 已取消
+  Completed: 4, // 已完成
   Draft: 1, // 草稿
   Pending: 2, // 待处理
   Processing: 3, // 处理中
-  Completed: 4, // 已完成
   Rejected: 5, // 已拒绝
-  Cancelled: 6, // 已取消
 } as const;
 
 // 工单优先级常量
 export const Priority = {
   High: 1, // 高
-  Normal: 2, // 普通
   Low: 3, // 低
+  Normal: 2, // 普通
 } as const;
 
 // 流转记录类型常量
 export const FlowRecordType = {
-  User: 1, // 用户操作
   System: 2, // 系统操作
+  User: 1, // 用户操作
 } as const;
 
 // 表单字段必填状态常量

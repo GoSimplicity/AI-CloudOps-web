@@ -7,9 +7,9 @@ const routes: RouteRecordRaw[] = [
   {
     component: BasicLayout,
     meta: {
+      icon: 'tabler:binary-tree-2',
       order: 1,
       title: $t('page.serviceTree.title'),
-      icon: 'tabler:binary-tree-2',
     },
     name: 'ServiceTree',
     path: '/tree',
@@ -19,8 +19,8 @@ const routes: RouteRecordRaw[] = [
         path: '/tree_node_manager',
         component: () => import('#/views/servicetree/TreeNodeManager.vue'),
         meta: {
-          title: '服务树节点管理',
           icon: 'fluent-mdl2:task-manager',
+          title: '服务树节点管理',
         },
       },
       {
@@ -29,8 +29,8 @@ const routes: RouteRecordRaw[] = [
         component: () =>
           import('#/views/servicetree/LocalResourceManagement.vue'),
         meta: {
-          title: '本地资源管理',
           icon: 'mdi:server-network',
+          title: '本地资源管理',
         },
       },
       {
@@ -39,8 +39,8 @@ const routes: RouteRecordRaw[] = [
         component: () =>
           import('#/views/servicetree/CloudAccountManagement.vue'),
         meta: {
-          title: '云账户管理',
           icon: 'mdi:cloud-outline',
+          title: '云账户管理',
         },
       },
       {
@@ -48,8 +48,8 @@ const routes: RouteRecordRaw[] = [
         path: '/cloud_resource_management',
         component: () => import('#/views/servicetree/CloudResourceManager.vue'),
         meta: {
-          title: '云资源管理',
           icon: 'mdi:cloud',
+          title: '云资源管理',
         },
       },
       {

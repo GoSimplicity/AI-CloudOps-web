@@ -231,7 +231,7 @@ watch(
         if (ok && current(epoch)) void refreshCount();
       });
   },
-  { immediate: true, flush: 'sync' },
+  { flush: 'sync', immediate: true },
 );
 const timer = setInterval(() => {
   if (authenticated() && allow(codes.unread)) void refreshCount();
@@ -269,9 +269,9 @@ onBeforeUnmount(() => {
               刷新 </a-button
             ><a-button
               v-if="allow(codes.readAll)"
-              size="small"
-              :loading="busy"
               :disabled="unreadCount === 0"
+              :loading="busy"
+              size="small"
               @click="perform('readAll')"
             >
               全部已读
@@ -286,9 +286,9 @@ onBeforeUnmount(() => {
         />
         <a-alert
           v-else-if="!allow(codes.list)"
-          type="info"
           message="当前用户无站内消息列表权限"
           show-icon
+          type="info"
         />
         <template v-else>
           <a-alert
@@ -331,26 +331,26 @@ onBeforeUnmount(() => {
                   ><a-space>
                     <a-button
                       v-if="!item.read_at && allow(codes.read)"
-                      type="link"
-                      size="small"
                       :disabled="busy || !safeId(item.id)"
+                      size="small"
+                      type="link"
                       @click="perform('read', item.id)"
                     >
                       标记已读
                     </a-button>
                     <a-popconfirm
                       v-if="allow(codes.delete)"
-                      title="删除这条消息？"
-                      ok-text="删除"
-                      cancel-text="取消"
                       :disabled="busy || !safeId(item.id)"
+                      cancel-text="取消"
+                      ok-text="删除"
+                      title="删除这条消息？"
                       @confirm="perform('delete', item.id)"
                     >
                       <a-button
-                        type="link"
-                        size="small"
-                        danger
                         :disabled="busy || !safeId(item.id)"
+                        danger
+                        size="small"
+                        type="link"
                       >
                         删除
                       </a-button>

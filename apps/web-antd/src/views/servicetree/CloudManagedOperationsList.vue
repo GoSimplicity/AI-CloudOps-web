@@ -8,26 +8,26 @@ import {
 } from '#/api/core/tree/tree_cloud';
 
 import CloudManagedOperationRecovery from './CloudManagedOperationRecovery.vue';
+import { validManagedOperation } from './managed-operation-contract';
 import {
   type ManagedOperationMarker,
   parseManagedMarker,
 } from './managed-operation-marker';
-import { validManagedOperation } from './managed-operation-contract';
 
 const props = defineProps<{
-  scope: ManagedCloudScope;
-  viewer: string;
-  superAdmin: boolean;
+  authorize: () => Promise<boolean>;
   canList: boolean;
   canRead: boolean;
   canReview: boolean;
   refreshToken: number;
-  authorize: () => Promise<boolean>;
+  scope: ManagedCloudScope;
+  superAdmin: boolean;
+  viewer: string;
 }>();
 const emit = defineEmits<{
+  acknowledged: [string, number];
   blocked: [boolean];
   busy: [boolean];
-  acknowledged: [string, number];
 }>();
 const records = ref<ManagedCloudOperation[]>([]);
 const total = ref(0);
@@ -52,10 +52,10 @@ const scopeKey = computed(
 const rowKey = (row: ManagedCloudOperation) =>
   `${row.owner_id}:${row.operation_id}`;
 const labels: Record<string, string> = {
-  running: '处理中',
-  unknown: '结果未知',
   completed: '已保存结果',
   reviewed: '已核对',
+  running: '处理中',
+  unknown: '结果未知',
 };
 function clearSelection() {
   selected.value = null;
@@ -140,9 +140,9 @@ function choose(row: ManagedCloudOperation) {
   selected.value = row;
   selectedMarker.value = parseManagedMarker(
     JSON.stringify({
-      version: 2,
       operation_id: row.operation_id,
       resource_ids: row.resource_ids,
+      version: 2,
     }),
   );
 }
@@ -156,9 +156,9 @@ function useResourceIDs() {
   const ids = resourceInput.value.split(/[\s,，]+/).filter(Boolean);
   const marker = parseManagedMarker(
     JSON.stringify({
-      version: 2,
       operation_id: selected.value.operation_id,
       resource_ids: ids,
+      version: 2,
     }),
   );
   if (!marker) {
@@ -209,7 +209,7 @@ watch(
     }
     void load(true);
   },
-  { immediate: true, flush: 'sync' },
+  { flush: 'sync', immediate: true },
 );
 watch(
   [() => props.canRead, () => props.canReview],

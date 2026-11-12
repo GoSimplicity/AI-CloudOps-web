@@ -2,9 +2,9 @@ import { requestClient } from '#/api/request';
 
 // 告警级别枚举
 export enum AlertRuleSeverity {
+  Critical = 3,
   Info = 1,
   Warning = 2,
-  Critical = 3,
 }
 
 // 监控告警规则配置

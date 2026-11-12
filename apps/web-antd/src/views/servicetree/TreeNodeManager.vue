@@ -1,8 +1,4 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-
-import { filterNodeTree, flattenNodeTree } from './shared/node-tree';
-
 import {
   computed,
   onBeforeUnmount,
@@ -12,10 +8,17 @@ import {
   watch,
 } from 'vue';
 
-import { message, Modal } from 'ant-design-vue';
 import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
+import { message, Modal } from 'ant-design-vue';
 
+import { getUserList, type GetUserListReq } from '#/api/core/system/user';
+import {
+  getTreeLocalList,
+  type GetTreeLocalResourceListReq,
+  ResourceStatus,
+  type TreeLocalResource,
+} from '#/api/core/tree/tree_local';
 import {
   addNodeMember,
   bindResource,
@@ -34,19 +37,15 @@ import {
   updateNode,
   type UpdateTreeNodeReq,
 } from '#/api/core/tree/tree_node';
-import { getUserList, type GetUserListReq } from '#/api/core/system/user';
-import {
-  getTreeLocalList,
-  type GetTreeLocalResourceListReq,
-  ResourceStatus,
-  type TreeLocalResource,
-} from '#/api/core/tree/tree_local';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
 import {
   shouldNotifyPageError,
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
+
+import { filterNodeTree, flattenNodeTree } from './shared/node-tree';
 
 const { can } = usePermission();
 
@@ -56,11 +55,11 @@ let detailRequest = 0;
 
 // 为了兼容后端返回的节点详情结构，定义本地扩展类型
 type NodeUser = { email?: string; id: number; real_name: string };
-type TreeNodeWithRelations = TreeNode & {
+type TreeNodeWithRelations = {
   admins?: NodeUser[];
   members?: NodeUser[];
   tree_local_resources?: TreeLocalResource[];
-};
+} & TreeNode;
 
 // 表单引用
 const formRef = ref();
@@ -94,12 +93,12 @@ let searchTimeout: any = null;
 
 // 统计数据
 const stats = reactive({
-  total_nodes: 0,
-  total_resources: 0,
-  total_admins: 0,
-  total_members: 0,
   active_nodes: 0,
   inactive_nodes: 0,
+  total_admins: 0,
+  total_members: 0,
+  total_nodes: 0,
+  total_resources: 0,
 });
 
 // 对话框状态
@@ -110,27 +109,27 @@ const bindResourceDialogVisible = ref(false);
 
 // 表单对话框数据
 const formDialog = reactive({
-  isEdit: false,
   form: {
+    description: '',
     id: undefined as number | undefined,
+    is_leaf: 1 | 2,
     name: '',
     parent_id: undefined as number | undefined,
-    description: '',
     status: TreeNodeStatus.ACTIVE,
-    is_leaf: 1 | 2,
   },
+  isEdit: false,
 });
 
 // 移动节点对话框数据
 const moveDialog = reactive({
-  nodeId: undefined as number | undefined,
   newParentId: undefined as number | undefined,
+  nodeId: undefined as number | undefined,
 });
 
 // 添加成员对话框数据
 const addMemberDialog = reactive({
-  nodeId: undefined as number | undefined,
   memberType: TreeNodeMemberType.AdminRole,
+  nodeId: undefined as number | undefined,
   selectedUsers: [] as number[],
 });
 
@@ -143,9 +142,9 @@ const selectedResourceIds = ref<number[]>([]);
 const userPagination = reactive({
   current: 1,
   pageSize: 10,
-  total: 0,
   showSizeChanger: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
+  total: 0,
 });
 
 // 用户搜索
@@ -161,18 +160,18 @@ const resourceColumns = [
 ];
 
 const resourceRowSelection = {
-  selectedRowKeys: selectedResourceIds,
   onChange: (selectedRowKeys: number[]) => {
     selectedResourceIds.value = selectedRowKeys;
   },
+  selectedRowKeys: selectedResourceIds,
 };
 
 const resourcePagination = reactive({
   current: 1,
   pageSize: 10,
-  total: 0,
   showSizeChanger: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
+  total: 0,
 });
 
 // 表单验证规则
@@ -201,26 +200,26 @@ const formatFullDateTime = (dateString?: string): string => {
 
 const getResourceStatusColor = (status: ResourceStatus): string => {
   const statusColorMap = {
-    [ResourceStatus.RUNNING]: 'success',
-    [ResourceStatus.STOPPED]: 'default',
-    [ResourceStatus.STARTING]: 'processing',
-    [ResourceStatus.STOPPING]: 'warning',
-    [ResourceStatus.RESTARTING]: 'processing',
     [ResourceStatus.DELETING]: 'error',
     [ResourceStatus.ERROR]: 'error',
+    [ResourceStatus.RESTARTING]: 'processing',
+    [ResourceStatus.RUNNING]: 'success',
+    [ResourceStatus.STARTING]: 'processing',
+    [ResourceStatus.STOPPED]: 'default',
+    [ResourceStatus.STOPPING]: 'warning',
   };
   return statusColorMap[status] || 'default';
 };
 
 const getResourceStatusText = (status: ResourceStatus): string => {
   const statusTextMap = {
-    [ResourceStatus.RUNNING]: '运行中',
-    [ResourceStatus.STOPPED]: '已停止',
-    [ResourceStatus.STARTING]: '启动中',
-    [ResourceStatus.STOPPING]: '停止中',
-    [ResourceStatus.RESTARTING]: '重启中',
     [ResourceStatus.DELETING]: '删除中',
     [ResourceStatus.ERROR]: '错误',
+    [ResourceStatus.RESTARTING]: '重启中',
+    [ResourceStatus.RUNNING]: '运行中',
+    [ResourceStatus.STARTING]: '启动中',
+    [ResourceStatus.STOPPED]: '已停止',
+    [ResourceStatus.STOPPING]: '停止中',
   };
   return statusTextMap[status] || '未知';
 };
@@ -302,8 +301,8 @@ const loadUserList = async (): Promise<void> => {
   try {
     const params: GetUserListReq = {
       page: userPagination.current,
-      size: userPagination.pageSize,
       search: userSearchQuery.value,
+      size: userPagination.pageSize,
     };
     const response = await getUserList(params);
     if (response && response.items) {
@@ -423,12 +422,12 @@ const handleResetFilters = (): void => {
 // 重置表单对话框
 const resetFormDialog = (): void => {
   formDialog.form = {
+    description: '',
     id: undefined,
+    is_leaf: 1,
     name: '',
     parent_id: undefined,
-    description: '',
     status: TreeNodeStatus.ACTIVE,
-    is_leaf: 1,
   };
 };
 
@@ -442,12 +441,12 @@ const handleCreateNode = (): void => {
 const handleEditNode = (record: TreeNodeWithRelations): void => {
   formDialog.isEdit = true;
   formDialog.form = {
+    description: record.description,
     id: record.id,
+    is_leaf: record.is_leaf,
     name: record.name,
     parent_id: record.parent_id || undefined,
-    description: record.description,
     status: record.status,
-    is_leaf: record.is_leaf,
   };
   formDialogVisible.value = true;
 };
@@ -474,11 +473,10 @@ const handleBindResource = (): void => {
 
 const confirmDelete = (record: TreeNode): void => {
   Modal.confirm({
-    title: '警告',
-    content: `确定要删除节点 "${record.name}" 吗？删除后将无法恢复！`,
-    okText: '删除',
-    okButtonProps: { danger: true },
     cancelText: '取消',
+    content: `确定要删除节点 "${record.name}" 吗？删除后将无法恢复！`,
+    okButtonProps: { danger: true },
+    okText: '删除',
     async onOk() {
       try {
         await deleteNode(record.id);
@@ -491,6 +489,7 @@ const confirmDelete = (record: TreeNode): void => {
           message.error(error.message || '删除节点失败');
       }
     },
+    title: '警告',
   });
 };
 
@@ -562,9 +561,9 @@ const removeMember = async (
 
   try {
     await removeNodeMember(selectedNode.value.id, {
+      member_type: memberType,
       node_id: selectedNode.value.id,
       user_id: userId,
-      member_type: memberType,
     });
 
     message.success('成员已移除');
@@ -586,11 +585,11 @@ const saveNode = async (): Promise<void> => {
 
   try {
     const formData = {
+      description: formDialog.form.description,
+      is_leaf: formDialog.form.is_leaf,
       name: formDialog.form.name,
       parent_id: formDialog.form.parent_id,
-      description: formDialog.form.description,
       status: formDialog.form.status,
-      is_leaf: formDialog.form.is_leaf,
     };
 
     if (formDialog.isEdit && formDialog.form.id) {
@@ -653,9 +652,9 @@ const handleAddMemberConfirm = async (): Promise<void> => {
   try {
     for (const userId of addMemberDialog.selectedUsers) {
       await addNodeMember({
+        member_type: addMemberDialog.memberType,
         node_id: addMemberDialog.nodeId,
         user_id: userId,
-        member_type: addMemberDialog.memberType,
       });
     }
 
@@ -862,21 +861,21 @@ onBeforeUnmount(() => {
               </div>
             </template>
             <a-tree
-              v-model:selectedKeys="selectedKeys"
-              v-model:expandedKeys="expandedKeys"
-              :tree-data="treeData"
+              v-model:expanded-keys="expandedKeys"
+              v-model:selected-keys="selectedKeys"
               :field-names="{ children: 'children', title: 'name', key: 'id' }"
-              show-icon
-              @select="handleTreeSelect"
-              @expand="handleTreeExpand"
+              :tree-data="treeData"
               class="node-tree"
+              show-icon
+              @expand="handleTreeExpand"
+              @select="handleTreeSelect"
             >
               <template #icon="{ dataRef }">
                 <Icon
+                  :class="getNodeIconClass(dataRef)"
                   :icon="
                     dataRef.is_leaf === 1 ? 'carbon:document' : 'carbon:folder'
                   "
-                  :class="getNodeIconClass(dataRef)"
                 />
               </template>
               <template #title="{ dataRef }">
@@ -1029,9 +1028,9 @@ onBeforeUnmount(() => {
                       </div>
                       <a-button
                         v-if="can('tree.node.removeMember')"
-                        type="text"
                         danger
                         size="small"
+                        type="text"
                         @click="removeMember(admin.id, 1)"
                       >
                         移除
@@ -1068,9 +1067,9 @@ onBeforeUnmount(() => {
                       </div>
                       <a-button
                         v-if="can('tree.node.removeMember')"
-                        type="text"
                         danger
                         size="small"
+                        type="text"
                         @click="removeMember(member.id, 2)"
                       >
                         移除
@@ -1292,12 +1291,12 @@ onBeforeUnmount(() => {
             </div>
             <a-pagination
               v-model:current="userPagination.current"
-              v-model:pageSize="userPagination.pageSize"
-              :total="userPagination.total"
-              @change="handleUserPaginationChange"
-              size="small"
+              v-model:page-size="userPagination.pageSize"
               :show-size-changer="true"
               :show-total="userPagination.showTotal"
+              :total="userPagination.total"
+              size="small"
+              @change="handleUserPaginationChange"
             />
           </div>
           <a-empty v-else description="没有找到用户" />
@@ -1717,10 +1716,6 @@ onBeforeUnmount(() => {
   .search-input :deep(.ant-input),
   .filter-select :deep(.ant-select-selector) {
     min-height: 44px;
-  }
-
-  .search-input :deep(.ant-input),
-  .filter-select :deep(.ant-select-selector) {
     padding: 8px 12px;
     font-size: 16px;
   }
@@ -1941,12 +1936,6 @@ onBeforeUnmount(() => {
   margin-bottom: 16px;
   padding-left: 12px;
   border-left: 1px solid var(--ops-border);
-}
-
-.tech-switch {
-}
-
-.tech-switch.ant-switch-checked {
 }
 
 .bind-resource-content {

@@ -1,9 +1,8 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import process from 'node:process';
 
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { readdirSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-
 import ts from 'typescript';
 
 import { requireFixtureValue } from '../../internal/test-utils/required-fixture-value';
@@ -74,7 +73,7 @@ async function selectAcceptanceNamespace(page: Page, namespace: string) {
 test('login is usable on mobile and supports both themes', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ height: 844, width: 390 });
   await page.goto(routePath('/auth/login'));
   await expect(
     page.getByRole('heading', { name: '登录运维工作台' }),
@@ -217,8 +216,8 @@ test('authenticated navigation renders every standalone business route', async (
       expectedUnavailable.has(requireFixtureValue(path))
     ) {
       test.info().annotations.push({
-        type: 'expected-unavailable',
         description: requireFixtureValue(path),
+        type: 'expected-unavailable',
       });
       return false;
     }
@@ -274,7 +273,7 @@ test('system list layouts preserve responsive filters and role creation controls
     ['/system_audit', '审计日志'],
   ];
   for (const [route, title] of routes) {
-    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.setViewportSize({ height: 1000, width: 1440 });
     await page.goto(routePath(requireFixtureValue(route)));
     await expect(page.locator('.ops-page h1')).toHaveText(
       requireFixtureValue(title),
@@ -297,9 +296,9 @@ test('system list layouts preserve responsive filters and role creation controls
     await expect(page.locator('html')).not.toHaveClass(/dark/);
     if (route === '/system_role') {
       await page.screenshot({
-        path: '.cache/ui-verification/system-role-desktop-light.png',
-        fullPage: true,
         animations: 'disabled',
+        fullPage: true,
+        path: '.cache/ui-verification/system-role-desktop-light.png',
       });
       await page.getByRole('button', { name: '新建角色' }).click();
       await expect(page.getByRole('dialog')).toBeVisible();
@@ -309,7 +308,7 @@ test('system list layouts preserve responsive filters and role creation controls
     }
     await toggle.click();
     await expect(page.locator('html')).toHaveClass(/dark/);
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ height: 844, width: 390 });
     await expect
       .poll(() =>
         page
@@ -332,8 +331,8 @@ test('system list layouts preserve responsive filters and role creation controls
     const cards = page.locator('.ops-page__summary .stat-card');
     const cardRects = await cards.evaluateAll((elements) =>
       elements.map((element) => ({
-        top: element.getBoundingClientRect().top,
         height: element.getBoundingClientRect().height,
+        top: element.getBoundingClientRect().top,
       })),
     );
     expect(requireFixtureValue(cardRects[0]).top).toBe(
@@ -352,9 +351,9 @@ test('system list layouts preserve responsive filters and role creation controls
     );
     if (route === '/system_user')
       await page.screenshot({
-        path: '.cache/ui-verification/system-user-mobile-dark.png',
-        fullPage: true,
         animations: 'disabled',
+        fullPage: true,
+        path: '.cache/ui-verification/system-user-mobile-dark.png',
       });
   }
   expect(errors, 'system list browser runtime errors').toEqual([]);
@@ -401,7 +400,7 @@ test('workorder list layouts preserve mobile actions and cancellation', async ({
     ['/template', '模板管理'],
     ['/form_management', '表单管理'],
   ]) {
-    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.setViewportSize({ height: 1000, width: 1440 });
     await page.goto(routePath(requireFixtureValue(route)));
     await expect(page.locator('.ops-page h1')).toHaveText(
       requireFixtureValue(title),
@@ -415,7 +414,7 @@ test('workorder list layouts preserve mobile actions and cancellation', async ({
       .getByRole('button', { name: /^取\s*消$/ })
       .click();
     await expect(page.getByRole('dialog')).not.toBeVisible();
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ height: 844, width: 390 });
     await expect
       .poll(() =>
         page
@@ -439,9 +438,9 @@ test('workorder list layouts preserve mobile actions and cancellation', async ({
     await expect(page.locator('.assistant-float-button')).not.toBeVisible();
     if (route === '/process')
       await page.screenshot({
-        path: '.cache/ui-verification/workorder-process-mobile.png',
-        fullPage: true,
         animations: 'disabled',
+        fullPage: true,
+        path: '.cache/ui-verification/workorder-process-mobile.png',
       });
   }
   expect(errors).toEqual([]);
@@ -499,9 +498,9 @@ test('account menu reflects profile API and notifications have an honest empty s
     page.getByRole('button', { exact: true, name: '查看所有' }),
   ).toHaveCount(0);
   await page.screenshot({
-    path: '.cache/ui-verification/notification-empty.png',
-    fullPage: true,
     animations: 'disabled',
+    fullPage: true,
+    path: '.cache/ui-verification/notification-empty.png',
   });
 });
 
@@ -551,7 +550,7 @@ test('kubernetes cluster and namespace lists use real isolated resources', async
   ).toBeVisible();
   await page
     .locator('.ops-page__actions')
-    .getByRole('button', { name: '新建集群', exact: true })
+    .getByRole('button', { exact: true, name: '新建集群' })
     .click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page
@@ -560,9 +559,9 @@ test('kubernetes cluster and namespace lists use real isolated resources', async
     .click();
   await expect(page.getByRole('dialog')).not.toBeVisible();
   await page.screenshot({
-    path: '.cache/ui-verification/k8s-cluster-desktop.png',
-    fullPage: true,
     animations: 'disabled',
+    fullPage: true,
+    path: '.cache/ui-verification/k8s-cluster-desktop.png',
   });
   await page.goto(routePath('/k8s_namespace'));
   await expect(page.locator('.ops-page h1')).toHaveText('命名空间管理');
@@ -577,7 +576,7 @@ test('kubernetes cluster and namespace lists use real isolated resources', async
   await expect(
     page
       .locator('.ops-page__actions')
-      .getByRole('button', { name: '创建命名空间', exact: true }),
+      .getByRole('button', { exact: true, name: '创建命名空间' }),
   ).toBeDisabled();
   await expect(page.getByText('请先选择集群', { exact: true })).toBeVisible();
   await selector.click();
@@ -592,7 +591,7 @@ test('kubernetes cluster and namespace lists use real isolated resources', async
   ).toBeVisible();
   await page.getByLabel('深色', { exact: true }).click();
   await expect(page.locator('html')).toHaveClass(/dark/);
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ height: 844, width: 390 });
   await expect
     .poll(() =>
       page
@@ -612,7 +611,7 @@ test('kubernetes cluster and namespace lists use real isolated resources', async
   await expectUncovered(
     page
       .locator('.ops-page__actions')
-      .getByRole('button', { name: '刷新数据', exact: true }),
+      .getByRole('button', { exact: true, name: '刷新数据' }),
   );
   await expectUncovered(page.locator('.k8s-search-input'));
   await expectUncovered(page.locator('.ant-table-thead th:visible').first());
@@ -622,9 +621,9 @@ test('kubernetes cluster and namespace lists use real isolated resources', async
     ),
   ).toBe(true);
   await page.screenshot({
-    path: '.cache/ui-verification/k8s-namespace-mobile.png',
-    fullPage: true,
     animations: 'disabled',
+    fullPage: true,
+    path: '.cache/ui-verification/k8s-namespace-mobile.png',
   });
   expect(errors).toEqual([]);
   expect(apiFailures).toEqual([]);
@@ -656,7 +655,7 @@ test('kubernetes workloads display real Deployment and Pod resources', async ({
     ['/k8s_deployment', 'Deployment 管理'],
     ['/k8s_pod', 'Pod 管理'],
   ]) {
-    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.setViewportSize({ height: 1000, width: 1440 });
     await page.goto(routePath(requireFixtureValue(route)));
     await expect(page.locator('.ops-page h1')).toHaveText(
       requireFixtureValue(title),
@@ -678,7 +677,7 @@ test('kubernetes workloads display real Deployment and Pod resources', async ({
       .click();
     await expect(page.getByRole('dialog')).not.toBeVisible();
     await page.getByLabel('深色', { exact: true }).click();
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ height: 844, width: 390 });
     await expect
       .poll(() =>
         page
@@ -690,7 +689,7 @@ test('kubernetes workloads display real Deployment and Pod resources', async ({
     await expectUncovered(
       page
         .locator('.ops-page__actions')
-        .getByRole('button', { name: '刷新数据', exact: true }),
+        .getByRole('button', { exact: true, name: '刷新数据' }),
     );
     await expectUncovered(page.locator('.k8s-search-input'));
     await expectUncovered(page.locator('.ant-table-thead th:visible').first());
@@ -701,9 +700,9 @@ test('kubernetes workloads display real Deployment and Pod resources', async ({
     ).toBe(true);
     if (route === '/k8s_pod')
       await page.screenshot({
-        path: '.cache/ui-verification/k8s-pod-mobile.png',
-        fullPage: true,
         animations: 'disabled',
+        fullPage: true,
+        path: '.cache/ui-verification/k8s-pod-mobile.png',
       });
   }
   expect(errors).toEqual([]);
@@ -721,11 +720,11 @@ test('pod terminal negotiates credential subprotocol and returns real output', a
   );
   await page.addInitScript(() => {
     const check = {
-      tokenInUrl: false,
-      offeredAuth: false,
-      offeredApp: false,
-      negotiatedApp: false,
       echoedCredential: false,
+      negotiatedApp: false,
+      offeredApp: false,
+      offeredAuth: false,
+      tokenInUrl: false,
     };
     Reflect.set(window, '__cloudopsWsCheck', check);
     const NativeSocket = window.WebSocket;
@@ -769,7 +768,7 @@ test('pod terminal negotiates credential subprotocol and returns real output', a
   const pod = page
     .locator('.ant-table-tbody tr[data-row-key*="/web-"]')
     .first();
-  await pod.getByRole('button', { name: '执行命令', exact: true }).click();
+  await pod.getByRole('button', { exact: true, name: '执行命令' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.getByRole('button', { exact: true, name: '连接终端' }).click();
   await expect(page.getByText('已连接', { exact: true })).toBeVisible({
@@ -778,7 +777,7 @@ test('pod terminal negotiates credential subprotocol and returns real output', a
   await page
     .locator('#terminal-container textarea.xterm-helper-textarea')
     .focus();
-  await page.keyboard.type("printf 'ui-%s-end\\n' ws");
+  await page.keyboard.type(String.raw`printf 'ui-%s-end\n' ws`);
   await page.keyboard.press('Enter');
   await expect
     .poll(() => output.join('').includes('ui-ws-end'), { timeout: 30_000 })
@@ -786,11 +785,11 @@ test('pod terminal negotiates credential subprotocol and returns real output', a
   expect(
     await page.evaluate(() => Reflect.get(window, '__cloudopsWsCheck')),
   ).toEqual({
-    tokenInUrl: false,
-    offeredAuth: true,
-    offeredApp: true,
-    negotiatedApp: true,
     echoedCredential: false,
+    negotiatedApp: true,
+    offeredApp: true,
+    offeredAuth: true,
+    tokenInUrl: false,
   });
   await page.getByRole('button', { exact: true, name: '断开连接' }).click();
   await page.getByRole('dialog').locator('button.ant-modal-close').click();
@@ -803,16 +802,16 @@ test('assistant rejects unowned legacy cache and uses the profile UID', async ({
   page.setDefaultTimeout(15_000);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.setViewportSize({ height: 1000, width: 1440 });
   await page.goto(routePath('/auth/login'));
   await page.evaluate(() => {
     localStorage.setItem(
       'aiAssistantChatState',
       JSON.stringify({
-        sessionId: 'legacy-private-session',
         chatMessages: [
           { content: 'LEGACY_PRIVATE_CACHE_SENTINEL', type: 'user' },
         ],
+        sessionId: 'legacy-private-session',
       }),
     );
     localStorage.setItem(
@@ -866,7 +865,7 @@ test('assistant rejects unowned legacy cache and uses the profile UID', async ({
   await page.getByRole('menuitem', { name: /^退出登录/ }).click();
   await page
     .getByRole('dialog')
-    .getByRole('button', { name: '确认', exact: true })
+    .getByRole('button', { exact: true, name: '确认' })
     .click();
   await expect(page).toHaveURL(/auth\/login/);
   await expect(page.locator('.ai-float-window')).toHaveCount(0);
@@ -892,25 +891,25 @@ test('assistant clears an invalid owned session and permits a fresh question', a
   const profile = profileBody.data;
   const invalidSid = 'cloudops-ui-unknown-owner-session';
   await page.evaluate(
-    ({ owner, invalidSid }) => {
+    ({ invalidSid, owner }) => {
       const write = (name: string, value: unknown) =>
         localStorage.setItem(
           `cloudops-assistant:v1:${encodeURIComponent(owner)}:${name}`,
           JSON.stringify({ owner, value }),
         );
       write('chat', {
-        sessionId: invalidSid,
         chatHistory: [],
         chatMessages: [
           { content: 'INVALID_OWNED_CACHE_SENTINEL', type: 'user' },
         ],
+        sessionId: invalidSid,
       });
       write('sessions', {
-        sessions: [{ localId: 'local-validation', name: 'Validation' }],
         currentLocalSessionId: 'local-validation',
+        sessions: [{ localId: 'local-validation', name: 'Validation' }],
       });
     },
-    { owner: String(profile.id), invalidSid },
+    { invalidSid, owner: String(profile.id) },
   );
   await page.reload();
   await page.locator('.assistant-float-button').click();
@@ -947,7 +946,7 @@ test('assistant clears an invalid owned session and permits a fresh question', a
   await menu.getByRole('menuitem', { name: /^退出登录/ }).click();
   await page
     .getByRole('dialog')
-    .getByRole('button', { name: '确认', exact: true })
+    .getByRole('button', { exact: true, name: '确认' })
     .click();
   await expect(page).toHaveURL(/auth\/login/);
   await expect(page.locator('.ai-float-window')).toHaveCount(0);
@@ -980,7 +979,7 @@ test('kubernetes Service and ConfigMap preserve real queries and responsive acti
     ['/k8s_service', 'Service 管理', 'web'],
     ['/k8s_configmap', 'ConfigMap 管理', 'web-content'],
   ]) {
-    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.setViewportSize({ height: 1000, width: 1440 });
     await page.goto(routePath(requireFixtureValue(route)));
     await expect(page.locator('.ops-page h1')).toHaveText(
       requireFixtureValue(title),
@@ -993,7 +992,7 @@ test('kubernetes Service and ConfigMap preserve real queries and responsive acti
       `.ant-table-tbody tr[data-row-key$="/${resourceName}"]`,
     );
     await expect(row).toHaveCount(1);
-    await row.getByRole('button', { name: '查看详情', exact: true }).click();
+    await row.getByRole('button', { exact: true, name: '查看详情' }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await expect(page.getByRole('dialog')).toContainText(
       requireFixtureValue(resourceName),
@@ -1049,25 +1048,25 @@ test('kubernetes Service and ConfigMap preserve real queries and responsive acti
     }
     if (route === '/k8s_service')
       await page.screenshot({
-        path: '.cache/ui-verification/k8s-service-desktop.png',
-        fullPage: true,
         animations: 'disabled',
+        fullPage: true,
+        path: '.cache/ui-verification/k8s-service-desktop.png',
       });
     await page.getByLabel('深色', { exact: true }).click();
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ height: 844, width: 390 });
     await expectUncovered(
       page
         .locator('.ops-page__actions')
-        .getByRole('button', { name: '刷新数据', exact: true }),
+        .getByRole('button', { exact: true, name: '刷新数据' }),
     );
     await expectUncovered(search);
     expect(
       await row.evaluate((element) => element.getBoundingClientRect().height),
     ).toBeLessThan(160);
     await expectUncovered(
-      row.getByRole('button', { name: '查看详情', exact: true }),
+      row.getByRole('button', { exact: true, name: '查看详情' }),
     );
-    await row.getByRole('button', { name: '查看详情', exact: true }).click();
+    await row.getByRole('button', { exact: true, name: '查看详情' }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await page.getByRole('dialog').locator('button.ant-modal-close').click();
     expect(
@@ -1080,9 +1079,9 @@ test('kubernetes Service and ConfigMap preserve real queries and responsive acti
         element.scrollLeft = 0;
       });
       await page.screenshot({
-        path: '.cache/ui-verification/k8s-configmap-mobile.png',
-        fullPage: true,
         animations: 'disabled',
+        fullPage: true,
+        path: '.cache/ui-verification/k8s-configmap-mobile.png',
       });
     }
   }
@@ -1129,7 +1128,7 @@ test('Prometheus lists preserve real empty queries, cancellation and mobile cont
     ['/monitor_alert_rule', '告警规则', '/api/monitor/alert_rules/list'],
     ['/monitor_onduty_group', '值班组', '/api/monitor/onduty_groups/list'],
   ]) {
-    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.setViewportSize({ height: 1000, width: 1440 });
     const initial = page.waitForResponse(
       (response) => new URL(response.url()).pathname === listPath,
     );
@@ -1170,12 +1169,12 @@ test('Prometheus lists preserve real empty queries, cancellation and mobile cont
     }
     if (route === '/monitor_pool')
       await page.screenshot({
-        path: '.cache/ui-verification/prometheus-pool-desktop.png',
-        fullPage: true,
         animations: 'disabled',
+        fullPage: true,
+        path: '.cache/ui-verification/prometheus-pool-desktop.png',
       });
     await page.getByLabel('深色', { exact: true }).click();
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ height: 844, width: 390 });
     await expectUncovered(search);
     await expectUncovered(reset);
     await expectUncovered(page.getByLabel('深色', { exact: true }));
@@ -1194,9 +1193,9 @@ test('Prometheus lists preserve real empty queries, cancellation and mobile cont
     ).toBe(true);
     if (route === '/monitor_send')
       await page.screenshot({
-        path: '.cache/ui-verification/prometheus-send-mobile.png',
-        fullPage: true,
         animations: 'disabled',
+        fullPage: true,
+        path: '.cache/ui-verification/prometheus-send-mobile.png',
       });
   }
   expect(errors).toEqual([]);
@@ -1237,12 +1236,12 @@ test('cron default retry budget and responsive cancellation use real API', async
   await dialog.getByRole('button', { name: /^取\s*消$/ }).click();
   await expect(dialog).not.toBeVisible();
   await page.screenshot({
-    path: '.cache/ui-verification/cron-desktop.png',
-    fullPage: true,
     animations: 'disabled',
+    fullPage: true,
+    path: '.cache/ui-verification/cron-desktop.png',
   });
   await page.getByLabel('深色', { exact: true }).click();
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ height: 844, width: 390 });
   await expectUncovered(create);
   await expectUncovered(page.getByPlaceholder('搜索任务名称或描述...'));
   await expectUncovered(
@@ -1262,9 +1261,9 @@ test('cron default retry budget and responsive cancellation use real API', async
     ),
   ).toBe(true);
   await page.screenshot({
-    path: '.cache/ui-verification/cron-mobile.png',
-    fullPage: true,
     animations: 'disabled',
+    fullPage: true,
+    path: '.cache/ui-verification/cron-mobile.png',
   });
   expect(errors).toEqual([]);
   expect(writes).toEqual([]);
@@ -1297,20 +1296,20 @@ test('on-duty calendar reads an isolated real group and supports month navigatio
     const created = await page.request.post(
       '/api/monitor/onduty_groups/create',
       {
-        headers,
         data: {
-          name,
-          user_ids: [profile.id],
-          shift_days: 1,
           description: 'Isolated UI acceptance fixture',
+          name,
+          shift_days: 1,
+          user_ids: [profile.id],
         },
+        headers,
       },
     );
     expect(created.status()).toBe(200);
     expect((await created.json()).code).toBe(0);
     const listed = await page.request.get('/api/monitor/onduty_groups/list', {
       headers,
-      params: { page: 1, size: 10, search: name },
+      params: { page: 1, search: name, size: 10 },
     });
     const matchesBody = await listed.json();
     const matches = matchesBody.data.items.filter(
@@ -1346,7 +1345,7 @@ test('on-duty calendar reads an isolated real group and supports month navigatio
     await page.getByPlaceholder('搜索值班历史...').press('Enter');
     expect((await history).status()).toBe(200);
     await page.getByLabel('深色', { exact: true }).click();
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ height: 844, width: 390 });
     await expectUncovered(
       page.getByRole('button', { exact: true, name: '返回值班组' }),
     );
@@ -1356,9 +1355,9 @@ test('on-duty calendar reads an isolated real group and supports month navigatio
       ),
     ).toBe(true);
     await page.screenshot({
-      path: '.cache/ui-verification/prometheus-calendar-mobile.png',
-      fullPage: true,
       animations: 'disabled',
+      fullPage: true,
+      path: '.cache/ui-verification/prometheus-calendar-mobile.png',
     });
     expect(errors).toEqual([]);
   } finally {
@@ -1412,7 +1411,7 @@ test('remaining Kubernetes resource lists preserve real kind scopes and safe can
     ['pv', 'PV 管理', false],
     ['clusterrolebinding', 'ClusterRoleBinding 管理', false],
   ] as const) {
-    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.setViewportSize({ height: 1000, width: 1440 });
     const initial = page.waitForResponse(
       (response) =>
         new URL(response.url()).pathname === `/api/k8s/${kind}/1/list`,
@@ -1443,17 +1442,17 @@ test('remaining Kubernetes resource lists preserve real kind scopes and safe can
         page.locator('.ant-table-tbody tr[data-row-key]').first(),
       ).toBeVisible();
       await page.screenshot({
-        path: '.cache/ui-verification/k8s-node-desktop.png',
-        fullPage: true,
         animations: 'disabled',
+        fullPage: true,
+        path: '.cache/ui-verification/k8s-node-desktop.png',
       });
     }
     await page.getByLabel('深色', { exact: true }).click();
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ height: 844, width: 390 });
     await expectUncovered(
       page
         .locator('.ops-page__actions')
-        .getByRole('button', { name: '刷新数据', exact: true }),
+        .getByRole('button', { exact: true, name: '刷新数据' }),
     );
     await expectUncovered(page.locator('.k8s-cluster-selector'));
     expect(
@@ -1463,9 +1462,9 @@ test('remaining Kubernetes resource lists preserve real kind scopes and safe can
     ).toBe(true);
     if (kind === 'rolebinding')
       await page.screenshot({
-        path: '.cache/ui-verification/k8s-rolebinding-mobile.png',
-        fullPage: true,
         animations: 'disabled',
+        fullPage: true,
+        path: '.cache/ui-verification/k8s-rolebinding-mobile.png',
       });
   }
   expect(errors).toEqual([]);
@@ -1503,9 +1502,9 @@ test('YAML templates and tasks complete a real isolated dry-run without creating
     const response = await page.request.get(`/api/k8s/${kind}/1/list`, {
       headers,
       params: {
+        cluster_id: 1,
         page: 1,
         size: 10,
-        cluster_id: 1,
         ...(kind === 'yaml_task' ? { name } : { search: name }),
       },
     });
@@ -1518,7 +1517,7 @@ test('YAML templates and tasks complete a real isolated dry-run without creating
     return matches[0]?.id || 0;
   };
   try {
-    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.setViewportSize({ height: 1000, width: 1440 });
     await page.goto(routePath('/k8s_yaml_template'));
     await expect(page.locator('.ops-page h1')).toHaveText('YAML 模板管理');
     await expect(page.locator('.k8s-cluster-selector')).toContainText(
@@ -1574,10 +1573,10 @@ test('YAML templates and tasks complete a real isolated dry-run without creating
     expect(taskId).toBeGreaterThan(0);
     const row = page.locator(`tr[data-row-key="${taskId}"]`);
     await expect(row).toContainText(taskName);
-    await row.getByRole('button', { name: '执行任务', exact: true }).click();
+    await row.getByRole('button', { exact: true, name: '执行任务' }).click();
     await expect(dialog).toBeVisible();
     await dialog
-      .getByRole('checkbox', { name: '预检查模式 (Dry Run)', exact: true })
+      .getByRole('checkbox', { exact: true, name: '预检查模式 (Dry Run)' })
       .check();
     const applyRequest = page.waitForRequest(
       (request) =>
@@ -1597,8 +1596,8 @@ test('YAML templates and tasks complete a real isolated dry-run without creating
       headers,
       params: {
         namespace: requireFixtureValue(namespace),
-        search: resourceName,
         page: 1,
+        search: resourceName,
         size: 10,
       },
     });
@@ -1609,11 +1608,11 @@ test('YAML templates and tasks complete a real isolated dry-run without creating
       ),
     ).toHaveLength(0);
     await page.getByLabel('深色', { exact: true }).click();
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ height: 844, width: 390 });
     await expectUncovered(
       page
         .locator('.ops-page__actions')
-        .getByRole('button', { name: '刷新数据', exact: true }),
+        .getByRole('button', { exact: true, name: '刷新数据' }),
     );
     expect(
       await page.evaluate(
@@ -1621,9 +1620,9 @@ test('YAML templates and tasks complete a real isolated dry-run without creating
       ),
     ).toBe(true);
     await page.screenshot({
-      path: '.cache/ui-verification/k8s-yaml-task-mobile.png',
-      fullPage: true,
       animations: 'disabled',
+      fullPage: true,
+      path: '.cache/ui-verification/k8s-yaml-task-mobile.png',
     });
     expect(errors).toEqual([]);
   } finally {
@@ -1651,8 +1650,8 @@ test('YAML templates and tasks complete a real isolated dry-run without creating
       headers,
       params: {
         namespace: requireFixtureValue(namespace),
-        search: resourceName,
         page: 1,
+        search: resourceName,
         size: 10,
       },
     });
@@ -1706,9 +1705,9 @@ test('expired login preserves its dialog and rebuilds current route permissions'
     '**/api/user/list?*',
     (route) =>
       route.fulfill({
-        status: 401,
-        contentType: 'application/json',
         body: JSON.stringify({ code: 401, message: 'acceptance-expired' }),
+        contentType: 'application/json',
+        status: 401,
       }),
     { times: 1 },
   );
@@ -1716,9 +1715,9 @@ test('expired login preserves its dialog and rebuilds current route permissions'
     '**/api/user/refresh_token',
     (route) =>
       route.fulfill({
-        status: 401,
-        contentType: 'application/json',
         body: JSON.stringify({ code: 401, message: 'acceptance-expired' }),
+        contentType: 'application/json',
+        status: 401,
       }),
     { times: 1 },
   );
@@ -1743,7 +1742,7 @@ test('expired login preserves its dialog and rebuilds current route permissions'
       new URL(response.url()).pathname === '/api/user/list' &&
       response.status() === 200,
   );
-  await dialog.getByRole('button', { name: '登录', exact: true }).click();
+  await dialog.getByRole('button', { exact: true, name: '登录' }).click();
   await page.evaluate(() => {
     for (const input of document.querySelectorAll<HTMLInputElement>(
       'input[type="password"]',
@@ -1779,7 +1778,7 @@ test('notification configuration uses real pagination, logs and safe responsive 
   const api = async (path: string, method = 'GET', data?: unknown) => {
     const response = await page.request.fetch(
       `/api/workorder/notification${path}`,
-      { method, data, headers: { Authorization: `Bearer ${token}` } },
+      { data, headers: { Authorization: `Bearer ${token}` }, method },
     );
     const result = await response.json();
     expect(response.status()).toBe(200);
@@ -1799,18 +1798,18 @@ test('notification configuration uses real pagination, logs and safe responsive 
   try {
     for (const [index, channel] of ['email', 'feishu'].entries()) {
       await api('/create', 'POST', {
-        name: names[index],
-        description: 'isolated UI acceptance, never send',
         channels: [channel],
+        description: 'isolated UI acceptance, never send',
         event_types: ['instance_created'],
-        trigger_type: 'immediate',
-        recipient_types: ['creator'],
-        message_template: 'Acceptance {title}',
-        status: 2,
-        priority: 2,
-        max_retries: 1,
-        retry_interval: 1,
         is_default: 2,
+        max_retries: 1,
+        message_template: 'Acceptance {title}',
+        name: names[index],
+        priority: 2,
+        recipient_types: ['creator'],
+        retry_interval: 1,
+        status: 2,
+        trigger_type: 'immediate',
       });
     }
     const fixture = await api(`/list?page=1&page_size=100&name=${nonce}`);
@@ -1865,7 +1864,7 @@ test('notification configuration uses real pagination, logs and safe responsive 
       .filter({ hasText: names[0] })
       .first();
     await row
-      .getByRole('button', { name: '通知更多操作', exact: true })
+      .getByRole('button', { exact: true, name: '通知更多操作' })
       .click();
     const logsRead: string[] = [];
     page.on('response', (response) => {
@@ -1900,7 +1899,7 @@ test('notification configuration uses real pagination, logs and safe responsive 
       .getByRole('dialog')
       .getByRole('button', { name: /^取\s*消$/ })
       .click();
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ height: 844, width: 390 });
     await expectUncovered(
       page.getByRole('button', { exact: true, name: '创建通知配置' }),
     );
@@ -1923,8 +1922,8 @@ test('notification configuration uses real pagination, logs and safe responsive 
     ).toBe(true);
     await page.waitForTimeout(300);
     await page.screenshot({
-      path: '.cache/ui-verification/notification-mobile-dark.png',
       fullPage: true,
+      path: '.cache/ui-verification/notification-mobile-dark.png',
     });
     expect(uiWrites).toEqual([]);
     expect(errors).toEqual([]);
@@ -1961,7 +1960,7 @@ test('assistant and autofix pages preserve responsive read-only interactions wit
     ['/autofix/workflow', '自动修复工作流'],
   ];
   for (const [path, title] of routes) {
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ height: 844, width: 390 });
     await page.goto(routePath(requireFixtureValue(path)));
     await expect(page.locator('.ops-page h1')).toHaveText(
       requireFixtureValue(title),
@@ -2011,8 +2010,8 @@ test('assistant and autofix pages preserve responsive read-only interactions wit
   await page.waitForTimeout(300);
   await page.locator('.ops-page h1').scrollIntoViewIfNeeded();
   await page.screenshot({
-    path: '.cache/ui-verification/autofix-mobile-dark.png',
     fullPage: true,
+    path: '.cache/ui-verification/autofix-mobile-dark.png',
   });
   expect(forbidden).toEqual([]);
   expect(errors).toEqual([]);
@@ -2047,9 +2046,9 @@ test('workorder instance completes a real template draft submit and approval lif
   page.on('pageerror', (error) => errors.push(error.message));
   const api = async (path: string, method = 'GET', data?: unknown) => {
     const response = await page.request.fetch(`/api/workorder/${path}`, {
-      method,
       data,
       headers: { Authorization: `Bearer ${token}` },
+      method,
     });
     const result = await response.json();
     expect(response.status(), path.split('?')[0]).toBe(200);
@@ -2067,7 +2066,7 @@ test('workorder instance completes a real template draft submit and approval lif
     await api(`${kind}/create`, 'POST', { name: nonce, ...fields });
     const item = await find(kind);
     expect(!!item?.id).toBe(true);
-    owned.push({ kind, id: item.id });
+    owned.push({ id: item.id, kind });
     return item.id as number;
   };
   try {
@@ -2076,58 +2075,58 @@ test('workorder instance completes a real template draft submit and approval lif
     expect(active.total).toBe(0);
     const category = await create('category', { status: 1 });
     const form = await create('form-design', {
-      status: 2,
       category_id: category,
       is_template: 1,
       schema: {
         fields: [
           {
             id: 'reason',
-            name: 'reason',
             label: '变更说明',
-            type: 'text',
+            name: 'reason',
             required: 1,
+            type: 'text',
           },
         ],
       },
+      status: 2,
     });
     const process = await create('process', {
-      status: 2,
       category_id: category,
-      form_design_id: form,
-      is_default: 2,
       definition: {
-        steps: [
-          {
-            id: 'start',
-            type: 'start',
-            name: '开始',
-            sort_order: 1,
-            actions: ['start'],
-          },
-          {
-            id: 'approval',
-            type: 'approval',
-            name: '审批',
-            sort_order: 2,
-            assignee_type: 'user',
-            assignee_ids: [uid],
-            actions: ['approve', 'reject'],
-          },
-          { id: 'end', type: 'end', name: '完成', sort_order: 3 },
-        ],
         connections: [
           { from: 'start', to: 'approval' },
           { from: 'approval', to: 'end' },
         ],
+        steps: [
+          {
+            actions: ['start'],
+            id: 'start',
+            name: '开始',
+            sort_order: 1,
+            type: 'start',
+          },
+          {
+            actions: ['approve', 'reject'],
+            assignee_ids: [uid],
+            assignee_type: 'user',
+            id: 'approval',
+            name: '审批',
+            sort_order: 2,
+            type: 'approval',
+          },
+          { id: 'end', name: '完成', sort_order: 3, type: 'end' },
+        ],
       },
+      form_design_id: form,
+      is_default: 2,
+      status: 2,
     });
     await create('template', {
-      status: 1,
-      process_id: process,
       category_id: category,
-      form_design_id: form,
       default_values: { reason: '仅本机浏览器验收' },
+      form_design_id: form,
+      process_id: process,
+      status: 1,
     });
     await page.goto(routePath('/instance'));
     await expect(page.locator('.ops-page h1')).toHaveText('工单实例');
@@ -2161,7 +2160,7 @@ test('workorder instance completes a real template draft submit and approval lif
     await expect(dialog).not.toBeVisible();
     const instance = await find('instance');
     expect(instance.status).toBe(1);
-    owned.push({ kind: 'instance', id: instance.id });
+    owned.push({ id: instance.id, kind: 'instance' });
     await page.getByLabel('搜索工单', { exact: true }).fill(nonce);
     await page.getByLabel('搜索工单', { exact: true }).press('Enter');
     const row = page.locator(
@@ -2169,7 +2168,7 @@ test('workorder instance completes a real template draft submit and approval lif
     );
     await expect(row).toContainText('草稿');
     await row
-      .getByRole('button', { name: '工单更多操作', exact: true })
+      .getByRole('button', { exact: true, name: '工单更多操作' })
       .click();
     await page.getByRole('menuitem').filter({ hasText: '提交工单' }).click();
     dialog = page.getByRole('dialog').filter({ hasText: '提交确认' });
@@ -2209,7 +2208,7 @@ test('workorder instance completes a real template draft submit and approval lif
       .filter({ hasText: '工单详情' })
       .getByRole('button', { name: /^关\s*闭$/ })
       .click();
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ height: 844, width: 390 });
     await expectUncovered(
       page.getByRole('button', { exact: true, name: '创建工单' }),
     );
@@ -2234,8 +2233,8 @@ test('workorder instance completes a real template draft submit and approval lif
     await page.waitForTimeout(300);
     await page.locator('.ops-page h1').scrollIntoViewIfNeeded();
     await page.screenshot({
-      path: '.cache/ui-verification/instance-mobile-dark.png',
       fullPage: true,
+      path: '.cache/ui-verification/instance-mobile-dark.png',
     });
     expect(errors).toEqual([]);
   } finally {
@@ -2247,7 +2246,7 @@ test('workorder instance completes a real template draft submit and approval lif
         (item) => item.kind === 'instance' && item.id === discovered.id,
       )
     )
-      owned.push({ kind: 'instance', id: discovered.id });
+      owned.push({ id: discovered.id, kind: 'instance' });
     for (const item of [...owned].reverse()) {
       if (item.kind === 'instance') {
         const current = await api(`instance/detail/${item.id}`);
@@ -2288,7 +2287,7 @@ test('RCA and prediction pages keep initial controls local and cache cancellatio
     ['/predict/analysis', '预测分析'],
   ];
   for (const [path, title] of routes) {
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ height: 844, width: 390 });
     await page.goto(routePath(requireFixtureValue(path)));
     await expect(page.locator('.ops-page h1')).toHaveText(
       requireFixtureValue(title),

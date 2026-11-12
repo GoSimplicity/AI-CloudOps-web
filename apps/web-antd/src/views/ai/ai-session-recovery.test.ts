@@ -1,12 +1,11 @@
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
-
 import { reactive } from 'vue';
 
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import AiAssistant from './ai.vue';
-
 import { createAssistantAccountScope } from '#/utils/assistant-account-scope';
+
+import AiAssistant from './ai.vue';
 
 function required<T>(value: null | T | undefined): T {
   if (value === null || value === undefined) {
@@ -15,7 +14,7 @@ function required<T>(value: null | T | undefined): T {
   return value;
 }
 
-const state = vi.hoisted(() => ({ user: null as any, access: null as any }));
+const state = vi.hoisted(() => ({ access: null as any, user: null as any }));
 const api = vi.hoisted(() => ({
   assistantQuery: vi.fn(),
   createAssistantSession: vi.fn(),
@@ -23,8 +22,8 @@ const api = vi.hoisted(() => ({
   refreshKnowledgeBase: vi.fn(),
 }));
 vi.mock('@vben/stores', () => ({
-  useUserStore: () => state.user,
   useAccessStore: () => state.access,
+  useUserStore: () => state.user,
 }));
 vi.mock('#/api/core/aiops/assistant', () => api);
 let wrapper: VueWrapper;
@@ -55,25 +54,25 @@ describe('悬浮助手持久会话恢复', () => {
       'private-question-canary',
     );
     api.getSessionInfo.mockResolvedValueOnce({
+      active_mode: 1,
+      active_question: first.question,
+      active_turn_id: first.turn_id,
+      conversation_history: [],
+      mode: 1,
       session_id: 'session-one',
       status: 'unknown',
-      mode: 1,
-      active_turn_id: first.turn_id,
-      active_question: first.question,
-      active_mode: 1,
-      conversation_history: [],
     });
     await setup().recoverTurn();
     expect(api.assistantQuery).toHaveBeenCalledTimes(1);
     expect(setup().sessionNotice).toContain('未知');
     api.getSessionInfo.mockResolvedValueOnce({
+      conversation_history: [
+        { a: 'private-answer-canary', mode: 1, q: first.question },
+      ],
+      last_turn_id: first.turn_id,
+      mode: 1,
       session_id: 'session-one',
       status: 'idle',
-      mode: 1,
-      last_turn_id: first.turn_id,
-      conversation_history: [
-        { q: first.question, a: 'private-answer-canary', mode: 1 },
-      ],
     });
     api.assistantQuery.mockResolvedValueOnce({
       answer: 'private-answer-canary',
@@ -93,30 +92,30 @@ describe('悬浮助手持久会话恢复', () => {
     const scope = createAssistantAccountScope(localStorage);
     scope.setOwner('1');
     scope.write('sessions', {
+      currentLocalSessionId: 'local-one',
       sessions: [
         {
+          createdAt: 1,
           localId: 'local-one',
           name: 'one',
-          createdAt: 1,
           serverId: 'session-one',
         },
       ],
-      currentLocalSessionId: 'local-one',
     });
     scope.write('chat', {
-      sessionId: 'session-one',
       chatHistory: [{ content: 'legacy-private-canary' }],
+      sessionId: 'session-one',
     });
     api.getSessionInfo.mockResolvedValue({
+      active_mode: 1,
+      active_question: 'pending-private',
+      active_turn_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      conversation_history: [
+        { a: 'server-answer', mode: 1, q: 'old-question' },
+      ],
+      mode: 1,
       session_id: 'session-one',
       status: 'unknown',
-      mode: 1,
-      active_turn_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-      active_question: 'pending-private',
-      active_mode: 1,
-      conversation_history: [
-        { q: 'old-question', a: 'server-answer', mode: 1 },
-      ],
     });
     wrapper = mount(AiAssistant);
     await flushPromises();

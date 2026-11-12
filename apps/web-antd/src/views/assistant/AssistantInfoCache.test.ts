@@ -1,7 +1,7 @@
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
-import Antd, { message } from 'ant-design-vue';
 import { reactive } from 'vue';
 
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AssistantInfo from './AssistantInfo.vue';
@@ -14,18 +14,18 @@ function required<T>(value: null | T | undefined): T {
 }
 
 const state = vi.hoisted(() => ({
-  user: null as any,
   access: null as any,
   allowed: true,
+  user: null as any,
 }));
 const api = vi.hoisted(() => ({
   clearAssistantCache: vi.fn(),
-  getAssistantInfo: vi.fn(),
   getAssistantConfig: vi.fn(),
+  getAssistantInfo: vi.fn(),
 }));
 vi.mock('@vben/stores', () => ({
-  useUserStore: () => state.user,
   useAccessStore: () => state.access,
+  useUserStore: () => state.user,
 }));
 vi.mock('#/api/core/aiops/assistant', () => api);
 vi.mock('#/utils/permission', () => ({
@@ -39,7 +39,7 @@ const deferred = () => {
     resolve = yes;
     reject = no;
   });
-  return { promise, resolve, reject };
+  return { promise, reject, resolve };
 };
 async function screen() {
   wrapper = mount(AssistantInfo, {
@@ -65,8 +65,8 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );

@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-
-import { useListRequest } from './useListRequest';
 import {
   computed,
   onBeforeUnmount,
@@ -15,10 +12,19 @@ import {
 import { useUserStore } from '@vben/stores';
 import { cloneDeep } from '@vben/utils';
 
-import { type FormInstance, message, Modal } from 'ant-design-vue';
 import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
+import { type FormInstance, message, Modal } from 'ant-design-vue';
 
+import {
+  getMonitorAlertManagerPoolApi,
+  getMonitorAlertManagerPoolListApi,
+  type MonitorAlertManagerPool,
+} from '#/api/core/prometheus/prometheus_alert_pool';
+import {
+  getMonitorOnDutyGroupListApi,
+  type MonitorOnDutyGroup,
+} from '#/api/core/prometheus/prometheus_onduty';
 import {
   createMonitorSendGroupApi,
   type CreateMonitorSendGroupReq,
@@ -31,19 +37,13 @@ import {
   type UpdateMonitorSendGroupReq,
 } from '#/api/core/prometheus/prometheus_send_group';
 import { getUserList } from '#/api/core/system/user';
-import {
-  getMonitorAlertManagerPoolApi,
-  getMonitorAlertManagerPoolListApi,
-  type MonitorAlertManagerPool,
-} from '#/api/core/prometheus/prometheus_alert_pool';
-import {
-  getMonitorOnDutyGroupListApi,
-  type MonitorOnDutyGroup,
-} from '#/api/core/prometheus/prometheus_onduty';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { useAuthStore } from '#/store';
 import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
+import { useListRequest } from './useListRequest';
 
 const { can, hasPerm } = usePermission();
 const formRef = ref<FormInstance>();
@@ -194,19 +194,19 @@ onBeforeUnmount(() => {
 const paginationConfig = reactive({
   current: 1,
   pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
   showQuickJumper: true,
+  showSizeChanger: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
   size: 'default' as const,
+  total: 0,
 });
 
 // 统计数据
 const stats = reactive({
-  total: 0,
+  associatedPools: 0,
   enabled: 0,
   needUpgrade: 0,
-  associatedPools: 0,
+  total: 0,
 });
 
 // 对话框状态
@@ -274,8 +274,8 @@ const initialSendForm = (): SendForm => ({
 
 // 表单对话框数据
 const formDialog = reactive({
-  isEdit: false,
   form: initialSendForm(),
+  isEdit: false,
 });
 
 // 详情对话框数据
@@ -315,9 +315,6 @@ const captureForm = () => {
   const isEdit = formDialog.isEdit;
   return {
     id,
-    isEdit,
-    owner,
-    revision,
     isCurrent: () =>
       !disposed &&
       formDialogVisible.value &&
@@ -326,6 +323,9 @@ const captureForm = () => {
       owner === formOwner &&
       formDialog.isEdit === isEdit &&
       formDialog.form.id === id,
+    isEdit,
+    owner,
+    revision,
   };
 };
 const poolOptions = (items: MonitorAlertManagerPool[]): Pool[] =>
@@ -497,10 +497,10 @@ const loadSendGroupList = async (
     request.isCurrent() && owner === operationOwner() && stillCurrent();
   try {
     const params: GetMonitorSendGroupListReq = {
-      page: paginationConfig.current,
-      size: paginationConfig.pageSize,
-      search: searchQuery.value || undefined,
       enable: enableFilter.value,
+      page: paginationConfig.current,
+      search: searchQuery.value || undefined,
+      size: paginationConfig.pageSize,
     };
 
     const response = (await getMonitorSendGroupListApi(
@@ -633,8 +633,8 @@ const loadOptionsData = async (): Promise<void> => {
       if (!isCurrent()) return;
       const userResponse = (await getUserList({
         page: currentPage,
-        size: pageSize,
         search: '',
+        size: pageSize,
       })) as ApiListResponse<UserInfo>;
       if (!isCurrent()) return;
 
@@ -695,8 +695,8 @@ const loadDialogPools = async (isNewSearch = false) => {
   try {
     const response = (await getMonitorAlertManagerPoolListApi({
       page,
-      size: 20,
       search,
+      size: 20,
     })) as ApiListResponse<MonitorAlertManagerPool>;
     if (!isCurrent()) return;
 
@@ -757,8 +757,8 @@ const loadDialogOnDutyGroups = async (isNewSearch = false) => {
   try {
     const response = (await getMonitorOnDutyGroupListApi({
       page,
-      size: 20,
       search,
+      size: 20,
     })) as ApiListResponse<MonitorOnDutyGroup>;
     if (!isCurrent()) return;
 
@@ -825,8 +825,8 @@ const loadDialogUsers = async (isNewSearch = false) => {
   try {
     const response = (await getUserList({
       page,
-      size: 20,
       search,
+      size: 20,
     })) as ApiListResponse<UserInfo>;
     if (!isCurrent()) return;
 
@@ -1502,8 +1502,8 @@ onMounted(() => {
             <template v-if="column.key === 'name'">
               <div class="pool-name-cell">
                 <div
-                  class="pool-badge"
                   :class="getPoolStatusClass(record)"
+                  class="pool-badge"
                 ></div>
                 <span class="pool-name-text">{{ record.name }}</span>
               </div>
@@ -1633,12 +1633,12 @@ onMounted(() => {
             <template v-if="column.key === 'creator'">
               <div class="creator-info">
                 <a-avatar
-                  size="small"
                   :style="{
                     backgroundColor: getAvatarColor(
                       record.create_user_name || '',
                     ),
                   }"
+                  size="small"
                 >
                   {{ getInitials(record.create_user_name) }}
                 </a-avatar>
@@ -1748,7 +1748,7 @@ onMounted(() => {
                   class="full-width"
                   placeholder="请搜索并选择AlertManager池"
                   show-search
-                  @popupScroll="handleDialogPoolScroll"
+                  @popup-scroll="handleDialogPoolScroll"
                   @search="handleDialogPoolSearch"
                 >
                   <a-select-option
@@ -1771,7 +1771,7 @@ onMounted(() => {
                   class="full-width"
                   placeholder="请搜索并选择值班组"
                   show-search
-                  @popupScroll="handleDialogOnDutyGroupScroll"
+                  @popup-scroll="handleDialogOnDutyGroupScroll"
                   @search="handleDialogOnDutyGroupSearch"
                 >
                   <a-select-option
@@ -1869,7 +1869,7 @@ onMounted(() => {
               mode="multiple"
               placeholder="请搜索并选择静态接收用户"
               show-search
-              @popupScroll="handleDialogUserScroll"
+              @popup-scroll="handleDialogUserScroll"
               @search="handleDialogUserSearch"
             />
           </a-form-item>
@@ -1904,7 +1904,7 @@ onMounted(() => {
               mode="multiple"
               placeholder="请搜索并选择首次升级用户"
               show-search
-              @popupScroll="handleDialogUserScroll"
+              @popup-scroll="handleDialogUserScroll"
               @search="handleDialogUserSearch"
             />
           </a-form-item>
@@ -1924,7 +1924,7 @@ onMounted(() => {
               mode="multiple"
               placeholder="请搜索并选择二次升级用户"
               show-search
-              @popupScroll="handleDialogUserScroll"
+              @popup-scroll="handleDialogUserScroll"
               @search="handleDialogUserSearch"
             />
           </a-form-item>
@@ -1980,7 +1980,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <a-descriptions :column="1" :labelStyle="{ width: '150px' }" bordered>
+        <a-descriptions :column="1" :label-style="{ width: '150px' }" bordered>
           <a-descriptions-item label="ID">
             {{ detailDialog.form.id }}
           </a-descriptions-item>

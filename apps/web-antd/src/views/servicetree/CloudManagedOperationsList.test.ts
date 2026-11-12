@@ -12,8 +12,8 @@ function required<T>(value: null | T | undefined): T {
 }
 
 const api = vi.hoisted(() => ({
-  listManagedOperations: vi.fn(),
   getManagedOperation: vi.fn(),
+  listManagedOperations: vi.fn(),
   reviewManagedOperation: vi.fn(),
 }));
 vi.mock('#/api/core/tree/tree_cloud', () => api);
@@ -25,25 +25,25 @@ const scope = {
 const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const row = (owner = 7) => ({
   ...scope,
-  owner_id: owner,
   operation_id: id,
+  owner_id: owner,
   resource_ids: ['rm-one'],
   state: 'unknown',
 });
 let wrapper: VueWrapper;
 function render(superAdmin = false) {
   wrapper = mount(List, {
+    global: { plugins: [Antd] },
     props: {
-      scope,
-      viewer: '7',
-      superAdmin,
+      authorize: async () => true,
       canList: true,
       canRead: true,
       canReview: true,
       refreshToken: 0,
-      authorize: async () => true,
+      scope,
+      superAdmin,
+      viewer: '7',
     },
-    global: { plugins: [Antd] },
   });
 }
 async function click(name: string) {
@@ -55,15 +55,15 @@ async function click(name: string) {
 beforeEach(() => {
   vi.resetAllMocks();
   api.listManagedOperations.mockResolvedValue({
-    items: [],
-    total: 0,
     scope_blocked: false,
+    total: 0,
+    items: [],
   });
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -80,9 +80,9 @@ afterEach(() => {
 });
 it('默认仅请求本人未确认操作并使用服务端范围汇总', async () => {
   api.listManagedOperations.mockResolvedValue({
-    items: [],
-    total: 0,
     scope_blocked: true,
+    total: 0,
+    items: [],
   });
   render();
   await flushPromises();
@@ -98,9 +98,9 @@ it('默认仅请求本人未确认操作并使用服务端范围汇总', async (
 });
 it('普通用户拒绝意外返回的其他用户记录', async () => {
   api.listManagedOperations.mockResolvedValue({
-    items: [{ ...row(8), resource_ids: ['private-resource-canary'] }],
-    total: 1,
     scope_blocked: true,
+    total: 1,
+    items: [{ ...row(8), resource_ids: ['private-resource-canary'] }],
   });
   render();
   await flushPromises();
@@ -110,9 +110,9 @@ it('普通用户拒绝意外返回的其他用户记录', async () => {
 });
 it('未知记录却声称范围不阻断时拒绝响应', async () => {
   api.listManagedOperations.mockResolvedValue({
-    items: [row()],
-    total: 1,
     scope_blocked: false,
+    total: 1,
+    items: [row()],
   });
   render();
   await flushPromises();
@@ -129,9 +129,9 @@ it('列表故障保留阻断并不暴露上游错误', async () => {
 });
 it('超管显式选择所有用户，同UUID按owner区分查询与核对', async () => {
   api.listManagedOperations.mockImplementation(async (params) => ({
-    items: params.all_owners ? [row(7), row(8)] : [row(7)],
-    total: params.all_owners ? 2 : 1,
     scope_blocked: true,
+    total: params.all_owners ? 2 : 1,
+    items: params.all_owners ? [row(7), row(8)] : [row(7)],
   }));
   render(true);
   await flushPromises();
@@ -139,10 +139,10 @@ it('超管显式选择所有用户，同UUID按owner区分查询与核对', asyn
   await flushPromises();
   expect(api.listManagedOperations).toHaveBeenLastCalledWith({
     ...scope,
+    all_owners: true,
     page: 1,
     size: 20,
     unconfirmed_only: true,
-    all_owners: true,
   });
   expect(wrapper.findAll('tbody tr.ant-table-row')).toHaveLength(2);
   await required(
@@ -170,11 +170,11 @@ it('超管显式选择所有用户，同UUID按owner区分查询与核对', asyn
   await flushPromises();
   const audited = {
     ...row(8),
-    state: 'reviewed',
     previous_state: 'running',
+    review_reason: '超级管理员已经核对实际资源及本地状态',
     reviewed_at: '2026-10-30T01:00:00Z',
     reviewed_by: 7,
-    review_reason: '超级管理员已经核对实际资源及本地状态',
+    state: 'reviewed',
   };
   api.reviewManagedOperation.mockResolvedValue(audited);
   api.getManagedOperation.mockResolvedValue(audited);
@@ -187,17 +187,17 @@ it('超管显式选择所有用户，同UUID按owner区分查询与核对', asyn
   expect(api.reviewManagedOperation).toHaveBeenCalledWith(id, {
     ...scope,
     owner_id: 8,
+    reason: '超级管理员已经核对实际资源及本地状态',
     resource_ids: ['rm-one'],
     resources_verified: true,
-    reason: '超级管理员已经核对实际资源及本地状态',
   });
   expect(wrapper.emitted('acknowledged')).toEqual([[id, 8]]);
 });
 it('旧记录没有快照时明确要求输入原资源ID而不是猜测', async () => {
   api.listManagedOperations.mockResolvedValue({
-    items: [{ ...row(), resource_ids: [] }],
-    total: 1,
     scope_blocked: true,
+    total: 1,
+    items: [{ ...row(), resource_ids: [] }],
   });
   render();
   await flushPromises();
@@ -221,19 +221,19 @@ it('切换viewer后丢弃原用户的迟到列表', async () => {
   render();
   await wrapper.setProps({ viewer: '8' });
   await flushPromises();
-  finish({ items: [row(7)], total: 1, scope_blocked: true });
+  finish({ scope_blocked: true, total: 1, items: [row(7)] });
   await flushPromises();
   expect(wrapper.findAll('tbody tr.ant-table-row')).toHaveLength(0);
   expect(wrapper.text()).not.toContain(id);
 });
 it('操作列表分页只请求当前页，不用截断列表推断整个范围安全', async () => {
   api.listManagedOperations.mockImplementation(async (params) => ({
+    scope_blocked: true,
+    total: 25,
     items: Array.from({ length: params.page === 1 ? 20 : 5 }, (_, i) => ({
       ...row(),
       operation_id: `aaaaaaaa-aaaa-4aaa-8aaa-${String((params.page - 1) * 20 + i + 1).padStart(12, '0')}`,
     })),
-    total: 25,
-    scope_blocked: true,
   }));
   render();
   await flushPromises();
@@ -251,11 +251,11 @@ it('操作列表分页只请求当前页，不用截断列表推断整个范围�
 it('超管权限撤销后立即移除其他用户记录并切回本人模式', async () => {
   const otherID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
   api.listManagedOperations.mockImplementation(async (params) => ({
+    scope_blocked: true,
+    total: 1,
     items: params.all_owners
       ? [{ ...row(8), operation_id: otherID }]
       : [row(7)],
-    total: 1,
-    scope_blocked: true,
   }));
   render(true);
   await flushPromises();
@@ -276,16 +276,16 @@ it('超管权限撤销后立即移除其他用户记录并切回本人模式', a
 it('已核对记录以只读方式展示原状态、核对人与理由，不再写入审计', async () => {
   const audit = {
     ...row(),
-    state: 'reviewed',
     previous_state: 'not_recorded',
+    review_reason: '原操作记录缺失，已经人工核对实际资源',
     reviewed_at: '2026-10-30T01:00:00Z',
     reviewed_by: 7,
-    review_reason: '原操作记录缺失，已经人工核对实际资源',
+    state: 'reviewed',
   };
   api.listManagedOperations.mockImplementation(async (params) => ({
-    items: params.unconfirmed_only ? [] : [audit],
-    total: params.unconfirmed_only ? 0 : 1,
     scope_blocked: false,
+    total: params.unconfirmed_only ? 0 : 1,
+    items: params.unconfirmed_only ? [] : [audit],
   }));
   render();
   await flushPromises();

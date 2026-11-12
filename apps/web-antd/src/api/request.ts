@@ -179,7 +179,7 @@ export function resolveHttpErrorMessage(msg: string, error: any): string {
   return msg;
 }
 
-const { apiURL, aiopsURL: configuredAiopsURL } = useAppConfig(
+const { aiopsURL: configuredAiopsURL, apiURL } = useAppConfig(
   import.meta.env,
   import.meta.env.PROD,
 );
@@ -296,9 +296,9 @@ export async function refreshAccessTokenForStream(): Promise<null | string> {
 
 function createRequestClient(baseURL: string) {
   const ownerScope = createRequestOwnerScope(() => ({
-    uid: useUserStore().userInfo?.userId || '',
-    generation: useAuthStore().getAuthGeneration(),
     authenticated: !!useAccessStore().accessToken,
+    generation: useAuthStore().getAuthGeneration(),
+    uid: useUserStore().userInfo?.userId || '',
   }));
   const client = new RequestClient({ baseURL, requestOwnerScope: ownerScope });
 
@@ -364,7 +364,7 @@ function createRequestClient(baseURL: string) {
   // response数据解构
   client.addResponseInterceptor({
     fulfilled: (response) => {
-      const { data: responseData, status, config } = response;
+      const { config, data: responseData, status } = response;
 
       // 如果是blob响应（文件下载），直接返回blob数据
       if (config?.responseType === 'blob' && responseData instanceof Blob) {
@@ -398,11 +398,11 @@ function createRequestClient(baseURL: string) {
   client.addResponseInterceptor(
     authenticateResponseInterceptor({
       client,
-      ownerScope,
       doReAuthenticate,
       doRefreshToken,
       enableRefreshToken: preferences.app.enableRefreshToken,
       formatToken,
+      ownerScope,
     }),
   );
 

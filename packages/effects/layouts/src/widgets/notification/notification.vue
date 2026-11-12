@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import type { NotificationItem } from './types';
 
+import { ref } from 'vue';
+
 import { Bell, MailCheck } from '@vben/icons';
 import { $t } from '@vben/locales';
 import {
@@ -9,8 +11,6 @@ import {
   VbenPopover,
   VbenScrollbar,
 } from '@vben-core/shadcn-ui';
-
-import { ref } from 'vue';
 
 interface Props {
   /**

@@ -28,11 +28,11 @@ const tokenTheme = computed(() => {
     token: {
       ...tokens,
       borderRadius: 2,
+      boxShadow: 'none',
+      boxShadowSecondary: 'none',
       fontFamily: '"PingFang SC", "Microsoft YaHei", system-ui, sans-serif',
       fontSize: 14,
       motionDurationMid: '0.12s',
-      boxShadow: 'none',
-      boxShadowSecondary: 'none',
     },
   };
 });

@@ -9,8 +9,8 @@ describe('终端 UTF-8 输入分片', () => {
   it.each([
     ['ASCII等于上限', 'a'.repeat(limit), 1],
     ['ASCII超出上限', 'a'.repeat(limit + 1), 2],
-    ['中文跨边界', 'a'.repeat(limit - 1) + '中', 2],
-    ['emoji跨边界', 'a'.repeat(limit - 2) + '😀', 2],
+    ['中文跨边界', `${'a'.repeat(limit - 1)}中`, 2],
+    ['emoji跨边界', `${'a'.repeat(limit - 2)}😀`, 2],
     ['完整emoji恰好上限', '😀'.repeat(limit / 4), 1],
     ['中文emoji与NUL混合', '中文😀\0\r\n'.repeat(10_000), 2],
     ['NUL最坏JSON转义', '\0'.repeat(limit + 1), 2],
@@ -21,7 +21,7 @@ describe('终端 UTF-8 输入分片', () => {
     for (const chunk of chunks) {
       expect(encoder.encode(chunk).byteLength).toBeLessThanOrEqual(limit);
       expect(
-        encoder.encode(JSON.stringify({ op: 'stdin', data: chunk })).byteLength,
+        encoder.encode(JSON.stringify({ data: chunk, op: 'stdin' })).byteLength,
       ).toBeLessThan(512 * 1024);
       expect(chunk).not.toMatch(/^[\uDC00-\uDFFF]|[\uD800-\uDBFF]$/);
     }

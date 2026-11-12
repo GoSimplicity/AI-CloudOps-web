@@ -1,16 +1,6 @@
 <script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
 import { onMounted, ref } from 'vue';
 
-import { message } from 'ant-design-vue';
-
-import { useConfigMapPage } from './ConfigMap';
-import {
-  formatDateTime,
-  formatK8sTime,
-  getRelativeTime,
-  namespacedResourceKey,
-} from '../shared/utils';
 import {
   AppstoreOutlined,
   CheckCircleOutlined,
@@ -29,132 +19,142 @@ import {
   SettingOutlined,
   TagsOutlined,
 } from '@ant-design/icons-vue';
+import { message } from 'ant-design-vue';
 
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { usePermission } from '#/utils/permission';
+
+import {
+  formatDateTime,
+  formatK8sTime,
+  getRelativeTime,
+  namespacedResourceKey,
+} from '../shared/utils';
+import { useConfigMapPage } from './ConfigMap';
 
 const { can } = usePermission();
 
 const {
+  // filter operations
+  addFilterLabel,
+  // batch operations
+  batchOperation,
+  // operations
+  clearConfigMaps,
+  clearFilterLabels,
+  clearNamespaces,
+  // yaml operations
+  clearYaml,
+  // create operations
+  closeCreateModal,
+  closeCreateYamlModal,
+  // detail operations
+  closeDetailModal,
+  // edit operations
+  closeEditModal,
+  // YAML operations
+  closeYamlModal,
   // state
   clusters,
   clustersError,
   clustersLoading,
   clustersTotal,
-  currentPage,
-  filterClusterId,
-  filterDataKey,
-  filterLabels,
-  filterNamespace,
-  loadError,
-  loading,
-  namespaces,
-  namespacesError,
-  namespacesLoading,
-  namespacesTotal,
-  pageSize,
-  searchText,
-  selectedRows,
-  total,
+  // form models
+  createFormModel,
+  // form rules
+  createFormRules,
+  createYamlFormModel,
+  // form refs
+  createYamlFormRef,
 
-  // modal state
-  detailLoading,
-  isCreateModalVisible,
-  isCreateYamlModalVisible,
-  isDetailModalVisible,
-  isEditModalVisible,
-  isYamlModalVisible,
-  submitLoading,
-
+  createYamlFormRules,
   // operation targets
   currentConfigMapDetail,
   currentOperationConfigMap,
-
-  // form models
-  createFormModel,
-  createYamlFormModel,
-  editFormModel,
-  yamlFormModel,
-
-  // form refs
-  createYamlFormRef,
-  formRef,
-  yamlFormRef,
-
-  // form rules
-  createFormRules,
-  createYamlFormRules,
-  yamlFormRules,
-
-  // computed
-  filteredConfigMaps,
-  rowSelection,
-
-  // helpers
-  getEnvText,
-  parseJsonField,
-
-  // operations
-  clearConfigMaps,
-  clearNamespaces,
-  fetchClusters,
-  fetchConfigMaps,
-  fetchNamespaces,
-  loadMoreClusters,
-  loadMoreNamespaces,
-
-  // detail operations
-  closeDetailModal,
-  showConfigMapDetail,
-
-  // YAML operations
-  closeYamlModal,
-  showYamlModal,
-  submitYamlForm,
-
-  // create operations
-  closeCreateModal,
-  closeCreateYamlModal,
-  openCreateModal,
-  openCreateYamlModal,
-  submitCreateForm,
-  submitCreateYamlForm,
-
-  // edit operations
-  closeEditModal,
-  openEditModal,
-  submitEditForm,
-
+  currentPage,
   // configmap operations
   deleteConfigMap,
+  // modal state
+  detailLoading,
+  editFormModel,
 
-  // filter operations
-  addFilterLabel,
-  clearFilterLabels,
-  removeFilterLabel,
+  fetchClusters,
+  fetchConfigMaps,
 
-  // batch operations
-  batchOperation,
+  fetchNamespaces,
+  filterClusterId,
+  filterDataKey,
+  // computed
+  filteredConfigMaps,
+
+  filterLabels,
+  filterNamespace,
+  formatEditYaml,
+
+  formatYaml,
+  formRef,
+  // helpers
+  getEnvText,
 
   // pagination operations
   handlePageChange,
+  insertYamlTemplate,
 
+  isCreateModalVisible,
+  isCreateYamlModalVisible,
+
+  isDetailModalVisible,
+  isEditModalVisible,
+  isYamlModalVisible,
+  loadError,
+  loading,
+  loadMoreClusters,
+  loadMoreNamespaces,
+
+  namespaces,
+  namespacesError,
+
+  namespacesLoading,
+  namespacesTotal,
+  openCreateModal,
+
+  openCreateYamlModal,
+  openEditModal,
+  pageSize,
+  parseJsonField,
   // form field operations
   removeAnnotationField,
   removeBinaryDataField,
+
   removeDataField,
   removeEditAnnotationField,
   removeEditBinaryDataField,
+
   removeEditDataField,
+
   removeEditLabelField,
+  removeFilterLabel,
   removeLabelField,
 
-  // yaml operations
-  clearYaml,
-  formatEditYaml,
-  formatYaml,
-  insertYamlTemplate,
+  rowSelection,
+
+  searchText,
+
+  selectedRows,
+  showConfigMapDetail,
+  showYamlModal,
+  submitCreateForm,
+  submitCreateYamlForm,
+  submitEditForm,
+  submitLoading,
+  submitYamlForm,
+
+  total,
   validateEditYaml,
   validateYaml,
+  yamlFormModel,
+  yamlFormRef,
+  yamlFormRules,
 } = useConfigMapPage();
 
 // 添加新字段的方法
@@ -523,7 +523,7 @@ onMounted(async () => {
               class="k8s-filter-select"
               placeholder="数据键过滤"
               @input="handleFilterChange"
-              @pressEnter="handleFilterChange"
+              @press-enter="handleFilterChange"
             >
               <template #suffix>
                 <KeyOutlined aria-hidden="true" />
@@ -575,7 +575,7 @@ onMounted(async () => {
               class="k8s-search-input"
               placeholder="搜索 ConfigMap 名称"
               @input="onSearch"
-              @pressEnter="onSearch"
+              @press-enter="onSearch"
             >
               <template #suffix>
                 <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -588,7 +588,6 @@ onMounted(async () => {
         <div class="k8s-toolbar-actions">
           <div class="k8s-action-buttons">
             <a-button
-              @click="resetFilters"
               :disabled="
                 !searchText &&
                 !filterClusterId &&
@@ -598,6 +597,7 @@ onMounted(async () => {
               "
               class="k8s-toolbar-btn"
               title="重置所有筛选条件"
+              @click="resetFilters"
             >
               <template #icon><DeleteOutlined aria-hidden="true" /></template>
               重置筛选
@@ -614,13 +614,13 @@ onMounted(async () => {
             </a-button>
 
             <a-button
-              type="primary"
-              danger
-              @click="() => batchOperation('删除')"
-              :disabled="selectedRows.length === 0"
               v-if="can('k8s.configmap.batchDelete') && selectedRows.length > 0"
+              :disabled="selectedRows.length === 0"
               class="k8s-toolbar-btn"
+              danger
               title="批量删除选中的 ConfigMap"
+              type="primary"
+              @click="() => batchOperation('删除')"
             >
               <template #icon><DeleteOutlined aria-hidden="true" /></template>
               删除 ({{ selectedRows.length }})
@@ -951,9 +951,9 @@ onMounted(async () => {
                 @press-enter="addNewData"
               />
               <a-button
+                :disabled="!newDataKey.trim()"
                 type="primary"
                 @click="addNewData"
-                :disabled="!newDataKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1010,9 +1010,9 @@ onMounted(async () => {
                 @press-enter="addNewBinaryData"
               />
               <a-button
+                :disabled="!newBinaryDataKey.trim()"
                 type="primary"
                 @click="addNewBinaryData"
-                :disabled="!newBinaryDataKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1079,9 +1079,9 @@ onMounted(async () => {
                 @press-enter="addNewLabel"
               />
               <a-button
+                :disabled="!newLabelKey.trim()"
                 type="primary"
                 @click="addNewLabel"
-                :disabled="!newLabelKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1137,9 +1137,9 @@ onMounted(async () => {
                 @press-enter="addNewAnnotation"
               />
               <a-button
+                :disabled="!newAnnotationKey.trim()"
                 type="primary"
                 @click="addNewAnnotation"
-                :disabled="!newAnnotationKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1312,9 +1312,9 @@ onMounted(async () => {
                 @press-enter="addNewEditData"
               />
               <a-button
+                :disabled="!newEditDataKey.trim()"
                 type="primary"
                 @click="addNewEditData"
-                :disabled="!newEditDataKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1371,9 +1371,9 @@ onMounted(async () => {
                 @press-enter="addNewEditBinaryData"
               />
               <a-button
+                :disabled="!newEditBinaryDataKey.trim()"
                 type="primary"
                 @click="addNewEditBinaryData"
-                :disabled="!newEditBinaryDataKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1429,9 +1429,9 @@ onMounted(async () => {
                 @press-enter="addNewEditLabel"
               />
               <a-button
+                :disabled="!newEditLabelKey.trim()"
                 type="primary"
                 @click="addNewEditLabel"
-                :disabled="!newEditLabelKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1487,9 +1487,9 @@ onMounted(async () => {
                 @press-enter="addNewEditAnnotation"
               />
               <a-button
+                :disabled="!newEditAnnotationKey.trim()"
                 type="primary"
                 @click="addNewEditAnnotation"
-                :disabled="!newEditAnnotationKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1607,12 +1607,12 @@ onMounted(async () => {
 
           <!-- 数据内容 -->
           <a-row
-            :gutter="[24, 16]"
-            style="margin-top: 16px"
             v-if="
               currentConfigMapDetail.data &&
               Object.keys(currentConfigMapDetail.data).length > 0
             "
+            :gutter="[24, 16]"
+            style="margin-top: 16px"
           >
             <a-col :span="24">
               <a-card class="k8s-detail-card" size="small" title="数据内容">
@@ -1642,12 +1642,12 @@ onMounted(async () => {
 
           <!-- 二进制数据内容 -->
           <a-row
-            :gutter="[24, 16]"
-            style="margin-top: 16px"
             v-if="
               currentConfigMapDetail.binary_data &&
               Object.keys(currentConfigMapDetail.binary_data).length > 0
             "
+            :gutter="[24, 16]"
+            style="margin-top: 16px"
           >
             <a-col :span="24">
               <a-card
@@ -1811,8 +1811,8 @@ onMounted(async () => {
     >
       <div class="labels-filter-form">
         <div
-          class="current-filters"
           v-if="Object.keys(filterLabels).length > 0"
+          class="current-filters"
         >
           <h4>当前过滤条件：</h4>
           <div class="filter-tags">
@@ -1851,10 +1851,10 @@ onMounted(async () => {
               style="flex: 1"
             />
             <a-button
-              type="primary"
-              @click="addNewFilterLabel"
               :disabled="!newFilterKey.trim()"
               size="small"
+              type="primary"
+              @click="addNewFilterLabel"
             >
               <template #icon><PlusOutlined aria-hidden="true" /></template>
             </a-button>

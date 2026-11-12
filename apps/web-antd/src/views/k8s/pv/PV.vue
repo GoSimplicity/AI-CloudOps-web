@@ -1,12 +1,4 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-
-import {
-  clusterResourceKey,
-  formatDateTime,
-  getRelativeTime,
-} from '../shared/utils';
-
 import { onMounted } from 'vue';
 
 import {
@@ -26,131 +18,138 @@ import {
   UndoOutlined,
 } from '@ant-design/icons-vue';
 
-import { usePVPage } from './PV';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { usePermission } from '#/utils/permission';
+
+import {
+  clusterResourceKey,
+  formatDateTime,
+  getRelativeTime,
+} from '../shared/utils';
+import { usePVPage } from './PV';
 
 const { can } = usePermission();
 
 const {
+  // label/annotation helpers
+  addNewAnnotation,
+  addNewEditAnnotation,
+  addNewEditLabel,
+  // volume source helpers
+  addNewEditVolumeSource,
+  addNewLabel,
+  addNewVolumeSource,
+  // yaml operations
+  clearYaml,
   // state
   clusters,
   clustersError,
   clustersLoading,
   clustersTotal,
-  currentPage,
-  filterAccessMode,
-  filterClusterId,
-  loadError,
-  loading,
-  pageSize,
-  searchText,
-  selectedRows,
-  total,
-
-  // form refs
-  createYamlFormRef,
-  formRef,
-  yamlFormRef,
-
-  // modal state
-  detailLoading,
-  isCreateModalVisible,
-  isCreateYamlModalVisible,
-  isDetailModalVisible,
-  isEditModalVisible,
-  isYamlModalVisible,
-  submitLoading,
-
-  // current operation
-  currentOperationPV,
-  currentPVDetail,
-
   // form models
   createFormModel,
-  createYamlFormModel,
-  editFormModel,
-  yamlFormModel,
-
   // form rules
   createFormRules,
-  createYamlFormRules,
-  yamlFormRules,
-
-  // computed
-  filteredPVs,
-  rowSelection,
-
-  // helpers
-  getAccessModeText,
-  getEnvText,
-  getPVStatusColor,
-  getPVStatusText,
 
   // api calls
   createPV,
   createPVByYaml,
+  createYamlFormModel,
+
+  // form refs
+  createYamlFormRef,
+  createYamlFormRules,
+  // current operation
+  currentOperationPV,
+  currentPage,
+  currentPVDetail,
   deleteBatchPVs,
   deletePV,
+
+  // modal state
+  detailLoading,
+  editFormModel,
+
   fetchClusters,
   fetchPVs,
-  reclaimPV,
-  updatePV,
-  updatePVByYaml,
+  filterAccessMode,
+  filterClusterId,
 
+  // computed
+  filteredPVs,
+  formatEditYaml,
+  formatYaml,
+
+  formRef,
+  // helpers
+  getAccessModeText,
+
+  getEnvText,
+  getPVStatusColor,
+  getPVStatusText,
+  // filter handlers
+  handleClusterChange,
+
+  handleClusterDropdownScroll,
+  handleFilterChange,
+  // form helpers
+  handleVolumeTypeChange,
+  insertYamlTemplate,
+  isCreateModalVisible,
+  isCreateYamlModalVisible,
+  isDetailModalVisible,
+  isEditModalVisible,
+  isRequiredField,
+
+  isYamlModalVisible,
+  // constants
+  K8sPVStatus,
+  loadError,
+  loading,
+  newAnnotationKey,
+
+  newEditAnnotationKey,
+  newEditLabelKey,
+  newEditVolumeSourceKey,
+  newEditVolumeSourceValue,
+  newLabelKey,
+  newVolumeSourceKey,
+
+  newVolumeSourceValue,
   // modal handlers
   openCreateModal,
   openCreateYamlModal,
+
   openDetailModal,
   openEditModal,
   openYamlModal,
-
-  // form helpers
-  handleVolumeTypeChange,
-  isRequiredField,
-  resetCreateForm,
-  resetCreateYamlForm,
-  resetEditForm,
-  resetYamlForm,
-
-  // filter handlers
-  handleClusterChange,
-  handleClusterDropdownScroll,
-  handleFilterChange,
-
-  // label/annotation helpers
-  addNewAnnotation,
-  addNewEditAnnotation,
-  addNewEditLabel,
-  addNewLabel,
-  newAnnotationKey,
-  newEditAnnotationKey,
-  newEditLabelKey,
-  newLabelKey,
+  pageSize,
+  reclaimPV,
   removeAnnotationField,
   removeEditAnnotationField,
   removeEditLabelField,
-  removeLabelField,
-
-  // volume source helpers
-  addNewEditVolumeSource,
-  addNewVolumeSource,
-  newEditVolumeSourceKey,
-  newEditVolumeSourceValue,
-  newVolumeSourceKey,
-  newVolumeSourceValue,
   removeEditVolumeSourceField,
+  removeLabelField,
   removeVolumeSourceField,
+  resetCreateForm,
 
-  // yaml operations
-  clearYaml,
-  formatEditYaml,
-  formatYaml,
-  insertYamlTemplate,
+  resetCreateYamlForm,
+  resetEditForm,
+  resetYamlForm,
+  rowSelection,
+  searchText,
+  selectedRows,
+  submitLoading,
+  total,
+
+  updatePV,
+  updatePVByYaml,
   validateEditYaml,
   validateYaml,
+  yamlFormModel,
+  yamlFormRef,
 
-  // constants
-  K8sPVStatus,
+  yamlFormRules,
 } = usePVPage();
 
 const columns = [
@@ -310,9 +309,9 @@ onMounted(async () => {
               </a-select-option>
               <a-select-option
                 v-if="clusters.length > 0 && clusters.length < clustersTotal"
-                value="__load_more__"
                 disabled
                 style="text-align: center; color: var(--ops-muted)"
+                value="__load_more__"
               >
                 <a-spin :spinning="clustersLoading" size="small" />
                 <span v-if="!clustersLoading">滚动加载更多...</span>
@@ -343,7 +342,7 @@ onMounted(async () => {
               class="k8s-search-input"
               placeholder="搜索 PV 名称"
               @input="onSearch"
-              @pressEnter="onSearch"
+              @press-enter="onSearch"
             >
               <template #suffix>
                 <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -376,13 +375,13 @@ onMounted(async () => {
             </a-button>
 
             <a-button
-              type="primary"
-              danger
-              @click="deleteBatchPVs"
-              :disabled="selectedRows.length === 0"
               v-if="can('k8s.pv.batchDelete') && selectedRows.length > 0"
+              :disabled="selectedRows.length === 0"
               class="k8s-toolbar-btn"
+              danger
               title="批量删除选中的 PV"
+              type="primary"
+              @click="deleteBatchPVs"
             >
               <template #icon><DeleteOutlined aria-hidden="true" /></template>
               删除 ({{ selectedRows.length }})
@@ -790,13 +789,13 @@ onMounted(async () => {
               />
               <a-input
                 v-model:value="createFormModel.volume_source[key]"
+                :maxlength="200"
                 :placeholder="
                   isRequiredField(createFormModel.volume_type, key)
                     ? `请输入 ${key} (必填)`
                     : `请输入 ${key} (可选)`
                 "
                 class="k8s-form-input"
-                :maxlength="200"
               />
               <a-button
                 class="k8s-remove-btn"
@@ -822,9 +821,9 @@ onMounted(async () => {
                 @press-enter="addNewVolumeSource"
               />
               <a-button
+                :disabled="!newVolumeSourceKey.trim()"
                 type="primary"
                 @click="addNewVolumeSource"
-                :disabled="!newVolumeSourceKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -886,9 +885,9 @@ onMounted(async () => {
                   @press-enter="addNewLabel"
                 />
                 <a-button
+                  :disabled="!newLabelKey.trim()"
                   type="primary"
                   @click="addNewLabel"
-                  :disabled="!newLabelKey.trim()"
                 >
                   <template #icon><PlusOutlined aria-hidden="true" /></template>
                   添加
@@ -951,9 +950,9 @@ onMounted(async () => {
                   @press-enter="addNewAnnotation"
                 />
                 <a-button
+                  :disabled="!newAnnotationKey.trim()"
                   type="primary"
                   @click="addNewAnnotation"
-                  :disabled="!newAnnotationKey.trim()"
                 >
                   <template #icon><PlusOutlined aria-hidden="true" /></template>
                   添加
@@ -1163,9 +1162,9 @@ onMounted(async () => {
                 @press-enter="addNewEditVolumeSource"
               />
               <a-button
+                :disabled="!newEditVolumeSourceKey.trim()"
                 type="primary"
                 @click="addNewEditVolumeSource"
-                :disabled="!newEditVolumeSourceKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1227,9 +1226,9 @@ onMounted(async () => {
                   @press-enter="addNewEditLabel"
                 />
                 <a-button
+                  :disabled="!newEditLabelKey.trim()"
                   type="primary"
                   @click="addNewEditLabel"
-                  :disabled="!newEditLabelKey.trim()"
                 >
                   <template #icon><PlusOutlined aria-hidden="true" /></template>
                   添加
@@ -1292,9 +1291,9 @@ onMounted(async () => {
                   @press-enter="addNewEditAnnotation"
                 />
                 <a-button
+                  :disabled="!newEditAnnotationKey.trim()"
                   type="primary"
                   @click="addNewEditAnnotation"
-                  :disabled="!newEditAnnotationKey.trim()"
                 >
                   <template #icon><PlusOutlined aria-hidden="true" /></template>
                   添加
@@ -1392,13 +1391,13 @@ onMounted(async () => {
         </a-card>
 
         <a-card
-          title="绑定信息"
-          size="small"
-          class="k8s-detail-card"
           v-if="
             currentPVDetail.claim_ref &&
             Object.keys(currentPVDetail.claim_ref).length > 0
           "
+          class="k8s-detail-card"
+          size="small"
+          title="绑定信息"
         >
           <div
             v-for="(value, key) in currentPVDetail.claim_ref"
@@ -1411,13 +1410,13 @@ onMounted(async () => {
         </a-card>
 
         <a-card
-          title="卷源配置"
-          size="small"
-          class="k8s-detail-card"
           v-if="
             currentPVDetail.volume_source &&
             Object.keys(currentPVDetail.volume_source).length > 0
           "
+          class="k8s-detail-card"
+          size="small"
+          title="卷源配置"
         >
           <div
             v-for="(value, key) in currentPVDetail.volume_source"

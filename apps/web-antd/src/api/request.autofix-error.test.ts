@@ -3,16 +3,16 @@ import { $t } from '@vben/locales';
 import { type AxiosAdapter, AxiosError } from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  AUTOFIX_ERROR_TEXT,
-  reportAutoFixError,
-} from '#/views/autofix/autofix-errors';
+import { HTTP_CONFLICT_MESSAGE } from '#/constants/http-error-messages';
+import { BUSINESS_ERROR_MESSAGE_KEY_PREFIX } from '#/utils/permission/business-error';
 import {
   PERMISSION_DENIED_MESSAGE,
   PERMISSION_DENIED_MESSAGE_KEY,
 } from '#/utils/permission/forbidden';
-import { BUSINESS_ERROR_MESSAGE_KEY_PREFIX } from '#/utils/permission/business-error';
-import { HTTP_CONFLICT_MESSAGE } from '#/constants/http-error-messages';
+import {
+  AUTOFIX_ERROR_TEXT,
+  reportAutoFixError,
+} from '#/views/autofix/autofix-errors';
 
 import { resetHttpErrorNoticeTracking } from './http-error-notice';
 import {
@@ -27,9 +27,9 @@ import {
  */
 const notices = vi.hoisted(() => ({
   error: vi.fn(),
-  warning: vi.fn(),
-  success: vi.fn(),
   info: vi.fn(),
+  success: vi.fn(),
+  warning: vi.fn(),
 }));
 const refreshTokenApi = vi.hoisted(() => vi.fn());
 
@@ -46,8 +46,8 @@ vi.mock('@vben/preferences', () => ({
 const access = vi.hoisted(() => {
   const store = {
     accessToken: 'token' as null | string,
-    refreshToken: 'refresh',
     isAccessChecked: true,
+    refreshToken: 'refresh',
     setAccessToken: (token: null | string) => {
       store.accessToken = token;
     },
@@ -98,7 +98,7 @@ async function confirmWith(adapter: AxiosAdapter) {
   try {
     await requestClientAIOps.post(
       '/autofix/workflow/confirm',
-      { plan_id: 'fake-plan', approved_action_ids: ['fake-action'] },
+      { approved_action_ids: ['fake-action'], plan_id: 'fake-plan' },
       { adapter },
     );
   } catch (error) {
@@ -136,8 +136,8 @@ function allNoticeCalls() {
 
 const ERROR_BODY = (code: string) => ({
   code: 1,
-  message: `后端原文 ${code}`,
   error_code: code,
+  message: `后端原文 ${code}`,
 });
 
 describe('autofix 错误提示 · 请求链路集成', () => {
@@ -179,9 +179,9 @@ describe('autofix 错误提示 · 请求链路集成', () => {
       const inline = await confirmWith(
         adapterOf(status, {
           code: 1,
-          message: '后端原文 fake-top-level-detail',
           error: { message: '后端原文 fake-nested-detail' },
           error_code: 'WORKFLOW_APPROVAL_ERROR',
+          message: '后端原文 fake-top-level-detail',
         }),
       );
       expect(inline).toBe(AUTOFIX_ERROR_TEXT.invalid);
@@ -219,7 +219,7 @@ describe('autofix 错误提示 · 请求链路集成', () => {
 
   it('hTTP 200 + code≠0：只有业务错误提示一条', async () => {
     const inline = await confirmWith(
-      adapterOf(200, { code: 1, message: '业务失败', data: null }),
+      adapterOf(200, { code: 1, data: null, message: '业务失败' }),
     );
     expect(inline).toBe(AUTOFIX_ERROR_TEXT.generic);
     expect(notices.error).toHaveBeenCalledTimes(1);
@@ -280,7 +280,7 @@ describe('autofix 错误提示 · 共用 key 不串改', () => {
     const autofixError = await requestClientAIOps
       .post(
         '/autofix/workflow/confirm',
-        { plan_id: 'fake-plan', approved_action_ids: ['fake-action'] },
+        { approved_action_ids: ['fake-action'], plan_id: 'fake-plan' },
         { adapter: adapterOf(502, ERROR_BODY('X')) },
       )
       .catch((error) => error);
@@ -301,7 +301,7 @@ describe('autofix 错误提示 · 共用 key 不串改', () => {
       requestClientAIOps
         .post(
           '/autofix/workflow/confirm',
-          { plan_id: 'fake-plan', approved_action_ids: ['fake-action'] },
+          { approved_action_ids: ['fake-action'], plan_id: 'fake-plan' },
           { adapter: adapterOf(503, ERROR_BODY('X')) },
         )
         .catch((error) => error),

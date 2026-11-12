@@ -30,7 +30,7 @@ withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{ clearPreferencesAndLogout: [] }>();
 
 const accessStore = useAccessStore();
-const { globalSearchShortcutKey, preferencesButtonPosition, isMobile } =
+const { globalSearchShortcutKey, isMobile, preferencesButtonPosition } =
   usePreferences();
 const slots = useSlots();
 const rightSlots = computed(() => {

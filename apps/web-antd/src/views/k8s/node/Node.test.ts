@@ -27,17 +27,17 @@ vi.setConfig({ testTimeout: 15_000 });
  * 权限走真实 usePermission（pinia 中的 userInfo / accessCodes），只 mock 接口层。
  */
 const api = vi.hoisted(() => ({
-  getK8sNodeList: vi.fn(),
-  getK8sNodeDetail: vi.fn(),
-  updateK8sNodeLabels: vi.fn(),
-  drainK8sNode: vi.fn(),
-  cordonK8sNode: vi.fn(),
-  uncordonK8sNode: vi.fn(),
-  getK8sNodeTaints: vi.fn(),
   addK8sNodeTaints: vi.fn(),
-  deleteK8sNodeTaints: vi.fn(),
   checkK8sNodeTaintYaml: vi.fn(),
+  cordonK8sNode: vi.fn(),
+  deleteK8sNodeTaints: vi.fn(),
+  drainK8sNode: vi.fn(),
   getClustersListApi: vi.fn(),
+  getK8sNodeDetail: vi.fn(),
+  getK8sNodeList: vi.fn(),
+  getK8sNodeTaints: vi.fn(),
+  uncordonK8sNode: vi.fn(),
+  updateK8sNodeLabels: vi.fn(),
 }));
 vi.mock('#/api/core/k8s/k8s_node', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/api/core/k8s/k8s_node')>()),
@@ -51,7 +51,7 @@ vi.mock('#/api/core/k8s/k8s_cluster', async (importOriginal) => ({
 const LIST_CODE = '/api/k8s/node/:cluster_id/:node_name/taints/list';
 const ADD = PERMISSION_CODES['k8s.node.taintAdd'];
 const DELETE = PERMISSION_CODES['k8s.node.taintDelete'];
-const EXISTING = { key: 'dedicated', value: 'gpu', effect: 'NoSchedule' };
+const EXISTING = { effect: 'NoSchedule', key: 'dedicated', value: 'gpu' };
 
 let wrapper: VueWrapper<any>;
 
@@ -125,11 +125,11 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
       addEventListener: vi.fn(),
+      addListener: vi.fn(),
+      matches: false,
       removeEventListener: vi.fn(),
+      removeListener: vi.fn(),
     })),
   );
   const computedStyle = window.getComputedStyle;
@@ -137,20 +137,20 @@ beforeEach(() => {
     computedStyle(element),
   );
   api.getClustersListApi.mockResolvedValue({
-    items: [{ id: 1, name: 'c1' }],
     total: 1,
+    items: [{ id: 1, name: 'c1' }],
   });
   api.getK8sNodeList.mockResolvedValue({
+    total: 1,
     items: [
       {
-        name: 'node-1',
         cluster_id: 1,
-        status: 1,
+        name: 'node-1',
         schedulable: 1,
+        status: 1,
         taints: [EXISTING],
       },
     ],
-    total: 1,
   });
   api.getK8sNodeTaints.mockResolvedValue({ taints: [EXISTING] });
   api.addK8sNodeTaints.mockResolvedValue(undefined);
@@ -248,9 +248,9 @@ describe('fE-02 污点弹窗权限（c-1..c-9）', () => {
     // 模拟在 devtools 里改状态：同时有删除（有权限）和新增（无权限）
     wrapper.vm.taintFormModel.taintsToDelete.push('dedicated');
     wrapper.vm.taintFormModel.taints.push({
+      effect: 'NoExecute',
       key: 'evil',
       value: '1',
-      effect: 'NoExecute',
     });
     await flushPromises();
     await save();
@@ -358,7 +358,7 @@ describe('fE-02 污点弹窗权限（c-1..c-9）', () => {
     expect(api.deleteK8sNodeTaints).toHaveBeenCalledTimes(1);
     expect(api.addK8sNodeTaints).toHaveBeenCalledWith(
       expect.objectContaining({
-        taints: [{ key: 'new-key', value: '', effect: 'NoSchedule' }],
+        taints: [{ effect: 'NoSchedule', key: 'new-key', value: '' }],
       }),
     );
     expect(message.success).toHaveBeenCalledWith('节点污点更新成功');
@@ -705,7 +705,7 @@ describe('复审 v4 P3-1 / P3-2：污点按 key 整组提交', () => {
     setSubject([ADD]);
     await mountPage();
     await openTaintModal();
-    const zone = { key: 'zone', value: 'a', effect: 'NoSchedule' };
+    const zone = { effect: 'NoSchedule', key: 'zone', value: 'a' };
     await addRow(zone);
     await save();
     expect(api.addK8sNodeTaints).toHaveBeenCalledWith(

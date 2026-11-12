@@ -30,12 +30,12 @@ for (const name of fs.readdirSync(dir).filter((x) => x.endsWith('.ts'))) {
           ? fs.readFileSync(target, 'utf8')
           : '';
         entries.push({
-          route: route.initializer.text,
-          view,
-          sharedPage: text.includes('<OpsPage '),
           inlineStyles: (text.match(/\sstyle=/g) || []).length,
+          route: route.initializer.text,
           scopedStyle:
             text.includes('<style scoped') || text.includes(' scoped>'),
+          sharedPage: text.includes('<OpsPage '),
+          view,
         });
       }
     }
@@ -45,14 +45,14 @@ for (const name of fs.readdirSync(dir).filter((x) => x.endsWith('.ts'))) {
 }
 entries.sort((a, b) => a.route.localeCompare(b.route));
 const report = {
-  routes: entries.length,
-  migratedShells: entries.filter((e) => e.sharedPage).length,
   entries,
+  migratedShells: entries.filter((e) => e.sharedPage).length,
+  routes: entries.length,
 };
 fs.mkdirSync(path.join(root, 'docs/release'), { recursive: true });
 fs.writeFileSync(
   path.join(root, 'docs/release/layout-inventory.json'),
-  JSON.stringify(report, null, 2) + '\n',
+  `${JSON.stringify(report, null, 2)}\n`,
 );
 console.log(
   `${report.routes} routed components; ${report.migratedShells} consume OpsPage. This counts structure, not business acceptance.`,

@@ -5,14 +5,14 @@ import { initStores } from '@vben/stores';
 import '@vben/styles';
 import '@vben/styles/antd';
 
-import './styles/console.css';
+import Antd from 'ant-design-vue';
 
 import { setupI18n } from '#/locales';
 
 import App from './app.vue';
 import { router } from './router';
 
-import Antd from 'ant-design-vue';
+import './styles/console.css';
 
 async function bootstrap(namespace: string) {
   const app = createApp(App);

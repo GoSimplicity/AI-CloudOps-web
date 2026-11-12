@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import type { WorkorderInstanceItem } from '#/api/core/workorder/workorder_instance';
 
-import { formatCommentContent } from '#/utils/comment-content';
-
 import { computed, nextTick, reactive, ref } from 'vue';
 
 import { message } from 'ant-design-vue';
@@ -14,6 +12,7 @@ import {
   type GetInstanceCommentsTreeReq,
   type WorkorderInstanceCommentItem,
 } from '#/api/core/workorder/workorder_instance_comment';
+import { formatCommentContent } from '#/utils/comment-content';
 import { getOwnLookupValue } from '#/utils/own-lookup';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
@@ -79,18 +78,18 @@ const repliesExpanded = ref<Record<number, boolean>>({});
 
 // 评论对话框
 const commentDialog = reactive({
-  visible: false,
   form: {
-    instance_id: 0,
     content: '',
+    instance_id: 0,
     is_system: 0,
   } as CreateWorkorderInstanceCommentReq,
+  visible: false,
 });
 
 // 评论查看对话框
 const commentsViewDialog = reactive({
-  visible: false,
   instanceId: 0,
+  visible: false,
 });
 
 let viewTicket: CommentWindowTicket | undefined;
@@ -184,11 +183,11 @@ const formatFullDateTime = (dateStr: string | undefined) => {
   if (!dateStr) return '';
   const d = new Date(dateStr);
   return d.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: 'long',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    month: 'long',
+    year: 'numeric',
   });
 };
 
@@ -287,8 +286,8 @@ const showCommentDialog = (instanceId: number) => {
   if (!ticket) return;
   formTicket = ticket;
   commentDialog.form = {
-    instance_id: ticket.instanceId,
     content: '',
+    instance_id: ticket.instanceId,
     is_system: 0,
   };
   commentDialog.visible = true;
@@ -382,11 +381,11 @@ const submitReply = async (commentId: number) => {
     currentView(ticket) && replyTickets.get(commentId) === request;
   replySubmitting.value[commentId] = true;
   const replyData: CreateWorkorderInstanceCommentReq = {
-    instance_id: ticket.instanceId,
     content: draft.trim(),
+    instance_id: ticket.instanceId,
+    is_system: 0,
     parent_id: commentId,
     type: 'normal',
-    is_system: 0,
   };
   try {
     await createWorkorderInstanceComment(replyData);
@@ -429,8 +428,8 @@ const submitQuickComment = async () => {
   const current = () => currentView(ticket) && quickRequest === request;
   quickCommenting.value = true;
   const commentData: CreateWorkorderInstanceCommentReq = {
-    instance_id: ticket.instanceId,
     content: draft,
+    instance_id: ticket.instanceId,
     is_system: 0,
   };
   try {
@@ -462,7 +461,7 @@ const formatQuotedContent = (comment: WorkorderInstanceCommentItem): string => {
   let content = comment.content || '';
   const maxLength = 100;
   if (content.length > maxLength) {
-    content = content.substring(0, maxLength) + '...';
+    content = `${content.substring(0, maxLength)}...`;
   }
 
   // 处理多行内容，每行都加上引用符号
@@ -567,7 +566,7 @@ const clearQuote = () => {
 const truncateText = (text: string, maxLength: number): string => {
   if (!text) return '';
   if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + '...';
+  return `${text.substring(0, maxLength)}...`;
 };
 
 const copyComment = async (content: string) => {
@@ -806,11 +805,11 @@ defineExpose({
             <div
               v-for="(comment, index) in sortedComments"
               :key="comment.id"
-              :data-comment-id="comment.id"
-              class="comment-item"
               :class="{
                 'comment-highlight': comment.id === highlightCommentId,
               }"
+              :data-comment-id="comment.id"
+              class="comment-item"
               tabindex="-1"
             >
               <div class="comment-wrapper">
@@ -1054,7 +1053,7 @@ defineExpose({
 </template>
 
 <style scoped>
-@keyframes slideInDown {
+@keyframes slide-in-down {
   from {
     transform: translateY(-10px);
     opacity: 0;
@@ -1067,7 +1066,7 @@ defineExpose({
 }
 
 /* 加载动画 */
-@keyframes slideInUp {
+@keyframes slide-in-up {
   from {
     transform: translateY(20px);
     opacity: 0;
@@ -1306,7 +1305,7 @@ defineExpose({
   border: 2px solid #d9ecf5;
   border-radius: var(--ops-radius);
   overflow: hidden;
-  animation: slideInDown 0.3s ease;
+  animation: slide-in-down 0.3s ease;
 }
 
 .quote-header {
@@ -1429,6 +1428,7 @@ defineExpose({
   transition: all 0.3s ease;
   position: relative;
   box-shadow: 0 2px 12px rgb(0 0 0 / 4%);
+  animation: slide-in-up 0.4s ease-out;
 }
 
 .comment-item:hover {
@@ -1676,6 +1676,7 @@ defineExpose({
   border-radius: var(--ops-radius);
   border: 1px solid #e8f0fe;
   transition: all 0.3s ease;
+  animation: slide-in-up 0.3s ease-out;
 }
 
 .reply-item:hover {
@@ -1765,14 +1766,6 @@ defineExpose({
 
 .responsive-modal :deep(.ant-modal-body) {
   padding: 0;
-}
-
-.comment-item {
-  animation: slideInUp 0.4s ease-out;
-}
-
-.reply-item {
-  animation: slideInUp 0.3s ease-out;
 }
 
 /* 滚动条样式 */

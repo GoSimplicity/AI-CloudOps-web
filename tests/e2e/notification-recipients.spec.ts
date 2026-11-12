@@ -1,7 +1,7 @@
+import { readFileSync } from 'node:fs';
 import process from 'node:process';
 
 import { expect, type Page, test } from '@playwright/test';
-import { readFileSync } from 'node:fs';
 
 import { requireFixtureValue } from '../../internal/test-utils/required-fixture-value';
 
@@ -64,9 +64,9 @@ test('notification department and explicit addresses persist disabled and preser
   const token = tokenBody.data.accessToken;
   const api = async (path: string, method = 'GET', data?: unknown) => {
     const response = await page.request.fetch(`/api/${path}`, {
-      method,
       data,
       headers: { Authorization: `Bearer ${token}` },
+      method,
     });
     const result = await response.json();
     expect(response.status(), path.split('?')[0]).toBe(200);
@@ -81,8 +81,8 @@ test('notification department and explicit addresses persist disabled and preser
     ).items.filter((item: { name: string }) => names.includes(item.name));
   const save = async (page: Page, method: string, endpoint: string) => {
     const dialog = page.getByRole('dialog', {
-      name: method === 'POST' ? '创建通知配置' : '编辑通知配置',
       exact: true,
+      name: method === 'POST' ? '创建通知配置' : '编辑通知配置',
     });
     const [response] = await Promise.all([
       page.waitForResponse(
@@ -100,9 +100,9 @@ test('notification department and explicit addresses persist disabled and preser
   let departmentId: number | undefined;
   try {
     const department = await api('department/create', 'POST', {
+      description: 'owned disabled notification acceptance',
       name: nonce,
       parent_id: 0,
-      description: 'owned disabled notification acceptance',
     });
     departmentId = department.id;
     expect(
@@ -129,25 +129,25 @@ test('notification department and explicit addresses persist disabled and preser
         .getByPlaceholder('请输入主题模板（可选）', { exact: true })
         .fill('初始主题');
       await expect(
-        dialog.getByRole('switch', { name: '通知启用状态', exact: true }),
+        dialog.getByRole('switch', { exact: true, name: '通知启用状态' }),
       ).not.toBeChecked();
       await dialog.getByRole('checkbox', { name: /邮件/ }).check();
       await dialog
-        .getByRole('checkbox', { name: '工单创建人', exact: true })
+        .getByRole('checkbox', { exact: true, name: '工单创建人' })
         .uncheck();
       if (kind === 'dept') {
         await dialog
-          .getByRole('checkbox', { name: '部门用户', exact: true })
+          .getByRole('checkbox', { exact: true, name: '部门用户' })
           .check();
         const ids = dialog.getByRole('combobox', {
-          name: '接收人部门ID',
           exact: true,
+          name: '接收人部门ID',
         });
         await ids.fill(String(departmentId));
         await ids.press('Enter');
       } else {
         await dialog
-          .getByRole('checkbox', { name: '自定义地址', exact: true })
+          .getByRole('checkbox', { exact: true, name: '自定义地址' })
           .check();
         await dialog.getByRole('checkbox', { name: /飞书/ }).check();
         await dialog.getByRole('button', { name: /^添加接收地址$/ }).click();
@@ -191,10 +191,10 @@ test('notification department and explicit addresses persist disabled and preser
     expect(dept.recipient_depts).toEqual([String(departmentId)]);
     expect(custom.status).toBe(2);
     expect(custom.recipient_addresses).toEqual([
-      { channel: 'email', address: 'owner@example.test', name: '负责人' },
+      { address: 'owner@example.test', channel: 'email', name: '负责人' },
       {
-        channel: 'feishu',
         address: 'ou_cloudopsAcceptance42',
+        channel: 'feishu',
         name: '飞书接收人',
       },
     ]);
@@ -227,30 +227,30 @@ test('notification department and explicit addresses persist disabled and preser
       .getByPlaceholder('请输入主题模板（可选）', { exact: true })
       .fill(presenceReady ? '' : '更新主题');
     await page.screenshot({
-      path: '/tmp/cloudops-notification-recipients-desktop.png',
-      fullPage: true,
       animations: 'disabled',
+      fullPage: true,
+      path: '/tmp/cloudops-notification-recipients-desktop.png',
     });
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ height: 844, width: 390 });
     const addressLayout = await dialog
       .locator('.recipient-address-row')
       .first()
       .evaluate((element) => {
         const bounds = element.getBoundingClientRect();
         return {
-          grid: getComputedStyle(element).gridTemplateColumns,
-          width: bounds.width,
           controls: Array.from(element.children)
             .filter((child) => child.tagName !== 'LEGEND')
             .map((child) => {
               const rect = child.getBoundingClientRect();
               return {
                 left: rect.left,
-                top: rect.top,
                 right: rect.right,
+                top: rect.top,
                 width: rect.width,
               };
             }),
+          grid: getComputedStyle(element).gridTemplateColumns,
+          width: bounds.width,
         };
       });
     expect(addressLayout.controls).toHaveLength(4);
@@ -265,8 +265,8 @@ test('notification department and explicit addresses persist disabled and preser
       requireFixtureValue(addressLayout.controls[1]).top,
     );
     await page.screenshot({
-      path: '/tmp/cloudops-notification-recipients-mobile.png',
       fullPage: true,
+      path: '/tmp/cloudops-notification-recipients-mobile.png',
     });
     await save(page, 'PUT', `/api/workorder/notification/update/${custom.id}`);
     const updated = await api(`workorder/notification/detail/${custom.id}`);
@@ -285,8 +285,8 @@ test('notification department and explicit addresses persist disabled and preser
       const unsupported = await page.request.put(
         `/api/workorder/notification/update/${custom.id}`,
         {
-          headers: { Authorization: `Bearer ${token}` },
           data: { status: 2, trigger_type: 'scheduled' },
+          headers: { Authorization: `Bearer ${token}` },
         },
       );
       expect((await unsupported.json()).code).not.toBe(0);
@@ -301,9 +301,9 @@ test('notification department and explicit addresses persist disabled and preser
       .getByLabel('自定义接收地址1', { exact: true })
       .scrollIntoViewIfNeeded();
     await page.screenshot({
-      path: '/tmp/cloudops-notification-recipients-mobile-dark.png',
-      fullPage: true,
       animations: 'disabled',
+      fullPage: true,
+      path: '/tmp/cloudops-notification-recipients-mobile-dark.png',
     });
     await dialog.locator('.ant-modal-footer .ant-btn-default').click();
     expect(sends).toEqual([]);

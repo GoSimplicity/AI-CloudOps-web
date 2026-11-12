@@ -1,4 +1,4 @@
-export type BearerTokenAction = 'keep' | 'replace' | 'clear';
+export type BearerTokenAction = 'clear' | 'keep' | 'replace';
 
 /** 编辑时不从读取接口重建密钥，省略字段与显式清除具有不同含义 */
 export function bearerTokenPayload(options: {

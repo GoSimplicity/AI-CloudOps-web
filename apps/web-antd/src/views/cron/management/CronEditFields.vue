@@ -9,8 +9,8 @@ import {
 
 import CronKeyValueFields from './CronKeyValueFields.vue';
 
-defineProps<{ resources: TreeLocalResource[]; loading: boolean }>();
-const emit = defineEmits<{ search: [value: string]; openResources: [] }>();
+defineProps<{ loading: boolean; resources: TreeLocalResource[] }>();
+const emit = defineEmits<{ openResources: []; search: [value: string] }>();
 const model = defineModel<UpdateCronJobReq>({ required: true });
 function setField<K extends keyof UpdateCronJobReq>(
   key: K,

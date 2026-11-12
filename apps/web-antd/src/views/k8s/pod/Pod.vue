@@ -1,18 +1,8 @@
 <script lang="ts" setup>
 import type { CreatePodContainer } from '#/api/core/k8s/k8s_pod';
 
-import OpsPage from '#/components/ops/OpsPage.vue';
 import { onMounted, ref, watch } from 'vue';
 
-import { message } from 'ant-design-vue';
-
-import { usePodPage } from './Pod';
-import {
-  formatDateTime,
-  formatK8sTime,
-  getRelativeTime,
-  namespacedResourceKey,
-} from '../shared/utils';
 import {
   AppstoreOutlined,
   CheckCircleOutlined,
@@ -41,38 +31,115 @@ import {
   TagsOutlined,
   UploadOutlined,
 } from '@ant-design/icons-vue';
+import { message } from 'ant-design-vue';
 
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { getOwnLookupValue } from '#/utils/own-lookup';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
+import {
+  formatDateTime,
+  formatK8sTime,
+  getRelativeTime,
+  namespacedResourceKey,
+} from '../shared/utils';
+import { usePodPage } from './Pod';
+
 const { can } = usePermission();
 
 const {
+  // form field operations
+  addContainerField,
+  addEnvField,
+  // filter operations
+  addFilterLabel,
+  addPortField,
+  addPortForwardField,
+  // batch operations
+  batchOperation,
+  clearFilterLabels,
+  // operations
+  clearNamespaces,
+  clearPods,
+  // YAML toolbar operations
+  clearYaml,
+  // create operations
+  closeCreateModal,
+  closeCreateYamlModal,
+  // detail operations
+  closeDetailModal,
+  // edit operations
+  closeEditModal,
+  // exec operations
+  closeExecModal,
+  // file operations
+  closeFileManagerModal,
+  // logs operations
+  closeLogsModal,
+  // port forward operations
+  closePortForwardModal,
+  // YAML operations
+  closeYamlModal,
+
   // state
   clusters,
   clustersError,
   clustersLoading,
   clustersTotal,
+  connectToTerminal,
+  // form models
+  createFormModel,
+  // form rules
+  createFormRules,
+  createYamlFormModel,
+  // form refs
+  createYamlFormRef,
+  createYamlFormRules,
+  // operation targets
+  currentOperationPod,
   currentPage,
+  currentPodDetail,
+
+  // pod operations
+  deletePod,
+  // modal state
+  detailLoading,
+
+  disconnectTerminal,
+  downloadFile,
+  editFormModel,
+  execFormModel,
+
+  execFormRef,
+  execFormRules,
+  fetchClusters,
+  fetchNamespaces,
+  fetchPodLogs,
+  fetchPods,
   filterClusterId,
+
+  // computed
+  filteredPods,
   filterLabels,
   filterNamespace,
   filterStatus,
-  loadError,
-  loading,
-  namespaces,
-  namespacesError,
-  namespacesLoading,
-  namespacesTotal,
-  pageSize,
-  searchText,
-  selectedRows,
-  total,
 
-  // modal state
-  detailLoading,
+  formatEditYaml,
+  formatYaml,
+  formRef,
+  // helpers
+  getEnvText,
+
+  getPhaseText,
+  getStatusColor,
+
+  getStatusText,
+  // pagination operations
+  handlePageChange,
+  insertYamlTemplate,
   isCreateModalVisible,
+
   isCreateYamlModalVisible,
   isDetailModalVisible,
   isEditModalVisible,
@@ -80,142 +147,75 @@ const {
   isFileManagerModalVisible,
   isLogsModalVisible,
   isLogsStreaming,
-  isPortForwardModalVisible,
-  isYamlModalVisible,
-  logsLoading,
-  submitLoading,
 
+  isPortForwardModalVisible,
   // 终端状态
   isTerminalConnected,
-  terminalLoading,
 
-  // operation targets
-  currentOperationPod,
-  currentPodDetail,
+  isYamlModalVisible,
+  // constants
+  K8sPodStatus,
+  loadError,
+
+  loading,
+  loadMoreClusters,
+  loadMoreNamespaces,
+  logsFormModel,
+  logsLoading,
+  namespaces,
+
+  namespacesError,
+  namespacesLoading,
+  namespacesTotal,
+  openCreateModal,
+  openCreateYamlModal,
+  openEditModal,
+
+  pageSize,
   podContainers,
   podLogs,
 
-  // form models
-  createFormModel,
-  createYamlFormModel,
-  editFormModel,
-  execFormModel,
-  logsFormModel,
   portForwardFormModel,
-  yamlFormModel,
 
-  // form refs
-  createYamlFormRef,
-  execFormRef,
-  formRef,
-  yamlFormRef,
-
-  // form rules
-  createFormRules,
-  createYamlFormRules,
-  execFormRules,
-  yamlFormRules,
-
-  // computed
-  filteredPods,
-  rowSelection,
-
-  // helpers
-  getEnvText,
-  getPhaseText,
-  getStatusColor,
-  getStatusText,
-
-  // operations
-  clearNamespaces,
-  clearPods,
-  fetchClusters,
-  fetchNamespaces,
-  fetchPods,
-  loadMoreClusters,
-  loadMoreNamespaces,
-
-  // detail operations
-  closeDetailModal,
-  showPodDetail,
-
-  // YAML operations
-  closeYamlModal,
-  showYamlModal,
-  submitYamlForm,
-
-  // YAML toolbar operations
-  clearYaml,
-  formatEditYaml,
-  formatYaml,
-  insertYamlTemplate,
-  validateEditYaml,
-  validateYaml,
-
-  // create operations
-  closeCreateModal,
-  closeCreateYamlModal,
-  openCreateModal,
-  openCreateYamlModal,
-  submitCreateForm,
-  submitCreateYamlForm,
-
-  // edit operations
-  closeEditModal,
-  openEditModal,
-  submitEditForm,
-
-  // pod operations
-  deletePod,
-
-  // logs operations
-  closeLogsModal,
-  fetchPodLogs,
-  showLogsModal,
-  stopLogsStream,
-
-  // exec operations
-  closeExecModal,
-  connectToTerminal,
-  disconnectTerminal,
-  showExecModal,
-
-  // port forward operations
-  closePortForwardModal,
-  showPortForwardModal,
-  submitPortForward,
-
-  // file operations
-  closeFileManagerModal,
-  downloadFile,
-  showFileManagerModal,
-  uploadFile,
-
-  // filter operations
-  addFilterLabel,
-  clearFilterLabels,
-  removeFilterLabel,
-
-  // batch operations
-  batchOperation,
-
-  // pagination operations
-  handlePageChange,
-
-  // form field operations
-  addContainerField,
-  addEnvField,
-  addPortField,
-  addPortForwardField,
   removeAnnotationField,
   removeContainerField,
   removeEnvField,
+  removeFilterLabel,
+
   removeLabelField,
   removePortField,
   removePortForwardField,
+  rowSelection,
 
-  // constants
-  K8sPodStatus,
+  searchText,
+  selectedRows,
+  showExecModal,
+
+  showFileManagerModal,
+  showLogsModal,
+  showPodDetail,
+  showPortForwardModal,
+
+  showYamlModal,
+  stopLogsStream,
+  submitCreateForm,
+
+  submitCreateYamlForm,
+
+  submitEditForm,
+
+  submitLoading,
+  submitPortForward,
+  submitYamlForm,
+  terminalLoading,
+  total,
+  uploadFile,
+  validateEditYaml,
+  validateYaml,
+  yamlFormModel,
+  yamlFormRef,
+
+  yamlFormRules,
 } = usePodPage();
 
 // 添加新标签/注解的方法
@@ -523,12 +523,12 @@ const fileList = ref<any[]>([]);
 const uploadLoading = ref(false);
 const downloadLoading = ref(false);
 const uploadProgress = ref({
-  show: false,
   current: 0,
-  total: 0,
-  percent: 0,
-  status: 'active' as 'active' | 'exception' | 'success',
   currentFile: '',
+  percent: 0,
+  show: false,
+  status: 'active' as 'active' | 'exception' | 'success',
+  total: 0,
 });
 
 // 文件管理相关方法
@@ -550,10 +550,10 @@ const beforeUpload = (file: File) => {
 
   // 添加到文件列表
   fileList.value.push({
-    uid: file.name + Date.now(),
     name: file.name,
-    status: 'done',
     originFileObj: file,
+    status: 'done',
+    uid: file.name + Date.now(),
   });
 
   return false; // 阻止自动上传
@@ -582,12 +582,12 @@ const handleUploadFiles = async () => {
 
   uploadLoading.value = true;
   uploadProgress.value = {
-    show: true,
     current: 0,
-    total: fileList.value.length,
-    percent: 0,
-    status: 'active',
     currentFile: '',
+    percent: 0,
+    show: true,
+    status: 'active',
+    total: fileList.value.length,
   };
 
   try {
@@ -657,12 +657,12 @@ const handleCloseFileManagerModal = () => {
   uploadLoading.value = false;
   downloadLoading.value = false;
   uploadProgress.value = {
-    show: false,
     current: 0,
-    total: 0,
-    percent: 0,
-    status: 'active',
     currentFile: '',
+    percent: 0,
+    show: false,
+    status: 'active',
+    total: 0,
   };
 
   // 调用原始的关闭方法
@@ -849,7 +849,7 @@ const handleCloseFileManagerModal = () => {
             class="k8s-search-input"
             placeholder="搜索 Pod 名称"
             @input="onSearch"
-            @pressEnter="onSearch"
+            @press-enter="onSearch"
           >
             <template #suffix>
               <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -862,7 +862,6 @@ const handleCloseFileManagerModal = () => {
       <div class="k8s-toolbar-actions">
         <div class="k8s-action-buttons">
           <a-button
-            @click="resetFilters"
             :disabled="
               !filterStatus &&
               !searchText &&
@@ -872,6 +871,7 @@ const handleCloseFileManagerModal = () => {
             "
             class="k8s-toolbar-btn"
             title="重置所有筛选条件"
+            @click="resetFilters"
           >
             <template #icon><DeleteOutlined aria-hidden="true" /></template>
             重置筛选
@@ -888,13 +888,13 @@ const handleCloseFileManagerModal = () => {
           </a-button>
 
           <a-button
-            type="primary"
-            danger
-            @click="() => batchOperation('删除')"
-            :disabled="selectedRows.length === 0"
             v-if="can('k8s.pod.batchDelete') && selectedRows.length > 0"
+            :disabled="selectedRows.length === 0"
             class="k8s-toolbar-btn"
+            danger
             title="批量删除选中的 Pod"
+            type="primary"
+            @click="() => batchOperation('删除')"
           >
             <template #icon><DeleteOutlined aria-hidden="true" /></template>
             删除 ({{ selectedRows.length }})
@@ -972,9 +972,9 @@ const handleCloseFileManagerModal = () => {
               <a-progress
                 v-if="record.ready && record.ready.includes('/')"
                 :percent="calculateReadyPercent(record.ready)"
-                size="small"
                 :show-info="false"
                 :status="isFullyReady(record.ready) ? 'success' : 'active'"
+                size="small"
                 style="margin-top: 4px; max-width: 80px"
               />
             </div>
@@ -1578,9 +1578,9 @@ const handleCloseFileManagerModal = () => {
                 @press-enter="addNewLabel"
               />
               <a-button
+                :disabled="!newLabelKey.trim()"
                 type="primary"
                 @click="addNewLabel"
-                :disabled="!newLabelKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1636,9 +1636,9 @@ const handleCloseFileManagerModal = () => {
                 @press-enter="addNewAnnotation"
               />
               <a-button
+                :disabled="!newAnnotationKey.trim()"
                 type="primary"
                 @click="addNewAnnotation"
-                :disabled="!newAnnotationKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1959,11 +1959,11 @@ const handleCloseFileManagerModal = () => {
                 >
                   <a-table-column
                     key="name"
-                    dataIndex="name"
+                    data-index="name"
                     title="容器名称"
                   />
-                  <a-table-column key="image" dataIndex="image" title="镜像" />
-                  <a-table-column key="ready" dataIndex="ready" title="状态">
+                  <a-table-column key="image" data-index="image" title="镜像" />
+                  <a-table-column key="ready" data-index="ready" title="状态">
                     <template #default="{ text }">
                       <a-tag :color="text ? 'success' : 'error'">
                         {{ text ? '就绪' : '未就绪' }}
@@ -1972,7 +1972,7 @@ const handleCloseFileManagerModal = () => {
                   </a-table-column>
                   <a-table-column
                     key="restart_count"
-                    dataIndex="restart_count"
+                    data-index="restart_count"
                     title="重启次数"
                   />
                 </a-table>
@@ -2108,9 +2108,9 @@ const handleCloseFileManagerModal = () => {
                 @press-enter="addNewEditLabel"
               />
               <a-button
+                :disabled="!newEditLabelKey.trim()"
                 type="primary"
                 @click="addNewEditLabel"
-                :disabled="!newEditLabelKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -2166,9 +2166,9 @@ const handleCloseFileManagerModal = () => {
                 @press-enter="addNewEditAnnotation"
               />
               <a-button
+                :disabled="!newEditAnnotationKey.trim()"
                 type="primary"
                 @click="addNewEditAnnotation"
-                :disabled="!newEditAnnotationKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -2279,9 +2279,9 @@ const handleCloseFileManagerModal = () => {
 
         <div class="logs-display">
           <pre
-            class="logs-content"
-            :class="{ 'streaming-logs': isLogsStreaming }"
             v-show="podLogs || isLogsStreaming"
+            :class="{ 'streaming-logs': isLogsStreaming }"
+            class="logs-content"
             >{{ podLogs || '正在连接...' }}</pre
           >
 
@@ -2344,10 +2344,10 @@ const handleCloseFileManagerModal = () => {
             <a-form-item>
               <a-button
                 v-if="can('k8s.pod.exec')"
+                :disabled="!execFormModel.container"
+                :loading="terminalLoading"
                 type="primary"
                 @click="connectToTerminal"
-                :loading="terminalLoading"
-                :disabled="!execFormModel.container"
               >
                 <template #icon>
                   <PlayCircleOutlined aria-hidden="true" />
@@ -2716,8 +2716,8 @@ const handleCloseFileManagerModal = () => {
     >
       <div class="labels-filter-form">
         <div
-          class="current-filters"
           v-if="Object.keys(filterLabels).length > 0"
+          class="current-filters"
         >
           <h4>当前过滤条件：</h4>
           <div class="filter-tags">
@@ -2756,10 +2756,10 @@ const handleCloseFileManagerModal = () => {
               style="flex: 1"
             />
             <a-button
-              type="primary"
-              @click="addNewFilterLabel"
               :disabled="!newFilterKey.trim()"
               size="small"
+              type="primary"
+              @click="addNewFilterLabel"
             >
               <template #icon><PlusOutlined aria-hidden="true" /></template>
             </a-button>

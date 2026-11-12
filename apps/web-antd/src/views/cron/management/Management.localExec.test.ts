@@ -17,10 +17,10 @@ function required<T>(value: null | T | undefined): T {
 }
 
 const client = vi.hoisted(() => ({
+  delete: vi.fn(),
   get: vi.fn(),
   post: vi.fn(),
   put: vi.fn(),
-  delete: vi.fn(),
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 vi.mock('@vben/stores', () => ({
@@ -33,13 +33,13 @@ vi.mock('#/utils/permission', async (importOriginal) => ({
 
 const job = (id: number, job_type: number) => ({
   id,
-  name: `job-${id}`,
-  job_type,
-  status: 1,
   is_built_in: 2,
-  schedule: '@every 1h',
-  max_retry: 0,
+  job_type,
   last_run_status: 0,
+  max_retry: 0,
+  name: `job-${id}`,
+  schedule: '@every 1h',
+  status: 1,
 });
 const rows = [job(2, 2), job(3, 3), job(4, 4), job(5, 5)];
 
@@ -49,11 +49,11 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
       addEventListener: vi.fn(),
+      addListener: vi.fn(),
+      matches: false,
       removeEventListener: vi.fn(),
+      removeListener: vi.fn(),
     })),
   );
   const style = window.getComputedStyle;
@@ -69,7 +69,7 @@ afterEach(() => {
 });
 
 async function start(allowLocalExec?: boolean) {
-  const data: Record<string, unknown> = { items: rows, total: rows.length };
+  const data: Record<string, unknown> = { total: rows.length, items: rows };
   if (allowLocalExec !== undefined) data.allow_local_exec = allowLocalExec;
   client.get.mockResolvedValue(data);
   wrapper = mount(Management, {
@@ -100,8 +100,8 @@ async function openJobTypeOptions() {
   await flushPromises();
   return [...document.body.querySelectorAll('.ant-select-item-option')].map(
     (item) => ({
-      text: item.textContent?.trim(),
       disabled: item.classList.contains('ant-select-item-option-disabled'),
+      text: item.textContent?.trim(),
     }),
   );
 }

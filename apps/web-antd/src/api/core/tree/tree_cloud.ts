@@ -5,30 +5,30 @@ import { requestClient } from '#/api/request';
 // 云厂商类型
 export enum CloudProvider {
   ALIYUN = 1, // 阿里云
-  TENCENT = 2, // 腾讯云
   AWS = 3, // AWS
-  HUAWEI = 4, // 华为云
   AZURE = 5, // Azure
   GCP = 6, // Google Cloud
+  HUAWEI = 4, // 华为云
+  TENCENT = 2, // 腾讯云
 }
 
 // 云资源类型
 export enum CloudResourceType {
   ECS = 1, // 云服务器
+  OSS = 4, // 对象存储
+  OTHER = 6, // 其他资源
   RDS = 2, // 云数据库
   SLB = 3, // 负载均衡
-  OSS = 4, // 对象存储
   VPC = 5, // 虚拟私有云
-  OTHER = 6, // 其他资源
 }
 
 // 云资源状态
 export enum CloudResourceStatus {
-  RUNNING = 1, // 运行中
-  STOPPED = 2, // 已停止
-  STARTING = 3, // 启动中
-  STOPPING = 4, // 停止中
   DELETED = 5, // 已删除
+  RUNNING = 1, // 运行中
+  STARTING = 3, // 启动中
+  STOPPED = 2, // 已停止
+  STOPPING = 4, // 停止中
   UNKNOWN = 6, // 未知状态
 }
 
@@ -52,8 +52,8 @@ export enum SyncMode {
 
 // SSH认证方式
 export enum AuthMode {
-  PASSWORD = 1, // 密码认证
   KEY = 2, // 密钥认证
+  PASSWORD = 1, // 密码认证
 }
 
 // 键值对类型
@@ -156,7 +156,7 @@ export interface SyncTreeCloudResourceReq {
 export interface SyncCloudResourceRegionResult {
   region_id: number;
   region: string;
-  status: 'success' | 'failed' | 'cancelled' | 'unknown';
+  status: 'cancelled' | 'failed' | 'success' | 'unknown';
   total_count: number;
   new_count: number;
   update_count: number;
@@ -167,7 +167,7 @@ export interface SyncCloudResourceRegionResult {
 }
 
 export interface SyncCloudResourceResp {
-  status?: 'success' | 'partial' | 'failed' | 'unknown';
+  status?: 'failed' | 'partial' | 'success' | 'unknown';
   regions?: SyncCloudResourceRegionResult[];
   total_count: number;
   new_count: number;
@@ -353,7 +353,7 @@ export async function updateCloudResourceStatusApi(
 }
 
 // 阿里云托管资源使用独立契约，不能当作 ECS/SSH 资源处理。
-export type ManagedCloudKind = 'rds' | 'clb' | 'cache';
+export type ManagedCloudKind = 'cache' | 'clb' | 'rds';
 export interface ManagedRDS {
   instance_id: string;
   name: string;
@@ -401,7 +401,7 @@ export interface ManagedCloudHistory {
   kind: ManagedCloudKind;
   operation_id?: string;
   resource_ids: string[];
-  status: 'running' | 'success' | 'failed' | 'cancelled' | 'unknown';
+  status: 'cancelled' | 'failed' | 'running' | 'success' | 'unknown';
   count: number;
   new_count: number;
   update_count: number;
@@ -421,7 +421,7 @@ export interface ManagedCloudScope {
 }
 export interface ManagedCloudSyncResult {
   operation_id?: string;
-  status: 'success' | 'failed' | 'cancelled' | 'unknown';
+  status: 'cancelled' | 'failed' | 'success' | 'unknown';
   history_id?: number;
   count: number;
   new_count: number;
@@ -435,22 +435,22 @@ export interface ManagedPermissions {
   permissions: string[];
 }
 export const managedPermissions = {
-  accountList: 'GET /api/tree/cloud/account/list',
   accountDetail: 'GET /api/tree/cloud/account/:id/detail',
-  list: 'GET /api/tree/cloud/managed/list',
+  accountList: 'GET /api/tree/cloud/account/list',
   detail: 'GET /api/tree/cloud/managed/detail/:id',
   history: 'GET /api/tree/cloud/managed/history',
   operationList: 'GET /api/tree/cloud/managed/operations',
   operationRead: 'GET /api/tree/cloud/managed/operations/:operation_id',
   operationReview:
     'POST /api/tree/cloud/managed/operations/:operation_id/resolve',
-  sync: 'POST /api/tree/cloud/managed/sync',
   resolve: 'POST /api/tree/cloud/managed/history/:id/resolve',
+  sync: 'POST /api/tree/cloud/managed/sync',
+  list: 'GET /api/tree/cloud/managed/list',
 } as const;
 export const getManagedPermissions = () =>
   requestClient.get<ManagedPermissions>('/user/permissions');
 export const getManagedResources = (
-  params: ManagedCloudScope & { page: number; size: number },
+  params: { page: number; size: number } & ManagedCloudScope,
 ) =>
   requestClient.get<{ items: ManagedCloudResource[]; total: number }>(
     '/tree/cloud/managed/list',
@@ -464,27 +464,27 @@ export const getManagedResourceDetail = (
     params,
   });
 export const getManagedSyncHistory = (
-  params: ManagedCloudScope & { page: number; size: number },
+  params: { page: number; size: number } & ManagedCloudScope,
 ) =>
   requestClient.get<{ items: ManagedCloudHistory[]; total: number }>(
     '/tree/cloud/managed/history',
     { params },
   );
 export const syncManagedResources = (
-  data: ManagedCloudScope & { operation_id: string; resource_ids: string[] },
+  data: { operation_id: string; resource_ids: string[] } & ManagedCloudScope,
 ) =>
   requestClient.post<ManagedCloudSyncResult>('/tree/cloud/managed/sync', data);
 
 export const resolveManagedHistory = (
   id: number,
-  data: ManagedCloudScope & { reason: string; resources_verified: true },
+  data: { reason: string; resources_verified: true } & ManagedCloudScope,
 ) => requestClient.post(`/tree/cloud/managed/history/${id}/resolve`, data);
 
 export interface ManagedCloudOperation extends ManagedCloudScope {
   owner_id: number;
   operation_id: string;
   resource_ids: string[];
-  state: 'running' | 'unknown' | 'completed' | 'reviewed';
+  state: 'completed' | 'reviewed' | 'running' | 'unknown';
   created_at?: string;
   updated_at?: string;
   result?: ManagedCloudSyncResult;
@@ -504,12 +504,12 @@ export const getManagedOperation = (operationID: string, ownerID?: number) =>
       );
 export const reviewManagedOperation = (
   operationID: string,
-  data: ManagedCloudScope & {
+  data: {
     owner_id?: number;
     reason: string;
     resource_ids: string[];
     resources_verified: true;
-  },
+  } & ManagedCloudScope,
 ) =>
   requestClient.post<ManagedCloudOperation>(
     `/tree/cloud/managed/operations/${operationID}/resolve`,
@@ -522,12 +522,12 @@ export interface ManagedCloudOperationList {
   scope_blocked: boolean;
 }
 export const listManagedOperations = (
-  params: ManagedCloudScope & {
+  params: {
     all_owners?: boolean;
     page: number;
     size: number;
     unconfirmed_only: boolean;
-  },
+  } & ManagedCloudScope,
 ) =>
   requestClient.get<ManagedCloudOperationList>(
     '/tree/cloud/managed/operations',

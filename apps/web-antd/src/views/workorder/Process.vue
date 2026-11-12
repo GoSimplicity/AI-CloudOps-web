@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
 import {
   computed,
   onMounted,
@@ -13,7 +12,6 @@ import {
 import { useUserStore } from '@vben/stores';
 import { cloneDeep } from '@vben/utils';
 
-import { message, Modal } from 'ant-design-vue';
 import {
   ApartmentOutlined,
   CheckCircleOutlined,
@@ -22,7 +20,17 @@ import {
   PlusOutlined,
   StopOutlined,
 } from '@ant-design/icons-vue';
+import { message, Modal } from 'ant-design-vue';
 
+import {
+  listWorkorderCategory,
+  type WorkorderCategoryItem,
+} from '#/api/core/workorder/workorder_category';
+import {
+  FormDesignStatus,
+  listWorkorderFormDesign,
+  type WorkorderFormDesignItem,
+} from '#/api/core/workorder/workorder_form_design';
 import {
   createDefaultProcessDefinition,
   createWorkorderProcess,
@@ -35,18 +43,7 @@ import {
   updateWorkorderProcess,
   type WorkorderProcessItem,
 } from '#/api/core/workorder/workorder_process';
-import {
-  listWorkorderCategory,
-  type WorkorderCategoryItem,
-} from '#/api/core/workorder/workorder_category';
-import {
-  FormDesignStatus,
-  listWorkorderFormDesign,
-  type WorkorderFormDesignItem,
-} from '#/api/core/workorder/workorder_form_design';
-
-import ProcessBasicConfig from './components/ProcessBasicConfig.vue';
-
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { useAuthStore } from '#/store/auth';
 import { getAvatarColor as avatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
@@ -54,6 +51,8 @@ import {
   shouldNotifyPageError,
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
+
+import ProcessBasicConfig from './components/ProcessBasicConfig.vue';
 
 const { can, hasPerm } = usePermission();
 const userStore = useUserStore();
@@ -151,7 +150,7 @@ const capturePayload = (
   }
 };
 
-const initialProcessForm = (): CreateWorkorderProcessReq & { id?: number } => ({
+const initialProcessForm = (): { id?: number } & CreateWorkorderProcessReq => ({
   category_id: undefined,
   definition: createDefaultProcessDefinition(),
   description: '',
@@ -246,10 +245,10 @@ const basicConfigRef = ref<{ validate: () => Promise<boolean> }>();
 
 // 统计数据
 const stats = reactive({
-  total: 0,
-  published: 0,
-  draft: 0,
   archived: 0,
+  draft: 0,
+  published: 0,
+  total: 0,
 });
 
 // 数据列表
@@ -261,24 +260,24 @@ const formDesigns = ref<WorkorderFormDesignItem[]>([]);
 const paginationConfig = computed(() => ({
   current: currentPage.value,
   pageSize: pageSize.value,
-  total: total.value,
-  showSizeChanger: true,
-  showQuickJumper: true,
-  showTotal: (total: number) => `共 ${total} 条`,
   pageSizeOptions: ['10', '20', '50', '100'],
+  showQuickJumper: true,
+  showSizeChanger: true,
+  showTotal: (total: number) => `共 ${total} 条`,
+  total: total.value,
 }));
 
 // 流程对话框
 const processDialog = reactive({
-  visible: false,
-  isEdit: false,
   form: initialProcessForm(),
+  isEdit: false,
+  visible: false,
 });
 
 // 详情对话框
 const detailDialog = reactive({
-  visible: false,
   process: null as null | WorkorderProcessItem,
+  visible: false,
 });
 
 watch(
@@ -347,11 +346,11 @@ const loadProcesses = async (
   loadError.value = '';
   try {
     const params: ListWorkorderProcessReq = {
-      page: currentPage.value,
-      size: pageSize.value,
-      search: searchQuery.value || undefined,
-      status: statusFilter.value || undefined,
       category_id: categoryFilter.value || undefined,
+      page: currentPage.value,
+      search: searchQuery.value || undefined,
+      size: pageSize.value,
+      status: statusFilter.value || undefined,
     };
 
     const res = (await listWorkorderProcess(params)) as any;
@@ -377,7 +376,7 @@ const loadProcesses = async (
     if (!isCurrent()) return;
     processList.value = [];
     total.value = 0;
-    Object.assign(stats, { total: 0, published: 0, draft: 0, archived: 0 });
+    Object.assign(stats, { archived: 0, draft: 0, published: 0, total: 0 });
     if (shouldRecordPageError(error)) loadError.value = '加载流程数据失败';
     if (shouldNotifyPageError(error)) message.error(loadError.value);
   } finally {
@@ -415,8 +414,8 @@ const loadCategories = async (): Promise<void> => {
       if (!isCurrent()) return;
       const params = {
         page: currentPage,
-        size: pageSize,
         search: undefined,
+        size: pageSize,
       };
 
       const res = (await listWorkorderCategory(params)) as any;
@@ -462,8 +461,8 @@ const loadFormDesigns = async (): Promise<void> => {
       if (!isCurrent()) return;
       const params = {
         page: currentPage,
-        size: pageSize,
         search: undefined,
+        size: pageSize,
         status: FormDesignStatus.Published, // 只获取已发布的表单
       };
 
@@ -810,9 +809,9 @@ const formatDate = (dateStr: string | undefined): string => {
   if (!dateStr) return '';
   const d = new Date(dateStr);
   return d.toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
     day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
   });
 };
 
@@ -826,11 +825,11 @@ const formatFullDateTime = (dateStr: string | undefined): string => {
   if (!dateStr) return '';
   const d = new Date(dateStr);
   return d.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: 'long',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    month: 'long',
+    year: 'numeric',
   });
 };
 
@@ -843,14 +842,14 @@ const getInitials = (name: string | undefined): string => {
 
 const getStatusClass = (status: number): string => {
   switch (status) {
+    case ProcessStatus.Archived: {
+      return 'status-archived';
+    }
     case ProcessStatus.Draft: {
       return 'status-draft';
     }
     case ProcessStatus.Published: {
       return 'status-published';
-    }
-    case ProcessStatus.Archived: {
-      return 'status-archived';
     }
     default: {
       return '';
@@ -860,14 +859,14 @@ const getStatusClass = (status: number): string => {
 
 const getStatusColor = (status: number): string => {
   switch (status) {
+    case ProcessStatus.Archived: {
+      return 'default';
+    }
     case ProcessStatus.Draft: {
       return 'orange';
     }
     case ProcessStatus.Published: {
       return 'green';
-    }
-    case ProcessStatus.Archived: {
-      return 'default';
     }
     default: {
       return 'default';
@@ -877,14 +876,14 @@ const getStatusColor = (status: number): string => {
 
 const getStatusText = (status: number): string => {
   switch (status) {
+    case ProcessStatus.Archived: {
+      return '已归档';
+    }
     case ProcessStatus.Draft: {
       return '草稿';
     }
     case ProcessStatus.Published: {
       return '已发布';
-    }
-    case ProcessStatus.Archived: {
-      return '已归档';
     }
     default: {
       return '未知';
@@ -1061,8 +1060,8 @@ onMounted(() => {
             <template v-if="column.key === 'name'">
               <div class="process-name-cell">
                 <div
-                  class="process-badge"
                   :class="getStatusClass(record.status)"
+                  class="process-badge"
                 ></div>
                 <span class="process-name-text">{{ record.name }}</span>
               </div>
@@ -1091,10 +1090,10 @@ onMounted(() => {
             <template v-if="column.key === 'operator'">
               <div class="creator-info">
                 <a-avatar
-                  size="small"
                   :style="{
                     backgroundColor: getAvatarColor(record.operator_name),
                   }"
+                  size="small"
                 >
                   {{ getInitials(record.operator_name) }}
                 </a-avatar>
@@ -1170,8 +1169,8 @@ onMounted(() => {
                         激活
                       </a-menu-item>
                       <a-menu-item
-                        key="setDefault"
                         v-if="!isDefaultProcess(record.is_default)"
+                        key="setDefault"
                       >
                         设为默认
                       </a-menu-item>
@@ -1219,7 +1218,7 @@ onMounted(() => {
       <div v-else class="modal-content">
         <!-- 流程编辑模式切换 -->
         <div class="edit-mode-tabs">
-          <a-tabs v-model:activeKey="editMode" type="card">
+          <a-tabs v-model:active-key="editMode" type="card">
             <a-tab-pane key="basic" tab="基本信息">
               <ProcessBasicConfig
                 :key="interactionRevision"

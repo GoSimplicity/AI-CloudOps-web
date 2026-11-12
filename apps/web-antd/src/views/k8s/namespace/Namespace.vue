@@ -1,10 +1,6 @@
 <script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
 import { onMounted, ref } from 'vue';
 
-import { message } from 'ant-design-vue';
-
-import { useNamespacePage } from './Namespace';
 import {
   AppstoreOutlined,
   CopyOutlined,
@@ -18,112 +14,116 @@ import {
   SearchOutlined,
   TagsOutlined,
 } from '@ant-design/icons-vue';
+import { message } from 'ant-design-vue';
 
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
+import { useNamespacePage } from './Namespace';
 
 const { can } = usePermission();
 
 const {
+  // filter operations
+  addFilterLabel,
+  // batch operations
+  batchOperation,
+  clearFilterLabels,
+  // operations
+  clearNamespaces,
+  // create operations
+  closeCreateModal,
+  // delete operations
+  closeDeleteModal,
+  closeDetailModal,
+  // label operations
+  closeLabelModal,
   // state
   clusters,
   clustersError,
   clustersLoading,
-  currentPage,
-  filterClusterId,
-  filterLabels,
-  filterStatus,
-  loadError,
-  loading,
-  pageSize,
-  searchText,
-  selectedRows,
-
-  // modal state
-  isCreateModalVisible,
-  isDeleteModalVisible,
-  isLabelEdit,
-  isLabelModalVisible,
-  submitLoading,
-
-  // detail modal
-  currentNamespaceDetail,
-  detailLoading,
-  isDetailModalVisible,
-
-  // operation target
-  currentOperationNamespace,
+  // pagination state
+  clustersTotal,
 
   // form models
   createFormModel,
-  deleteFormModel,
-  labelFormModel,
-
   // form refs
   createFormRef,
-  labelFormRef,
-
   // form rules
   createFormRules,
-  labelFormRules,
+  // detail modal
+  currentNamespaceDetail,
+  // operation target
+  currentOperationNamespace,
+
+  currentPage,
+  deleteFormModel,
+  deleteNamespace,
+
+  detailLoading,
+
+  fetchClusters,
+  fetchNamespaces,
+  filterClusterId,
 
   // computed
   filteredNamespaces,
-  rowSelection,
+  filterLabels,
+
+  filterStatus,
+  forceDeleteNamespace,
 
   // helpers
   getClusterName,
   getEnvText,
+
   getPhaseColor,
   getPhaseText,
   getStatusColor,
   getStatusText,
-
-  // operations
-  clearNamespaces,
-  closeDetailModal,
-  fetchClusters,
-  fetchNamespaces,
-  showNamespaceDetail,
-
-  // create operations
-  closeCreateModal,
-  openCreateModal,
-  submitCreateForm,
-
-  // label operations
-  closeLabelModal,
-  openEditLabelModal,
-  removeAnnotationField,
-  removeCreateAnnotationField,
-  removeCreateLabelField,
-  removeLabelField,
-  submitLabelForm,
-
-  // delete operations
-  closeDeleteModal,
-  deleteNamespace,
-  forceDeleteNamespace,
-  submitDeleteForm,
-
-  // filter operations
-  addFilterLabel,
-  clearFilterLabels,
-  removeFilterLabel,
-
-  // batch operations
-  batchOperation,
-
   // cluster pagination
   handlePageChange,
+  // modal state
+  isCreateModalVisible,
+
+  isDeleteModalVisible,
+  isDetailModalVisible,
+  isLabelEdit,
+  isLabelModalVisible,
+  labelFormModel,
+
+  labelFormRef,
+  labelFormRules,
+  loadError,
+
+  loading,
   loadMoreClusters,
-
-  // pagination state
-  clustersTotal,
-  total,
-
   // constants
   NamespaceStatus,
+  openCreateModal,
+  openEditLabelModal,
+  pageSize,
+  removeAnnotationField,
+
+  removeCreateAnnotationField,
+  removeCreateLabelField,
+  removeFilterLabel,
+  removeLabelField,
+
+  rowSelection,
+  searchText,
+  selectedRows,
+
+  showNamespaceDetail,
+
+  submitCreateForm,
+  submitDeleteForm,
+
+  submitLabelForm,
+  submitLoading,
+
+  total,
 } = useNamespacePage();
 
 // 添加新标签/注解的方法
@@ -396,9 +396,9 @@ onMounted(async () => {
             </a-select-option>
             <a-select-option
               v-if="clusters.length > 0 && clusters.length < clustersTotal"
-              value="__load_more__"
               disabled
               style="text-align: center; color: #999"
+              value="__load_more__"
             >
               <a-spin :spinning="clustersLoading" size="small" />
               <span v-if="!clustersLoading">滚动加载更多...</span>
@@ -471,7 +471,7 @@ onMounted(async () => {
             class="k8s-search-input"
             placeholder="搜索命名空间名称"
             @input="onSearch"
-            @pressEnter="onSearch"
+            @press-enter="onSearch"
           >
             <template #suffix>
               <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -484,7 +484,6 @@ onMounted(async () => {
       <div class="k8s-toolbar-actions">
         <div class="k8s-action-buttons">
           <a-button
-            @click="() => resetFilters()"
             :disabled="
               !filterStatus &&
               !searchText &&
@@ -493,19 +492,20 @@ onMounted(async () => {
             "
             class="k8s-toolbar-btn"
             title="重置所有筛选条件"
+            @click="() => resetFilters()"
           >
             <template #icon><DeleteOutlined aria-hidden="true" /></template>
             重置筛选
           </a-button>
 
           <a-button
-            type="primary"
-            danger
-            @click="() => batchOperation('删除')"
-            :disabled="selectedRows.length === 0"
             v-if="can('k8s.namespace.batchDelete') && selectedRows.length > 0"
+            :disabled="selectedRows.length === 0"
             class="k8s-toolbar-btn"
+            danger
             title="批量删除选中的命名空间"
+            type="primary"
+            @click="() => batchOperation('删除')"
           >
             <template #icon><DeleteOutlined aria-hidden="true" /></template>
             删除 ({{ selectedRows.length }})
@@ -564,7 +564,7 @@ onMounted(async () => {
             <a-badge :status="getPhaseColor(text)" :text="getPhaseText(text)" />
           </template>
           <template v-else-if="column.key === 'cluster_id'">
-            <span class="k8s-cluster-name" :title="getClusterName(text)">{{
+            <span :title="getClusterName(text)" class="k8s-cluster-name">{{
               getClusterName(text)
             }}</span>
           </template>
@@ -572,9 +572,9 @@ onMounted(async () => {
             <div class="k8s-uid-display">
               <span :title="text" class="uid-text">{{ text }}</span>
               <a-button
-                title="复制 UID"
                 class="uid-copy-btn"
                 size="small"
+                title="复制 UID"
                 type="text"
                 @click="() => copyToClipboard(text)"
               >
@@ -666,11 +666,11 @@ onMounted(async () => {
                 </a-button>
               </a-tooltip>
               <a-tooltip
-                title="强制删除"
                 v-if="
                   can('k8s.namespace.forceDelete') &&
                   record.status === NamespaceStatus.Terminating
                 "
+                title="强制删除"
               >
                 <a-button
                   :disabled="
@@ -778,9 +778,9 @@ onMounted(async () => {
                 @press-enter="addNewCreateLabel"
               />
               <a-button
+                :disabled="!newCreateLabelKey.trim()"
                 type="primary"
                 @click="addNewCreateLabel"
-                :disabled="!newCreateLabelKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -835,9 +835,9 @@ onMounted(async () => {
                 @press-enter="addNewCreateAnnotation"
               />
               <a-button
+                :disabled="!newCreateAnnotationKey.trim()"
                 type="primary"
                 @click="addNewCreateAnnotation"
-                :disabled="!newCreateAnnotationKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -914,9 +914,9 @@ onMounted(async () => {
                 @press-enter="addNewLabel"
               />
               <a-button
+                :disabled="!newLabelKey.trim()"
                 type="primary"
                 @click="addNewLabel"
-                :disabled="!newLabelKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -971,9 +971,9 @@ onMounted(async () => {
                 @press-enter="addNewAnnotation"
               />
               <a-button
+                :disabled="!newAnnotationKey.trim()"
                 type="primary"
                 @click="addNewAnnotation"
-                :disabled="!newAnnotationKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1205,8 +1205,8 @@ onMounted(async () => {
     >
       <div class="labels-filter-form">
         <div
-          class="current-filters"
           v-if="Object.keys(filterLabels).length > 0"
+          class="current-filters"
         >
           <h4>当前过滤条件：</h4>
           <div class="filter-tags">
@@ -1245,10 +1245,10 @@ onMounted(async () => {
               style="flex: 1"
             />
             <a-button
-              type="primary"
-              @click="addNewFilterLabel"
               :disabled="!newFilterKey.trim()"
               size="small"
+              type="primary"
+              @click="addNewFilterLabel"
             >
               <template #icon><PlusOutlined aria-hidden="true" /></template>
             </a-button>

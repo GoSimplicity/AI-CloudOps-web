@@ -23,10 +23,10 @@ vi.setConfig({ testTimeout: 15_000 });
 
 const api = vi.hoisted(() => ({
   clusters: vi.fn(),
-  namespaces: vi.fn(),
-  secrets: vi.fn(),
   detail: vi.fn(),
+  namespaces: vi.fn(),
   reveal: vi.fn(),
+  secrets: vi.fn(),
   update: vi.fn(),
 }));
 vi.mock('#/api/core/k8s/k8s_cluster', async (importOriginal) => ({
@@ -47,16 +47,16 @@ vi.mock('#/api/core/k8s/k8s_secret', async (importOriginal) => ({
 
 const FAKE = 'fake-mount-value-for-test';
 const DETAIL = {
-  cluster_id: 1,
-  namespace: 'ns-a',
-  name: 'secret-a',
-  type: 'Opaque',
-  labels: [],
   annotations: [],
+  cluster_id: 1,
   data: { token: '' },
   data_keys: [{ key: 'token', size: 25 }],
+  labels: [],
+  name: 'secret-a',
+  namespace: 'ns-a',
   redacted: true,
   string_data: {},
+  type: 'Opaque',
 };
 
 let wrapper: undefined | VueWrapper<any>;
@@ -87,23 +87,23 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
       addEventListener: vi.fn(),
+      addListener: vi.fn(),
+      matches: false,
       removeEventListener: vi.fn(),
+      removeListener: vi.fn(),
     })),
   );
   useUserStore().setUserInfo({ roles: ['ops'], username: 'ops' } as any);
   useAccessStore().setAccessCodes([SECRET_REVEAL_PERMISSION_CODE]);
-  api.clusters.mockResolvedValue({ items: [], total: 0 });
-  api.namespaces.mockResolvedValue({ items: [], total: 0 });
-  api.secrets.mockResolvedValue({ items: [], total: 0 });
+  api.clusters.mockResolvedValue({ total: 0, items: [] });
+  api.namespaces.mockResolvedValue({ total: 0, items: [] });
+  api.secrets.mockResolvedValue({ total: 0, items: [] });
   api.detail.mockResolvedValue({ ...DETAIL });
   api.reveal.mockResolvedValue({
     data: { token: btoa(FAKE) },
-    string_data: {},
     keys: ['token'],
+    string_data: {},
   });
 });
 afterEach(() => {
@@ -127,9 +127,9 @@ describe('secret 详情：脱敏展示 + 按键 reveal', () => {
     await settle();
     expect(api.reveal).toHaveBeenCalledWith({
       cluster_id: 1,
-      namespace: 'ns-a',
-      name: 'secret-a',
       keys: ['token'],
+      name: 'secret-a',
+      namespace: 'ns-a',
     });
     expect(all('.secret-data-plain')[0]?.textContent).toBe(FAKE);
 
@@ -229,7 +229,7 @@ describe('secret 编辑：详情加载中「添加」按钮禁用（incr5）', (
     expect(vm.editFormModel.labels).toEqual({});
     expect(vm.editFormModel.annotations).toEqual({});
 
-    resolve({ ...DETAIL, data_keys: [], data: {} });
+    resolve({ ...DETAIL, data: {}, data_keys: [] });
     await opening;
     await settle();
     for (const button of buttons()) {
@@ -277,7 +277,7 @@ describe('secret 编辑：详情加载中回车也不能添加（incr6 遗留第
     expect(vm.editFormModel.labels).toEqual({});
     expect(vm.editFormModel.annotations).toEqual({});
 
-    resolve({ ...DETAIL, data_keys: [], data: {} });
+    resolve({ ...DETAIL, data: {}, data_keys: [] });
     await opening;
     await settle();
     for (const input of inputs()) {

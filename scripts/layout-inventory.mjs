@@ -1,10 +1,10 @@
-import { parse as parseSfc } from 'vue/compiler-sfc';
+import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, relative, resolve } from 'node:path';
-import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import ts from 'typescript';
+import { parse as parseSfc } from 'vue/compiler-sfc';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const routesDirectory = resolve(
@@ -89,11 +89,11 @@ for (const file of routeFiles.filter((file) => file.endsWith('.ts'))) {
         }
         inspect(descriptor.template.ast);
         entries.push({
-          route: path.initializer.text,
-          view,
-          sharedPage,
           inlineStyles,
+          route: path.initializer.text,
           scopedStyle: descriptor.styles.some((style) => style.scoped),
+          sharedPage,
+          view,
         });
       }
     }
@@ -102,16 +102,15 @@ for (const file of routeFiles.filter((file) => file.endsWith('.ts'))) {
   visit(source);
 }
 entries.sort((left, right) => left.route.localeCompare(right.route));
-const inventory =
-  JSON.stringify(
-    {
-      routes: entries.length,
-      migratedShells: entries.filter((entry) => entry.sharedPage).length,
-      entries,
-    },
-    null,
-    2,
-  ) + '\n';
+const inventory = `${JSON.stringify(
+  {
+    entries,
+    migratedShells: entries.filter((entry) => entry.sharedPage).length,
+    routes: entries.length,
+  },
+  null,
+  2,
+)}\n`;
 const target = resolve(root, 'docs/release/layout-inventory.json');
 if (process.argv.includes('--check')) {
   if (readFileSync(target, 'utf8') !== inventory)

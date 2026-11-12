@@ -121,10 +121,10 @@ export function findCatchBodies(text: string): CatchBody[] {
   )) {
     const open = m.index + m[0].length - 1;
     bodies.push({
-      param: m[1] ?? '',
-      start: open + 1,
       end: matchClose(text, open, '{}'),
       kind: 'catch',
+      param: m[1] ?? '',
+      start: open + 1,
     });
   }
   for (const m of text.matchAll(/\.catch\s*\(/g)) {
@@ -143,7 +143,7 @@ export function findCatchBodies(text: string): CatchBody[] {
       end = matchClose(text, start, '{}');
       start += 1;
     }
-    bodies.push({ param, start, end, kind: '.catch' });
+    bodies.push({ end, kind: '.catch', param, start });
   }
   return bodies;
 }
@@ -387,7 +387,7 @@ export function summarize(
           (unguarded[`${w.file}|${w.lhs}`] ?? 0) + 1;
     }
   }
-  return { guardedPerFile, unguarded, managedFailClosed };
+  return { guardedPerFile, managedFailClosed, unguarded };
 }
 
 /** 对照快照与白名单，返回问题列表（空 = 通过）；计数都要求精确相等 */
@@ -448,12 +448,12 @@ const NOT_REQUEST_CATCH: Record<string, number> = {
  * 行为回归见 CloudManagedResources.test.ts 的未知历史、存储不可用、同步未确认与核对失败用例。
  */
 const MANAGED_FAIL_CLOSED_EXCEPTIONS: Record<string, number> = {
-  'servicetree/CloudManagedResources.vue|refreshPermissions|error.value': 1,
   'servicetree/CloudManagedResources.vue|loadAccounts|error.value': 1,
-  'servicetree/CloudManagedResources.vue|loadRecords|error.value': 1,
   'servicetree/CloudManagedResources.vue|loadHistory|historyError.value': 1,
-  'servicetree/CloudManagedResources.vue|sync|error.value': 1,
+  'servicetree/CloudManagedResources.vue|loadRecords|error.value': 1,
+  'servicetree/CloudManagedResources.vue|refreshPermissions|error.value': 1,
   'servicetree/CloudManagedResources.vue|submitReview|reviewError.value': 1,
+  'servicetree/CloudManagedResources.vue|sync|error.value': 1,
 };
 
 /** 已守卫写入的逐文件快照（incr3 P3-7：取代原先的总数 71；新增 / 删除守卫需同步改这里并在评审说明） */

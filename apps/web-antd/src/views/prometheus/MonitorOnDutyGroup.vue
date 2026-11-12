@@ -166,11 +166,11 @@ onBeforeUnmount(() => {
 const paginationConfig = reactive({
   current: 1,
   pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
   showQuickJumper: true,
+  showSizeChanger: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
   size: 'default' as const,
+  total: 0,
 });
 
 // 用户选择相关状态
@@ -181,9 +181,9 @@ const userSearchText = ref('');
 // 用户列表分页配置
 const userPaginationConfig = reactive({
   current: 1,
+  hasMore: true,
   pageSize: 20,
   total: 0,
-  hasMore: true,
 });
 
 // 用户数据缓存
@@ -196,17 +196,17 @@ const planUserOptions = ref<{ label: string; value: string }[]>([]);
 const planPaginationConfig = reactive({
   current: 1,
   pageSize: 15,
-  total: 0,
   showSizeChanger: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
+  total: 0,
 });
 
 // 统计数据
 const stats = reactive({
-  total: 0,
   activeusers: 0,
   avgShiftDays: 0,
   todayOnDuty: 0,
+  total: 0,
 });
 
 // 对话框状态
@@ -220,19 +220,19 @@ const isCreateChangeModalVisible = ref(false);
 
 // 表单数据
 const addForm = reactive<CreateMonitorOnDutyGroupReq>({
-  name: '',
-  user_ids: [],
-  shift_days: 7,
   description: '',
+  name: '',
+  shift_days: 7,
+  user_ids: [],
 });
 
 const editForm = reactive<UpdateMonitorOnDutyGroupReq>({
+  description: '',
+  enable: 1,
   id: 0,
   name: '',
   shift_days: 7,
   user_ids: [],
-  description: '',
-  enable: 1,
 });
 
 const createChangeForm = reactive<{
@@ -242,10 +242,10 @@ const createChangeForm = reactive<{
   origin_user_id: null | number;
   reason: string;
 }>({
-  on_duty_group_id: 0,
   date: null,
-  origin_user_id: null,
+  on_duty_group_id: 0,
   on_duty_user_id: null,
+  origin_user_id: null,
   reason: '',
 });
 
@@ -267,12 +267,12 @@ const detailDialog = reactive({
 
 // 未来排班计划对话框数据
 const futurePlanDialog = reactive({
+  availableUsers: [] as string[],
   data: null as any | null,
   groupId: 0,
   groupName: '',
-  shiftDays: 0,
-  availableUsers: [] as string[],
   loading: false,
+  shiftDays: 0,
 });
 
 // 值班历史对话框数据
@@ -287,10 +287,10 @@ const historyDialog = reactive({
 const historyPaginationConfig = reactive({
   current: 1,
   pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
   showQuickJumper: true,
+  showSizeChanger: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
+  total: 0,
 });
 
 // 调班记录对话框数据
@@ -305,10 +305,10 @@ const changeDialog = reactive({
 const changePaginationConfig = reactive({
   current: 1,
   pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
   showQuickJumper: true,
+  showSizeChanger: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
+  total: 0,
 });
 
 // 排班计划筛选
@@ -320,12 +320,20 @@ const historyDateRange = ref<[Dayjs, Dayjs] | null>(null);
 
 // 表单验证规则
 const formRules = {
+  description: [
+    {
+      max: 255,
+      message: '描述最多255个字符',
+      transform: (value?: string) => value?.trim(),
+      trigger: 'blur',
+    },
+  ],
   name: [
     { message: '请输入值班组名称', required: true, trigger: 'blur' },
     {
-      min: 1,
       max: 50,
       message: '长度应为1到50个字符',
+      min: 1,
       transform: (value: string) => value.trim(),
       trigger: 'blur',
     },
@@ -339,14 +347,6 @@ const formRules = {
       type: 'integer' as const,
     },
   ],
-  description: [
-    {
-      max: 255,
-      message: '描述最多255个字符',
-      transform: (value?: string) => value?.trim(),
-      trigger: 'blur',
-    },
-  ],
   user_ids: [
     { message: '请选择至少一个值班成员', required: true, trigger: 'change' },
   ],
@@ -354,11 +354,11 @@ const formRules = {
 
 const changeFormRules = {
   date: [{ message: '请选择调班日期', required: true, trigger: 'change' }],
-  origin_user_id: [
-    { message: '请选择原值班人员', required: true, trigger: 'change' },
-  ],
   on_duty_user_id: [
     { message: '请选择调班后人员', required: true, trigger: 'change' },
+  ],
+  origin_user_id: [
+    { message: '请选择原值班人员', required: true, trigger: 'change' },
   ],
 };
 
@@ -632,10 +632,10 @@ const fetchOnDutyGroups = async (): Promise<void> => {
   const request = beginRequest();
   try {
     const params: GetMonitorOnDutyGroupListReq = {
-      page: paginationConfig.current,
-      size: paginationConfig.pageSize,
-      search: searchText.value.trim() || undefined,
       enable: enableFilter.value,
+      page: paginationConfig.current,
+      search: searchText.value.trim() || undefined,
+      size: paginationConfig.pageSize,
     };
     const response = await getMonitorOnDutyGroupListApi(params);
     if (!request.isCurrent() || owner !== operationOwner()) return;
@@ -681,8 +681,8 @@ const fetchUserList = async (page = 1, search = ''): Promise<void> => {
     usersLoading.value = true;
     const req: GetUserListReq = {
       page,
-      size: userPaginationConfig.pageSize,
       search: search || '',
+      size: userPaginationConfig.pageSize,
     };
     const res = await getUserList(req);
     if (!isCurrent()) return;
@@ -708,7 +708,7 @@ const fetchUserList = async (page = 1, search = ''): Promise<void> => {
         // 缓存用户信息
         userCache.value.set(userId, userName);
 
-        return [{ value: userId, label: userName }];
+        return [{ label: userName, value: userId }];
       },
     );
 
@@ -735,11 +735,13 @@ const fetchUserList = async (page = 1, search = ''): Promise<void> => {
 // 处理用户选择下拉框滚动
 const handleUserSelectScroll = (e: any): void => {
   const { target } = e;
-  if (target.scrollTop + target.offsetHeight >= target.scrollHeight - 20) {
-    if (userPaginationConfig.hasMore && !usersLoading.value) {
-      userPaginationConfig.current += 1;
-      fetchUserList(userPaginationConfig.current, userSearchText.value);
-    }
+  if (
+    target.scrollTop + target.offsetHeight >= target.scrollHeight - 20 &&
+    userPaginationConfig.hasMore &&
+    !usersLoading.value
+  ) {
+    userPaginationConfig.current += 1;
+    fetchUserList(userPaginationConfig.current, userSearchText.value);
   }
 };
 
@@ -754,13 +756,15 @@ const handleUserSearch = (value: string): void => {
 // 处理调班记录用户选择下拉框滚动
 const handleChangeUserSelectScroll = (e: any): void => {
   const { target } = e;
-  if (target.scrollTop + target.offsetHeight >= target.scrollHeight - 20) {
-    if (changeUserPagination.hasMore && !changeUsersLoading.value) {
-      fetchChangeUsers(
-        changeUserPagination.current + 1,
-        changeUserSearchText.value,
-      );
-    }
+  if (
+    target.scrollTop + target.offsetHeight >= target.scrollHeight - 20 &&
+    changeUserPagination.hasMore &&
+    !changeUsersLoading.value
+  ) {
+    fetchChangeUsers(
+      changeUserPagination.current + 1,
+      changeUserSearchText.value,
+    );
   }
 };
 
@@ -916,7 +920,7 @@ const handleReset = (): void => {
 };
 
 const handleEnableChange = async (
-  record: MonitorOnDutyGroup & { statusLoading?: boolean },
+  record: { statusLoading?: boolean } & MonitorOnDutyGroup,
   checked: boolean,
 ): Promise<void> => {
   const owner = operationOwner();
@@ -1108,7 +1112,7 @@ const exportPlan = (): void => {
     ),
   ].join('\n');
 
-  const blob = new Blob(['\uFEFF' + csvContent], {
+  const blob = new Blob([`\uFEFF${csvContent}`], {
     type: 'text/csv;charset=utf-8;',
   });
   const link = document.createElement('a');
@@ -1162,7 +1166,7 @@ const exportHistory = async (): Promise<void> => {
       ),
     ].join('\n');
 
-    const blob = new Blob(['\uFEFF' + csvContent], {
+    const blob = new Blob([`\uFEFF${csvContent}`], {
       type: 'text/csv;charset=utf-8;',
     });
     const link = document.createElement('a');
@@ -1276,7 +1280,7 @@ const showEditModal = (record: MonitorOnDutyGroup): void => {
         validPositiveId(user.id) &&
         !userOptions.value.some((option) => option.value === user.id)
       ) {
-        userOptions.value.push({ value: user.id, label: user.username });
+        userOptions.value.push({ label: user.username, value: user.id });
       }
     }
   });
@@ -1393,8 +1397,8 @@ const saveGroup = async (mode: 'add' | 'edit'): Promise<void> => {
       }
       await updateMonitorOnDutyGroupApi({
         ...payload,
-        id,
         enable: snapshot.enable,
+        id,
       });
     } else await createMonitorOnDutyGroupApi(payload);
     if (!currentFields()) return;
@@ -1563,11 +1567,10 @@ const confirmDelete = (record: MonitorOnDutyGroup): void => {
   const current = captureCrud();
   let consumed = false;
   deleteDialog = Modal.confirm({
-    title: '警告',
+    cancelText: '取消',
     content: `确定要删除值班组 "${name}" 吗？`,
     okText: '删除',
     okType: 'danger',
-    cancelText: '取消',
     onCancel() {
       consumed = true;
     },
@@ -1586,6 +1589,7 @@ const confirmDelete = (record: MonitorOnDutyGroup): void => {
           message.error('删除值班组失败');
       }
     },
+    title: '警告',
   });
 };
 
@@ -1753,10 +1757,10 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
             <template v-if="column.key === 'name'">
               <div class="group-name-cell">
                 <div
-                  class="group-badge"
                   :class="[
                     record.enable === 1 ? 'status-active' : 'status-inactive',
                   ]"
+                  class="group-badge"
                 ></div>
                 <span class="group-name-text">{{ record.name }}</span>
               </div>
@@ -1796,13 +1800,13 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
               <div class="duty-status-container">
                 <div v-if="record.today_duty_user" class="today-duty">
                   <a-avatar
-                    size="small"
                     :style="{
                       backgroundColor: getAvatarColor(
                         record.today_duty_user.real_name ||
                           record.today_duty_user.username,
                       ),
                     }"
+                    size="small"
                   >
                     {{
                       getInitials(
@@ -1834,12 +1838,12 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
             <template v-if="column.key === 'creator'">
               <div class="creator-info">
                 <a-avatar
-                  size="small"
                   :style="{
                     backgroundColor: getAvatarColor(
                       record.create_user_name || '',
                     ),
                   }"
+                  size="small"
                 >
                   {{ getInitials(record.create_user_name || '') }}
                 </a-avatar>
@@ -1971,14 +1975,14 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
                   v-model:value="addForm.user_ids"
                   :filter-option="false"
                   :loading="usersLoading"
-                  :maxTagCount="3"
+                  :max-tag-count="3"
                   :options="userOptions"
                   allow-clear
                   mode="multiple"
                   placeholder="请搜索并选择值班成员"
                   show-search
                   style="width: 100%"
-                  @popupScroll="handleUserSelectScroll"
+                  @popup-scroll="handleUserSelectScroll"
                   @search="handleUserSearch"
                 />
               </a-form-item>
@@ -2063,14 +2067,14 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
                   v-model:value="editForm.user_ids"
                   :filter-option="false"
                   :loading="usersLoading"
-                  :maxTagCount="3"
+                  :max-tag-count="3"
                   :options="userOptions"
                   allow-clear
                   mode="multiple"
                   placeholder="请搜索并选择值班成员"
                   show-search
                   style="width: 100%"
-                  @popupScroll="handleUserSelectScroll"
+                  @popup-scroll="handleUserSelectScroll"
                   @search="handleUserSearch"
                 />
               </a-form-item>
@@ -2105,7 +2109,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
           </div>
         </div>
 
-        <a-descriptions :column="1" :labelStyle="{ width: '150px' }" bordered>
+        <a-descriptions :column="1" :label-style="{ width: '150px' }" bordered>
           <a-descriptions-item label="ID">
             {{ detailDialog.data.id }}
           </a-descriptions-item>
@@ -2146,13 +2150,13 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
               class="duty-user-info"
             >
               <a-avatar
-                size="small"
                 :style="{
                   backgroundColor: getAvatarColor(
                     detailDialog.data.today_duty_user.real_name ||
                       detailDialog.data.today_duty_user.username,
                   ),
                 }"
+                size="small"
               >
                 {{
                   getInitials(
@@ -2254,12 +2258,12 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
                 <div class="timeline-content">
                   <div class="duty-user">
                     <a-avatar
-                      size="small"
                       :style="{
                         backgroundColor: getAvatarColor(
                           plan.user?.username || '',
                         ),
                       }"
+                      size="small"
                     >
                       {{ getInitials(plan.user?.username || '') }}
                     </a-avatar>
@@ -2268,15 +2272,15 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
                     }}</span>
                     <a-tag
                       v-if="isToday(plan.date)"
-                      color="red"
                       class="today-tag"
+                      color="red"
                     >
                       今日
                     </a-tag>
                     <a-tag
                       v-else-if="isTomorrow(plan.date)"
-                      color="orange"
                       class="tomorrow-tag"
+                      color="orange"
                     >
                       明日
                     </a-tag>
@@ -2300,12 +2304,12 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
             >
               <a-pagination
                 v-model:current="planPaginationConfig.current"
-                :pageSize="planPaginationConfig.pageSize"
-                :pageSizeOptions="['10', '15', '30', '50']"
-                :showSizeChanger="true"
+                :page-size="planPaginationConfig.pageSize"
+                :page-size-options="['10', '15', '30', '50']"
+                :show-size-changer="true"
                 :total="planPaginationConfig.total"
                 @change="handlePlanPaginationChange"
-                @showSizeChange="handlePlanPaginationChange"
+                @show-size-change="handlePlanPaginationChange"
               />
             </div>
           </div>
@@ -2462,8 +2466,8 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
             <div class="footer-right">
               <a-pagination
                 v-model:current="historyPaginationConfig.current"
-                :pageSize="historyPaginationConfig.pageSize"
-                :showTotal="historyPaginationConfig.showTotal"
+                :page-size="historyPaginationConfig.pageSize"
+                :show-total="historyPaginationConfig.showTotal"
                 :total="historyPaginationConfig.total"
                 size="small"
                 @change="handleHistoryPageChange"
@@ -2537,12 +2541,12 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
               <template v-if="column.key === 'creator'">
                 <div class="creator-info">
                   <a-avatar
-                    size="small"
                     :style="{
                       backgroundColor: getAvatarColor(
                         record.create_user_name || '',
                       ),
                     }"
+                    size="small"
                   >
                     {{ getInitials(record.create_user_name || '') }}
                   </a-avatar>
@@ -2617,7 +2621,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
             placeholder="请选择原值班人员"
             show-search
             style="width: 100%"
-            @popupScroll="handleChangeUserSelectScroll"
+            @popup-scroll="handleChangeUserSelectScroll"
             @search="handleChangeUserSearch"
           />
         </a-form-item>
@@ -2631,7 +2635,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
             placeholder="请选择调班后人员"
             show-search
             style="width: 100%"
-            @popupScroll="handleChangeUserSelectScroll"
+            @popup-scroll="handleChangeUserSelectScroll"
             @search="handleChangeUserSearch"
           />
         </a-form-item>

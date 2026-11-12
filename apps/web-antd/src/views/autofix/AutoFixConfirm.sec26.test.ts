@@ -1,7 +1,7 @@
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
-import Antd, { message } from 'ant-design-vue';
 import { reactive } from 'vue';
 
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AutoFixWorkflow from './AutoFixWorkflow.vue';
@@ -22,16 +22,16 @@ vi.mock('#/utils/permission', async (importOriginal) => ({
   usePermission: () => ({ can: () => true, hasPerm: () => true }),
 }));
 
-const account = vi.hoisted(() => ({ user: null as any, access: null as any }));
+const account = vi.hoisted(() => ({ access: null as any, user: null as any }));
 const api = vi.hoisted(() => ({
+  confirmAutoFixWorkflow: vi.fn(),
+  executeAutoFixWorkflow: vi.fn(),
   getAutoFixInfo: vi.fn(),
   getAutoFixReady: vi.fn(),
-  executeAutoFixWorkflow: vi.fn(),
-  confirmAutoFixWorkflow: vi.fn(),
 }));
 vi.mock('@vben/stores', () => ({
-  useUserStore: () => account.user,
   useAccessStore: () => account.access,
+  useUserStore: () => account.user,
 }));
 vi.mock('#/api/core/aiops/autofix', () => api);
 
@@ -39,57 +39,57 @@ let wrapper: undefined | VueWrapper;
 const action = (id: string) => ({
   action_id: id,
   action_type: 'restart_deployment',
-  executable: true,
   description: `原计划动作 ${id}`,
+  executable: true,
   risk_assessment: {
     allowed: false,
-    requires_human_confirmation: true,
-    permission_allowed: true,
     namespace_allowed: true,
+    permission_allowed: true,
+    reasons: [],
+    requires_human_confirmation: true,
     resource_exists: true,
     risk_level: 'high',
-    reasons: [],
   },
 });
 function pending(ids: string[], approval: Record<string, unknown> = {}) {
   const items = ids.map((id) => action(id));
   return {
-    status: 'needs_human_confirmation',
-    next_action: 'human_confirm',
-    plan: { plan_id: 'fake-plan-id', blocked_actions: items },
-    candidate_actions: items,
-    blocked_actions: items,
-    review: {},
     agents_used: [],
-    diagnosis: {},
-    execution: {},
-    executed_actions: [],
-    messages: [],
-    timestamp: new Date().toISOString(),
     approval: {
-      state: 'pending',
-      expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
-      retry_safe: false,
-      confirmation_required: true,
       confirm_endpoint: '/api/v1/autofix/workflow/confirm',
+      confirmation_required: true,
+      expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
       pending_action_ids: ids,
+      retry_safe: false,
+      state: 'pending',
       ...approval,
     },
+    blocked_actions: items,
+    candidate_actions: items,
+    diagnosis: {},
+    executed_actions: [],
+    execution: {},
+    messages: [],
+    next_action: 'human_confirm',
+    plan: { blocked_actions: items, plan_id: 'fake-plan-id' },
+    review: {},
+    status: 'needs_human_confirmation',
+    timestamp: new Date().toISOString(),
   };
 }
 const completed = () => ({
   ...pending([]),
-  status: 'completed',
+  approval: {
+    confirmation_required: false,
+    expires_at: new Date().toISOString(),
+    pending_action_ids: [],
+    retry_safe: false,
+    state: 'completed',
+  },
+  blocked_actions: [],
   execution: { status: 'completed' },
   next_action: 'finish',
-  blocked_actions: [],
-  approval: {
-    state: 'completed',
-    expires_at: new Date().toISOString(),
-    retry_safe: false,
-    confirmation_required: false,
-    pending_action_ids: [],
-  },
+  status: 'completed',
 });
 
 beforeEach(() => {
@@ -103,8 +103,8 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -113,10 +113,10 @@ beforeEach(() => {
     style(element),
   );
   api.getAutoFixInfo.mockResolvedValue({
-    service: 's',
-    status: 'ok',
     capabilities: [],
     endpoints: {},
+    service: 's',
+    status: 'ok',
   });
   api.getAutoFixReady.mockResolvedValue({ ready: true });
   api.executeAutoFixWorkflow.mockResolvedValue(pending(['a1', 'a2']));
@@ -169,8 +169,8 @@ describe('规则 4：逐项确认 / 批量确认', () => {
     await required(buttons('确认此项')[0]).trigger('click');
     await flushPromises();
     expect(api.confirmAutoFixWorkflow).toHaveBeenCalledWith({
-      plan_id: 'fake-plan-id',
       approved_action_ids: ['a1'],
+      plan_id: 'fake-plan-id',
     });
     expect(buttons('确认此项')).toHaveLength(1);
     expect(required(wrapper).text()).toContain('原计划动作 a2');
@@ -184,8 +184,8 @@ describe('规则 4：逐项确认 / 批量确认', () => {
     await flushPromises();
     expect(api.confirmAutoFixWorkflow).toHaveBeenCalledTimes(1);
     expect(api.confirmAutoFixWorkflow).toHaveBeenCalledWith({
-      plan_id: 'fake-plan-id',
       approved_action_ids: ['a1', 'a2'],
+      plan_id: 'fake-plan-id',
     });
     expect(message.success).toHaveBeenCalled();
     expect(required(wrapper).find('.confirm-panel').exists()).toBe(false);
@@ -242,8 +242,8 @@ describe('规则 3：pending 由 status + approval 字段共同决定', () => {
     await required(button('全部确认')).trigger('click');
     await flushPromises();
     expect(api.confirmAutoFixWorkflow).toHaveBeenCalledWith({
-      plan_id: 'fake-plan-id',
       approved_action_ids: ['a1'],
+      plan_id: 'fake-plan-id',
     });
   });
 });

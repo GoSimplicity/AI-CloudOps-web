@@ -1,21 +1,21 @@
-import { describe, expect, it, vi } from 'vitest';
+import { shallowMount } from '@vue/test-utils';
 import * as echarts from 'echarts/core';
 import { SVGRenderer } from 'echarts/renderers';
-import { shallowMount } from '@vue/test-utils';
+import { describe, expect, it, vi } from 'vitest';
 
 import RCAAnalysis from './RCAAnalysis.vue';
 import RCADiagnosis from './RCADiagnosis.vue';
 
 vi.mock('@vben/stores', () => ({
-  useUserStore: () => ({ userInfo: { userId: '1' } }),
   useAccessStore: () => ({ accessToken: 'offline' }),
+  useUserStore: () => ({ userInfo: { userId: '1' } }),
 }));
 vi.mock('#/api/core/aiops/rca', () => ({
-  getAllPrometheusMetrics: vi.fn(async () => []),
   analyzeRootCause: vi.fn(),
-  quickDiagnosis: vi.fn(),
-  getEventPatterns: vi.fn(),
+  getAllPrometheusMetrics: vi.fn(async () => []),
   getErrorSummary: vi.fn(),
+  getEventPatterns: vi.fn(),
+  quickDiagnosis: vi.fn(),
 }));
 
 describe('rCA真实ECharts按需注册', () => {
@@ -34,19 +34,19 @@ describe('rCA真实ECharts按需注册', () => {
     );
     echarts.use(SVGRenderer);
     const chart = echarts.init(null, undefined, {
+      height: 180,
       renderer: 'svg',
       ssr: true,
       width: 320,
-      height: 180,
     });
     try {
       chart.setOption({
-        xAxis: { type: 'category', data: ['actual'] },
-        yAxis: { type: 'value' },
         series: [
-          { type: 'bar', data: [0] },
-          { type: 'pie', radius: '20%', data: [{ name: 'actual', value: 1 }] },
+          { data: [0], type: 'bar' },
+          { data: [{ name: 'actual', value: 1 }], radius: '20%', type: 'pie' },
         ],
+        xAxis: { data: ['actual'], type: 'category' },
+        yAxis: { type: 'value' },
       });
       expect(chart.renderToSVGString()).toContain('<path');
       expect(errors).not.toHaveBeenCalled();

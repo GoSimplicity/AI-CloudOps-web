@@ -5,6 +5,18 @@ import { computed, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 
 import {
+  Env,
+  getClustersListApi,
+  type K8sCluster,
+  type KeyValueList,
+  type ListClustersReq,
+} from '#/api/core/k8s/k8s_cluster';
+import {
+  getNamespacesListApi,
+  type K8sNamespace,
+  type K8sNamespaceListReq,
+} from '#/api/core/k8s/k8s_namespace';
+import {
   type CreateResourceByYamlReq,
   createServiceApi,
   createServiceByYamlApi,
@@ -24,18 +36,6 @@ import {
   updateServiceByYamlApi,
   type UpdateServiceReq,
 } from '#/api/core/k8s/k8s_service';
-import {
-  Env,
-  getClustersListApi,
-  type K8sCluster,
-  type KeyValueList,
-  type ListClustersReq,
-} from '#/api/core/k8s/k8s_cluster';
-import {
-  getNamespacesListApi,
-  type K8sNamespace,
-  type K8sNamespaceListReq,
-} from '#/api/core/k8s/k8s_namespace';
 import { getOwnLookupValue } from '#/utils/own-lookup';
 import {
   shouldNotifyPageError,
@@ -105,13 +105,13 @@ export function useServicePage() {
     selector: Record<string, string>;
     type: string;
   }>({
+    annotations: {},
+    labels: {},
     name: '',
     namespace: '',
-    type: 'ClusterIP',
-    ports: [{ name: '', protocol: 'TCP', port: 80, target_port: 80 }],
+    ports: [{ name: '', port: 80, protocol: 'TCP', target_port: 80 }],
     selector: {},
-    labels: {},
-    annotations: {},
+    type: 'ClusterIP',
   });
 
   const editFormModel = ref<{
@@ -123,13 +123,13 @@ export function useServicePage() {
     selector: Record<string, string>;
     type: string;
   }>({
+    annotations: {},
+    labels: {},
     name: '',
     namespace: '',
-    type: 'ClusterIP',
-    ports: [{ name: '', protocol: 'TCP', port: 80, target_port: 80 }],
+    ports: [{ name: '', port: 80, protocol: 'TCP', target_port: 80 }],
     selector: {},
-    labels: {},
-    annotations: {},
+    type: 'ClusterIP',
   });
 
   const yamlFormModel = ref<{
@@ -147,53 +147,53 @@ export function useServicePage() {
   // form validation rules
   const createFormRules: Record<string, Rule[]> = {
     name: [
-      { required: true, message: '请输入 Service 名称', trigger: 'blur' },
+      { message: '请输入 Service 名称', required: true, trigger: 'blur' },
       {
-        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         message:
           'Service 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         trigger: 'blur',
       },
       { max: 63, message: 'Service 名称长度不能超过63个字符', trigger: 'blur' },
     ],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' },
+      { message: '请选择命名空间', required: true, trigger: 'change' },
     ],
     type: [
-      { required: true, message: '请选择 Service 类型', trigger: 'change' },
+      { message: '请选择 Service 类型', required: true, trigger: 'change' },
     ],
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
   const editFormRules: Record<string, Rule[]> = {
     name: [
-      { required: true, message: '请输入 Service 名称', trigger: 'blur' },
+      { message: '请输入 Service 名称', required: true, trigger: 'blur' },
       {
-        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         message:
           'Service 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         trigger: 'blur',
       },
       { max: 63, message: 'Service 名称长度不能超过63个字符', trigger: 'blur' },
     ],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' },
+      { message: '请选择命名空间', required: true, trigger: 'change' },
     ],
     type: [
-      { required: true, message: '请选择 Service 类型', trigger: 'change' },
+      { message: '请选择 Service 类型', required: true, trigger: 'change' },
     ],
   };
 
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
@@ -203,11 +203,11 @@ export function useServicePage() {
   });
 
   const rowSelection = computed(() => ({
-    selectedRowKeys: selectedRowKeys.value,
     onChange: (keys: string[], rows: K8sService[]) => {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
     },
+    selectedRowKeys: selectedRowKeys.value,
   }));
 
   // helpers
@@ -224,29 +224,29 @@ export function useServicePage() {
     if (env === undefined || env === null) return '未知环境';
     const value = typeof env === 'string' ? Number.parseInt(env) : env;
     const map: Record<number, string> = {
-      [Env.Prod]: '生产',
       [Env.Dev]: '开发',
-      [Env.Stage]: '预发',
-      [Env.Rc]: '测试',
       [Env.Press]: '灰度',
+      [Env.Prod]: '生产',
+      [Env.Rc]: '测试',
+      [Env.Stage]: '预发',
     };
     return map[value] || '未知环境';
   };
 
   const getStatusText = (status?: K8sSvcStatus) => {
     const map: Record<K8sSvcStatus, string> = {
+      [K8sSvcStatus.Error]: '异常',
       [K8sSvcStatus.Running]: '运行中',
       [K8sSvcStatus.Stopped]: '已停止',
-      [K8sSvcStatus.Error]: '异常',
     };
     return status === undefined ? '未知' : map[status] || '未知';
   };
 
   const getStatusColor = (status?: K8sSvcStatus) => {
     const map: Record<K8sSvcStatus, string> = {
+      [K8sSvcStatus.Error]: 'error',
       [K8sSvcStatus.Running]: 'success',
       [K8sSvcStatus.Stopped]: 'default',
-      [K8sSvcStatus.Error]: 'error',
     };
     return status === undefined ? 'default' : map[status] || 'default';
   };
@@ -394,16 +394,16 @@ export function useServicePage() {
       selectedRows.value = [];
       const params: GetServiceListReq = {
         cluster_id: clusterId,
-        page: currentPage.value,
-        size: pageSize.value,
-        search: searchText.value || undefined,
-        namespace: namespace || undefined,
-        type: filterType.value || undefined,
-        status: filterStatus.value || undefined,
         labels:
           Object.keys(filterLabels.value).length > 0
             ? filterLabels.value
             : undefined,
+        namespace: namespace || undefined,
+        page: currentPage.value,
+        search: searchText.value || undefined,
+        size: pageSize.value,
+        status: filterStatus.value || undefined,
+        type: filterType.value || undefined,
       };
       const res = await getServiceListApi(clusterId, params);
       if (
@@ -571,8 +571,8 @@ export function useServicePage() {
 
       const params: UpdateResourceByYamlReq = {
         cluster_id: currentOperationService.value.cluster_id,
-        namespace: currentOperationService.value.namespace,
         name: currentOperationService.value.name,
+        namespace: currentOperationService.value.namespace,
         yaml: yamlFormModel.value.yaml,
       };
 
@@ -601,13 +601,13 @@ export function useServicePage() {
   // 创建 Service
   const openCreateModal = () => {
     createFormModel.value = {
+      annotations: {},
+      labels: {},
       name: '',
       namespace: '',
-      type: 'ClusterIP',
-      ports: [{ name: '', protocol: 'TCP', port: 80, target_port: 80 }],
+      ports: [{ name: '', port: 80, protocol: 'TCP', target_port: 80 }],
       selector: {},
-      labels: {},
-      annotations: {},
+      type: 'ClusterIP',
     };
     isCreateModalVisible.value = true;
   };
@@ -635,23 +635,23 @@ export function useServicePage() {
       submitLoading.value = true;
 
       const params: CreateServiceReq = {
+        annotations:
+          Object.keys(createFormModel.value.annotations).length > 0
+            ? createFormModel.value.annotations
+            : undefined,
         cluster_id: filterClusterId.value,
+        labels:
+          Object.keys(createFormModel.value.labels).length > 0
+            ? createFormModel.value.labels
+            : undefined,
         name: createFormModel.value.name,
         namespace: createFormModel.value.namespace,
-        type: createFormModel.value.type,
         ports: createFormModel.value.ports,
         selector:
           Object.keys(createFormModel.value.selector).length > 0
             ? createFormModel.value.selector
             : undefined,
-        labels:
-          Object.keys(createFormModel.value.labels).length > 0
-            ? createFormModel.value.labels
-            : undefined,
-        annotations:
-          Object.keys(createFormModel.value.annotations).length > 0
-            ? createFormModel.value.annotations
-            : undefined,
+        type: createFormModel.value.type,
       };
 
       await createServiceApi(filterClusterId.value, params);
@@ -703,15 +703,15 @@ export function useServicePage() {
   const openEditModal = (record: K8sService) => {
     currentOperationService.value = record;
     editFormModel.value = {
+      annotations: record.annotations || {},
+      labels: record.labels || {},
       name: record.name,
       namespace: record.namespace,
-      type: record.type,
       ports: record.ports || [
-        { name: '', protocol: 'TCP', port: 80, target_port: 80 },
+        { name: '', port: 80, protocol: 'TCP', target_port: 80 },
       ],
       selector: record.selector || {},
-      labels: record.labels || {},
-      annotations: record.annotations || {},
+      type: record.type,
     };
     isEditModalVisible.value = true;
   };
@@ -732,23 +732,23 @@ export function useServicePage() {
       submitLoading.value = true;
 
       const params: UpdateServiceReq = {
+        annotations:
+          Object.keys(editFormModel.value.annotations).length > 0
+            ? editFormModel.value.annotations
+            : undefined,
         cluster_id: currentOperationService.value.cluster_id,
-        namespace: currentOperationService.value.namespace,
+        labels:
+          Object.keys(editFormModel.value.labels).length > 0
+            ? editFormModel.value.labels
+            : undefined,
         name: currentOperationService.value.name,
-        type: editFormModel.value.type,
+        namespace: currentOperationService.value.namespace,
         ports: editFormModel.value.ports,
         selector:
           Object.keys(editFormModel.value.selector).length > 0
             ? editFormModel.value.selector
             : undefined,
-        labels:
-          Object.keys(editFormModel.value.labels).length > 0
-            ? editFormModel.value.labels
-            : undefined,
-        annotations:
-          Object.keys(editFormModel.value.annotations).length > 0
-            ? editFormModel.value.annotations
-            : undefined,
+        type: editFormModel.value.type,
       };
 
       await updateServiceApi(
@@ -778,12 +778,11 @@ export function useServicePage() {
     if (!clusterId) return;
 
     Modal.confirm({
-      title: '删除 Service',
+      cancelText: '取消',
+      centered: true,
       content: `确定要删除 Service "${record.name}" 吗？此操作不可逆！`,
       okText: '确认删除',
       okType: 'danger',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           await deleteServiceApi(clusterId, record.namespace, record.name);
@@ -794,6 +793,7 @@ export function useServicePage() {
             message.error('❌ Service 删除失败');
         }
       },
+      title: '删除 Service',
     });
   };
 
@@ -851,12 +851,11 @@ export function useServicePage() {
     if (selectedRows.value.length === 0) return;
 
     Modal.confirm({
-      title: `批量${operation}`,
+      cancelText: '取消',
+      centered: true,
       content: `确定要对选中的 ${selectedRows.value.length} 个 Service 执行${operation}操作吗？`,
       okText: '确认执行',
       okType: operation === '删除' ? 'danger' : 'primary',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           for (const service of selectedRows.value) {
@@ -885,6 +884,7 @@ export function useServicePage() {
             message.error(`❌ 批量${operation}失败`);
         }
       },
+      title: `批量${operation}`,
     });
   };
 
@@ -966,8 +966,8 @@ export function useServicePage() {
   const addPortField = () => {
     createFormModel.value.ports.push({
       name: '',
-      protocol: 'TCP',
       port: 80,
+      protocol: 'TCP',
       target_port: 80,
     });
   };
@@ -982,8 +982,8 @@ export function useServicePage() {
   const addEditPortField = () => {
     editFormModel.value.ports.push({
       name: '',
-      protocol: 'TCP',
       port: 80,
+      protocol: 'TCP',
       target_port: 80,
     });
   };
@@ -1067,6 +1067,35 @@ export function useServicePage() {
   };
 
   return {
+    // form field operations
+    addAnnotationField,
+    // edit form field operations
+    addEditPortField,
+    // filter operations
+    addFilterLabel,
+    addLabelField,
+    addNewEditAnnotation,
+    addNewEditLabel,
+    addNewEditSelector,
+    addPortField,
+    addSelectorField,
+    // batch operations
+    batchOperation,
+    clearFilterLabels,
+    // operations
+    clearNamespaces,
+    clearServices,
+    // create operations
+    closeCreateModal,
+    closeCreateYamlModal,
+    // detail operations
+    closeDetailModal,
+    // edit operations
+    closeEditModal,
+    // endpoints operations
+    closeEndpointsModal,
+    // YAML operations
+    closeYamlModal,
     // state
     clusters,
     clustersError,
@@ -1074,155 +1103,126 @@ export function useServicePage() {
     clustersPage,
     clustersSize,
     clustersTotal,
-    currentPage,
-    filterClusterId,
-    filterLabels,
-    filterNamespace,
-    filterStatus,
-    filterType,
-    loadError,
-    loading,
-    namespaces,
-    namespacesError,
-    namespacesLoading,
-    namespacesPage,
-    namespacesSize,
-    namespacesTotal,
-    pageSize,
-    searchText,
-    selectedRowKeys,
-    selectedRows,
-    services,
-    total,
-
-    // form refs
-    createYamlFormRef,
-    editFormRef,
-    formRef,
-    yamlFormRef,
-
-    // modal state
-    detailLoading,
-    isCreateModalVisible,
-    isCreateYamlModalVisible,
-    isDetailModalVisible,
-    isEditModalVisible,
-    isEndpointsModalVisible,
-    isYamlModalVisible,
-    submitLoading,
-
-    // operation targets
-    currentOperationService,
-    currentServiceDetail,
-    currentYamlContent,
-    serviceEndpoints,
-
     // form models
     createFormModel,
-    createYamlFormModel,
-    editFormModel,
-    yamlFormModel,
 
     // form rules
     createFormRules,
+    createYamlFormModel,
+    // form refs
+    createYamlFormRef,
     createYamlFormRules,
+
+    // operation targets
+    currentOperationService,
+    currentPage,
+    currentServiceDetail,
+    currentYamlContent,
+    // service operations
+    deleteService,
+    // modal state
+    detailLoading,
+    editFormModel,
+    editFormRef,
+
     editFormRules,
-    yamlFormRules,
-
-    // computed
-    filteredServices,
-    rowSelection,
-
-    // helpers
-    getEnvText,
-    getServiceTypeColor,
-    getServiceTypeText,
-    getStatusColor,
-    getStatusText,
-    keyValueListToRecord,
-    recordToKeyValueList,
-    validateClusterId,
-
-    // operations
-    clearNamespaces,
-    clearServices,
     fetchClusters,
     fetchNamespaces,
     fetchServices,
-    loadMoreClusters,
-    loadMoreNamespaces,
 
-    // detail operations
-    closeDetailModal,
-    showServiceDetail,
+    filterClusterId,
+    // computed
+    filteredServices,
+    filterLabels,
+    filterNamespace,
 
-    // YAML operations
-    closeYamlModal,
-    showYamlModal,
-    submitYamlForm,
+    filterStatus,
+    filterType,
+    formRef,
+    // helpers
+    getEnvText,
 
-    // create operations
-    closeCreateModal,
-    closeCreateYamlModal,
-    openCreateModal,
-    openCreateYamlModal,
-    submitCreateForm,
-    submitCreateYamlForm,
+    getServiceTypeColor,
+    getServiceTypeText,
 
-    // edit operations
-    closeEditModal,
-    openEditModal,
-    submitEditForm,
-
-    // service operations
-    deleteService,
-
-    // endpoints operations
-    closeEndpointsModal,
-    showEndpointsModal,
-
-    // filter operations
-    addFilterLabel,
-    clearFilterLabels,
-    removeFilterLabel,
-
-    // batch operations
-    batchOperation,
-
+    getStatusColor,
+    getStatusText,
     // pagination operations
     handleClusterChange,
     handleClusterDropdownScroll,
     handleFilterChange,
     handlePageChange,
-    onSearch,
-    resetClusters,
+    isCreateModalVisible,
+    isCreateYamlModalVisible,
 
-    // form field operations
-    addAnnotationField,
-    addLabelField,
-    addPortField,
-    addSelectorField,
+    isDetailModalVisible,
+    isEditModalVisible,
+    isEndpointsModalVisible,
+    isYamlModalVisible,
+    // constants
+    K8sSvcStatus,
+    keyValueListToRecord,
+    loadError,
+
+    loading,
+    loadMoreClusters,
+
+    loadMoreNamespaces,
+    namespaces,
+    namespacesError,
+
+    namespacesLoading,
+    namespacesPage,
+    namespacesSize,
+    namespacesTotal,
+    // edit form helper variables
+    newEditAnnotationKey,
+    newEditLabelKey,
+
+    newEditSelectorKey,
+    onSearch,
+    openCreateModal,
+
+    openCreateYamlModal,
+
+    openEditModal,
+    pageSize,
+
+    recordToKeyValueList,
     removeAnnotationField,
+    removeEditAnnotationField,
+
+    removeEditLabelField,
+
+    removeEditPortField,
+    removeEditSelectorField,
+    removeFilterLabel,
     removeLabelField,
     removePortField,
     removeSelectorField,
 
-    // edit form field operations
-    addEditPortField,
-    addNewEditAnnotation,
-    addNewEditLabel,
-    addNewEditSelector,
-    removeEditAnnotationField,
-    removeEditLabelField,
-    removeEditPortField,
-    removeEditSelectorField,
+    resetClusters,
+    rowSelection,
+    searchText,
+    selectedRowKeys,
+    selectedRows,
+    serviceEndpoints,
+    services,
+    showEndpointsModal,
 
-    // edit form helper variables
-    newEditAnnotationKey,
-    newEditLabelKey,
-    newEditSelectorKey,
+    showServiceDetail,
+    showYamlModal,
+    submitCreateForm,
+    submitCreateYamlForm,
+    submitEditForm,
+    submitLoading,
+    submitYamlForm,
+    total,
 
-    // constants
-    K8sSvcStatus,
+    validateClusterId,
+    yamlFormModel,
+    yamlFormRef,
+
+    yamlFormRules,
   };
 }

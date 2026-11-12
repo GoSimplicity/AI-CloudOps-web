@@ -24,10 +24,10 @@ vi.mock('#/utils/permission', async (importOriginal) => ({
 }));
 
 const client = vi.hoisted(() => ({
+  delete: vi.fn(),
   get: vi.fn(),
   post: vi.fn(),
   put: vi.fn(),
-  delete: vi.fn(),
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 vi.mock('@vben/stores', () => ({
@@ -39,26 +39,26 @@ vi.mock('#/store', () => ({
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 let wrapper: undefined | VueWrapper;
 const resource = {
-  id: 7,
-  name: '密钥主机',
-  ip_addr: '192.0.2.5',
-  port: 22,
-  username: 'root',
   auth_mode: 2,
-  status: 1,
-  os_type: 'linux',
-  environment: 'test',
   description: '原描述',
+  environment: 'test',
+  id: 7,
+  ip_addr: '192.0.2.5',
+  name: '密钥主机',
+  os_type: 'linux',
+  port: 22,
+  status: 1,
   tags: [{ key: 'team', value: 'ops' }],
   tree_nodes: [],
+  username: 'root',
 };
 beforeEach(() => {
   vi.resetAllMocks();
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -69,8 +69,8 @@ beforeEach(() => {
   client.get.mockImplementation((path: string) =>
     Promise.resolve(
       path === '/tree/local/list'
-        ? { items: [resource], total: 1 }
-        : { items: [], total: 0 },
+        ? { total: 1, items: [resource] }
+        : { total: 0, items: [] },
     ),
   );
   client.put.mockResolvedValue(undefined);
@@ -111,8 +111,8 @@ it('对象标签按键值显示，编辑已有密钥主机不要求重新输入�
   expect(client.put).toHaveBeenCalledWith(
     '/tree/local/update/7',
     expect.objectContaining({
-      username: 'operator',
       tags: [{ key: 'team', value: 'ops' }],
+      username: 'operator',
     }),
   );
   expect(required(client.put.mock.calls[0])[1]).not.toHaveProperty('key');

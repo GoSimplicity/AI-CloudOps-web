@@ -4,10 +4,10 @@ import type { KeyValue } from '#/api/core/cron/cron';
 import { PlusOutlined } from '@ant-design/icons-vue';
 
 const props = defineProps<{
+  addText: string;
   items: KeyValue[];
   keyPlaceholder: string;
   valuePlaceholder: string;
-  addText: string;
 }>();
 const emit = defineEmits<{ change: [items: KeyValue[]] }>();
 

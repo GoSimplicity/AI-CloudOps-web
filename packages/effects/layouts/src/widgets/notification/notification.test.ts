@@ -13,7 +13,7 @@ describe('通知真实空态', () => {
   it('未接入通知源时无未读圆点，打开后显示说明并省略空操作', async () => {
     const wrapper = mount(Notification, {
       attachTo: document.body,
-      props: { notifications: [], dot: false, emptyText: '通知源尚未接入' },
+      props: { dot: false, emptyText: '通知源尚未接入', notifications: [] },
     });
     expect(wrapper.find('.bell-button .bg-primary').exists()).toBe(false);
     expect(wrapper.findAll('button')).toHaveLength(1);

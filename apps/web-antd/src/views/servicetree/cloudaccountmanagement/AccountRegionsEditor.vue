@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import {
-  type CloudAccountRegionInput,
-  CloudProvider,
-} from '#/api/core/tree/tree_account';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 
 import { useUserStore } from '@vben/stores';
 
 import { FormItemRest, message, Modal } from 'ant-design-vue';
 
+import {
+  type CloudAccountRegionInput,
+  CloudProvider,
+} from '#/api/core/tree/tree_account';
 import {
   type AvailableRegion,
   getAvailableRegions,
@@ -20,11 +20,11 @@ import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 import { computeProviderName, isSupportedAccountProvider } from './provider';
 
 const props = defineProps<{
+  accountEnabled?: boolean;
+  accountId?: number;
+  canRead?: boolean;
   disabled?: boolean;
   provider: number;
-  accountId?: number;
-  accountEnabled?: boolean;
-  canRead?: boolean;
 }>();
 const regions = defineModel<CloudAccountRegionInput[]>({ required: true });
 const available = ref<AvailableRegion[]>([]);
@@ -149,10 +149,9 @@ function confirmLiveRegions() {
     props.accountId === accountId &&
     props.provider === provider;
   regionDialog = Modal.confirm({
-    title: '查询云端可用地域',
+    cancelText: '取消',
     content: `将使用已保存的账户凭据查询${computeProviderName(provider)}，不会使用表单中未保存的密钥。`,
     okText: '确认查询',
-    cancelText: '取消',
     onCancel: () => {
       if (ticket === confirmation) invalidateRegionScope();
     },
@@ -168,6 +167,7 @@ function confirmLiveRegions() {
         }
       }
     },
+    title: '查询云端可用地域',
   });
 }
 
@@ -190,10 +190,10 @@ const codes = computed({
     regions.value = unique.map((region) => {
       const previous = existing.get(region);
       return {
-        region,
-        region_name: previous?.region_name || regionNames.get(region) || '',
         description: previous?.description ?? '',
         is_default: region === nextDefault,
+        region,
+        region_name: previous?.region_name || regionNames.get(region) || '',
         ...(previous?.project_id === undefined
           ? {}
           : { project_id: previous.project_id }),
@@ -220,23 +220,23 @@ const defaultRegion = computed({
 const options = computed(() => {
   const items = new Map<
     string,
-    { value: string; label: string; disabled?: boolean }
+    { disabled?: boolean; label: string; value: string }
   >();
   for (const item of available.value)
     items.set(item.region, {
-      value: item.region,
+      disabled: !item.available,
       label: item.region_name
         ? `${item.region_name} (${item.region})`
         : item.region,
-      disabled: !item.available,
+      value: item.region,
     });
   for (const item of regions.value)
     if (!items.has(item.region))
       items.set(item.region, {
-        value: item.region,
         label: item.region_name
           ? `${item.region_name} (${item.region})`
           : item.region,
+        value: item.region,
       });
   return [...items.values()];
 });

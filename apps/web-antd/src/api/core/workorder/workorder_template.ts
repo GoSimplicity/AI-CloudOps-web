@@ -5,8 +5,8 @@ import type { WorkorderProcessItem } from './workorder_process';
 import { requestClient } from '#/api/request';
 
 export const TemplateStatus = {
-  Enabled: 1, // 启用
   Disabled: 2, // 禁用
+  Enabled: 1, // 启用
 } as const;
 
 export const TemplateVisibility = {

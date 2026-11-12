@@ -16,7 +16,6 @@ export function useListRequest(loading: Ref<boolean>) {
     loadError.value = '';
     const isCurrent = () => !disposed && current === revision;
     return {
-      isCurrent,
       fail(error: unknown, fallback: string) {
         if (!isCurrent()) return false;
         loadError.value =
@@ -26,6 +25,7 @@ export function useListRequest(loading: Ref<boolean>) {
       finish() {
         if (isCurrent()) loading.value = false;
       },
+      isCurrent,
     };
   }
   function invalidate() {
@@ -33,5 +33,5 @@ export function useListRequest(loading: Ref<boolean>) {
     loading.value = false;
     loadError.value = '';
   }
-  return { loadError, beginRequest, invalidate };
+  return { beginRequest, invalidate, loadError };
 }

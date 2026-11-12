@@ -27,8 +27,8 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -40,7 +40,7 @@ beforeEach(() => {
   client.get.mockImplementation((path: string) =>
     path.includes('/detail/')
       ? detail()
-      : Promise.resolve({ items: [], details: [], total: 0 }),
+      : Promise.resolve({ details: [], total: 0, items: [] }),
   );
 });
 afterEach(() => {
@@ -92,8 +92,8 @@ describe('值班日历页面真实控件', () => {
       '/monitor/onduty_groups/history/7',
       {
         params: expect.objectContaining({
-          start_date: '2026-02-01',
           end_date: '2026-02-28',
+          start_date: '2026-02-01',
         }),
       },
     );

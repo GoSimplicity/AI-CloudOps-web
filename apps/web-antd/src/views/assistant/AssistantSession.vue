@@ -1,17 +1,9 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
-
-import { message } from 'ant-design-vue';
-
 import { useRouter } from 'vue-router';
 
 import { useAccessStore, useUserStore } from '@vben/stores';
 
-import {
-  assistantOwner,
-  createAssistantAccountScope,
-} from '#/utils/assistant-account-scope';
 import {
   ApiOutlined,
   BarChartOutlined,
@@ -29,11 +21,17 @@ import {
   ReloadOutlined,
   SearchOutlined,
 } from '@ant-design/icons-vue';
+import { message } from 'ant-design-vue';
 
 import {
   getSessionInfo,
   type SessionInfoResponse,
 } from '#/api/core/aiops/assistant';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import {
+  assistantOwner,
+  createAssistantAccountScope,
+} from '#/utils/assistant-account-scope';
 import { getOwnLookupValue } from '#/utils/own-lookup';
 
 // 响应式数据
@@ -48,11 +46,11 @@ const showStats = ref(false);
 
 // 当前会话信息
 const currentSession = reactive<Partial<SessionInfoResponse>>({
-  session_id: '',
   created_time: '',
   last_activity: '',
   message_count: 0,
   mode: 1,
+  session_id: '',
   status: '',
 });
 
@@ -78,10 +76,10 @@ const sessionStats = computed(() => {
   ).length;
 
   return {
-    totalSessions: total,
-    totalMessages,
-    ragSessions,
     mcpSessions,
+    ragSessions,
+    totalMessages,
+    totalSessions: total,
   };
 });
 
@@ -133,13 +131,13 @@ const formatTime = (timestamp?: string) => {
 const sessionMetadata = (
   session: Partial<SessionInfoResponse>,
 ): SessionInfoResponse => ({
-  session_id: session.session_id || '',
   created_time: session.created_time || '',
   last_activity: session.last_activity || '',
   message_count: session.message_count || 0,
   mode: session.mode || 1,
-  status: session.status || '',
   revision: session.revision,
+  session_id: session.session_id || '',
+  status: session.status || '',
 });
 
 // 保存历史记录到本地存储
@@ -265,9 +263,9 @@ const exportAllSessions = () => {
   }
 
   const exportData = {
-    timestamp: new Date().toISOString(),
     sessions: sessionHistory.value,
     statistics: sessionStats.value,
+    timestamp: new Date().toISOString(),
   };
 
   const blob = new Blob([JSON.stringify(exportData, null, 2)], {
@@ -318,7 +316,7 @@ watch(
     sessionHistory.value = [];
     if (owner) loadHistoryFromStorage();
   },
-  { immediate: true, flush: 'sync' },
+  { flush: 'sync', immediate: true },
 );
 onBeforeUnmount(() => accountScope.invalidate());
 </script>
@@ -358,7 +356,7 @@ onBeforeUnmount(() => accountScope.invalidate());
               v-model:value="searchSessionId"
               placeholder="请输入会话ID进行搜索"
               style="width: calc(100% - 100px)"
-              @pressEnter="searchSession"
+              @press-enter="searchSession"
             />
             <a-button
               :loading="searching"

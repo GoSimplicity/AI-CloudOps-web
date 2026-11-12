@@ -24,9 +24,7 @@ describe('autofix-format', () => {
     expect(getRiskTagColor('high')).toBe('red');
 
     const result = normalizeWorkflowResult({
-      status: 'completed',
       plan: {
-        fault_type: 'image_pull_failure',
         candidate_actions: [
           {
             action_id: 'patch-image-pull-policy',
@@ -34,7 +32,9 @@ describe('autofix-format', () => {
             risk_assessment: { allowed: true, risk_level: 'low' },
           },
         ],
+        fault_type: 'image_pull_failure',
       },
+      status: 'completed',
     });
 
     expect(result.agents_used).toEqual([]);

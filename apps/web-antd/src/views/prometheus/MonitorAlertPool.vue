@@ -150,19 +150,19 @@ onBeforeUnmount(() => {
 const paginationConfig = reactive({
   current: 1,
   pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
   showQuickJumper: true,
+  showSizeChanger: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
   size: 'default' as const,
+  total: 0,
 });
 
 // 统计数据
 const stats = reactive({
-  total: 0,
-  alertInstances: 0,
   active: 0,
+  alertInstances: 0,
   groupLabels: 0,
+  total: 0,
 });
 
 // 对话框状态
@@ -172,26 +172,26 @@ const detailDialogVisible = ref(false);
 
 // 表单数据
 const addForm = reactive({
-  name: '',
-  alert_manager_instances: [{ value: '', key: Date.now() }],
-  resolve_timeout: '',
-  group_wait: '',
+  alert_manager_instances: [{ key: Date.now(), value: '' }],
+  group_by: [{ key: Date.now(), labelKey: '', labelValue: '' }],
   group_interval: '',
-  repeat_interval: '',
-  group_by: [{ labelKey: '', labelValue: '', key: Date.now() }],
+  group_wait: '',
+  name: '',
   receiver: '',
+  repeat_interval: '',
+  resolve_timeout: '',
 });
 
 const editForm = reactive({
+  alert_manager_instances: [{ key: Date.now(), value: '' }],
+  group_by: [{ key: Date.now(), labelKey: '', labelValue: '' }],
+  group_interval: '',
+  group_wait: '',
   id: 0,
   name: '',
-  alert_manager_instances: [{ value: '', key: Date.now() }],
-  resolve_timeout: '',
-  group_wait: '',
-  group_interval: '',
-  repeat_interval: '',
-  group_by: [{ labelKey: '', labelValue: '', key: Date.now() }],
   receiver: '',
+  repeat_interval: '',
+  resolve_timeout: '',
 });
 
 // 详情对话框数据
@@ -206,8 +206,8 @@ const userLoading = ref(false);
 const userPagination = reactive({
   current: 1,
   pageSize: 10,
-  total: 0,
   showSizeChanger: false,
+  total: 0,
 });
 const userSearchText = ref('');
 const activeForm = ref<'add' | 'edit' | null>(null);
@@ -308,8 +308,8 @@ const fetchAlertManagerPools = async (): Promise<void> => {
   try {
     const params: GetAlertManagerPoolListParams = {
       page: paginationConfig.current,
-      size: paginationConfig.pageSize,
       search: searchText.value || undefined,
+      size: paginationConfig.pageSize,
     };
 
     const response = await getMonitorAlertManagerPoolListApi(params);
@@ -363,14 +363,14 @@ const handleReset = (): void => {
 
 const resetAddForm = (): void => {
   Object.assign(addForm, {
-    name: '',
-    alert_manager_instances: [{ value: '', key: Date.now() }],
-    resolve_timeout: '',
-    group_wait: '',
+    alert_manager_instances: [{ key: Date.now(), value: '' }],
+    group_by: [{ key: Date.now(), labelKey: '', labelValue: '' }],
     group_interval: '',
-    repeat_interval: '',
-    group_by: [{ labelKey: '', labelValue: '', key: Date.now() }],
+    group_wait: '',
+    name: '',
     receiver: '',
+    repeat_interval: '',
+    resolve_timeout: '',
   });
 };
 
@@ -419,11 +419,10 @@ const confirmDelete = (record: MonitorAlertManagerPool): void => {
   const current = captureWindow();
   let consumed = false;
   deleteDialog = Modal.confirm({
-    title: '警告',
+    cancelText: '取消',
     content: `确定要删除实例池 "${name}" 吗？`,
     okText: '删除',
     okType: 'danger',
-    cancelText: '取消',
     onCancel() {
       consumed = true;
     },
@@ -440,6 +439,7 @@ const confirmDelete = (record: MonitorAlertManagerPool): void => {
           message.error('删除实例池失败');
       }
     },
+    title: '警告',
   });
 };
 
@@ -467,8 +467,8 @@ const fetchUsers = async () => {
   try {
     const params: GetUserListReq = {
       page: userPagination.current,
-      size: userPagination.pageSize,
       search: userSearchText.value,
+      size: userPagination.pageSize,
     };
     const response = await getUserList(params);
     if (!current()) return;
@@ -549,8 +549,8 @@ const closeDetailDialog = (): void => {
 // 动态表单项操作
 const addAlertManagerInstance = (): void => {
   addForm.alert_manager_instances.push({
-    value: '',
     key: Date.now(),
+    value: '',
   });
 };
 
@@ -563,9 +563,9 @@ const removeAlertManagerInstance = (instance: DynamicItem): void => {
 
 const addLabel = (): void => {
   addForm.group_by.push({
+    key: Date.now(),
     labelKey: '',
     labelValue: '',
-    key: Date.now(),
   });
 };
 
@@ -579,8 +579,8 @@ const removeLabel = (label: LabelItem): void => {
 // 编辑模态框动态表单项操作
 const addEditAlertManagerInstance = (): void => {
   editForm.alert_manager_instances.push({
-    value: '',
     key: Date.now(),
+    value: '',
   });
 };
 
@@ -593,9 +593,9 @@ const removeEditAlertManagerInstance = (instance: DynamicItem): void => {
 
 const addEditLabel = (): void => {
   editForm.group_by.push({
+    key: Date.now(),
     labelKey: '',
     labelValue: '',
-    key: Date.now(),
   });
 };
 
@@ -649,16 +649,16 @@ const savePool = async (mode: 'add' | 'edit'): Promise<void> => {
       return;
     }
     const payload: CreateMonitorAlertManagerPoolReq = {
-      name: snapshot.name,
       alert_manager_instances: instances,
-      resolve_timeout: snapshot.resolve_timeout,
-      group_wait: snapshot.group_wait,
-      group_interval: snapshot.group_interval,
-      repeat_interval: snapshot.repeat_interval,
       group_by: snapshot.group_by
         .filter((item) => item.labelKey && item.labelValue)
         .map((item) => `${item.labelKey},${item.labelValue}`),
+      group_interval: snapshot.group_interval,
+      group_wait: snapshot.group_wait,
+      name: snapshot.name,
       receiver: snapshot.receiver,
+      repeat_interval: snapshot.repeat_interval,
+      resolve_timeout: snapshot.resolve_timeout,
     };
     if (mode === 'edit') {
       if (!validId(id)) return;
@@ -688,8 +688,8 @@ const showEditModal = (record: MonitorAlertManagerPool): void => {
   editForm.name = record.name ?? '';
   editForm.alert_manager_instances = (record.alert_manager_instances ?? []).map(
     (value) => ({
-      value,
       key: Date.now() + Math.random(),
+      value,
     }),
   );
   editForm.resolve_timeout = record.resolve_timeout ?? '';
@@ -702,12 +702,12 @@ const showEditModal = (record: MonitorAlertManagerPool): void => {
       ? groupBy.map((value: string) => {
           const [labelKey, labelValue] = value.split(',');
           return {
+            key: Date.now() + Math.random(),
             labelKey: labelKey ?? '',
             labelValue: labelValue ?? '',
-            key: Date.now() + Math.random(),
           };
         })
-      : [{ labelKey: '', labelValue: '', key: Date.now() }];
+      : [{ key: Date.now(), labelKey: '', labelValue: '' }];
   editForm.receiver = record.receiver ?? '';
   isEditModalVisible.value = true;
 };
@@ -918,12 +918,12 @@ onMounted(() => {
             <template v-if="column.key === 'creator'">
               <div class="creator-info">
                 <a-avatar
-                  size="small"
                   :style="{
                     backgroundColor: getAvatarColor(
                       record.create_user_name || '',
                     ),
                   }"
+                  size="small"
                 >
                   {{ getInitials(record.create_user_name) }}
                 </a-avatar>
@@ -1325,7 +1325,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <a-descriptions :column="1" :labelStyle="{ width: '150px' }" bordered>
+        <a-descriptions :column="1" :label-style="{ width: '150px' }" bordered>
           <a-descriptions-item label="ID">
             {{ detailDialog.form.id }}
           </a-descriptions-item>
@@ -1736,7 +1736,7 @@ onMounted(() => {
   flex: 1;
 }
 
-.label-separator {
+:is(.label-separator) {
   font-weight: bold;
   color: var(--ops-muted);
 }

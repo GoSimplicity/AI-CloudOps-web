@@ -2,18 +2,18 @@ import { requestClient } from '#/api/request';
 
 // 环境枚举
 export enum Env {
-  Prod = 1, // 生产环境
   Dev = 2, // 开发环境
-  Stage = 3, // 预发环境
-  Rc = 4, // 测试环境
   Press = 5, // 灰度环境
+  Prod = 1, // 生产环境
+  Rc = 4, // 测试环境
+  Stage = 3, // 预发环境
 }
 
 // 集群状态枚举
 export enum ClusterStatus {
+  Error = 3, // 异常
   Running = 1, // 运行中
   Stopped = 2, // 停止
-  Error = 3, // 异常
 }
 
 // 键值对类型

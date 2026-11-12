@@ -176,7 +176,7 @@ describe('incr9 P3-A：<< 合并键在任意深度都拦（js-yaml 显式键优�
 describe('incr9 P3-B：stringData 里 !!binary 的值解码后（去首尾空白）是占位符 → 拦', () => {
   const BINARY: Array<[string, string]> = [
     [
-      'f08 折行，占位符 + \\n',
+      String.raw`f08 折行，占位符 + \n`,
       `${HEAD}stringData:\n  k: !!binary |\n${fold7(b64(`${PH}\n`), '    ')}\n`,
     ],
     [
@@ -188,7 +188,7 @@ describe('incr9 P3-B：stringData 里 !!binary 的值解码后（去首尾空白
       `${HEAD}stringData:\n  k: !!binary "\\x50${b64(`${PH} `).slice(1)}"\n`,
     ],
     [
-      'f12 flow，占位符 + \\n',
+      String.raw`f12 flow，占位符 + \n`,
       `${HEAD}stringData: {k: !!binary "\\x50${b64(`${PH}\n`).slice(1)}"}\n`,
     ],
     [
@@ -220,11 +220,11 @@ describe('incr9 P3-B：stringData 里 !!binary 的值解码后（去首尾空白
 
 describe('incr9 P3-C：按 Go TrimSpace（含 U+0085 / NBSP / U+3000）比较；base64 按 UTF-8 解码', () => {
   const STRING_DATA: Array<[string, string]> = [
-    ['w10 \\N（U+0085）在前', `"\\N${PH}"`],
-    ['w11 \\N 在后', `"${PH}\\N"`],
-    ['w19 \\N\\N 在前、\\t 在后', `"\\N\\N${PH}\\t"`],
-    ['\\N 与空格混合', `" \\N ${PH} \\N "`],
-    ['NBSP（\\_）', `"\\_${PH}"`],
+    [String.raw`w10 \N（U+0085）在前`, `"\\N${PH}"`],
+    [String.raw`w11 \N 在后`, `"${PH}\\N"`],
+    [String.raw`w19 \N\N 在前、\t 在后`, `"\\N\\N${PH}\\t"`],
+    [String.raw`\N 与空格混合`, `" \\N ${PH} \\N "`],
+    [String.raw`NBSP（\_）`, `"\\_${PH}"`],
     ['U+3000', `"${PH}\\u3000"`],
     ['U+2003', `"\\u2003${PH}"`],
   ];
@@ -296,8 +296,8 @@ describe('incr9 P3-C：按 Go TrimSpace（含 U+0085 / NBSP / U+3000）比较；
     expect(
       getDataRowError({
         key: 'k',
-        value: `${PH}\u0085`,
         original: false,
+        value: `${PH}\u0085`,
       } as any),
     ).toBe(REDACTED_VALUE_MESSAGE);
   });

@@ -5,6 +5,13 @@ import { computed, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 
 import {
+  Env,
+  getClustersListApi,
+  type K8sCluster,
+  type KeyValueList,
+  type ListClustersReq,
+} from '#/api/core/k8s/k8s_cluster';
+import {
   createNamespaceApi,
   type CreateNamespaceReq,
   deleteNamespaceApi,
@@ -16,13 +23,6 @@ import {
   updateNamespaceApi,
   type UpdateNamespaceReq,
 } from '#/api/core/k8s/k8s_namespace';
-import {
-  Env,
-  getClustersListApi,
-  type K8sCluster,
-  type KeyValueList,
-  type ListClustersReq,
-} from '#/api/core/k8s/k8s_cluster';
 import { getOwnLookupValue } from '#/utils/own-lookup';
 import {
   shouldNotifyPageError,
@@ -82,8 +82,8 @@ export function useNamespacePage() {
     annotations: Record<string, string>;
     labels: Record<string, string>;
   }>({
-    labels: {},
     annotations: {},
+    labels: {},
   });
 
   // 创建命名空间表单模型
@@ -92,9 +92,9 @@ export function useNamespacePage() {
     labels: Record<string, string>;
     name: string;
   }>({
-    name: '',
-    labels: {},
     annotations: {},
+    labels: {},
+    name: '',
   });
 
   // 删除命名空间表单模型
@@ -102,8 +102,8 @@ export function useNamespacePage() {
     force: 1 | 2;
     grace_period_seconds: number;
   }>({
-    grace_period_seconds: 30,
     force: 2, // 默认非强制删除
+    grace_period_seconds: 30,
   });
 
   // 标签过滤表单模型
@@ -120,11 +120,11 @@ export function useNamespacePage() {
 
   const createFormRules: Record<string, Rule[]> = {
     name: [
-      { required: true, message: '请输入命名空间名称', trigger: 'blur' },
+      { message: '请输入命名空间名称', required: true, trigger: 'blur' },
       {
-        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         message:
           '命名空间名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         trigger: 'blur',
       },
       { max: 63, message: '命名空间名称长度不能超过63个字符', trigger: 'blur' },
@@ -133,13 +133,13 @@ export function useNamespacePage() {
 
   const deleteFormRules: Record<string, Rule[]> = {
     grace_period_seconds: [
-      { required: true, message: '请输入优雅删除时间', trigger: 'blur' },
+      { message: '请输入优雅删除时间', required: true, trigger: 'blur' },
       {
-        type: 'number',
-        min: 0,
         max: 3600,
         message: '优雅删除时间必须在0-3600秒之间',
+        min: 0,
         trigger: 'blur',
+        type: 'number',
       },
     ],
   };
@@ -150,11 +150,11 @@ export function useNamespacePage() {
   });
 
   const rowSelection = computed(() => ({
-    selectedRowKeys: selectedRowKeys.value,
     onChange: (keys: string[], rows: K8sNamespace[]) => {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
     },
+    selectedRowKeys: selectedRowKeys.value,
   }));
 
   // helpers
@@ -171,11 +171,11 @@ export function useNamespacePage() {
     if (env === undefined || env === null) return '未知环境';
     const value = typeof env === 'string' ? Number.parseInt(env) : env;
     const map: Record<number, string> = {
-      [Env.Prod]: '生产',
       [Env.Dev]: '开发',
-      [Env.Stage]: '预发',
-      [Env.Rc]: '测试',
       [Env.Press]: '灰度',
+      [Env.Prod]: '生产',
+      [Env.Rc]: '测试',
+      [Env.Stage]: '预发',
     };
     return map[value] || '未知环境';
   };
@@ -221,11 +221,11 @@ export function useNamespacePage() {
     // Handle both Chinese and English status
     const map: Record<string, string> = {
       [NamespaceStatus.Active]: '活跃',
-      活跃: '活跃',
       [NamespaceStatus.Terminating]: '终止中',
-      终止中: '终止中',
       [NamespaceStatus.Unknown]: '未知',
       未知: '未知',
+      活跃: '活跃',
+      终止中: '终止中',
     };
     return map[status] || status;
   };
@@ -236,11 +236,11 @@ export function useNamespacePage() {
     // Handle both Chinese and English status
     const map: Record<string, string> = {
       [NamespaceStatus.Active]: 'success',
-      活跃: 'success',
       [NamespaceStatus.Terminating]: 'warning',
-      终止中: 'warning',
       [NamespaceStatus.Unknown]: 'default',
       未知: 'default',
+      活跃: 'success',
+      终止中: 'warning',
     };
     return map[status] || 'default';
   };
@@ -302,14 +302,14 @@ export function useNamespacePage() {
       selectedRows.value = [];
       const params: K8sNamespaceListReq = {
         cluster_id: clusterId,
-        page: currentPage.value,
-        size: pageSize.value,
-        search: searchText.value || undefined,
-        status: filterStatus.value || undefined,
         labels:
           Object.keys(filterLabels.value).length > 0
             ? recordToKeyValueList(filterLabels.value)
             : undefined,
+        page: currentPage.value,
+        search: searchText.value || undefined,
+        size: pageSize.value,
+        status: filterStatus.value || undefined,
       };
       const res = await getNamespacesListApi(clusterId, params);
       if (
@@ -420,9 +420,9 @@ export function useNamespacePage() {
   // 创建命名空间
   const openCreateModal = () => {
     createFormModel.value = {
-      name: '',
-      labels: {},
       annotations: {},
+      labels: {},
+      name: '',
     };
     isCreateModalVisible.value = true;
   };
@@ -439,16 +439,16 @@ export function useNamespacePage() {
       submitLoading.value = true;
 
       const params: CreateNamespaceReq = {
-        cluster_id: filterClusterId.value,
-        name: createFormModel.value.name,
-        labels:
-          Object.keys(createFormModel.value.labels).length > 0
-            ? recordToKeyValueList(createFormModel.value.labels)
-            : undefined,
         annotations:
           Object.keys(createFormModel.value.annotations).length > 0
             ? recordToKeyValueList(createFormModel.value.annotations)
             : undefined,
+        cluster_id: filterClusterId.value,
+        labels:
+          Object.keys(createFormModel.value.labels).length > 0
+            ? recordToKeyValueList(createFormModel.value.labels)
+            : undefined,
+        name: createFormModel.value.name,
       };
 
       await createNamespaceApi(filterClusterId.value, params);
@@ -471,8 +471,8 @@ export function useNamespacePage() {
     currentOperationNamespace.value = record;
     isLabelEdit.value = true;
     labelFormModel.value = {
-      labels: keyValueListToRecord(record.labels),
       annotations: keyValueListToRecord(record.annotations),
+      labels: keyValueListToRecord(record.labels),
     };
     isLabelModalVisible.value = true;
   };
@@ -489,10 +489,10 @@ export function useNamespacePage() {
       submitLoading.value = true;
 
       const params: UpdateNamespaceReq = {
-        cluster_id: currentOperationNamespace.value.cluster_id,
-        name: currentOperationNamespace.value.name,
-        labels: recordToKeyValueList(labelFormModel.value.labels),
         annotations: recordToKeyValueList(labelFormModel.value.annotations),
+        cluster_id: currentOperationNamespace.value.cluster_id,
+        labels: recordToKeyValueList(labelFormModel.value.labels),
+        name: currentOperationNamespace.value.name,
       };
 
       await updateNamespaceApi(
@@ -514,8 +514,8 @@ export function useNamespacePage() {
   const deleteNamespace = (record: K8sNamespace) => {
     currentOperationNamespace.value = record;
     deleteFormModel.value = {
-      grace_period_seconds: 30,
       force: 2, // 非强制删除
+      grace_period_seconds: 30,
     };
     isDeleteModalVisible.value = true;
   };
@@ -533,9 +533,9 @@ export function useNamespacePage() {
 
       const params: DeleteNamespaceReq = {
         cluster_id: currentOperationNamespace.value.cluster_id,
-        name: currentOperationNamespace.value.name,
         force: deleteFormModel.value.force,
         grace_period_seconds: deleteFormModel.value.grace_period_seconds,
+        name: currentOperationNamespace.value.name,
       };
 
       await deleteNamespaceApi(
@@ -555,12 +555,11 @@ export function useNamespacePage() {
 
   const forceDeleteNamespace = (record: K8sNamespace) => {
     Modal.confirm({
-      title: '强制删除命名空间',
+      cancelText: '取消',
+      centered: true,
       content: `确定要强制删除命名空间 "${record.name}" 吗？强制删除将忽略终结器，可能导致资源泄露！`,
       okText: '确认强制删除',
       okType: 'danger',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           const clusterId = record.cluster_id || filterClusterId.value;
@@ -571,9 +570,9 @@ export function useNamespacePage() {
 
           const params: DeleteNamespaceReq = {
             cluster_id: clusterId,
-            name: record.name,
             force: 1, // 强制删除
             grace_period_seconds: 0,
+            name: record.name,
           };
           await deleteNamespaceApi(clusterId, record.name, params);
           message.success('命名空间强制删除成功');
@@ -583,6 +582,7 @@ export function useNamespacePage() {
             message.error('命名空间强制删除失败');
         }
       },
+      title: '强制删除命名空间',
     });
   };
 
@@ -628,12 +628,11 @@ export function useNamespacePage() {
     if (selectedRows.value.length === 0) return;
 
     Modal.confirm({
-      title: `批量${operation}`,
+      cancelText: '取消',
+      centered: true,
       content: `确定要对选中的 ${selectedRows.value.length} 个命名空间执行${operation}操作吗？`,
       okText: '确认执行',
       okType: operation === '删除' ? 'danger' : 'primary',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           // 根据不同操作类型执行相应的批量操作
@@ -641,8 +640,8 @@ export function useNamespacePage() {
             for (const ns of selectedRows.value) {
               const params: DeleteNamespaceReq = {
                 cluster_id: ns.cluster_id,
-                name: ns.name,
                 force: 2,
+                name: ns.name,
               };
               await deleteNamespaceApi(ns.cluster_id, ns.name, params);
             }
@@ -656,6 +655,7 @@ export function useNamespacePage() {
             message.error(`批量${operation}失败`);
         }
       },
+      title: `批量${operation}`,
     });
   };
 
@@ -716,6 +716,20 @@ export function useNamespacePage() {
   };
 
   return {
+    // filter operations
+    addFilterLabel,
+    // batch operations
+    batchOperation,
+    clearFilterLabels,
+    // operations
+    clearNamespaces,
+    // create operations
+    closeCreateModal,
+    // delete operations
+    closeDeleteModal,
+    closeDetailModal,
+    // label operations
+    closeLabelModal,
     // state
     clusters,
     clustersError,
@@ -723,108 +737,94 @@ export function useNamespacePage() {
     clustersPage,
     clustersSize,
     clustersTotal,
-    currentPage,
-    filterClusterId,
-    filterLabels,
-    filterStatus,
-    loadError,
-    loading,
-    namespaces,
-    pageSize,
-    searchText,
-    selectedRowKeys,
-    selectedRows,
-    total,
-
+    // form models
+    createFormModel,
     // form refs
     createFormRef,
-    labelFormRef,
-
-    // modal state
-    isCreateModalVisible,
-    isDeleteModalVisible,
-    isLabelEdit,
-    isLabelModalVisible,
-    submitLoading,
-
+    // form rules
+    createFormRules,
     // detail modal
     currentNamespaceDetail,
-    detailLoading,
-    isDetailModalVisible,
 
     // operation target
     currentOperationNamespace,
+    currentPage,
 
-    // form models
-    createFormModel,
     deleteFormModel,
-    labelFormModel,
-    labelsFilterFormModel,
-
-    // form rules
-    createFormRules,
     deleteFormRules,
-    labelFormRules,
+    deleteNamespace,
+    detailLoading,
+    fetchClusters,
 
+    fetchNamespaces,
+    filterClusterId,
     // computed
     filteredNamespaces,
-    rowSelection,
 
+    filterLabels,
+
+    filterStatus,
+    forceDeleteNamespace,
     // helpers
     getClusterName,
     getEnvText,
+
     getPhaseColor,
     getPhaseText,
     getStatusColor,
+
     getStatusText,
     getSystemLabelsFromKeyValueList,
+
     getUserLabelsFromKeyValueList,
+    // cluster pagination
+    handlePageChange,
     hasSystemLabels,
     hasUserLabels,
+    // modal state
+    isCreateModalVisible,
+    isDeleteModalVisible,
+    isDetailModalVisible,
+    isLabelEdit,
+    isLabelModalVisible,
     keyValueListToRecord,
-    recordToKeyValueList,
+    labelFormModel,
+    labelFormRef,
 
-    // operations
-    clearNamespaces,
-    closeDetailModal,
-    fetchClusters,
-    fetchNamespaces,
-    showNamespaceDetail,
+    labelFormRules,
+    labelsFilterFormModel,
+    loadError,
+    loading,
+    loadMoreClusters,
 
-    // create operations
-    closeCreateModal,
+    namespaces,
+    // constants
+    NamespaceStatus,
     openCreateModal,
-    submitCreateForm,
 
-    // label operations
-    closeLabelModal,
     openEditLabelModal,
+    pageSize,
+    recordToKeyValueList,
     removeAnnotationField,
     removeCreateAnnotationField,
     removeCreateLabelField,
-    removeLabelField,
-    submitLabelForm,
-
-    // delete operations
-    closeDeleteModal,
-    deleteNamespace,
-    forceDeleteNamespace,
-    submitDeleteForm,
-
-    // filter operations
-    addFilterLabel,
-    clearFilterLabels,
     removeFilterLabel,
 
-    // batch operations
-    batchOperation,
-
-    // cluster pagination
-    handlePageChange,
-    loadMoreClusters,
+    removeLabelField,
     resetClusters,
+    rowSelection,
+    searchText,
 
-    // constants
-    NamespaceStatus,
+    selectedRowKeys,
+    selectedRows,
+    showNamespaceDetail,
+
+    submitCreateForm,
+
+    submitDeleteForm,
+    submitLabelForm,
+    submitLoading,
+
+    total,
   };
 }

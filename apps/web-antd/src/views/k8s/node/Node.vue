@@ -1,16 +1,6 @@
 <script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
-
-import {
-  clusterResourceKey,
-  formatDateTime,
-  getRelativeTime,
-} from '../shared/utils';
 import { onMounted, ref } from 'vue';
 
-import { message } from 'ant-design-vue';
-
-import { useNodePage } from './Node';
 import {
   CheckOutlined,
   DeleteOutlined,
@@ -27,106 +17,115 @@ import {
   TagsOutlined,
   WarningOutlined,
 } from '@ant-design/icons-vue';
+import { message } from 'ant-design-vue';
 
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { usePermission } from '#/utils/permission';
+
+import {
+  clusterResourceKey,
+  formatDateTime,
+  getRelativeTime,
+} from '../shared/utils';
+import { useNodePage } from './Node';
 
 const { can } = usePermission();
 
 const {
+  // taint operations
+  addTaint,
+  // batch operations
+  batchOperation,
+  // operations
+  clearNodes,
+  closeDetailModal,
+  // drain operations
+  closeDrainModal,
+  // label operations
+  closeLabelModal,
+  closeTaintModal,
   // state
   clusters,
   clustersError,
   clustersLoading,
-  currentPage,
-  filterClusterId,
-  filterStatus,
-  loadError,
-  loading,
-  pageSize,
-  searchText,
-  selectedRows,
-
-  // modal state
-  isDrainModalVisible,
-  isLabelModalVisible,
-  isTaintModalVisible,
-  submitLoading,
+  // pagination state
+  clustersTotal,
 
   // detail modal
   currentNodeDetail,
+  currentPage,
   detailLoading,
-  isDetailModalVisible,
-
   // form models
   drainFormModel,
-  labelFormModel,
-  taintFormModel,
 
   // form refs
   drainFormRef,
-  labelFormRef,
-  taintFormRef,
-
   // form rules
   drainFormRules,
-  labelFormRules,
-  taintFormRules,
+  fetchClusters,
 
+  fetchNodes,
+  filterClusterId,
   // computed
   filteredNodes,
-  rowSelection,
 
+  filterStatus,
   // helpers
   getEnvText,
   getSchedulableColor,
+
   getSchedulableText,
   getStatusColor,
   getStatusText,
 
-  // operations
-  clearNodes,
-  closeDetailModal,
-  fetchClusters,
-  fetchNodes,
+  // cluster pagination
+  handlePageChange,
+  hasTaintChanges,
+
+  isDetailModalVisible,
+  // modal state
+  isDrainModalVisible,
+  isLabelModalVisible,
+  isNewTaint,
+  isTaintModalVisible,
+
+  labelFormModel,
+  labelFormRef,
+  labelFormRules,
+  loadError,
+  loading,
+
+  loadMoreClusters,
+  // constants
+  NodeStatus,
+  openDrainModal,
+  openEditLabelModal,
+
+  openTaintModal,
+  pageSize,
+  removeLabelField,
+  removeTaint,
+  rowSelection,
+  searchText,
+  selectedRows,
   showNodeDetail,
 
-  // label operations
-  closeLabelModal,
-  openEditLabelModal,
-  removeLabelField,
-  submitLabelForm,
+  submitDrainForm,
 
-  // taint operations
-  addTaint,
-  closeTaintModal,
-  hasTaintChanges,
-  isNewTaint,
-  openTaintModal,
-  removeTaint,
+  submitLabelForm,
+  submitLoading,
   submitTaintForm,
-  validateTaintYaml,
+
+  taintFormModel,
+
+  taintFormRef,
+  taintFormRules,
 
   // schedule operations
   toggleNodeSchedule,
-
-  // drain operations
-  closeDrainModal,
-  openDrainModal,
-  submitDrainForm,
-
-  // batch operations
-  batchOperation,
-
-  // cluster pagination
-  handlePageChange,
-  loadMoreClusters,
-
-  // pagination state
-  clustersTotal,
   total,
 
-  // constants
-  NodeStatus,
+  validateTaintYaml,
 } = useNodePage();
 
 // 添加新标签的临时状态
@@ -402,9 +401,9 @@ onMounted(async () => {
               </a-select-option>
               <a-select-option
                 v-if="clusters.length > 0 && clusters.length < clustersTotal"
-                value="__load_more__"
                 disabled
                 style="text-align: center; color: var(--ops-muted)"
+                value="__load_more__"
               >
                 <a-spin :spinning="clustersLoading" size="small" />
                 <span v-if="!clustersLoading">滚动加载更多...</span>
@@ -442,7 +441,7 @@ onMounted(async () => {
               class="k8s-search-input"
               placeholder="搜索节点名称"
               @input="onSearch"
-              @pressEnter="onSearch"
+              @press-enter="onSearch"
             >
               <template #suffix>
                 <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -465,13 +464,13 @@ onMounted(async () => {
             </a-button>
 
             <a-button
-              type="primary"
-              danger
-              @click="() => batchOperation('禁用调度')"
-              :disabled="selectedRows.length === 0"
               v-if="selectedRows.length > 0 && can('k8s.node.batchCordon')"
+              :disabled="selectedRows.length === 0"
               class="k8s-toolbar-btn"
+              danger
               title="批量禁用调度"
+              type="primary"
+              @click="() => batchOperation('禁用调度')"
             >
               <template #icon><StopOutlined aria-hidden="true" /></template>
               批量操作 ({{ selectedRows.length }})
@@ -751,7 +750,7 @@ onMounted(async () => {
     <!-- 标签管理模态框 -->
     <a-modal
       v-model:open="isLabelModalVisible"
-      :autoFocus="false"
+      :auto-focus="false"
       :confirm-loading="submitLoading"
       :focus-trigger-after-close="false"
       :keyboard="true"
@@ -833,9 +832,9 @@ onMounted(async () => {
                   @press-enter="addNewLabel"
                 />
                 <a-button
+                  :disabled="!newLabelKey.trim()"
                   type="primary"
                   @click="addNewLabel"
-                  :disabled="!newLabelKey.trim()"
                 >
                   <template #icon><PlusOutlined aria-hidden="true" /></template>
                   添加
@@ -850,7 +849,7 @@ onMounted(async () => {
     <!-- 污点管理模态框 -->
     <a-modal
       v-model:open="isTaintModalVisible"
-      :autoFocus="false"
+      :auto-focus="false"
       :confirm-loading="submitLoading"
       :focus-trigger-after-close="false"
       :keyboard="true"
@@ -920,25 +919,25 @@ onMounted(async () => {
               >
                 <a-input
                   v-model:value="taint.key"
-                  placeholder="污点键"
-                  class="k8s-form-input"
-                  :maxlength="100"
                   :disabled="!can('k8s.node.taintAdd')"
+                  :maxlength="100"
                   :readonly="!isNewTaint(taint)"
+                  class="k8s-form-input"
+                  placeholder="污点键"
                 />
                 <a-input
                   v-model:value="taint.value"
-                  placeholder="污点值（可选）"
-                  class="k8s-form-input"
-                  :maxlength="100"
                   :disabled="!can('k8s.node.taintAdd')"
+                  :maxlength="100"
+                  class="k8s-form-input"
+                  placeholder="污点值（可选）"
                 />
                 <a-select
                   v-model:value="taint.effect"
-                  placeholder="污点效果"
-                  class="k8s-form-input"
-                  style="width: 150px"
                   :disabled="!can('k8s.node.taintAdd')"
+                  class="k8s-form-input"
+                  placeholder="污点效果"
+                  style="width: 150px"
                 >
                   <a-select-option value="NoSchedule">
                     NoSchedule
@@ -950,10 +949,10 @@ onMounted(async () => {
                 </a-select>
                 <a-button
                   v-if="can('k8s.node.taintDelete') || isNewTaint(taint)"
-                  type="text"
-                  danger
-                  @click="removeTaint(idx)"
                   class="k8s-remove-btn"
+                  danger
+                  type="text"
+                  @click="removeTaint(idx)"
                 >
                   <template #icon>
                     <DeleteOutlined aria-hidden="true" />
@@ -963,10 +962,10 @@ onMounted(async () => {
               </div>
               <a-button
                 v-if="can('k8s.node.taintAdd')"
-                type="dashed"
-                @click="addTaint"
                 block
                 style="margin-top: 12px"
+                type="dashed"
+                @click="addTaint"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加污点
@@ -994,10 +993,10 @@ onMounted(async () => {
               style="font-family: monospace; margin-bottom: 8px"
             />
             <a-button
+              :disabled="!taintYamlData || !taintYamlData.trim()"
+              :loading="yamlValidating"
               type="default"
               @click="handleValidateYaml"
-              :loading="yamlValidating"
-              :disabled="!taintYamlData || !taintYamlData.trim()"
             >
               <template #icon><CheckOutlined aria-hidden="true" /></template>
               验证 YAML
@@ -1010,7 +1009,7 @@ onMounted(async () => {
     <!-- 驱逐节点模态框 -->
     <a-modal
       v-model:open="isDrainModalVisible"
-      :autoFocus="false"
+      :auto-focus="false"
       :confirm-loading="submitLoading"
       :focus-trigger-after-close="false"
       :keyboard="true"
@@ -1171,7 +1170,7 @@ onMounted(async () => {
     <!-- 详情模态框 -->
     <a-modal
       v-model:open="isDetailModalVisible"
-      :autoFocus="false"
+      :auto-focus="false"
       :focus-trigger-after-close="false"
       :footer="null"
       :keyboard="true"
@@ -1234,11 +1233,11 @@ onMounted(async () => {
                   }}</span>
                 </div>
                 <div
-                  class="k8s-detail-item"
                   v-if="
                     currentNodeDetail.external_ip &&
                     currentNodeDetail.external_ip.trim()
                   "
+                  class="k8s-detail-item"
                 >
                   <span class="k8s-detail-label">外部IP:</span>
                   <span class="k8s-detail-value">{{
@@ -1266,11 +1265,11 @@ onMounted(async () => {
                   }}</span>
                 </div>
                 <div
-                  class="k8s-detail-item"
                   v-if="
                     currentNodeDetail.kube_proxy_version &&
                     currentNodeDetail.kube_proxy_version.trim()
                   "
+                  class="k8s-detail-item"
                 >
                   <span class="k8s-detail-label">KubeProxy版本:</span>
                   <span class="k8s-detail-value">{{
@@ -1320,8 +1319,8 @@ onMounted(async () => {
                   }}</span>
                 </div>
                 <div
-                  class="k8s-detail-item"
                   v-if="!hasSystemInfo(currentNodeDetail)"
+                  class="k8s-detail-item"
                   style="
                     text-align: center;
                     color: var(--ops-muted);
@@ -1411,12 +1410,12 @@ onMounted(async () => {
           </a-row>
 
           <a-row
-            :gutter="[24, 16]"
-            style="margin-top: 16px"
             v-if="
               currentNodeDetail.annotations &&
               Object.keys(currentNodeDetail.annotations).length > 0
             "
+            :gutter="[24, 16]"
+            style="margin-top: 16px"
           >
             <a-col :span="24">
               <a-card class="k8s-detail-card" size="small" title="注解信息">

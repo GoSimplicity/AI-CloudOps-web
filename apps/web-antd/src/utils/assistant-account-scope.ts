@@ -31,25 +31,6 @@ export function createAssistantAccountScope(storage: Storage) {
   const keyFor = (name: string) =>
     `cloudops-assistant:v1:${encodeURIComponent(owner)}:${name}`;
   return {
-    setOwner(next: string) {
-      owner = next;
-      generation++;
-      request++;
-    },
-    invalidate() {
-      request++;
-    },
-    identity() {
-      return { owner, generation };
-    },
-    sameOwner(ticket: { generation: number; owner: string }) {
-      return (
-        !!owner && ticket.owner === owner && ticket.generation === generation
-      );
-    },
-    ticket() {
-      return { owner, generation, request: ++request };
-    },
     current(ticket: { generation: number; owner: string; request: number }) {
       return (
         !!owner &&
@@ -57,6 +38,12 @@ export function createAssistantAccountScope(storage: Storage) {
         ticket.generation === generation &&
         ticket.request === request
       );
+    },
+    identity() {
+      return { generation, owner };
+    },
+    invalidate() {
+      request++;
     },
     read<T>(name: string): T | undefined {
       if (!owner) return undefined;
@@ -68,6 +55,19 @@ export function createAssistantAccountScope(storage: Storage) {
       } catch {
         return undefined;
       }
+    },
+    sameOwner(ticket: { generation: number; owner: string }) {
+      return (
+        !!owner && ticket.owner === owner && ticket.generation === generation
+      );
+    },
+    setOwner(next: string) {
+      owner = next;
+      generation++;
+      request++;
+    },
+    ticket() {
+      return { generation, owner, request: ++request };
     },
     write(name: string, value: unknown) {
       if (!owner) return;

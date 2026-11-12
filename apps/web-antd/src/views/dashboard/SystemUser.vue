@@ -1,14 +1,19 @@
 <script lang="ts" setup>
 import type { FormInstance } from 'ant-design-vue';
 
-import OpsPage from '#/components/ops/OpsPage.vue';
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 
 import { useUserStore } from '@vben/stores';
 
-import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
+import { message } from 'ant-design-vue';
 
+import {
+  assignRolesToUserApi,
+  getUserRolesApi,
+  listRolesApi,
+  revokeRolesFromUserApi,
+} from '#/api/core/system/system';
 import {
   changePassword,
   type ChangePasswordReq,
@@ -22,12 +27,7 @@ import {
   updateUserInfo,
   type UserSignUpReq,
 } from '#/api/core/system/user';
-import {
-  assignRolesToUserApi,
-  getUserRolesApi,
-  listRolesApi,
-  revokeRolesFromUserApi,
-} from '#/api/core/system/system';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { useAuthStore } from '#/store/auth';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
@@ -198,45 +198,45 @@ onUnmounted(() => {
 });
 const viewUserData = ref<null | UserInfo>(null);
 const userStatistics = ref<UserStatistics>({
-  admin_count: 0,
   active_user_count: 0,
+  admin_count: 0,
 });
 
 // 搜索参数
 const searchParams = reactive({
-  search: '',
-  enable: undefined as number | undefined,
   account_type: undefined as number | undefined,
+  enable: undefined as number | undefined,
+  search: '',
 });
 
 // 分页配置
 const paginationConfig = reactive({
   current: 1,
   pageSize: 20,
-  total: 0,
-  showSizeChanger: true,
-  showQuickJumper: true,
   pageSizeOptions: ['10', '20', '50', '100'],
+  showQuickJumper: true,
+  showSizeChanger: true,
   showTotal: (total: number, range: [number, number]) =>
     `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+  total: 0,
 });
 
 // 表单数据初始化
 const initFormData = () => ({
-  username: '',
-  real_name: '',
-  mobile: '',
-  email: '',
-  desc: '',
-  enable: 1,
   account_type: 1,
-  password: '',
-  newPassword: '',
+  avatar: '',
   confirmPassword: '',
+  desc: '',
+  email: '',
+  enable: 1,
+  fei_shu_user_id: '',
   home_path: '',
   id: 0,
-  avatar: '',
-  fei_shu_user_id: '',
+  mobile: '',
+  newPassword: '',
+  password: '',
+  real_name: '',
+  username: '',
 });
 
 const formData = reactive(initFormData());
@@ -244,9 +244,9 @@ const formData = reactive(initFormData());
 // 表单验证规则
 const formRules = computed(() => {
   const rules: any = {
-    username: [{ message: '请输入用户名', required: true, trigger: 'blur' }],
-    real_name: [{ message: '请输入真实姓名', required: true, trigger: 'blur' }],
     mobile: [{ message: '请输入手机号', required: true, trigger: 'blur' }],
+    real_name: [{ message: '请输入真实姓名', required: true, trigger: 'blur' }],
+    username: [{ message: '请输入用户名', required: true, trigger: 'blur' }],
   };
 
   if (modalTitle.value === '新建用户') {
@@ -257,13 +257,13 @@ const formRules = computed(() => {
     rules.confirmPassword = [
       { message: '请确认密码', required: true, trigger: 'blur' },
       {
+        trigger: 'blur',
         validator: (_rule: any, value: string) => {
           if (value && value !== formData.password) {
             return Promise.reject('两次输入的密码不一致');
           }
           return Promise.resolve();
         },
-        trigger: 'blur',
       },
     ];
   }
@@ -290,13 +290,13 @@ const formChangPwdRules = computed(() => {
     rules.confirmPassword = [
       { message: '请确认密码', required: true, trigger: 'blur' },
       {
+        trigger: 'blur',
         validator: (_rule: any, value: string) => {
           if (value && value !== formData.newPassword) {
             return Promise.reject('两次输入的密码不一致');
           }
           return Promise.resolve();
         },
-        trigger: 'blur',
       },
     ];
   }
@@ -424,11 +424,11 @@ const fetchUserList = async (stillCurrent: () => boolean = () => true) => {
   loading.value = true;
   try {
     const params: GetUserListReq = {
-      page: paginationConfig.current,
-      size: paginationConfig.pageSize,
-      search: searchParams.search || '',
-      enable: 0,
       account_type: 0,
+      enable: 0,
+      page: paginationConfig.current,
+      search: searchParams.search || '',
+      size: paginationConfig.pageSize,
     };
 
     if (searchParams.enable === 1 || searchParams.enable === 2) {
@@ -544,8 +544,8 @@ const fetchUserStatistics = async (
       message.error(error.message || '获取用户统计失败');
     // 设置默认值避免显示undefined
     userStatistics.value = {
-      admin_count: 0,
       active_user_count: 0,
+      admin_count: 0,
     };
   }
 };
@@ -601,17 +601,17 @@ const handleEdit = async (user: UserInfo) => {
     modalTitle.value = '编辑用户';
     const response = await getUserDetailApi(user.id);
     Object.assign(formData, {
-      id: response.id,
-      username: response.username,
-      real_name: response.real_name,
-      mobile: response.mobile,
-      email: response.email || '',
-      desc: response.desc || '',
-      enable: response.enable,
       account_type: response.account_type,
-      home_path: response.home_path || '',
       avatar: response.avatar || '',
+      desc: response.desc || '',
+      email: response.email || '',
+      enable: response.enable,
       fei_shu_user_id: response.fei_shu_user_id || '',
+      home_path: response.home_path || '',
+      id: response.id,
+      mobile: response.mobile,
+      real_name: response.real_name,
+      username: response.username,
     });
     modalVisible.value = true;
   } catch (error: any) {
@@ -674,16 +674,16 @@ const handleStatusChange = async (user: UserInfo, newStatus: number) => {
     user.enable = newStatus;
 
     const updateData: UpdateProfileReq = {
-      id: user.id,
-      real_name: user.real_name || '',
-      mobile: user.mobile || '',
       account_type: user.account_type as 1 | 2,
-      enable: newStatus as 1 | 2,
+      avatar: user.avatar || '',
       desc: user.desc || '',
+      email: user.email || '',
+      enable: newStatus as 1 | 2,
       fei_shu_user_id: user.fei_shu_user_id || '',
       home_path: user.home_path || '',
-      email: user.email || '',
-      avatar: user.avatar || '',
+      id: user.id,
+      mobile: user.mobile || '',
+      real_name: user.real_name || '',
     };
 
     await updateUserInfo(updateData);
@@ -705,21 +705,19 @@ const handleChangePasswordSubmit = async () => {
     submitLoading.value = true;
 
     const changePasswordData: ChangePasswordReq = {
+      confirm_password: formData.confirmPassword,
+      new_password: formData.newPassword,
+      password: formData.password,
       user_id: formData.id as number,
       username: formData.username,
-      password: formData.password,
-      new_password: formData.newPassword,
-      confirm_password: formData.confirmPassword,
     };
     // message.info(JSON.stringify(changePasswordData))
     await changePassword(changePasswordData);
     message.success('更新成功');
     pwdModalVisible.value = false;
   } catch (error: any) {
-    if (!error.errorFields) {
-      if (shouldNotifyPageError(error))
-        message.error(error.message || '操作失败');
-    }
+    if (!error.errorFields && shouldNotifyPageError(error))
+      message.error(error.message || '操作失败');
   } finally {
     submitLoading.value = false;
   }
@@ -732,15 +730,15 @@ const handleSubmit = async () => {
 
     if (modalTitle.value === '新建用户') {
       const signUpData: UserSignUpReq = {
-        username: formData.username,
-        password: formData.password,
-        mobile: formData.mobile,
-        real_name: formData.real_name,
-        desc: formData.desc,
         account_type: formData.account_type as 1 | 2,
+        desc: formData.desc,
         enable: formData.enable as 1 | 2,
-        home_path: formData.home_path,
         fei_shu_user_id: formData.fei_shu_user_id || '',
+        home_path: formData.home_path,
+        mobile: formData.mobile,
+        password: formData.password,
+        real_name: formData.real_name,
+        username: formData.username,
       };
 
       // 添加可选字段
@@ -761,16 +759,16 @@ const handleSubmit = async () => {
       message.success('创建成功');
     } else {
       const updateData: UpdateProfileReq = {
-        id: formData.id as number,
-        real_name: formData.real_name,
-        mobile: formData.mobile,
         account_type: formData.account_type as 1 | 2,
-        desc: formData.desc,
-        enable: formData.enable as 1 | 2,
-        home_path: formData.home_path,
-        email: formData.email || '',
-        fei_shu_user_id: formData.fei_shu_user_id || '',
         avatar: formData.avatar || '',
+        desc: formData.desc,
+        email: formData.email || '',
+        enable: formData.enable as 1 | 2,
+        fei_shu_user_id: formData.fei_shu_user_id || '',
+        home_path: formData.home_path,
+        id: formData.id as number,
+        mobile: formData.mobile,
+        real_name: formData.real_name,
       };
       await updateUserInfo(updateData);
       message.success('更新成功');
@@ -780,10 +778,8 @@ const handleSubmit = async () => {
     await fetchUserList();
     await fetchUserStatistics(); // 更新统计数据
   } catch (error: any) {
-    if (!error.errorFields) {
-      if (shouldNotifyPageError(error))
-        message.error(error.message || '操作失败');
-    }
+    if (!error.errorFields && shouldNotifyPageError(error))
+      message.error(error.message || '操作失败');
   } finally {
     submitLoading.value = false;
   }
@@ -885,7 +881,7 @@ onMounted(() => {
             aria-label="搜索用户"
             class="search-input"
             placeholder="搜索用户名"
-            @pressEnter="handleSearch"
+            @press-enter="handleSearch"
           >
             <template #prefix>
               <Icon icon="material-symbols:search" />
@@ -938,8 +934,8 @@ onMounted(() => {
               <div class="user-avatar">
                 <img
                   v-if="record.avatar"
-                  :src="getAvatarUrl(record.avatar)"
                   :alt="record.username"
+                  :src="getAvatarUrl(record.avatar)"
                   @error="handleAvatarError"
                 />
                 <div v-else class="default-avatar">
@@ -1056,8 +1052,8 @@ onMounted(() => {
               <div class="detail-avatar">
                 <img
                   v-if="viewUserData.avatar"
-                  :src="getAvatarUrl(viewUserData.avatar)"
                   :alt="viewUserData.username"
+                  :src="getAvatarUrl(viewUserData.avatar)"
                   @error="handleAvatarError"
                 />
                 <div v-else class="default-avatar">
@@ -1165,8 +1161,8 @@ onMounted(() => {
         <a-form-item label="头像" name="avatar">
           <div class="avatar-upload">
             <div
-              class="avatar-preview"
               :class="{ 'avatar-upload-loading': avatarUploading }"
+              class="avatar-preview"
             >
               <img
                 v-if="formData.avatar"

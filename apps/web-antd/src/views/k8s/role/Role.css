@@ -130,6 +130,7 @@
   padding: 16px;
   margin-bottom: 16px;
   transition: all 0.2s ease;
+  animation: slide-in 0.3s ease;
 }
 
 .rule-input-group:hover {
@@ -205,6 +206,7 @@
   font-weight: 500;
   cursor: default;
   transition: all 0.2s ease;
+  animation: fade-in 0.2s ease;
 }
 
 .tags-display .ant-tag:hover {
@@ -532,11 +534,8 @@
 }
 
 /* ==================== 动画效果 ==================== */
-.rule-input-group {
-  animation: slideIn 0.3s ease;
-}
 
-@keyframes slideIn {
+@keyframes slide-in {
   from {
     opacity: 0;
     transform: translateY(-10px);
@@ -548,11 +547,7 @@
   }
 }
 
-.tags-display .ant-tag {
-  animation: fadeIn 0.2s ease;
-}
-
-@keyframes fadeIn {
+@keyframes fade-in {
   from {
     opacity: 0;
     transform: scale(0.8);
@@ -662,25 +657,25 @@
   color: #722ed1;
 }
 
-.rule-detail-tags .ant-tag-blue {
+:is(.rule-detail-tags .ant-tag-blue) {
   background: #e6f7ff;
   border: 1px solid #91d5ff;
   color: #1890ff;
 }
 
-.rule-detail-tags .ant-tag-green {
+:is(.rule-detail-tags .ant-tag-green) {
   background: #f6ffed;
   border: 1px solid #b7eb8f;
   color: #52c41a;
 }
 
-.rule-detail-tags .ant-tag-orange {
+:is(.rule-detail-tags .ant-tag-orange) {
   background: #fff7e6;
   border: 1px solid #ffd591;
   color: #fa8c16;
 }
 
-.rule-detail-tags .ant-tag-purple {
+:is(.rule-detail-tags .ant-tag-purple) {
   background: #f9f0ff;
   border: 1px solid #d3adf7;
   color: #722ed1;

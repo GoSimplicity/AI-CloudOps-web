@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useRouter } from 'vue-router';
 
-import { Alert, Badge, Button } from 'ant-design-vue';
 import {
   ArrowLeftOutlined,
   DisconnectOutlined,
   ReloadOutlined,
 } from '@ant-design/icons-vue';
-import { useRouter } from 'vue-router';
+import { Alert, Badge, Button } from 'ant-design-vue';
 
 import { useSshTerminal } from './use-ssh-terminal';
 
@@ -21,18 +21,18 @@ const { connect, disconnect, error, state } = useSshTerminal(viewport, {
   resourceId: () => props.resourceId,
 });
 const labels = {
-  idle: '未连接',
-  connecting: '连接中',
   connected: '连接已建立',
+  connecting: '连接中',
   disconnected: '连接已关闭',
   error: '连接失败',
+  idle: '未连接',
 } as const;
 const tones = {
-  idle: 'default',
-  connecting: 'processing',
   connected: 'success',
+  connecting: 'processing',
   disconnected: 'warning',
   error: 'error',
+  idle: 'default',
 } as const;
 const listPath = computed(() =>
   props.kind === 'local'

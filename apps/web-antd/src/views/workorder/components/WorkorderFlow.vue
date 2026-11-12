@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
 
-import { message } from 'ant-design-vue';
 import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
@@ -10,14 +9,15 @@ import {
   StopOutlined,
   UserOutlined,
 } from '@ant-design/icons-vue';
+import { message } from 'ant-design-vue';
 
+import { InstanceStatus } from '#/api/core/workorder/workorder_instance';
 import {
   FlowAction,
   listWorkorderInstanceFlow,
   type ListWorkorderInstanceFlowReq,
   type WorkorderInstanceFlowItem,
 } from '#/api/core/workorder/workorder_instance_flow';
-import { InstanceStatus } from '#/api/core/workorder/workorder_instance';
 import { getOwnLookupValue } from '#/utils/own-lookup';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
@@ -51,14 +51,14 @@ const viewMode = ref<'list' | 'timeline'>('timeline');
 
 // 详情对话框
 const detailDialog = reactive({
-  visible: false,
   item: null as null | WorkorderInstanceFlowItem,
+  visible: false,
 });
 
 // 流转记录对话框
 const flowDialog = reactive({
-  visible: false,
   instanceId: 0,
+  visible: false,
 });
 
 // 响应式对话框宽度
@@ -77,12 +77,12 @@ const formatFullDateTime = (dateStr: string | undefined) => {
   if (!dateStr) return '';
   const d = new Date(dateStr);
   return d.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: 'long',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    month: 'long',
     second: '2-digit',
+    year: 'numeric',
   });
 };
 
@@ -147,10 +147,10 @@ const filteredFlowList = computed(() => {
 const isImportantFlow = (action: string): boolean => {
   return [
     FlowAction.Approve as string,
+    FlowAction.Cancel as string,
+    FlowAction.Complete as string,
     FlowAction.Reject as string,
     FlowAction.Submit as string,
-    FlowAction.Complete as string,
-    FlowAction.Cancel as string,
   ].includes(action);
 };
 
@@ -176,25 +176,25 @@ const getFlowCount = (type: string): number => {
 
 const getFlowActionClass = (action: string): string => {
   const classMap: Record<string, string> = {
-    [FlowAction.Submit]: 'action-submit',
     [FlowAction.Approve]: 'action-approve',
-    [FlowAction.Reject]: 'action-reject',
     [FlowAction.Assign]: 'action-assign',
     [FlowAction.Cancel]: 'action-cancel',
     [FlowAction.Complete]: 'action-complete',
+    [FlowAction.Reject]: 'action-reject',
     [FlowAction.Return]: 'action-return',
+    [FlowAction.Submit]: 'action-submit',
   };
   return classMap[action] || 'action-default';
 };
 
 const getStatusBadgeClass = (status: number): string => {
   const classMap: Record<number, string> = {
+    [InstanceStatus.Cancelled]: 'status-cancelled',
+    [InstanceStatus.Completed]: 'status-completed',
     [InstanceStatus.Draft]: 'status-draft',
     [InstanceStatus.Pending]: 'status-pending',
     [InstanceStatus.Processing]: 'status-processing',
-    [InstanceStatus.Completed]: 'status-completed',
     [InstanceStatus.Rejected]: 'status-rejected',
-    [InstanceStatus.Cancelled]: 'status-cancelled',
   };
   return classMap[status] || 'status-default';
 };
@@ -225,9 +225,9 @@ const loadFlow = async (instanceId: number) => {
 
     while (hasMoreData) {
       const params: ListWorkorderInstanceFlowReq = {
+        instance_id: instanceId,
         page: currentPage,
         size: pageSize,
-        instance_id: instanceId,
       };
 
       const res = await listWorkorderInstanceFlow(params);
@@ -293,38 +293,38 @@ const getAvatarColor = (name: string | undefined) => {
 
 const getStatusText = (status: number): string => {
   const textMap = {
+    [InstanceStatus.Cancelled]: '已取消',
+    [InstanceStatus.Completed]: '已完成',
     [InstanceStatus.Draft]: '草稿',
     [InstanceStatus.Pending]: '待处理',
     [InstanceStatus.Processing]: '处理中',
-    [InstanceStatus.Completed]: '已完成',
     [InstanceStatus.Rejected]: '已拒绝',
-    [InstanceStatus.Cancelled]: '已取消',
   };
   return textMap[status as keyof typeof textMap] || '未知';
 };
 
 const getFlowActionIcon = (action: string) => {
   const iconMap: Record<string, any> = {
-    [FlowAction.Submit]: SendOutlined,
     [FlowAction.Approve]: CheckCircleOutlined,
-    [FlowAction.Reject]: ExclamationCircleOutlined,
     [FlowAction.Assign]: UserOutlined,
     [FlowAction.Cancel]: StopOutlined,
     [FlowAction.Complete]: CheckCircleOutlined,
+    [FlowAction.Reject]: ExclamationCircleOutlined,
     [FlowAction.Return]: ExclamationCircleOutlined,
+    [FlowAction.Submit]: SendOutlined,
   };
   return iconMap[action] || PlayCircleOutlined;
 };
 
 const getFlowActionText = (action: string): string => {
   const textMap: Record<string, string> = {
-    [FlowAction.Submit]: '提交工单',
     [FlowAction.Approve]: '审批通过',
-    [FlowAction.Reject]: '审批拒绝',
     [FlowAction.Assign]: '指派处理人',
     [FlowAction.Cancel]: '取消工单',
     [FlowAction.Complete]: '完成工单',
+    [FlowAction.Reject]: '审批拒绝',
     [FlowAction.Return]: '退回工单',
+    [FlowAction.Submit]: '提交工单',
   };
   return textMap[action] || action;
 };
@@ -457,21 +457,21 @@ defineExpose({
               <div
                 v-for="(item, index) in filteredFlowList"
                 :key="item.id"
-                class="flow-timeline-item"
                 :class="{ 'important-flow': isImportantFlow(item.action) }"
-                :style="{ '--delay': index * 0.15 + 's' }"
+                :style="{ '--delay': `${index * 0.15}s` }"
+                class="flow-timeline-item"
               >
                 <!-- 时间线节点 -->
                 <div
-                  class="timeline-node"
                   :class="getFlowActionClass(item.action)"
+                  class="timeline-node"
                 >
                   <div class="node-icon">
                     <component :is="getFlowActionIcon(item.action)" />
                   </div>
                   <div
-                    class="node-pulse"
                     v-if="isImportantFlow(item.action)"
+                    class="node-pulse"
                   ></div>
                 </div>
 
@@ -480,8 +480,8 @@ defineExpose({
                   <div class="flow-card-header">
                     <div class="flow-action-info">
                       <div
-                        class="action-badge"
                         :class="getFlowActionClass(item.action)"
+                        class="action-badge"
                       >
                         <component :is="getFlowActionIcon(item.action)" />
                         <span>{{ getFlowActionText(item.action) }}</span>
@@ -543,8 +543,8 @@ defineExpose({
                     <div class="status-change-section">
                       <div class="status-flow">
                         <div
-                          class="from-status"
                           :class="getStatusBadgeClass(item.from_status)"
+                          class="from-status"
                         >
                           {{ getStatusText(item.from_status) }}
                         </div>
@@ -552,8 +552,8 @@ defineExpose({
                           <IconComponent icon="arrow" />
                         </div>
                         <div
-                          class="to-status"
                           :class="getStatusBadgeClass(item.to_status)"
+                          class="to-status"
                         >
                           {{ getStatusText(item.to_status) }}
                         </div>
@@ -602,13 +602,13 @@ defineExpose({
                 <div
                   v-for="(item, index) in filteredFlowList"
                   :key="item.id"
-                  :style="{ '--delay': index * 0.1 + 's' }"
+                  :style="{ '--delay': `${index * 0.1}s` }"
                   class="table-row"
                 >
                   <div class="body-cell action" data-label="操作类型">
                     <div
-                      class="action-badge-small"
                       :class="getFlowActionClass(item.action)"
+                      class="action-badge-small"
                     >
                       <component :is="getFlowActionIcon(item.action)" />
                       <span>{{ getFlowActionText(item.action) }}</span>
@@ -639,15 +639,15 @@ defineExpose({
                   <div class="body-cell status" data-label="状态变更">
                     <div class="status-change-small">
                       <span
-                        class="from-status"
                         :class="getStatusBadgeClass(item.from_status)"
+                        class="from-status"
                       >
                         {{ getStatusText(item.from_status) }}
                       </span>
                       <IconComponent icon="arrow" />
                       <span
-                        class="to-status"
                         :class="getStatusBadgeClass(item.to_status)"
+                        class="to-status"
                       >
                         {{ getStatusText(item.to_status) }}
                       </span>
@@ -714,8 +714,8 @@ defineExpose({
       <div v-if="detailDialog.item" class="flow-detail-content">
         <div class="detail-header">
           <div
-            class="detail-action-badge"
             :class="getFlowActionClass(detailDialog.item.action)"
+            class="detail-action-badge"
           >
             <component :is="getFlowActionIcon(detailDialog.item.action)" />
             {{ getFlowActionText(detailDialog.item.action) }}
@@ -752,15 +752,15 @@ defineExpose({
           <a-descriptions-item label="状态变更">
             <div class="status-change-detail">
               <span
-                class="from-status"
                 :class="getStatusBadgeClass(detailDialog.item.from_status)"
+                class="from-status"
               >
                 {{ getStatusText(detailDialog.item.from_status) }}
               </span>
               <IconComponent icon="arrow" />
               <span
-                class="to-status"
                 :class="getStatusBadgeClass(detailDialog.item.to_status)"
+                class="to-status"
               >
                 {{ getStatusText(detailDialog.item.to_status) }}
               </span>
@@ -790,7 +790,7 @@ defineExpose({
   }
 }
 
-@keyframes fadeInUp {
+@keyframes fade-in-up {
   from {
     opacity: 0;
     transform: translateY(30px);
@@ -802,7 +802,7 @@ defineExpose({
   }
 }
 
-@keyframes pulseEffect {
+@keyframes pulse-effect {
   0% {
     transform: scale(1);
     opacity: 0.3;
@@ -1173,7 +1173,7 @@ defineExpose({
   align-items: flex-start;
   gap: 24px;
   position: relative;
-  animation: fadeInUp 0.6s ease-out;
+  animation: fade-in-up 0.6s ease-out;
   animation-delay: var(--delay);
   animation-fill-mode: both;
 }
@@ -1221,7 +1221,7 @@ defineExpose({
   border-radius: 50%;
   background: inherit;
   opacity: 0.3;
-  animation: pulseEffect 2s infinite;
+  animation: pulse-effect 2s infinite;
 }
 
 /* 不同操作类型的节点样式 */
@@ -1566,7 +1566,7 @@ defineExpose({
   padding: 16px 20px;
   border-bottom: 1px solid #f0f2f5;
   transition: all 0.3s ease;
-  animation: fadeInUp 0.4s ease-out;
+  animation: fade-in-up 0.4s ease-out;
   animation-delay: var(--delay);
   animation-fill-mode: both;
 }

@@ -1,7 +1,6 @@
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
-
 import { defineComponent, h, reactive } from 'vue';
 
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useAutoFixWorkflow } from './useAutoFixWorkflow';
@@ -14,22 +13,22 @@ function required<T>(value: null | T | undefined): T {
 }
 
 const account = vi.hoisted(() => ({
-  user: null as any,
   access: null as any,
   permissions: null as any,
+  user: null as any,
 }));
 const api = vi.hoisted(() => ({
-  getAutoFixInfo: vi.fn(),
-  getAutoFixReady: vi.fn(),
-  executeAutoFixWorkflow: vi.fn(),
   confirmAutoFixWorkflow: vi.fn(),
+  executeAutoFixWorkflow: vi.fn(),
   getAutoFixHistory: vi.fn(),
+  getAutoFixInfo: vi.fn(),
   getAutoFixOperation: vi.fn(),
   getAutoFixPlan: vi.fn(),
+  getAutoFixReady: vi.fn(),
 }));
 vi.mock('@vben/stores', () => ({
-  useUserStore: () => account.user,
   useAccessStore: () => account.access,
+  useUserStore: () => account.user,
 }));
 vi.mock('#/utils/permission', () => ({
   usePermission: () => ({
@@ -44,9 +43,9 @@ vi.mock('#/api/core/aiops/autofix', () => api);
 vi.mock('ant-design-vue', () => ({
   message: {
     error: vi.fn(),
-    warning: vi.fn(),
-    success: vi.fn(),
     info: vi.fn(),
+    success: vi.fn(),
+    warning: vi.fn(),
   },
 }));
 const operationPermission = '/api/v1/autofix/workflow/operations/:operation_id';
@@ -54,13 +53,12 @@ const planPermission = '/api/v1/autofix/workflow/plans/:plan_id';
 const historyPermission = '/api/v1/autofix/workflow/history';
 const planId = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const pendingResult = () => ({
-  status: 'needs_human_confirmation',
-  plan: { plan_id: planId },
+  agents_used: [],
   approval: {
-    state: 'pending',
+    confirmation_required: true,
     expires_at: new Date(Date.now() + 60_000).toISOString(),
     pending_action_ids: ['a'],
-    confirmation_required: true,
+    state: 'pending',
   },
   blocked_actions: [
     {
@@ -75,24 +73,25 @@ const pendingResult = () => ({
   ],
   candidate_actions: [],
   diagnosis: {},
-  execution: {},
   executed_actions: [],
+  execution: {},
   messages: [],
+  plan: { plan_id: planId },
   review: {},
-  agents_used: [],
+  status: 'needs_human_confirmation',
   timestamp: '',
 });
 const operation = (id: string, state = 'pending') => ({
+  approval_state: state === 'pending' ? 'pending' : 'consumed',
+  execution_summary: state === 'completed' ? { status: 'completed' } : null,
   operation_id: id,
   plan_id: planId,
-  state,
-  approval_state: state === 'pending' ? 'pending' : 'consumed',
   result: state === 'pending' ? pendingResult() : null,
-  execution_summary: state === 'completed' ? { status: 'completed' } : null,
+  state,
 });
 const Harness = defineComponent({
-  setup: () => useAutoFixWorkflow(),
   render: () => h('div'),
+  setup: () => useAutoFixWorkflow(),
 });
 let wrapper: undefined | VueWrapper<any>;
 async function mountHarness() {
@@ -118,11 +117,11 @@ beforeEach(() => {
   account.user = reactive({ userInfo: { userId: '1' } });
   account.access = reactive({ accessToken: 'token-a' });
   account.permissions = reactive({
-    run: true,
     confirm: true,
+    [historyPermission]: true,
     [operationPermission]: true,
     [planPermission]: true,
-    [historyPermission]: true,
+    run: true,
   });
   api.getAutoFixInfo.mockResolvedValue({});
 });

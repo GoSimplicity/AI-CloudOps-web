@@ -13,28 +13,28 @@ import {
   ref,
 } from 'vue';
 
-import * as echarts from 'echarts/core';
+import { InfoCircleOutlined, WarningOutlined } from '@ant-design/icons-vue';
 import { BarChart, LineChart } from 'echarts/charts';
 import {
   GridComponent,
   LegendComponent,
   TooltipComponent,
 } from 'echarts/components';
+import * as echarts from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
-import { InfoCircleOutlined, WarningOutlined } from '@ant-design/icons-vue';
 
-import OpsPage from '#/components/ops/OpsPage.vue';
 import {
   getSystemInfoApi,
   getSystemMetricsApi,
 } from '#/api/core/system/system';
+import OpsPage from '#/components/ops/OpsPage.vue';
 
 // 所有数值来自一次实际读取；本页历史仅保留激活期间最近30次采样
 const definitions = [
-  { key: 'cpu_usage', label: 'CPU使用率', unit: '%', precision: 1 },
-  { key: 'memory_usage', label: '内存使用率', unit: '%', precision: 1 },
-  { key: 'disk_usage', label: '磁盘使用率', unit: '%', precision: 1 },
-  { key: 'load_avg_1', label: '系统负载（1分钟）', unit: '', precision: 2 },
+  { key: 'cpu_usage', label: 'CPU使用率', precision: 1, unit: '%' },
+  { key: 'memory_usage', label: '内存使用率', precision: 1, unit: '%' },
+  { key: 'disk_usage', label: '磁盘使用率', precision: 1, unit: '%' },
+  { key: 'load_avg_1', label: '系统负载（1分钟）', precision: 2, unit: '' },
 ] as const;
 type MetricKey = (typeof definitions)[number]['key'];
 type Snapshot = Partial<System>;
@@ -53,9 +53,9 @@ const moduleData = ref<{
 }>({ systemInfo: null, systemMetrics: null });
 const history = ref<Record<MetricKey, Array<null | number>>>({
   cpu_usage: [],
-  memory_usage: [],
   disk_usage: [],
   load_avg_1: [],
+  memory_usage: [],
 });
 const readErrors = ref<string[]>([]);
 const refreshing = ref(false);
@@ -100,9 +100,9 @@ const metrics = computed(() =>
     const value = sampleValue(definition.key);
     return {
       ...definition,
+      data: history.value[definition.key],
       raw: value,
       value: value === null ? '未知' : value.toFixed(definition.precision),
-      data: history.value[definition.key],
     };
   }),
 );
@@ -161,16 +161,16 @@ const systemStatusText = computed(() =>
     ? '正在读取采样'
     : {
         'status-error': '当前采样超过告警阈值',
-        'status-warning': '当前采样需要关注',
         'status-healthy': '本次可用采样未超阈值',
         'status-unknown': '采样不可用或不完整',
+        'status-warning': '当前采样需要关注',
       }[systemStatusClass.value],
 );
 const events = computed(() => {
   const result = readErrors.value.map((message, index) => ({
     id: `read-error-${index}`,
-    type: 'error',
     message,
+    type: 'error',
   }));
   if (
     moduleData.value.systemMetrics &&
@@ -179,8 +179,8 @@ const events = computed(() => {
   )
     result.push({
       id: 'sample_incomplete',
-      type: 'warning',
       message: '部分采样字段缺失或无效，当前状态无法完整判断',
+      type: 'warning',
     });
   for (const metric of metrics.value) {
     if (metric.raw === null || metric.key === 'load_avg_1' || metric.raw <= 75)
@@ -188,15 +188,15 @@ const events = computed(() => {
     const id = metric.key.split('_')[0];
     result.push({
       id: `${id}_${metric.raw > 90 ? 'high' : 'warning'}`,
-      type: metric.raw > 90 ? 'error' : 'warning',
       message: `${metric.label}：${metric.value}%`,
+      type: metric.raw > 90 ? 'error' : 'warning',
     });
   }
   if (loadRatio.value !== null && loadRatio.value > 1.5)
     result.push({
       id: 'load_warning',
-      type: 'warning',
       message: `每核心负载：${loadRatio.value.toFixed(2)}`,
+      type: 'warning',
     });
   return result;
 });
@@ -230,27 +230,27 @@ function pair(used: unknown, total: unknown, multiplier: number) {
 }
 const resources = computed(() => [
   {
+    detail: `${formatNumber(host.value.cpu_cores)} 核 · ${host.value.cpu_model || '型号未知'}`,
     name: 'CPU',
     usage: sampleValue('cpu_usage'),
-    detail: `${formatNumber(host.value.cpu_cores)} 核 · ${host.value.cpu_model || '型号未知'}`,
   },
   {
-    name: '内存',
-    usage: sampleValue('memory_usage'),
     detail: pair(
       moduleData.value.systemMetrics?.memory_used,
       moduleData.value.systemMetrics?.memory_total,
       1024 ** 2,
     ),
+    name: '内存',
+    usage: sampleValue('memory_usage'),
   },
   {
-    name: '存储',
-    usage: sampleValue('disk_usage'),
     detail: pair(
       moduleData.value.systemMetrics?.disk_used,
       moduleData.value.systemMetrics?.disk_total,
       1024 ** 3,
     ),
+    name: '存储',
+    usage: sampleValue('disk_usage'),
   },
 ]);
 const sampleTime = computed(() => {
@@ -269,11 +269,11 @@ function colors() {
     return getComputedStyle(probe).color || fallback;
   };
   const result = {
-    text: read('--ops-ink', '#222222'),
-    muted: read('--ops-muted', '#777777'),
-    border: read('--ops-border', '#dddddd'),
-    surface: read('--ops-surface', '#ffffff'),
     accent: read('--ops-accent', '#1677ff'),
+    border: read('--ops-border', '#dddddd'),
+    muted: read('--ops-muted', '#777777'),
+    surface: read('--ops-surface', '#ffffff'),
+    text: read('--ops-ink', '#222222'),
   };
   probe.remove();
   return result;
@@ -298,60 +298,60 @@ function updateCharts() {
     trendChartInstance.setOption(
       {
         animation: false,
-        textStyle: { color: palette.text },
-        tooltip: { ...tooltip, trigger: 'axis' },
+        grid: { bottom: 70, left: 48, right: 48, top: 32 },
         legend: {
-          data: ['CPU使用率', '内存使用率', '每核心负载'],
           bottom: 0,
+          data: ['CPU使用率', '内存使用率', '每核心负载'],
           textStyle: { color: palette.muted },
         },
-        grid: { left: 48, right: 48, top: 32, bottom: 70 },
+        series: [
+          {
+            data: [sampleValue('cpu_usage')],
+            itemStyle: { color: palette.accent },
+            name: 'CPU使用率',
+            type: 'bar',
+          },
+          {
+            data: [sampleValue('memory_usage')],
+            itemStyle: { color: '#52a771' },
+            name: '内存使用率',
+            type: 'bar',
+          },
+          {
+            data: [loadRatio.value],
+            itemStyle: { color: '#b88a36' },
+            name: '每核心负载',
+            type: 'bar',
+            yAxisIndex: 1,
+          },
+        ],
+        textStyle: { color: palette.text },
+        tooltip: { ...tooltip, trigger: 'axis' },
         xAxis: {
-          type: 'category',
-          data: [sampleTime.value],
           axisLabel: { color: palette.muted },
           axisLine: { lineStyle: { color: palette.border } },
+          data: [sampleTime.value],
+          type: 'category',
         },
         yAxis: [
           {
-            type: 'value',
-            min: 0,
-            max: 100,
-            name: '使用率 (%)',
             axisLabel: { color: palette.muted },
+            max: 100,
+            min: 0,
+            name: '使用率 (%)',
             splitLine: { lineStyle: { color: palette.border } },
+            type: 'value',
           },
           {
-            type: 'value',
-            min: 0,
+            axisLabel: { color: palette.muted },
             max: (extent: { max: number }) =>
               Number.isFinite(extent.max)
                 ? Math.max(2, Math.ceil(extent.max))
                 : 2,
+            min: 0,
             name: '负载/核',
             splitLine: { show: false },
-            axisLabel: { color: palette.muted },
-          },
-        ],
-        series: [
-          {
-            name: 'CPU使用率',
-            type: 'bar',
-            data: [sampleValue('cpu_usage')],
-            itemStyle: { color: palette.accent },
-          },
-          {
-            name: '内存使用率',
-            type: 'bar',
-            data: [sampleValue('memory_usage')],
-            itemStyle: { color: '#52a771' },
-          },
-          {
-            name: '每核心负载',
-            type: 'bar',
-            yAxisIndex: 1,
-            data: [loadRatio.value],
-            itemStyle: { color: '#b88a36' },
+            type: 'value',
           },
         ],
       },
@@ -364,6 +364,18 @@ function updateCharts() {
     networkChartInstance.setOption(
       {
         animation: false,
+        grid: { bottom: 32, left: 80, right: 24, top: 16 },
+        series: [
+          {
+            data: [
+              finite(moduleData.value.systemMetrics?.network_in),
+              finite(moduleData.value.systemMetrics?.network_out),
+            ],
+            itemStyle: { color: palette.accent },
+            name: '累计网络流量',
+            type: 'bar',
+          },
+        ],
         textStyle: { color: palette.text },
         tooltip: {
           ...tooltip,
@@ -371,29 +383,17 @@ function updateCharts() {
           valueFormatter: (value: unknown) =>
             finite(value) === null ? '未知' : `${value} MiB`,
         },
-        grid: { left: 80, right: 24, top: 16, bottom: 32 },
         xAxis: {
-          type: 'value',
-          min: 0,
           axisLabel: { color: palette.muted },
+          min: 0,
           splitLine: { lineStyle: { color: palette.border } },
+          type: 'value',
         },
         yAxis: {
-          type: 'category',
-          data: ['累计接收', '累计发送'],
           axisLabel: { color: palette.muted },
+          data: ['累计接收', '累计发送'],
+          type: 'category',
         },
-        series: [
-          {
-            name: '累计网络流量',
-            type: 'bar',
-            data: [
-              finite(moduleData.value.systemMetrics?.network_in),
-              finite(moduleData.value.systemMetrics?.network_out),
-            ],
-            itemStyle: { color: palette.accent },
-          },
-        ],
       },
       true,
     );
@@ -407,20 +407,20 @@ function updateCharts() {
     chart.setOption(
       {
         animation: false,
-        grid: { left: 2, right: 2, top: 4, bottom: 4 },
-        xAxis: { type: 'category', show: false },
-        yAxis: { type: 'value', show: false },
+        grid: { bottom: 4, left: 2, right: 2, top: 4 },
         series: [
           {
-            type: 'line',
-            data: metric.data,
             connectNulls: false,
+            data: metric.data,
+            itemStyle: { color: palette.accent },
+            lineStyle: { color: palette.accent, width: 1.5 },
             showSymbol: metric.data.length === 1,
             symbolSize: 4,
-            lineStyle: { width: 1.5, color: palette.accent },
-            itemStyle: { color: palette.accent },
+            type: 'line',
           },
         ],
+        xAxis: { show: false, type: 'category' },
+        yAxis: { show: false, type: 'value' },
       },
       true,
     );
@@ -511,8 +511,8 @@ function activate() {
     if (active && !disposed) updateCharts();
   });
   themeObserver.observe(document.documentElement, {
-    attributes: true,
     attributeFilter: ['class', 'style'],
+    attributes: true,
   });
   void fetchAllSystemData();
 }
@@ -541,17 +541,17 @@ onBeforeUnmount(() => {
 
 <template>
   <OpsPage
-    class="dashboard-container"
     :description="
       simulated
         ? '演示主机的合成采样，每30秒刷新样例；不代表真实主机监控'
         : '后端运行主机的最近采样，每30秒读取一次；页面展示采样范围内的状态'
     "
+    class="dashboard-container"
     title="系统欢迎页"
   >
     <template #actions>
       <a-space wrap>
-        <span class="sample-status" :class="systemStatusClass" role="status">{{
+        <span :class="systemStatusClass" class="sample-status" role="status">{{
           systemStatusText
         }}</span>
         <a-button :loading="refreshing" @click="refreshSystemData">
@@ -582,9 +582,9 @@ onBeforeUnmount(() => {
     <a-alert
       v-if="readErrors.length > 0"
       :message="readErrors.join('；')"
-      type="error"
-      show-icon
       role="alert"
+      show-icon
+      type="error"
     />
     <div class="sample-meta">
       <span>采集时间：{{ sampleTime }}</span
@@ -712,7 +712,7 @@ onBeforeUnmount(() => {
           <div class="resource-header">
             <h2>{{ resource.name }}</h2>
             <span>{{
-              resource.usage === null ? '未知' : resource.usage.toFixed(1) + '%'
+              resource.usage === null ? '未知' : `${resource.usage.toFixed(1)}%`
             }}</span>
           </div>
           <a-progress

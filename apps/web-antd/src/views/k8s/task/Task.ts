@@ -6,7 +6,12 @@ import { useUserStore } from '@vben/stores';
 
 import { message, Modal } from 'ant-design-vue';
 
-import { formatK8sTime } from '../shared/utils';
+import {
+  Env,
+  getClustersListApi,
+  type K8sCluster,
+  type ListClustersReq,
+} from '#/api/core/k8s/k8s_cluster';
 import {
   applyYamlTask,
   createYamlTask,
@@ -25,25 +30,21 @@ import {
   type YamlTaskUpdateReq,
   type YamlTemplateListReq,
 } from '#/api/core/k8s/k8s_yaml';
-import {
-  Env,
-  getClustersListApi,
-  type K8sCluster,
-  type ListClustersReq,
-} from '#/api/core/k8s/k8s_cluster';
 import { useAuthStore } from '#/store';
 import {
   shouldNotifyPageError,
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
 
+import { formatK8sTime } from '../shared/utils';
+
 // 任务状态枚举
 export const TaskStatus = {
+  CANCELLED: 'cancelled',
+  FAILED: 'failed',
   PENDING: 'pending',
   RUNNING: 'running',
   SUCCESS: 'success',
-  FAILED: 'failed',
-  CANCELLED: 'cancelled',
 } as const;
 
 export type TaskStatusType = (typeof TaskStatus)[keyof typeof TaskStatus];
@@ -126,23 +127,23 @@ export function useTaskPage() {
   // form validation rules
   const createFormRules: Record<string, Rule[]> = {
     name: [
-      { required: true, message: '请输入任务名称', trigger: 'blur' },
+      { message: '请输入任务名称', required: true, trigger: 'blur' },
       {
-        pattern: /^[a-zA-Z0-9-_\u4E00-\u9FA5]+$/,
         message: '任务名称只能包含中英文、数字、下划线和连字符',
+        pattern: /^[a-zA-Z0-9-_\u4E00-\u9FA5]+$/,
         trigger: 'blur',
       },
       { max: 50, message: '任务名称长度不能超过50个字符', trigger: 'blur' },
     ],
-    template_id: [{ required: true, message: '请选择模板', trigger: 'change' }],
+    template_id: [{ message: '请选择模板', required: true, trigger: 'change' }],
   };
 
   const editFormRules: Record<string, Rule[]> = {
     name: [
-      { required: true, message: '请输入任务名称', trigger: 'blur' },
+      { message: '请输入任务名称', required: true, trigger: 'blur' },
       {
-        pattern: /^[a-zA-Z0-9-_\u4E00-\u9FA5]+$/,
         message: '任务名称只能包含中英文、数字、下划线和连字符',
+        pattern: /^[a-zA-Z0-9-_\u4E00-\u9FA5]+$/,
         trigger: 'blur',
       },
       { max: 255, message: '任务名称长度不能超过255个字符', trigger: 'blur' },
@@ -155,11 +156,11 @@ export function useTaskPage() {
   });
 
   const rowSelection = computed(() => ({
-    selectedRowKeys: selectedRowKeys.value,
     onChange: (keys: (number | string)[], rows: K8sYamlTask[]) => {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
     },
+    selectedRowKeys: selectedRowKeys.value,
   }));
 
   // helpers
@@ -198,33 +199,33 @@ export function useTaskPage() {
     if (env === undefined || env === null) return '未知环境';
     const value = typeof env === 'string' ? parseInt(env) : env;
     const map: Record<number, string> = {
-      [Env.Prod]: '生产',
       [Env.Dev]: '开发',
-      [Env.Stage]: '预发',
-      [Env.Rc]: '测试',
       [Env.Press]: '灰度',
+      [Env.Prod]: '生产',
+      [Env.Rc]: '测试',
+      [Env.Stage]: '预发',
     };
     return map[value] || '未知环境';
   };
 
   const getStatusText = (status?: string) => {
     const map: Record<string, string> = {
+      [TaskStatus.CANCELLED]: '已取消',
+      [TaskStatus.FAILED]: '失败',
       [TaskStatus.PENDING]: '等待中',
       [TaskStatus.RUNNING]: '运行中',
       [TaskStatus.SUCCESS]: '成功',
-      [TaskStatus.FAILED]: '失败',
-      [TaskStatus.CANCELLED]: '已取消',
     };
     return status ? map[status] || status : '未知';
   };
 
   const getStatusColor = (status?: string) => {
     const map: Record<string, string> = {
+      [TaskStatus.CANCELLED]: 'warning',
+      [TaskStatus.FAILED]: 'error',
       [TaskStatus.PENDING]: 'default',
       [TaskStatus.RUNNING]: 'processing',
       [TaskStatus.SUCCESS]: 'success',
-      [TaskStatus.FAILED]: 'error',
-      [TaskStatus.CANCELLED]: 'warning',
     };
     return status ? map[status] || 'default' : 'default';
   };
@@ -277,9 +278,9 @@ export function useTaskPage() {
       templatesLoading.value = true;
       templatesError.value = '';
       const params: YamlTemplateListReq = {
+        cluster_id: clusterId,
         page: templatesPage.value,
         size: templatesSize.value,
-        cluster_id: clusterId,
       };
       const res = await getYamlTemplateList(params);
       if (
@@ -322,12 +323,12 @@ export function useTaskPage() {
       selectedRowKeys.value = [];
       selectedRows.value = [];
       const params: YamlTaskListReq = {
+        cluster_id: clusterId,
+        name: searchText.value || undefined,
         page: currentPage.value,
         size: pageSize.value,
-        cluster_id: clusterId,
-        template_id: filterTemplateId.value || undefined,
         status: filterStatus.value || undefined,
-        name: searchText.value || undefined,
+        template_id: filterTemplateId.value || undefined,
       };
       const res = await getYamlTaskList(params);
       if (
@@ -422,8 +423,8 @@ export function useTaskPage() {
       isDetailModalVisible.value = true;
       currentTaskDetail.value = null;
       const params: YamlTaskDetailReq = {
-        id,
         cluster_id: clusterId,
+        id,
       };
       const res = await getYamlTaskDetail(params);
       if (!current()) return;
@@ -503,9 +504,9 @@ export function useTaskPage() {
       submitLoading.value = true;
 
       const params: YamlTaskCreateReq = {
+        cluster_id: clusterId,
         name: createFormModel.value.name,
         template_id: templateId,
-        cluster_id: clusterId,
         variables: createFormModel.value.variables.filter((v) => v.trim()),
       };
 
@@ -585,10 +586,10 @@ export function useTaskPage() {
       submitLoading.value = true;
 
       const params: YamlTaskUpdateReq = {
+        cluster_id: clusterId,
         id,
         name: editFormModel.value.name,
         template_id: editFormModel.value.template_id,
-        cluster_id: clusterId,
         variables: editFormModel.value.variables.filter((v) => v.trim()),
       };
 
@@ -653,9 +654,9 @@ export function useTaskPage() {
       executeLoading.value = true;
 
       const params: YamlTaskExecuteReq = {
-        id,
         cluster_id: clusterId,
         dry_run: executeFormModel.value.dry_run,
+        id,
       };
 
       await applyYamlTask(params);
@@ -689,18 +690,17 @@ export function useTaskPage() {
       operationOwner() === owner;
 
     Modal.confirm({
-      title: '删除任务',
+      cancelText: '取消',
+      centered: true,
       content: `确定要删除任务 "${record.name}" 吗？此操作不可逆！`,
       okText: '确认删除',
       okType: 'danger',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         if (!current()) return;
         try {
           const params: YamlTaskDeleteReq = {
-            id,
             cluster_id: clusterId,
+            id,
           };
           await deleteYamlTask(params);
           if (!current()) return;
@@ -711,6 +711,7 @@ export function useTaskPage() {
           if (shouldNotifyPageError(error)) message.error('任务删除失败');
         }
       },
+      title: '删除任务',
     });
   };
 
@@ -741,12 +742,11 @@ export function useTaskPage() {
       selection.every((record, index) => record.id === ids[index]);
 
     Modal.confirm({
-      title: `批量${operation}`,
+      cancelText: '取消',
+      centered: true,
       content: `确定要对选中的 ${selectedRows.value.length} 个任务执行${operation}操作吗？`,
       okText: '确认执行',
       okType: operation === '删除' ? 'danger' : 'primary',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         if (!current()) return;
         try {
@@ -754,15 +754,15 @@ export function useTaskPage() {
             if (!current()) return;
             if (operation === '删除') {
               const params: YamlTaskDeleteReq = {
-                id,
                 cluster_id: clusterId,
+                id,
               };
               await deleteYamlTask(params);
             } else if (operation === '执行') {
               await applyYamlTask({
-                id,
                 cluster_id: clusterId,
                 dry_run: false,
+                id,
               });
             }
           }
@@ -777,6 +777,7 @@ export function useTaskPage() {
             message.error(`批量${operation}失败`);
         }
       },
+      title: `批量${operation}`,
     });
   };
 
@@ -828,6 +829,24 @@ export function useTaskPage() {
   };
 
   return {
+    // form field operations
+    addEditVariableField,
+    addVariableField,
+    // batch operations
+    batchOperation,
+    // modal state
+    checkLoading,
+    // operations
+    clearTasks,
+    clearTemplates,
+    // create operations
+    closeCreateModal,
+    // detail operations
+    closeDetailModal,
+    // edit operations
+    closeEditModal,
+    // execute operations
+    closeExecuteModal,
     // state
     clusters,
     clustersError,
@@ -835,111 +854,93 @@ export function useTaskPage() {
     clustersPage,
     clustersSize,
     clustersTotal,
+    // form models
+    createFormModel,
+    // form rules
+    createFormRules,
+    // operation targets
+    currentOperationTask,
     currentPage,
+    currentTaskDetail,
+    // task operations
+    deleteTask,
+    detailLoading,
+    editFormModel,
+
+    // form refs
+    editFormRef,
+    editFormRules,
+    executeFormModel,
+
+    executeFormRef,
+    executeLoading,
+    fetchClusters,
+    fetchTasks,
+    fetchTemplates,
     filterClusterId,
+    // computed
+    filteredTasks,
     filterStatus,
+
     filterTemplateId,
+    // helpers
+    formatK8sTime,
+
+    formRef,
+    getEnvText,
+    getStatusColor,
+
+    getStatusText,
+    getTemplateName,
+
+    // pagination operations
+    handlePageChange,
+    isCreateModalVisible,
+
+    isDetailModalVisible,
+    isEditModalVisible,
+    isExecuteModalVisible,
     loadError,
     loading,
+    loadMoreClusters,
+
+    loadMoreTemplates,
+    openCreateModal,
+    openEditModal,
+    openExecuteModal,
     pageSize,
+    removeEditVariableField,
+    removeVariableField,
+
+    resetClusters,
+    resetTemplates,
+
+    rowSelection,
     searchText,
     selectedRowKeys,
+
     selectedRows,
+    showTaskDetail,
+    submitCreateForm,
+
+    submitEditForm,
+    submitExecuteForm,
+    submitLoading,
+
     tasks,
+
+    // constants
+    TaskStatus,
+
     templates,
     templatesError,
     templatesLoading,
+
     templatesPage,
     templatesSize,
     templatesTotal,
     total,
 
-    // form refs
-    editFormRef,
-    executeFormRef,
-    formRef,
-
-    // modal state
-    checkLoading,
-    detailLoading,
-    executeLoading,
-    isCreateModalVisible,
-    isDetailModalVisible,
-    isEditModalVisible,
-    isExecuteModalVisible,
-    submitLoading,
-
-    // operation targets
-    currentOperationTask,
-    currentTaskDetail,
-
-    // form models
-    createFormModel,
-    editFormModel,
-    executeFormModel,
-
-    // form rules
-    createFormRules,
-    editFormRules,
-
-    // computed
-    filteredTasks,
-    rowSelection,
-
-    // helpers
-    formatK8sTime,
-    getEnvText,
-    getStatusColor,
-    getStatusText,
-    getTemplateName,
     validateClusterId,
-
-    // operations
-    clearTasks,
-    clearTemplates,
-    fetchClusters,
-    fetchTasks,
-    fetchTemplates,
-    loadMoreClusters,
-    loadMoreTemplates,
-
-    // detail operations
-    closeDetailModal,
-    showTaskDetail,
-
-    // create operations
-    closeCreateModal,
-    openCreateModal,
-    submitCreateForm,
-
-    // edit operations
-    closeEditModal,
-    openEditModal,
-    submitEditForm,
-
-    // execute operations
-    closeExecuteModal,
-    openExecuteModal,
-    submitExecuteForm,
-
-    // task operations
-    deleteTask,
-
-    // batch operations
-    batchOperation,
-
-    // pagination operations
-    handlePageChange,
-    resetClusters,
-    resetTemplates,
-
-    // form field operations
-    addEditVariableField,
-    addVariableField,
-    removeEditVariableField,
-    removeVariableField,
-
-    // constants
-    TaskStatus,
   };
 }

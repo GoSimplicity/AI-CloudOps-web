@@ -1,10 +1,10 @@
-import process from 'node:process';
-
-import { withFixtureCleanup } from '../../internal/test-utils/fixture-cleanup';
-import { expect, test } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import process from 'node:process';
 
+import { expect, test } from '@playwright/test';
+
+import { withFixtureCleanup } from '../../internal/test-utils/fixture-cleanup';
 import { requireFixtureValue } from '../../internal/test-utils/required-fixture-value';
 
 const routePath = (path: string) =>
@@ -22,8 +22,8 @@ function password() {
 }
 
 test('disabled HTTP cron persists create and execution-field edits without running', async ({
-  page,
   baseURL,
+  page,
 }) => {
   test.setTimeout(120_000);
   page.setDefaultTimeout(15_000);
@@ -74,9 +74,9 @@ test('disabled HTTP cron persists create and execution-field edits without runni
     if (/\/enable$|\/trigger$|\/run$/.test(path))
       throw new Error('Task execution is forbidden in this fixture');
     const response = await page.request.fetch(`/api${path}`, {
-      method,
       data,
       headers: { Authorization: `Bearer ${token}` },
+      method,
       timeout: 10_000,
     });
     const result = await response.json();
@@ -149,7 +149,7 @@ test('disabled HTTP cron persists create and execution-field edits without runni
           response.request().method() === 'POST',
       );
       await dialog
-        .getByRole('button', { name: '创建任务', exact: true })
+        .getByRole('button', { exact: true, name: '创建任务' })
         .click();
       const response = await created;
       expect(response.request().postDataJSON().status).toBe(2);
@@ -198,23 +198,23 @@ test('disabled HTTP cron persists create and execution-field edits without runni
           new URL(response.url()).pathname === `/api/cron/job/${id}/update`,
       );
       await dialog
-        .getByRole('button', { name: '保存修改', exact: true })
+        .getByRole('button', { exact: true, name: '保存修改' })
         .click();
       expect((await (await updated).json()).code).toBe(0);
       await expect(dialog).not.toBeVisible();
       const detail = await api(`/cron/job/${id}/detail`);
       expect(detail).toMatchObject({
-        status: 2,
-        job_type: 3,
-        schedule: '@every 2h',
-        http_url: 'http://127.0.0.1:9/updated',
-        http_method: 'POST',
-        http_headers: [{ key: 'X-Fixture', value: 'owned-fixture' }],
         http_body: '{"fixture":true}',
-        timeout: 120,
+        http_headers: [{ key: 'X-Fixture', value: 'owned-fixture' }],
+        http_method: 'POST',
+        http_url: 'http://127.0.0.1:9/updated',
+        job_type: 3,
+        last_run_status: 0,
         max_retry: 0,
         run_count: 0,
-        last_run_status: 0,
+        schedule: '@every 2h',
+        status: 2,
+        timeout: 120,
       });
       await row
         .locator('button')
@@ -229,7 +229,7 @@ test('disabled HTTP cron persists create and execution-field edits without runni
           response.request().method() === 'DELETE',
       );
       await confirmation
-        .getByRole('button', { name: '确认删除', exact: true })
+        .getByRole('button', { exact: true, name: '确认删除' })
         .click();
       expect((await (await removed).json()).code).toBe(0);
       await expect(row).toHaveCount(0);

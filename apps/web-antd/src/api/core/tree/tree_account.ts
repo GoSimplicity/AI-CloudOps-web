@@ -3,17 +3,17 @@ import { requestClient } from '#/api/request';
 // 云厂商类型枚举
 export enum CloudProvider {
   AliCloud = 1,
-  TencentCloud = 2,
   AWS = 3,
-  HuaweiCloud = 4,
   Azure = 5,
   GCP = 6,
+  HuaweiCloud = 4,
+  TencentCloud = 2,
 }
 
 // 云账户状态枚举
 export enum CloudAccountStatus {
-  Enabled = 1, // 启用
   Disabled = 2, // 禁用
+  Enabled = 1, // 启用
 }
 
 export type CloudCredentialType = 'long_term' | 'temporary';
@@ -76,7 +76,7 @@ export interface ProviderCredentialInput {
 }
 
 export interface CreateCloudAccountReq {
-  status?: CloudAccountStatus.Enabled | CloudAccountStatus.Disabled;
+  status?: CloudAccountStatus.Disabled | CloudAccountStatus.Enabled;
   name: string;
   provider: CloudProvider;
   regions: CloudAccountRegionInput[];

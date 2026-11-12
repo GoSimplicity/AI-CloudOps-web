@@ -18,10 +18,10 @@ vi.mock('#/utils/permission', async (importOriginal) => ({
   usePermission: () => ({ can: () => true, hasPerm: () => true }),
 }));
 
-const account = vi.hoisted(() => ({ user: null as any, access: null as any }));
+const account = vi.hoisted(() => ({ access: null as any, user: null as any }));
 vi.mock('@vben/stores', () => ({
-  useUserStore: () => account.user,
   useAccessStore: () => account.access,
+  useUserStore: () => account.user,
 }));
 const wrappers: VueWrapper[] = [];
 afterEach(() => {
@@ -61,8 +61,8 @@ vi.mock('@iconify/vue', () => ({
     name: 'Icon',
     props: {
       icon: {
-        type: String,
         default: '',
+        type: String,
       },
     },
     template: '<span class="icon-stub">{{ icon }}</span>',
@@ -70,53 +70,53 @@ vi.mock('@iconify/vue', () => ({
 }));
 
 const ButtonStub = defineComponent({
+  emits: ['click'],
   name: 'ButtonStub',
   props: {
     disabled: {
-      type: Boolean,
       default: false,
+      type: Boolean,
     },
   },
-  emits: ['click'],
   template:
     '<button :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
 });
 
 const InputStub = defineComponent({
+  emits: ['update:value'],
   name: 'InputStub',
   props: {
     value: {
-      type: String,
       default: '',
+      type: String,
     },
   },
-  emits: ['update:value'],
   template:
     '<input :value="value" @input="$emit(\'update:value\', $event.target.value)" />',
 });
 
 const TextareaStub = defineComponent({
+  emits: ['update:value'],
   name: 'TextareaStub',
   props: {
     value: {
-      type: String,
       default: '',
+      type: String,
     },
   },
-  emits: ['update:value'],
   template:
     '<textarea :value="value" @input="$emit(\'update:value\', $event.target.value)"></textarea>',
 });
 
 const SelectStub = defineComponent({
+  emits: ['change', 'update:value'],
   name: 'SelectStub',
   props: {
     value: {
-      type: String,
       default: '',
+      type: String,
     },
   },
-  emits: ['change', 'update:value'],
   template:
     '<select :value="value" @change="$emit(\'update:value\', $event.target.value); $emit(\'change\', $event.target.value)"><slot /></select>',
 });
@@ -125,22 +125,22 @@ const SelectOptionStub = defineComponent({
   name: 'SelectOptionStub',
   props: {
     value: {
-      type: String,
       default: '',
+      type: String,
     },
   },
   template: '<option :value="value"><slot /></option>',
 });
 
 const CheckboxStub = defineComponent({
+  emits: ['change'],
   name: 'CheckboxStub',
   props: {
     checked: {
-      type: Boolean,
       default: false,
+      type: Boolean,
     },
   },
-  emits: ['change'],
   template:
     '<input type="checkbox" :checked="checked" @change="$emit(\'change\', { target: { checked: $event.target.checked } })" />',
 });
@@ -149,12 +149,12 @@ const AlertStub = defineComponent({
   name: 'AlertStub',
   props: {
     description: {
-      type: String,
       default: '',
+      type: String,
     },
     message: {
-      type: String,
       default: '',
+      type: String,
     },
   },
   template:
@@ -165,8 +165,8 @@ const DrawerStub = defineComponent({
   name: 'DrawerStub',
   props: {
     open: {
-      type: Boolean,
       default: false,
+      type: Boolean,
     },
   },
   template: '<div v-if="open"><slot /></div>',
@@ -181,8 +181,8 @@ const TableStub = defineComponent({
   name: 'TableStub',
   props: {
     dataSource: {
-      type: Array,
       default: () => [],
+      type: Array,
     },
   },
   template: '<div class="table-stub">rows:{{ dataSource.length }}</div>',
@@ -272,6 +272,13 @@ describe('autoFixWorkflow.vue', () => {
   it('executes workflow and renders reviewer result', async () => {
     autofixMocks.executeAutoFixWorkflow.mockResolvedValue({
       agents_used: ['Coordinator', 'Reviewer'],
+      approval: {
+        expires_at: '2099-01-01T00:00:00Z',
+        // 复审 P3-1：缺 pending_action_ids 时不允许确认，夹具按契约带上
+        pending_action_ids: ['block-secret-check'],
+        retry_safe: false,
+        state: 'pending',
+      },
       blocked_actions: [
         {
           action_id: 'block-secret-check',
@@ -282,9 +289,9 @@ describe('autoFixWorkflow.vue', () => {
             allowed: false,
             namespace_allowed: true,
             permission_allowed: true,
-            resource_exists: true,
-            requires_human_confirmation: true,
             reasons: ['需要密钥确认'],
+            requires_human_confirmation: true,
+            resource_exists: true,
             risk_level: 'high',
           },
         },
@@ -295,6 +302,9 @@ describe('autoFixWorkflow.vue', () => {
           agent: 'Reviewer',
         },
       ],
+      plan: {
+        plan_id: 'autofix-default-payment-service-123',
+      },
       review: {
         approved: false,
         blocked_actions: [
@@ -305,17 +315,7 @@ describe('autoFixWorkflow.vue', () => {
         ],
         reason: '镜像密钥未确认',
       },
-      plan: {
-        plan_id: 'autofix-default-payment-service-123',
-      },
       status: 'needs_human_confirmation',
-      approval: {
-        state: 'pending',
-        expires_at: '2099-01-01T00:00:00Z',
-        retry_safe: false,
-        // 复审 P3-1：缺 pending_action_ids 时不允许确认，夹具按契约带上
-        pending_action_ids: ['block-secret-check'],
-      },
       timestamp: '2026-06-06T10:30:00Z',
     });
 
@@ -330,7 +330,6 @@ describe('autoFixWorkflow.vue', () => {
         },
       ],
       execution: {
-        status: 'completed',
         executed_actions: [
           {
             action_id: 'block-secret-check',
@@ -338,14 +337,15 @@ describe('autoFixWorkflow.vue', () => {
             status: 'succeeded',
           },
         ],
+        status: 'completed',
+      },
+      plan: {
+        plan_id: 'autofix-default-payment-service-123',
       },
       review: {
         approved: true,
         approved_action_ids: ['block-secret-check'],
         reason: '已执行 1 个经人工确认动作',
-      },
-      plan: {
-        plan_id: 'autofix-default-payment-service-123',
       },
       status: 'completed',
       timestamp: '2026-06-06T10:31:00Z',
@@ -371,10 +371,10 @@ describe('autoFixWorkflow.vue', () => {
 
     expect(autofixMocks.executeAutoFixWorkflow).toHaveBeenCalledWith({
       deployment: 'payment-service',
-      operation_id: expect.any(String),
       event:
         'ImagePullBackOff: failed to pull image，可能和镜像地址、Secret或网络连通性有关。',
       namespace: 'default',
+      operation_id: expect.any(String),
       problem_description:
         'Deployment 镜像拉取失败，请检查镜像地址、镜像拉取密钥和网络连通性，并给出可控修复动作。',
     });

@@ -6,6 +6,16 @@ import { message, Modal } from 'ant-design-vue';
 import yaml from 'js-yaml';
 
 import {
+  Env,
+  getClustersListApi,
+  type K8sCluster,
+  type ListClustersReq,
+} from '#/api/core/k8s/k8s_cluster';
+import {
+  getNamespacesListApi,
+  type K8sNamespace,
+} from '#/api/core/k8s/k8s_namespace';
+import {
   createRoleBindingApi,
   createRoleBindingByYamlApi,
   type CreateRoleBindingByYamlReq,
@@ -26,16 +36,6 @@ import {
   type UpdateRoleBindingByYamlReq,
   type UpdateRoleBindingReq,
 } from '#/api/core/k8s/k8s_rolebinding';
-import {
-  Env,
-  getClustersListApi,
-  type K8sCluster,
-  type ListClustersReq,
-} from '#/api/core/k8s/k8s_cluster';
-import {
-  getNamespacesListApi,
-  type K8sNamespace,
-} from '#/api/core/k8s/k8s_namespace';
 import {
   shouldNotifyPageError,
   shouldRecordPageError,
@@ -121,10 +121,10 @@ const parseRoleBindingData = (roleBinding: K8sRoleBinding): K8sRoleBinding => {
         (!parsedRoleBinding.subjects || parsedRoleBinding.subjects.length === 0)
       ) {
         parsedRoleBinding.subjects = config.subjects.map((subject: any) => ({
+          api_group: subject.apiGroup,
           kind: subject.kind || '',
           name: subject.name || '',
           namespace: subject.namespace,
-          api_group: subject.apiGroup,
         }));
       }
     }
@@ -222,6 +222,8 @@ export function useRoleBindingPage() {
     role_ref: RoleRef;
     subjects: Subject[];
   }>({
+    annotations: {},
+    labels: {},
     name: '',
     namespace: '',
     role_ref: {
@@ -231,13 +233,11 @@ export function useRoleBindingPage() {
     },
     subjects: [
       {
+        api_group: 'rbac.authorization.k8s.io',
         kind: 'User',
         name: '',
-        api_group: 'rbac.authorization.k8s.io',
       },
     ],
-    labels: {},
-    annotations: {},
   });
 
   const editFormModel = ref<{
@@ -248,6 +248,8 @@ export function useRoleBindingPage() {
     role_ref: RoleRef;
     subjects: Subject[];
   }>({
+    annotations: {},
+    labels: {},
     name: '',
     namespace: '',
     role_ref: {
@@ -256,8 +258,6 @@ export function useRoleBindingPage() {
       name: '',
     },
     subjects: [],
-    labels: {},
-    annotations: {},
   });
 
   const createYamlFormModel = ref<{
@@ -275,16 +275,16 @@ export function useRoleBindingPage() {
   // form rules
   const createFormRules: Record<string, Rule[]> = {
     name: [
-      { required: true, message: '请输入 RoleBinding 名称', trigger: 'blur' },
+      { message: '请输入 RoleBinding 名称', required: true, trigger: 'blur' },
       {
-        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         message: '名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         trigger: 'blur',
       },
       { max: 63, message: '名称长度不能超过63个字符', trigger: 'blur' },
     ],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' },
+      { message: '请选择命名空间', required: true, trigger: 'change' },
     ],
   };
 
@@ -294,15 +294,15 @@ export function useRoleBindingPage() {
 
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
@@ -323,7 +323,6 @@ export function useRoleBindingPage() {
   });
 
   const rowSelection = computed(() => ({
-    selectedRowKeys: selectedRowKeys.value,
     onChange: (keys: string[], rows: K8sRoleBinding[]) => {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
@@ -351,6 +350,7 @@ export function useRoleBindingPage() {
         );
       }
     },
+    selectedRowKeys: selectedRowKeys.value,
   }));
 
   // helpers
@@ -367,11 +367,11 @@ export function useRoleBindingPage() {
     if (env === undefined || env === null) return '未知环境';
     const value = typeof env === 'string' ? Number.parseInt(env) : env;
     const map: Record<number, string> = {
-      [Env.Prod]: '生产',
       [Env.Dev]: '开发',
-      [Env.Stage]: '预发',
-      [Env.Rc]: '测试',
       [Env.Press]: '灰度',
+      [Env.Prod]: '生产',
+      [Env.Rc]: '测试',
+      [Env.Stage]: '预发',
     };
     return map[value] || '未知环境';
   };
@@ -486,8 +486,8 @@ export function useRoleBindingPage() {
       const params: GetRoleBindingListReq = {
         cluster_id: clusterId,
         namespace,
-        search: searchText.value || undefined,
         page: currentPage.value,
+        search: searchText.value || undefined,
         size: pageSize.value,
       };
 
@@ -599,8 +599,8 @@ export function useRoleBindingPage() {
 
       const params: GetRoleBindingDetailsReq = {
         cluster_id: clusterId,
-        namespace: roleBinding.namespace,
         name: roleBinding.name,
+        namespace: roleBinding.namespace,
       };
 
       const response = await getRoleBindingDetailsApi(params);
@@ -611,7 +611,7 @@ export function useRoleBindingPage() {
     } catch (error: any) {
       if (shouldNotifyPageError(error))
         message.error(
-          '获取 RoleBinding 详情失败：' + (error.message || '未知错误'),
+          `获取 RoleBinding 详情失败：${error.message || '未知错误'}`,
         );
       // 即使获取详情失败，也要解析基础数据
       currentRoleBindingDetail.value = parseRoleBindingData(roleBinding);
@@ -637,8 +637,8 @@ export function useRoleBindingPage() {
 
       const params: GetRoleBindingYamlReq = {
         cluster_id: clusterId,
-        namespace: roleBinding.namespace,
         name: roleBinding.name,
+        namespace: roleBinding.namespace,
       };
 
       const response = await getRoleBindingYamlApi(params);
@@ -648,7 +648,7 @@ export function useRoleBindingPage() {
     } catch (error: any) {
       if (shouldNotifyPageError(error))
         message.error(
-          '获取 RoleBinding YAML 失败：' + (error.message || '未知错误'),
+          `获取 RoleBinding YAML 失败：${error.message || '未知错误'}`,
         );
     } finally {
       submitLoading.value = false;
@@ -674,8 +674,8 @@ export function useRoleBindingPage() {
 
       const params: UpdateRoleBindingByYamlReq = {
         cluster_id: clusterId,
-        namespace: currentOperationRoleBinding.value.namespace,
         name: currentOperationRoleBinding.value.name,
+        namespace: currentOperationRoleBinding.value.namespace,
         yaml_content: yamlFormModel.value.yaml,
       };
 
@@ -688,7 +688,7 @@ export function useRoleBindingPage() {
 
       if (shouldNotifyPageError(error))
         message.error(
-          '更新 RoleBinding YAML 失败：' + (error.message || '未知错误'),
+          `更新 RoleBinding YAML 失败：${error.message || '未知错误'}`,
         );
     } finally {
       submitLoading.value = false;
@@ -697,6 +697,8 @@ export function useRoleBindingPage() {
 
   const resetCreateForm = () => {
     createFormModel.value = {
+      annotations: {},
+      labels: {},
       name: '',
       namespace: filterNamespace.value || '',
       role_ref: {
@@ -706,13 +708,11 @@ export function useRoleBindingPage() {
       },
       subjects: [
         {
+          api_group: 'rbac.authorization.k8s.io',
           kind: 'User',
           name: '',
-          api_group: 'rbac.authorization.k8s.io',
         },
       ],
-      labels: {},
-      annotations: {},
     };
     formRef.value?.resetFields();
   };
@@ -741,21 +741,21 @@ export function useRoleBindingPage() {
       submitLoading.value = true;
 
       const params: CreateRoleBindingReq = {
-        cluster_id: filterClusterId.value,
-        namespace: createFormModel.value.namespace,
-        name: createFormModel.value.name,
-        role_ref: createFormModel.value.role_ref,
-        subjects: createFormModel.value.subjects.filter((subject) =>
-          subject.name.trim(),
-        ),
-        labels:
-          Object.keys(createFormModel.value.labels).length > 0
-            ? createFormModel.value.labels
-            : undefined,
         annotations:
           Object.keys(createFormModel.value.annotations).length > 0
             ? createFormModel.value.annotations
             : undefined,
+        cluster_id: filterClusterId.value,
+        labels:
+          Object.keys(createFormModel.value.labels).length > 0
+            ? createFormModel.value.labels
+            : undefined,
+        name: createFormModel.value.name,
+        namespace: createFormModel.value.namespace,
+        role_ref: createFormModel.value.role_ref,
+        subjects: createFormModel.value.subjects.filter((subject) =>
+          subject.name.trim(),
+        ),
       };
 
       await createRoleBindingApi(params);
@@ -766,9 +766,7 @@ export function useRoleBindingPage() {
       if (error.errorFields) return;
 
       if (shouldNotifyPageError(error))
-        message.error(
-          '创建 RoleBinding 失败：' + (error.message || '未知错误'),
-        );
+        message.error(`创建 RoleBinding 失败：${error.message || '未知错误'}`);
     } finally {
       submitLoading.value = false;
     }
@@ -783,6 +781,14 @@ export function useRoleBindingPage() {
 
     // 解析并填充编辑表单
     editFormModel.value = {
+      annotations:
+        roleBinding.annotations && typeof roleBinding.annotations === 'object'
+          ? { ...roleBinding.annotations }
+          : {},
+      labels:
+        roleBinding.labels && typeof roleBinding.labels === 'object'
+          ? { ...roleBinding.labels }
+          : {},
       name: roleBinding.name,
       namespace: roleBinding.namespace,
       role_ref: {
@@ -794,30 +800,22 @@ export function useRoleBindingPage() {
       subjects:
         roleBinding.subjects && roleBinding.subjects.length > 0
           ? roleBinding.subjects.map((subject) => ({
-              kind: subject.kind || 'User',
-              name: subject.name || '',
-              namespace: subject.namespace,
               api_group:
                 subject.api_group ||
                 (subject.kind === 'ServiceAccount'
                   ? ''
                   : 'rbac.authorization.k8s.io'),
+              kind: subject.kind || 'User',
+              name: subject.name || '',
+              namespace: subject.namespace,
             }))
           : [
               {
+                api_group: 'rbac.authorization.k8s.io',
                 kind: 'User',
                 name: '',
-                api_group: 'rbac.authorization.k8s.io',
               },
             ],
-      labels:
-        roleBinding.labels && typeof roleBinding.labels === 'object'
-          ? { ...roleBinding.labels }
-          : {},
-      annotations:
-        roleBinding.annotations && typeof roleBinding.annotations === 'object'
-          ? { ...roleBinding.annotations }
-          : {},
     };
 
     isEditModalVisible.value = true;
@@ -839,21 +837,21 @@ export function useRoleBindingPage() {
       submitLoading.value = true;
 
       const params: UpdateRoleBindingReq = {
-        cluster_id: clusterId,
-        namespace: currentOperationRoleBinding.value.namespace,
-        name: currentOperationRoleBinding.value.name,
-        role_ref: editFormModel.value.role_ref,
-        subjects: editFormModel.value.subjects.filter((subject) =>
-          subject.name.trim(),
-        ),
-        labels:
-          Object.keys(editFormModel.value.labels).length > 0
-            ? editFormModel.value.labels
-            : undefined,
         annotations:
           Object.keys(editFormModel.value.annotations).length > 0
             ? editFormModel.value.annotations
             : undefined,
+        cluster_id: clusterId,
+        labels:
+          Object.keys(editFormModel.value.labels).length > 0
+            ? editFormModel.value.labels
+            : undefined,
+        name: currentOperationRoleBinding.value.name,
+        namespace: currentOperationRoleBinding.value.namespace,
+        role_ref: editFormModel.value.role_ref,
+        subjects: editFormModel.value.subjects.filter((subject) =>
+          subject.name.trim(),
+        ),
       };
 
       await updateRoleBindingApi(params);
@@ -864,9 +862,7 @@ export function useRoleBindingPage() {
       if (error.errorFields) return;
 
       if (shouldNotifyPageError(error))
-        message.error(
-          '更新 RoleBinding 失败：' + (error.message || '未知错误'),
-        );
+        message.error(`更新 RoleBinding 失败：${error.message || '未知错误'}`);
     } finally {
       submitLoading.value = false;
     }
@@ -908,7 +904,7 @@ export function useRoleBindingPage() {
 
       if (shouldNotifyPageError(error))
         message.error(
-          '通过 YAML 创建 RoleBinding 失败：' + (error.message || '未知错误'),
+          `通过 YAML 创建 RoleBinding 失败：${error.message || '未知错误'}`,
         );
     } finally {
       submitLoading.value = false;
@@ -921,18 +917,17 @@ export function useRoleBindingPage() {
     if (!clusterId) return;
 
     Modal.confirm({
-      title: '删除确认',
+      cancelText: '取消',
+      centered: true,
       content: `确定要删除 RoleBinding "${roleBinding.namespace}/${roleBinding.name}" 吗？此操作不可逆！`,
       okText: '确认删除',
       okType: 'danger',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           const params: DeleteRoleBindingReq = {
             cluster_id: clusterId,
-            namespace: roleBinding.namespace,
             name: roleBinding.name,
+            namespace: roleBinding.namespace,
           };
 
           await deleteRoleBindingApi(params);
@@ -941,10 +936,11 @@ export function useRoleBindingPage() {
         } catch (error: any) {
           if (shouldNotifyPageError(error))
             message.error(
-              '删除 RoleBinding 失败：' + (error.message || '未知错误'),
+              `删除 RoleBinding 失败：${error.message || '未知错误'}`,
             );
         }
       },
+      title: '删除确认',
     });
   };
 
@@ -980,12 +976,11 @@ export function useRoleBindingPage() {
 
     if (operation === '删除') {
       Modal.confirm({
-        title: '批量删除确认',
+        cancelText: '取消',
+        centered: true,
         content: `确定要删除以下 ${selectedRows.value.length} 个 RoleBinding 吗？\n\n${names}\n\n此操作不可逆！`,
         okText: '确认删除',
         okType: 'danger',
-        cancelText: '取消',
-        centered: true,
         onOk: async () => {
           const deletePromises = selectedRows.value.map((roleBinding) => {
             const clusterId = validateClusterId(roleBinding);
@@ -993,8 +988,8 @@ export function useRoleBindingPage() {
 
             const params: DeleteRoleBindingReq = {
               cluster_id: clusterId,
-              namespace: roleBinding.namespace,
               name: roleBinding.name,
+              namespace: roleBinding.namespace,
             };
             return deleteRoleBindingApi(params);
           });
@@ -1010,12 +1005,12 @@ export function useRoleBindingPage() {
           } catch (error: any) {
             if (shouldNotifyPageError(error))
               message.error(
-                '批量删除部分 RoleBinding 失败：' +
-                  (error.message || '未知错误'),
+                `批量删除部分 RoleBinding 失败：${error.message || '未知错误'}`,
               );
             await fetchRoleBindings();
           }
         },
+        title: '批量删除确认',
       });
     }
   };
@@ -1032,9 +1027,9 @@ export function useRoleBindingPage() {
   // form field operations
   const addSubjectField = () => {
     createFormModel.value.subjects.push({
+      api_group: 'rbac.authorization.k8s.io',
       kind: 'User',
       name: '',
-      api_group: 'rbac.authorization.k8s.io',
     });
   };
 
@@ -1055,9 +1050,9 @@ export function useRoleBindingPage() {
   // 编辑表单字段操作
   const addEditSubjectField = () => {
     editFormModel.value.subjects.push({
+      api_group: 'rbac.authorization.k8s.io',
       kind: 'User',
       name: '',
-      api_group: 'rbac.authorization.k8s.io',
     });
   };
 
@@ -1357,129 +1352,129 @@ export function useRoleBindingPage() {
   };
 
   return {
+    // form field operations
+    addEditSubjectField,
+    // filter operations
+    addFilterLabel,
+    addSubjectField,
+    // batch operations
+    batchOperation,
+    clearFilterLabels,
+    // operations
+    clearNamespaces,
+    clearRoleBindings,
+    // YAML utility functions
+    clearYaml,
+    // create operations
+    closeCreateModal,
+    closeCreateYamlModal,
+    // detail operations
+    closeDetailModal,
+    // edit operations
+    closeEditModal,
+    // YAML operations
+    closeYamlModal,
     // state
     clusters,
     clustersError,
     clustersLoading,
     clustersTotal,
+    // form models
+    createFormModel,
+    // form rules
+    createFormRules,
+
+    createYamlFormModel,
+    // form refs
+    createYamlFormRef,
+    createYamlFormRules,
+    // operation targets
+    currentOperationRoleBinding,
     currentPage,
-    filterClusterId,
-    filterLabels,
-    filterNamespace,
-    loadError,
-    loading,
-    namespaces,
-    namespacesError,
-    namespacesLoading,
-    namespacesTotal,
-    pageSize,
-    roleBindings,
-    searchText,
-    selectedRows,
-    total,
+    currentRoleBindingDetail,
+    // roleBinding operations
+    deleteRoleBinding,
 
     // modal state
     detailLoading,
-    isCreateModalVisible,
-    isCreateYamlModalVisible,
-    isDetailModalVisible,
-    isEditModalVisible,
-    isYamlModalVisible,
-    submitLoading,
-
-    // operation targets
-    currentOperationRoleBinding,
-    currentRoleBindingDetail,
-
-    // form models
-    createFormModel,
-    createYamlFormModel,
     editFormModel,
-    yamlFormModel,
 
-    // form refs
-    createYamlFormRef,
     editFormRef,
-    formRef,
-    yamlFormRef,
-
-    // form rules
-    createFormRules,
-    createYamlFormRules,
     editFormRules,
-    yamlFormRules,
+    fetchClusters,
+    fetchNamespaces,
 
+    fetchRoleBindings,
+    filterClusterId,
     // computed
     filteredRoleBindings,
-    rowSelection,
+    filterLabels,
+
+    filterNamespace,
+    formatEditYaml,
+    formatYaml,
+    formRef,
 
     // helpers
     getClusterName,
     getEnvText,
+
     getUserDisplay,
-    validateClusterId,
-
-    // operations
-    clearNamespaces,
-    clearRoleBindings,
-    fetchClusters,
-    fetchNamespaces,
-    fetchRoleBindings,
-    loadMoreClusters,
-    loadMoreNamespaces,
-
-    // detail operations
-    closeDetailModal,
-    showRoleBindingDetail,
-
-    // YAML operations
-    closeYamlModal,
-    showYamlModal,
-    submitYamlForm,
-
-    // create operations
-    closeCreateModal,
-    closeCreateYamlModal,
-    openCreateModal,
-    openCreateYamlModal,
-    submitCreateForm,
-    submitCreateYamlForm,
-
-    // edit operations
-    closeEditModal,
-    openEditModal,
-    submitEditForm,
-
-    // roleBinding operations
-    deleteRoleBinding,
-
-    // filter operations
-    addFilterLabel,
-    clearFilterLabels,
-    removeFilterLabel,
-
-    // batch operations
-    batchOperation,
-
     // pagination operations
     handlePageChange,
+    insertYamlTemplate,
+    isCreateModalVisible,
 
-    // form field operations
-    addEditSubjectField,
-    addSubjectField,
+    isCreateYamlModalVisible,
+    isDetailModalVisible,
+    isEditModalVisible,
+    isYamlModalVisible,
+    loadError,
+    loading,
+    loadMoreClusters,
+
+    loadMoreNamespaces,
+    namespaces,
+
+    namespacesError,
+    namespacesLoading,
+    namespacesTotal,
+
+    openCreateModal,
+    openCreateYamlModal,
+    openEditModal,
+    pageSize,
     removeAnnotationField,
     removeEditAnnotationField,
+
     removeEditLabelField,
     removeEditSubjectField,
-    removeLabelField,
-    removeSubjectField,
+    removeFilterLabel,
 
-    // YAML utility functions
-    clearYaml,
-    formatEditYaml,
-    formatYaml,
-    insertYamlTemplate,
+    removeLabelField,
+
+    removeSubjectField,
+    roleBindings,
+    rowSelection,
+
+    searchText,
+
+    selectedRows,
+
+    showRoleBindingDetail,
+    showYamlModal,
+    submitCreateForm,
+    submitCreateYamlForm,
+    submitEditForm,
+    submitLoading,
+    submitYamlForm,
+    total,
+
+    validateClusterId,
     validateEditYaml,
     validateYaml,
+    yamlFormModel,
+    yamlFormRef,
+    yamlFormRules,
   };
 }

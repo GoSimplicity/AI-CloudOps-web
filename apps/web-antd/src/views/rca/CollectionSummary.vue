@@ -5,7 +5,7 @@ import { computed } from 'vue';
 
 import { analysisStatus, coverageText, sourceText } from './collection';
 
-const props = defineProps<{ status?: string; collection?: RCACollection }>();
+const props = defineProps<{ collection?: RCACollection; status?: string }>();
 const statusInfo = computed(() => analysisStatus(props.status));
 const sources = [
   { key: 'metrics', label: '指标' },

@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
+import type {
+  ErrorSummaryResponse,
+  EventPatternsResponse,
+  QuickDiagnosisResponse,
+  RCAAnalysisResponse,
+} from '#/api/core/aiops/rca';
 
-import CollectionSummary from './CollectionSummary.vue';
-import { analysisStatus } from './collection';
-import { useAiRequestScope } from '../assistant/useAiRequestScope';
-import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
-// 按需引入echarts，减少打包体积
-import * as echarts from 'echarts/core';
+
+import { Icon } from '@iconify/vue';
+import { message } from 'ant-design-vue';
 import { BarChart, LineChart, PieChart } from 'echarts/charts';
 import {
   GridComponent,
@@ -15,15 +17,16 @@ import {
   TitleComponent,
   TooltipComponent,
 } from 'echarts/components';
+
+import OpsPage from '#/components/ops/OpsPage.vue';
+
+import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
+import { useAiRequestScope } from '../assistant/useAiRequestScope';
+import { analysisStatus } from './collection';
+import CollectionSummary from './CollectionSummary.vue';
+// 按需引入echarts，减少打包体积
+import * as echarts from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
-import { message } from 'ant-design-vue';
-import { Icon } from '@iconify/vue';
-import type {
-  ErrorSummaryResponse,
-  EventPatternsResponse,
-  QuickDiagnosisResponse,
-  RCAAnalysisResponse,
-} from '#/api/core/aiops/rca';
 
 import {
   analyzeRootCause,
@@ -113,20 +116,20 @@ const formattedCriticalIssues = computed(() => {
   return quickDiagnosisResult.value.critical_issues.map((issue: any) => {
     if (typeof issue === 'string') {
       return {
-        type: 'unknown',
-        severity: 'critical',
-        description: issue,
         confidence: 0,
+        description: issue,
+        severity: 'critical',
         timestamp: null,
+        type: 'unknown',
       };
     }
 
     return {
-      type: issue.type || 'unknown',
-      severity: issue.severity || 'critical',
-      description: issue.description || issue.message || '暂无描述',
       confidence: Math.max(0, Math.min(1, issue.confidence || 0)),
+      description: issue.description || issue.message || '暂无描述',
+      severity: issue.severity || 'critical',
       timestamp: issue.timestamp || null,
+      type: issue.type || 'unknown',
     };
   });
 });
@@ -185,48 +188,48 @@ const initErrorTrendsChart = () => {
     : [];
 
   const option = {
-    textStyle: { color: chartColors().text },
     backgroundColor: 'transparent',
     color: ['#6366f1'],
+    grid: {
+      bottom: '3%',
+      containLabel: true,
+      left: '3%',
+      right: '4%',
+    },
+    series: [
+      {
+        areaStyle: chartType.value === 'line' ? { opacity: 0.1 } : undefined,
+        data: data.map((d) => d.value),
+        itemStyle: {
+          borderRadius: chartType.value === 'bar' ? [4, 4, 0, 0] : 0,
+        },
+        lineStyle: { width: 2 },
+        name: '错误数量',
+        smooth: true,
+        type: chartType.value,
+      },
+    ],
+    textStyle: { color: chartColors().text },
     tooltip: {
-      trigger: 'axis',
       backgroundColor: chartColors().surface,
       borderColor: chartColors().border,
       borderWidth: 1,
       textStyle: { color: chartColors().text },
-    },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      containLabel: true,
+      trigger: 'axis',
     },
     xAxis: {
-      type: 'category',
+      axisLabel: { color: chartColors().muted },
+      axisLine: { lineStyle: { color: chartColors().border } },
       boundaryGap: chartType.value === 'bar',
       data: data.map((d) => d.time),
-      axisLine: { lineStyle: { color: chartColors().border } },
-      axisLabel: { color: chartColors().muted },
+      type: 'category',
     },
     yAxis: {
-      type: 'value',
+      axisLabel: { color: chartColors().muted },
       axisLine: { lineStyle: { color: chartColors().border } },
       splitLine: { lineStyle: { color: chartColors().ground } },
-      axisLabel: { color: chartColors().muted },
+      type: 'value',
     },
-    series: [
-      {
-        name: '错误数量',
-        type: chartType.value,
-        data: data.map((d) => d.value),
-        smooth: true,
-        lineStyle: { width: 2 },
-        areaStyle: chartType.value === 'line' ? { opacity: 0.1 } : undefined,
-        itemStyle: {
-          borderRadius: chartType.value === 'bar' ? [4, 4, 0, 0] : 0,
-        },
-      },
-    ],
   };
 
   errorTrendsChart.setOption(option);
@@ -249,36 +252,36 @@ const initErrorCategoriesChart = () => {
     }));
 
   const option = {
-    textStyle: { color: chartColors().text },
     backgroundColor: 'transparent',
     color: ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'],
+    series: [
+      {
+        avoidLabelOverlap: false,
+        data: pieData,
+        emphasis: {
+          label: {
+            fontSize: '18',
+            fontWeight: 'bold',
+            show: true,
+          },
+        },
+        label: {
+          position: 'center',
+          show: false,
+        },
+        labelLine: { show: false },
+        radius: ['40%', '70%'],
+        type: 'pie',
+      },
+    ],
+    textStyle: { color: chartColors().text },
     tooltip: {
-      trigger: 'item',
       backgroundColor: chartColors().surface,
       borderColor: chartColors().border,
       borderWidth: 1,
       textStyle: { color: chartColors().text },
+      trigger: 'item',
     },
-    series: [
-      {
-        type: 'pie',
-        radius: ['40%', '70%'],
-        avoidLabelOverlap: false,
-        label: {
-          show: false,
-          position: 'center',
-        },
-        emphasis: {
-          label: {
-            show: true,
-            fontSize: '18',
-            fontWeight: 'bold',
-          },
-        },
-        labelLine: { show: false },
-        data: pieData,
-      },
-    ],
   };
 
   errorCategoriesChart.setOption(option);
@@ -342,8 +345,8 @@ const refreshAllDiagnosis = async () => {
 
       promises.push(
         getEventPatterns({
-          namespace,
           hours,
+          namespace,
         }).catch((_error) => {
           // Event patterns analysis failed
           return null;
@@ -356,16 +359,16 @@ const refreshAllDiagnosis = async () => {
 
       promises.push(
         getErrorSummary({
-          namespace,
           hours,
+          namespace,
         }).catch((_error) => {
           // Error summary analysis failed
           return null;
         }),
         analyzeRootCause({
+          metrics: [],
           namespace,
           time_window_hours: hours,
-          metrics: [],
         }).catch((_error) => {
           // Root cause analysis failed
           return null;
@@ -411,7 +414,7 @@ const refreshAllDiagnosis = async () => {
       rcaAnalysisResult.value = results[3];
     }
 
-    diagnosisContext.value = { namespace, hours };
+    diagnosisContext.value = { hours, namespace };
     hasInitialData.value = true;
     await nextTick();
     if (!diagnosisLane.current(ticket)) return;
@@ -614,7 +617,6 @@ onUnmounted(() => {
           <div class="metric-label">关键问题</div>
         </div>
         <div
-          class="metric-trend"
           :class="
             !quickUsable
               ? 'trend-unknown'
@@ -622,6 +624,7 @@ onUnmounted(() => {
                 ? 'trend-up'
                 : 'trend-stable'
           "
+          class="metric-trend"
         >
           {{
             !quickUsable
@@ -648,7 +651,6 @@ onUnmounted(() => {
           <div class="metric-label">警告信息</div>
         </div>
         <div
-          class="metric-trend"
           :class="
             !quickUsable
               ? 'trend-unknown'
@@ -656,6 +658,7 @@ onUnmounted(() => {
                 ? 'trend-warning'
                 : 'trend-stable'
           "
+          class="metric-trend"
         >
           {{
             !quickUsable
@@ -676,7 +679,6 @@ onUnmounted(() => {
           <div class="metric-label">错误总数</div>
         </div>
         <div
-          class="metric-trend"
           :class="
             !errorSummaryResult
               ? 'trend-unknown'
@@ -684,6 +686,7 @@ onUnmounted(() => {
                 ? 'trend-up'
                 : 'trend-stable'
           "
+          class="metric-trend"
         >
           过去{{ timeRange }}小时
         </div>
@@ -748,12 +751,12 @@ onUnmounted(() => {
                 {{ issue.description || issue }}
               </div>
               <div
-                class="issue-confidence"
                 v-if="Number.isFinite(issue.confidence)"
+                class="issue-confidence"
               >
                 <div class="confidence-bar">
                   <div
-                    :style="{ width: issue.confidence * 100 + '%' }"
+                    :style="{ width: `${issue.confidence * 100}%` }"
                     class="confidence-fill"
                   ></div>
                 </div>
@@ -796,9 +799,9 @@ onUnmounted(() => {
     <!-- 图表区域 -->
     <a-alert
       v-if="diagnosisFailures.length > 0"
-      type="warning"
       :message="`未完成：${diagnosisFailures.join('、')}。当前结果不代表完整健康检查。`"
       show-icon
+      type="warning"
     />
     <div v-if="hasInitialData" class="charts-section">
       <div class="chart-container">
@@ -828,7 +831,7 @@ onUnmounted(() => {
           置信度:
           {{
             Number.isFinite(rcaAnalysisResult.confidence_score)
-              ? (rcaAnalysisResult.confidence_score * 100).toFixed(1) + '%'
+              ? `${(rcaAnalysisResult.confidence_score * 100).toFixed(1)}%`
               : '未知'
           }}
         </a-tag>
@@ -849,7 +852,7 @@ onUnmounted(() => {
             <div class="cause-confidence">
               <div class="confidence-mini-bar">
                 <div
-                  :style="{ width: cause.confidence * 100 + '%' }"
+                  :style="{ width: `${cause.confidence * 100}%` }"
                   class="confidence-mini-fill"
                 ></div>
               </div>
@@ -1533,10 +1536,6 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
-.rec-list {
-  margin-top: 8px;
-}
-
 .rec-item {
   font-size: 13px;
   color: var(--ops-muted);
@@ -1676,7 +1675,7 @@ onUnmounted(() => {
   margin-top: 8px;
 }
 
-.rec-item {
+:is(.rec-item) {
   font-size: 13px;
   color: var(--ops-muted);
   line-height: 1.4;

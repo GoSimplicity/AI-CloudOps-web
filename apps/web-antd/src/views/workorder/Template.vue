@@ -1,9 +1,6 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 
-import { message, Modal } from 'ant-design-vue';
 import {
   CheckCircleOutlined,
   DownOutlined,
@@ -12,7 +9,20 @@ import {
   PlusOutlined,
   StopOutlined,
 } from '@ant-design/icons-vue';
+import { message, Modal } from 'ant-design-vue';
 
+import {
+  listWorkorderCategory,
+  type WorkorderCategoryItem,
+} from '#/api/core/workorder/workorder_category';
+import {
+  listWorkorderFormDesign,
+  type WorkorderFormDesignItem,
+} from '#/api/core/workorder/workorder_form_design';
+import {
+  listWorkorderProcess,
+  type WorkorderProcessItem,
+} from '#/api/core/workorder/workorder_process';
 import {
   createWorkorderTemplate,
   type CreateWorkorderTemplateReq,
@@ -27,18 +37,7 @@ import {
   type UpdateWorkorderTemplateReq,
   type WorkorderTemplateItem,
 } from '#/api/core/workorder/workorder_template';
-import {
-  listWorkorderCategory,
-  type WorkorderCategoryItem,
-} from '#/api/core/workorder/workorder_category';
-import {
-  listWorkorderProcess,
-  type WorkorderProcessItem,
-} from '#/api/core/workorder/workorder_process';
-import {
-  listWorkorderFormDesign,
-  type WorkorderFormDesignItem,
-} from '#/api/core/workorder/workorder_form_design';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { usePermission } from '#/utils/permission';
 import {
   shouldNotifyPageError,
@@ -122,42 +121,45 @@ const categories = ref<WorkorderCategoryItem[]>([]);
 
 // 统计数据
 const stats = reactive({
-  total: 0,
-  enabled: 0,
   disabled: 0,
+  enabled: 0,
   thisMonth: 0,
+  total: 0,
 });
 
 // 分页配置
 const paginationConfig = computed(() => ({
   current: currentPage.value,
   pageSize: pageSize.value,
-  total: total.value,
-  showSizeChanger: true,
-  showQuickJumper: true,
-  showTotal: (total: number) => `共 ${total} 条`,
   pageSizeOptions: ['10', '20', '50', '100'],
+  showQuickJumper: true,
+  showSizeChanger: true,
+  showTotal: (total: number) => `共 ${total} 条`,
+  total: total.value,
 }));
 
 // 模板对话框
 const templateDialog = reactive({
-  visible: false,
-  isEdit: false,
   form: {
+    category_id: 0,
+    default_values: {},
+    description: '',
+    form_design_id: 0,
     id: undefined,
     name: '',
-    description: '',
-    status: TemplateStatus.Enabled,
-    category_id: 0,
     process_id: 0,
-    form_design_id: 0,
+    status: TemplateStatus.Enabled,
     tags: [],
-    default_values: {},
-  } as CreateWorkorderTemplateReq & { id?: number },
+  } as { id?: number } & CreateWorkorderTemplateReq,
+  isEdit: false,
+  visible: false,
 });
 
 // 表单验证规则
 const formRules = {
+  form_design_id: [
+    { message: '请选择关联表单', required: true, trigger: 'change' },
+  ],
   name: [
     { message: '请输入模板名称', required: true, trigger: 'blur' },
     { max: 50, message: '长度应为3到50个字符', min: 3, trigger: 'blur' },
@@ -165,15 +167,12 @@ const formRules = {
   process_id: [
     { message: '请选择关联流程', required: true, trigger: 'change' },
   ],
-  form_design_id: [
-    { message: '请选择关联表单', required: true, trigger: 'change' },
-  ],
 };
 
 // 详情对话框
 const detailDialog = reactive({
-  visible: false,
   template: null as null | WorkorderTemplateItem,
+  visible: false,
 });
 
 // 分类选择器相关
@@ -184,9 +183,9 @@ let categorySearchTimeout: null | ReturnType<typeof setTimeout> = null;
 
 const categoryPagination = reactive({
   current: 1,
+  hasMore: false,
   pageSize: 20,
   total: 0,
-  hasMore: false,
 });
 
 // 流程选择器相关
@@ -197,9 +196,9 @@ let processSearchTimeout: null | ReturnType<typeof setTimeout> = null;
 
 const processPagination = reactive({
   current: 1,
+  hasMore: false,
   pageSize: 20,
   total: 0,
-  hasMore: false,
 });
 
 // 表单选择器相关
@@ -210,9 +209,9 @@ let formSearchTimeout: null | ReturnType<typeof setTimeout> = null;
 
 const formPagination = reactive({
   current: 1,
+  hasMore: false,
   pageSize: 20,
   total: 0,
-  hasMore: false,
 });
 
 // 清理定时器
@@ -256,24 +255,24 @@ const formTotalPages = computed(() => {
 
 const getStatusColor = (status: number): string => {
   const colorMap = {
-    [TemplateStatus.Enabled]: 'green',
     [TemplateStatus.Disabled]: 'default',
+    [TemplateStatus.Enabled]: 'green',
   };
   return colorMap[status as keyof typeof colorMap] || 'default';
 };
 
 const getStatusText = (status: number): string => {
   const textMap = {
-    [TemplateStatus.Enabled]: '启用',
     [TemplateStatus.Disabled]: '禁用',
+    [TemplateStatus.Enabled]: '启用',
   };
   return textMap[status as keyof typeof textMap] || '未知';
 };
 
 const getStatusClass = (status: number): string => {
   const classMap = {
-    [TemplateStatus.Enabled]: 'status-enabled',
     [TemplateStatus.Disabled]: 'status-disabled',
+    [TemplateStatus.Enabled]: 'status-enabled',
   };
   return classMap[status as keyof typeof classMap] || '';
 };
@@ -282,9 +281,9 @@ const formatDate = (dateStr: string | undefined) => {
   if (!dateStr) return '';
   const d = new Date(dateStr);
   return d.toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
     day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
   });
 };
 
@@ -298,11 +297,11 @@ const formatFullDateTime = (dateStr: string | undefined) => {
   if (!dateStr) return '';
   const d = new Date(dateStr);
   return d.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: 'long',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    month: 'long',
+    year: 'numeric',
   });
 };
 
@@ -347,11 +346,11 @@ const loadDialogCategories = async (
   try {
     const params = {
       page: reset ? 1 : categoryPagination.current,
-      size: categoryPagination.pageSize,
       search:
         search === undefined
           ? categorySearchKeyword.value || undefined
           : search,
+      size: categoryPagination.pageSize,
     };
 
     const response = await listWorkorderCategory(params);
@@ -403,10 +402,8 @@ const handleCategorySearch = (value: string): void => {
 };
 
 const handleCategoryDropdownChange = (open: boolean): void => {
-  if (open) {
-    if (dialogCategories.value.length === 0) {
-      loadDialogCategories(true);
-    }
+  if (open && dialogCategories.value.length === 0) {
+    loadDialogCategories(true);
   }
 };
 
@@ -424,7 +421,7 @@ const handleCategoryScroll = (e: Event): void => {
   if (!target) return;
 
   const element = target as HTMLElement;
-  const { scrollTop, scrollHeight, clientHeight } = element;
+  const { clientHeight, scrollHeight, scrollTop } = element;
 
   if (
     scrollTop + clientHeight >= scrollHeight - 10 &&
@@ -449,9 +446,9 @@ const loadDialogProcesses = async (
   try {
     const params = {
       page: reset ? 1 : processPagination.current,
-      size: processPagination.pageSize,
       search:
         search === undefined ? processSearchKeyword.value || undefined : search,
+      size: processPagination.pageSize,
     };
 
     const response = await listWorkorderProcess(params);
@@ -503,10 +500,8 @@ const handleProcessSearch = (value: string): void => {
 };
 
 const handleProcessDropdownChange = (open: boolean): void => {
-  if (open) {
-    if (dialogProcesses.value.length === 0) {
-      loadDialogProcesses(true);
-    }
+  if (open && dialogProcesses.value.length === 0) {
+    loadDialogProcesses(true);
   }
 };
 
@@ -524,7 +519,7 @@ const handleProcessScroll = (e: Event): void => {
   if (!target) return;
 
   const element = target as HTMLElement;
-  const { scrollTop, scrollHeight, clientHeight } = element;
+  const { clientHeight, scrollHeight, scrollTop } = element;
 
   if (
     scrollTop + clientHeight >= scrollHeight - 10 &&
@@ -549,9 +544,9 @@ const loadDialogForms = async (
   try {
     const params = {
       page: reset ? 1 : formPagination.current,
-      size: formPagination.pageSize,
       search:
         search === undefined ? formSearchKeyword.value || undefined : search,
+      size: formPagination.pageSize,
     };
 
     const response = await listWorkorderFormDesign(params);
@@ -601,10 +596,8 @@ const handleFormSearch = (value: string): void => {
 };
 
 const handleFormDropdownChange = (open: boolean): void => {
-  if (open) {
-    if (dialogForms.value.length === 0) {
-      loadDialogForms(true);
-    }
+  if (open && dialogForms.value.length === 0) {
+    loadDialogForms(true);
   }
 };
 
@@ -622,7 +615,7 @@ const handleFormScroll = (e: Event): void => {
   if (!target) return;
 
   const element = target as HTMLElement;
-  const { scrollTop, scrollHeight, clientHeight } = element;
+  const { clientHeight, scrollHeight, scrollTop } = element;
 
   if (
     scrollTop + clientHeight >= scrollHeight - 10 &&
@@ -641,11 +634,11 @@ const loadTemplates = async () => {
   loadError.value = '';
   try {
     const params: ListWorkorderTemplateReq = {
-      page: currentPage.value,
-      size: pageSize.value,
-      search: searchQuery.value || undefined,
-      status: statusFilter.value || undefined,
       category_id: categoryFilter.value || undefined,
+      page: currentPage.value,
+      search: searchQuery.value || undefined,
+      size: pageSize.value,
+      status: statusFilter.value || undefined,
     };
 
     const res = await listWorkorderTemplate(params);
@@ -676,7 +669,7 @@ const loadTemplates = async () => {
   } catch (error) {
     templateList.value = [];
     total.value = 0;
-    Object.assign(stats, { total: 0, enabled: 0, disabled: 0, thisMonth: 0 });
+    Object.assign(stats, { disabled: 0, enabled: 0, thisMonth: 0, total: 0 });
     if (shouldRecordPageError(error)) loadError.value = '加载模板数据失败';
     if (shouldNotifyPageError(error)) message.error(loadError.value);
   } finally {
@@ -795,14 +788,14 @@ const resetSelectors = (): void => {
 const handleCreateTemplate = () => {
   templateDialog.isEdit = false;
   templateDialog.form = {
-    name: '',
-    description: '',
-    status: TemplateStatus.Enabled,
     category_id: undefined,
-    process_id: 0,
-    form_design_id: 0,
-    tags: [],
     default_values: {},
+    description: '',
+    form_design_id: 0,
+    name: '',
+    process_id: 0,
+    status: TemplateStatus.Enabled,
+    tags: [],
   };
   templateDialog.visible = true;
   resetSelectors();
@@ -827,14 +820,14 @@ const loadCategoryForEdit = async (
       !dialogCategories.value.find((cat) => cat.id === templateData.category_id)
     ) {
       const categoryInfo: WorkorderCategoryItem = {
+        created_at: '',
+        description: '',
         id: templateData.category_id,
         name: templateData.category?.name || `分类${templateData.category_id}`,
-        description: '',
-        created_at: '',
-        updated_at: '',
         operator_id: 0,
         operator_name: '',
         status: 1,
+        updated_at: '',
       };
 
       dialogCategories.value = [
@@ -858,17 +851,17 @@ const loadProcessForEdit = async (
       )
     ) {
       const processInfo: WorkorderProcessItem = {
-        id: templateData.process_id,
-        name: templateData.process?.name || `流程${templateData.process_id}`,
-        description: '',
         created_at: '',
-        updated_at: '',
+        definition: {},
+        description: '',
+        form_design_id: 0,
+        id: templateData.process_id,
+        is_default: 2,
+        name: templateData.process?.name || `流程${templateData.process_id}`,
         operator_id: 0,
         operator_name: '',
         status: 1,
-        is_default: 2,
-        definition: {},
-        form_design_id: 0,
+        updated_at: '',
       };
       dialogProcesses.value = [
         processInfo,
@@ -889,21 +882,21 @@ const loadFormForEdit = async (
       !dialogForms.value.find((form) => form.id === templateData.form_design_id)
     ) {
       const formInfo: WorkorderFormDesignItem = {
+        category_id: 0,
+        created_at: '',
+        description: '',
         id: templateData.form_design_id,
+        is_template: 1,
         name:
           templateData.form_design?.name ||
           `表单${templateData.form_design_id}`,
-        description: '',
-        created_at: '',
-        updated_at: '',
         operator_id: 0,
         operator_name: '',
-        status: 1,
-        is_template: 1,
-        category_id: 0,
         schema: {
           fields: [],
         },
+        status: 1,
+        updated_at: '',
       };
       dialogForms.value = [
         formInfo,
@@ -938,15 +931,15 @@ const handleEditTemplate = async (row: WorkorderTemplateItem) => {
     } as DetailWorkorderTemplateReq);
     if (res) {
       templateDialog.form = {
+        category_id: res.category_id,
+        default_values: res.default_values || {},
+        description: res.description,
+        form_design_id: res.form_design_id,
         id: res.id,
         name: res.name,
-        description: res.description,
-        status: res.status,
-        category_id: res.category_id,
         process_id: res.process_id,
-        form_design_id: res.form_design_id,
+        status: res.status,
         tags: res.tags || [],
-        default_values: res.default_values || {},
       };
 
       templateDialog.visible = true;
@@ -980,11 +973,10 @@ const handleViewTemplate = async (row: WorkorderTemplateItem) => {
 
 const confirmDelete = (template: WorkorderTemplateItem) => {
   Modal.confirm({
-    title: '警告',
+    cancelText: '取消',
     content: `确定要删除模板 "${template.name}" 吗？这个操作不可恢复！`,
     okText: '删除',
     okType: 'danger',
-    cancelText: '取消',
     async onOk() {
       try {
         loading.value = true;
@@ -1007,6 +999,7 @@ const confirmDelete = (template: WorkorderTemplateItem) => {
         loading.value = false;
       }
     },
+    title: '警告',
   });
 };
 
@@ -1040,13 +1033,13 @@ const saveTemplate = async () => {
 
     if (templateDialog.isEdit && templateDialog.form.id) {
       const updateData: UpdateWorkorderTemplateReq = {
+        category_id: templateDialog.form.category_id,
+        description: templateDialog.form.description || '',
+        form_design_id: templateDialog.form.form_design_id,
         id: templateDialog.form.id,
         name: templateDialog.form.name,
-        description: templateDialog.form.description || '',
         process_id: templateDialog.form.process_id,
-        form_design_id: templateDialog.form.form_design_id,
         status: templateDialog.form.status,
-        category_id: templateDialog.form.category_id,
         tags: templateDialog.form.tags,
       };
 
@@ -1054,12 +1047,12 @@ const saveTemplate = async () => {
       message.success(`模板 "${templateDialog.form.name}" 已更新`);
     } else {
       const createData: CreateWorkorderTemplateReq = {
-        name: templateDialog.form.name,
-        description: templateDialog.form.description,
-        process_id: templateDialog.form.process_id,
-        form_design_id: templateDialog.form.form_design_id,
-        status: templateDialog.form.status,
         category_id: templateDialog.form.category_id,
+        description: templateDialog.form.description,
+        form_design_id: templateDialog.form.form_design_id,
+        name: templateDialog.form.name,
+        process_id: templateDialog.form.process_id,
+        status: templateDialog.form.status,
         tags: templateDialog.form.tags,
       };
 
@@ -1227,8 +1220,8 @@ onMounted(async () => {
             <template v-if="column.key === 'name'">
               <div class="template-name-cell">
                 <div
-                  class="status-badge"
                   :class="getStatusClass(record.status)"
+                  class="status-badge"
                 ></div>
                 <span class="template-name-text">{{ record.name }}</span>
               </div>
@@ -1268,10 +1261,10 @@ onMounted(async () => {
             <template v-if="column.key === 'creator'">
               <div class="creator-info">
                 <a-avatar
-                  size="small"
                   :style="{
                     backgroundColor: getAvatarColor(record.operator_name || ''),
                   }"
+                  size="small"
                 >
                   {{ getInitials(record.operator_name) }}
                 </a-avatar>
@@ -1412,9 +1405,9 @@ onMounted(async () => {
 
                 <a-select-option
                   v-if="categoryPagination.hasMore"
-                  value="__load_more__"
                   class="load-more-option"
                   disabled
+                  value="__load_more__"
                 >
                   <div
                     class="load-more-content"
@@ -1485,9 +1478,9 @@ onMounted(async () => {
 
                 <a-select-option
                   v-if="processPagination.hasMore"
-                  value="__load_more_process__"
                   class="load-more-option"
                   disabled
+                  value="__load_more_process__"
                 >
                   <div
                     class="load-more-content"
@@ -1558,9 +1551,9 @@ onMounted(async () => {
 
                 <a-select-option
                   v-if="formPagination.hasMore"
-                  value="__load_more_form__"
                   class="load-more-option"
                   disabled
+                  value="__load_more_form__"
                 >
                   <div class="load-more-content" @click.stop="loadMoreForms">
                     <a-button

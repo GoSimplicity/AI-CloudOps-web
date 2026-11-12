@@ -5,36 +5,36 @@ import { requestClient } from '#/api/request';
 
 // 流程状态常量
 export const ProcessStatus = {
+  Archived: 3, // 已归档
   Draft: 1, // 草稿
   Published: 2, // 已发布
-  Archived: 3, // 已归档
 } as const;
 
 // 流程步骤类型常量
 export const ProcessStepType = {
-  Start: 'start', // 开始
   Approval: 'approval', // 审批
-  Task: 'task', // 任务
   End: 'end', // 结束
+  Start: 'start', // 开始
+  Task: 'task', // 任务
 } as const;
 
 // 可执行动作常量
 export const Action = {
+  Approve: 'approve', // 审批动作
+  Assign: 'assign', // 指派动作
+  Cancel: 'cancel', // 取消动作
+  Complete: 'complete', // 完成动作
+  Notify: 'notify', // 通知动作
+  Reject: 'reject', // 驳回动作
+  Return: 'return', // 退回动作
   Start: 'start', // 开始动作
   Submit: 'submit', // 提交动作
-  Approve: 'approve', // 审批动作
-  Reject: 'reject', // 驳回动作
-  Assign: 'assign', // 指派动作
-  Complete: 'complete', // 完成动作
-  Return: 'return', // 退回动作
-  Cancel: 'cancel', // 取消动作
-  Notify: 'notify', // 通知动作
 } as const;
 
 // 受理人类型常量
 export const AssigneeType = {
-  User: 'user', // 用户类型
   Group: 'system', // 系统类型
+  User: 'user', // 用户类型
 } as const;
 
 // WorkorderProcess 工单流程实体
@@ -71,16 +71,16 @@ export interface ProcessStep {
 export interface ConnectionCondition {
   field_key: string; // 表单字段标识
   operator:
-    | 'eq'
-    | 'ne'
-    | 'gt'
-    | 'lt'
-    | 'gte'
-    | 'lte'
-    | 'in'
-    | 'not_in'
     | 'contains'
-    | 'not_contains'; // 比较操作符
+    | 'eq'
+    | 'gt'
+    | 'gte'
+    | 'in'
+    | 'lt'
+    | 'lte'
+    | 'ne'
+    | 'not_contains' // 比较操作符
+    | 'not_in';
   value: any; // 比较值
   label?: string; // 条件显示名称
 }
@@ -103,41 +103,41 @@ export interface ProcessDefinition {
 
 export function createDefaultProcessDefinition(): ProcessDefinition {
   return {
-    steps: [
-      {
-        id: ProcessStepType.Start,
-        type: ProcessStepType.Start,
-        name: '开始',
-        actions: [Action.Submit],
-        sort_order: 1,
-      },
-      {
-        id: ProcessStepType.Approval,
-        type: ProcessStepType.Approval,
-        name: '审批',
-        assignee_type: AssigneeType.Group,
-        assignee_ids: [],
-        actions: [Action.Approve, Action.Reject, Action.Assign],
-        sort_order: 2,
-      },
-      {
-        id: ProcessStepType.End,
-        type: ProcessStepType.End,
-        name: '结束',
-        actions: [],
-        sort_order: 3,
-      },
-    ],
     connections: [
       {
-        id: 'start_to_approval',
         from: ProcessStepType.Start,
+        id: 'start_to_approval',
         to: ProcessStepType.Approval,
       },
       {
-        id: 'approval_to_end',
         from: ProcessStepType.Approval,
+        id: 'approval_to_end',
         to: ProcessStepType.End,
+      },
+    ],
+    steps: [
+      {
+        actions: [Action.Submit],
+        id: ProcessStepType.Start,
+        name: '开始',
+        sort_order: 1,
+        type: ProcessStepType.Start,
+      },
+      {
+        actions: [Action.Approve, Action.Reject, Action.Assign],
+        assignee_ids: [],
+        assignee_type: AssigneeType.Group,
+        id: ProcessStepType.Approval,
+        name: '审批',
+        sort_order: 2,
+        type: ProcessStepType.Approval,
+      },
+      {
+        actions: [],
+        id: ProcessStepType.End,
+        name: '结束',
+        sort_order: 3,
+        type: ProcessStepType.End,
       },
     ],
   };

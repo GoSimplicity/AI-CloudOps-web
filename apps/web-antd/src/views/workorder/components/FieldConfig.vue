@@ -33,9 +33,9 @@ const isRequired = computed({
 // 计算属性
 const needsOptions = computed(() => {
   return [
-    FormFieldType.Select,
-    FormFieldType.Radio,
     FormFieldType.Checkbox,
+    FormFieldType.Radio,
+    FormFieldType.Select,
   ].includes(localField.value.type as any);
 });
 
@@ -94,16 +94,16 @@ const handleTypeChange = (type: string) => {
       localField.value.default = [];
       break;
     }
+    case FormFieldType.Date: {
+      localField.value.default = undefined;
+      break;
+    }
     case FormFieldType.Number: {
       localField.value.default = 0;
       break;
     }
     case FormFieldType.Switch: {
       localField.value.default = false;
-      break;
-    }
-    case FormFieldType.Date: {
-      localField.value.default = undefined;
       break;
     }
     default: {

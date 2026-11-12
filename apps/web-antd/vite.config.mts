@@ -1,8 +1,9 @@
+import process from 'node:process';
+import path from 'path'; // 引入 path 模块
+
 import { defineConfig } from '@vben/vite-config';
 
 import { loadEnv, type ProxyOptions } from 'vite';
-import process from 'node:process';
-import path from 'path'; // 引入 path 模块
 
 // 浏览器与 Vite 同源，上游无需对本地开发端口再次执行 CORS 校验
 // 只处理 HTTP 代理事件，WebSocket 保留原有来源约束
@@ -23,9 +24,16 @@ export default defineConfig(async (environment) => {
   return {
     application: {},
     vite: {
+      resolve: {
+        alias: {
+          '#': path.resolve(__dirname, 'src'),
+        },
+      },
       server: {
         host: '127.0.0.1',
         proxy: {
+          // Vite matches these prefixes in insertion order.
+          /* eslint-disable perfectionist/sort-objects */
           '/api/v1': {
             changeOrigin: true,
             configure: configureHttpProxy,
@@ -39,11 +47,7 @@ export default defineConfig(async (environment) => {
             target: `${proxyTarget}/api`,
             ws: true,
           },
-        },
-      },
-      resolve: {
-        alias: {
-          '#': path.resolve(__dirname, 'src'),
+          /* eslint-enable perfectionist/sort-objects */
         },
       },
     },

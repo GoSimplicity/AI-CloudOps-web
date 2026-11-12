@@ -83,8 +83,8 @@ const validate = () => {
 
 // 暴露方法给父组件
 defineExpose({
-  validate,
   resetForm,
+  validate,
 });
 </script>
 
@@ -261,6 +261,7 @@ defineExpose({
 
 .form-field {
   margin-bottom: 28px;
+  animation: fade-in-up 0.3s ease-out;
 }
 
 .field-label {
@@ -451,11 +452,7 @@ defineExpose({
   }
 }
 
-.form-field {
-  animation: fadeInUp 0.3s ease-out;
-}
-
-@keyframes fadeInUp {
+@keyframes fade-in-up {
   from {
     opacity: 0;
     transform: translateY(20px);

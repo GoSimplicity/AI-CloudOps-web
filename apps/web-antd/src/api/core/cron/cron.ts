@@ -2,31 +2,31 @@ import { requestClient } from '#/api/request';
 
 // 定时任务状态枚举
 export enum CronJobStatus {
-  ENABLED = 1, // 启用
   DISABLED = 2, // 禁用
-  RUNNING = 3, // 运行中
+  ENABLED = 1, // 启用
   ERROR = 4, // 错误
+  RUNNING = 3, // 运行中
 }
 
 // 定时任务类型枚举
 export enum CronJobType {
-  SYSTEM = 1, // 系统任务
   COMMAND = 2, // 命令行任务
   HTTP = 3, // HTTP请求任务
   SCRIPT = 4, // 脚本任务
   SSH = 5, // SSH远程执行任务
+  SYSTEM = 1, // 系统任务
 }
 
 // 资源状态枚举
 export enum ResourceStatus {
-  ENABLED = 1, // 启用
   DISABLED = 2, // 禁用
+  ENABLED = 1, // 启用
 }
 
 // 认证方式枚举
 export enum AuthMode {
-  PASSWORD = 1, // 密码认证
   KEY = 2, // 密钥认证
+  PASSWORD = 1, // 密码认证
 }
 
 // 键值对类型
@@ -127,7 +127,7 @@ export interface GetCronJobListReq {
 
 // 创建定时任务请求参数
 export interface CreateCronJobReq {
-  status?: CronJobStatus.ENABLED | CronJobStatus.DISABLED;
+  status?: CronJobStatus.DISABLED | CronJobStatus.ENABLED;
   name: string;
   description?: string;
   job_type: CronJobType;

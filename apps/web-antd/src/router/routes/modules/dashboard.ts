@@ -38,8 +38,8 @@ const routes: RouteRecordRaw[] = [
         path: '/system_api',
         component: () => import('#/views/dashboard/SystemApi.vue'),
         meta: {
-          title: '接口管理',
           icon: 'lucide:zap',
+          title: '接口管理',
         },
       },
       {

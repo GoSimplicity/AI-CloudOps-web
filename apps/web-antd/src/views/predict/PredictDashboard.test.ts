@@ -1,37 +1,36 @@
-import { shallowMount } from '@vue/test-utils';
-
 import { reactive } from 'vue';
 
+import { shallowMount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import PredictDashboard from './PredictDashboard.vue';
 
 vi.mock('@vben/stores', () => ({
-  useUserStore: () => reactive({ userInfo: { userId: '1' } }),
   useAccessStore: () => reactive({ accessToken: 'offline' }),
+  useUserStore: () => reactive({ userInfo: { userId: '1' } }),
 }));
 const api = vi.hoisted(() => ({
-  predictQps: vi.fn(),
   predictCpu: vi.fn(),
-  predictMemory: vi.fn(),
   predictDisk: vi.fn(),
+  predictMemory: vi.fn(),
+  predictQps: vi.fn(),
 }));
 const messages = vi.hoisted(() => ({
+  error: vi.fn(),
   success: vi.fn(),
   warning: vi.fn(),
-  error: vi.fn(),
 }));
 vi.mock('#/api/core/aiops/predict', () => api);
 vi.mock('ant-design-vue', () => ({ message: messages }));
 vi.mock('echarts/core', () => ({
-  use: vi.fn(),
   init: () => ({
-    setOption: vi.fn(),
     clear: vi.fn(),
-    resize: vi.fn(),
     dispose: vi.fn(),
     isDisposed: () => false,
+    resize: vi.fn(),
+    setOption: vi.fn(),
   }),
+  use: vi.fn(),
 }));
 
 describe('prediction refresh failures', () => {
@@ -47,10 +46,10 @@ describe('prediction refresh failures', () => {
     });
     const state = (wrapper.vm as any).$.setupState;
     state.inputData = {
-      currentQps: 0,
       currentCpu: 20,
-      currentMemory: 30,
       currentDisk: 40,
+      currentMemory: 30,
+      currentQps: 0,
     };
     state.predictionCache = { qps: { current_value: 99 } };
     await state.refreshAllPredictions();
@@ -68,10 +67,10 @@ describe('prediction refresh failures', () => {
     });
     const state = (wrapper.vm as any).$.setupState;
     state.inputData = {
-      currentQps: 10,
       currentCpu: 20,
-      currentMemory: 30,
       currentDisk: 40,
+      currentMemory: 30,
+      currentQps: 10,
     };
     await state.refreshAllPredictions();
     expect(Object.keys(state.predictionCache)).toEqual(['cpu']);

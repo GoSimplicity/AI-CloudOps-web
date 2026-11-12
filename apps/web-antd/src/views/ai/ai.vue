@@ -9,6 +9,10 @@ import {
   watch,
 } from 'vue';
 
+import { useAccessStore, useUserStore } from '@vben/stores';
+
+import { message } from 'ant-design-vue';
+import DOMPurify from 'dompurify';
 import {
   AlertCircle,
   Bot,
@@ -34,21 +38,18 @@ import {
   X,
   Zap,
 } from 'lucide-vue-next';
-import { message } from 'ant-design-vue';
 import { marked } from 'marked';
-import DOMPurify from 'dompurify';
-import { useAccessStore, useUserStore } from '@vben/stores';
 
-import {
-  assistantOwner,
-  createAssistantAccountScope,
-} from '#/utils/assistant-account-scope';
 import {
   assistantQuery,
   createAssistantSession,
   getSessionInfo,
   refreshKnowledgeBase,
 } from '#/api/core/aiops/assistant';
+import {
+  assistantOwner,
+  createAssistantAccountScope,
+} from '#/utils/assistant-account-scope';
 import { usePermission } from '#/utils/permission';
 import {
   shouldNotifyPageError,
@@ -162,52 +163,52 @@ const windowPosition = reactive({
 });
 
 const windowSize = reactive({
-  width: 380,
   height: 600,
+  width: 380,
 });
 
 const dragStart = reactive({
-  x: 0,
-  y: 0,
   windowX: 0,
   windowY: 0,
+  x: 0,
+  y: 0,
 });
 
 const resizeStart = reactive({
+  startHeight: 0,
+  startWidth: 0,
   x: 0,
   y: 0,
-  startWidth: 0,
-  startHeight: 0,
 });
 
 // 计算悬浮窗样式
 const floatWindowStyle = computed(() => ({
-  left: `${windowPosition.x}px`,
-  top: `${windowPosition.y}px`,
-  width: `${windowSize.width}px`,
   height: isMinimized.value ? '60px' : `${windowSize.height}px`,
-  transform: isExpanded.value ? 'none' : undefined,
+  left: `${windowPosition.x}px`,
   position: 'fixed',
+  top: `${windowPosition.y}px`,
+  transform: isExpanded.value ? 'none' : undefined,
+  width: `${windowSize.width}px`,
   ...(isExpanded.value
     ? {
+        height: '80vh',
         left: '50%',
+        maxHeight: '700px',
+        maxWidth: '800px',
         top: '50%',
         transform: 'translate(-50%, -50%)',
         width: '80vw',
-        height: '80vh',
-        maxWidth: '800px',
-        maxHeight: '700px',
       }
     : {}),
 }));
 
 // 快捷操作
 const quickActions = [
-  { text: '云服务器状态', icon: Settings },
-  { text: '性能监控', icon: Zap },
-  { text: '日志分析', icon: FileText },
-  { text: 'Markdown演示', icon: FileText },
-  { text: '帮助文档', icon: HelpCircle },
+  { icon: Settings, text: '云服务器状态' },
+  { icon: Zap, text: '性能监控' },
+  { icon: FileText, text: '日志分析' },
+  { icon: FileText, text: 'Markdown演示' },
+  { icon: HelpCircle, text: '帮助文档' },
 ];
 
 // 聊天消息接口定义
@@ -215,8 +216,8 @@ const chatMessages = reactive([
   {
     content:
       '👋 您好！我是AI-CloudOps助手，专注于为您提供智能运维服务。\n\n我可以帮助您：\n• 🔍 监控云服务器状态\n• 📊 分析性能指标\n• 🛠️ 故障诊断与修复\n• 📋 生成运维报告\n\n请问有什么我可以为您服务的吗？',
-    type: 'ai',
     time: formatTime(new Date()),
+    type: 'ai',
   },
 ]);
 
@@ -226,20 +227,20 @@ const initChatMessages = () => {
   chatMessages.push({
     content:
       '👋 您好！我是AI-CloudOps助手，专注于为您提供智能运维服务。\n\n我可以帮助您：\n• 🔍 监控云服务器状态\n• 📊 分析性能指标\n• 🛠️ 故障诊断与修复\n• 📋 生成运维报告\n\n请问有什么我可以为您服务的吗？',
-    type: 'ai',
     time: formatTime(new Date()),
+    type: 'ai',
   });
 };
 
 const persistState = () => {
   try {
     const uiState = {
-      windowPosition: { x: windowPosition.x, y: windowPosition.y },
-      windowSize: { width: windowSize.width, height: windowSize.height },
-      isMinimized: isMinimized.value,
-      isExpanded: isExpanded.value,
       currentMode: currentMode.value,
+      isExpanded: isExpanded.value,
+      isMinimized: isMinimized.value,
       showAdvancedOptions: showAdvancedOptions.value,
+      windowPosition: { x: windowPosition.x, y: windowPosition.y },
+      windowSize: { height: windowSize.height, width: windowSize.width },
     };
     localStorage.setItem(UI_STATE_KEY, JSON.stringify(uiState));
 
@@ -248,13 +249,13 @@ const persistState = () => {
     };
     accountScope.write('chat', chatState);
     accountScope.write('sessions', {
+      currentLocalSessionId: currentLocalSessionId.value,
       sessions: sessions.value.map((s) => ({
+        createdAt: s.createdAt,
         localId: s.localId,
         name: s.name,
-        createdAt: s.createdAt,
         serverId: s.serverId || '',
       })),
-      currentLocalSessionId: currentLocalSessionId.value,
     });
   } catch {}
 };
@@ -312,14 +313,14 @@ const autoResizeTextarea = () => {
   if (!el) return;
   el.style.height = 'auto';
   const maxHeight = 160;
-  el.style.height = Math.min(el.scrollHeight, maxHeight) + 'px';
+  el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
 };
 
 const scrollToBottom = () => {
   if (messagesContainer.value) {
     messagesContainer.value.scrollTo({
-      top: messagesContainer.value.scrollHeight,
       behavior: 'smooth',
+      top: messagesContainer.value.scrollHeight,
     });
   }
 };
@@ -480,22 +481,22 @@ function applySessionHistory(info) {
   )
     throw new Error('会话历史无效');
   chatHistory.value = history.flatMap((turn) => [
-    { role: 'user', content: turn.q },
-    { role: 'assistant', content: turn.a },
+    { content: turn.q, role: 'user' },
+    { content: turn.a, role: 'assistant' },
   ]);
   initChatMessages();
   for (const turn of history) {
     chatMessages.push({
-      type: 'user',
       content: turn.q,
       time: formatTime(new Date()),
+      type: 'user',
     });
     chatMessages.push({
-      type: 'ai',
       content: turn.a,
-      time: formatTime(new Date()),
-      sources: [],
       followUpQuestions: [],
+      sources: [],
+      time: formatTime(new Date()),
+      type: 'ai',
     });
   }
   currentMode.value = info.mode;
@@ -507,10 +508,10 @@ function applySessionHistory(info) {
       (info.active_mode === 1 || info.active_mode === 2)
     ) {
       pendingTurn.value = {
-        question: info.active_question,
         mode: info.active_mode,
-        turnId: info.active_turn_id,
+        question: info.active_question,
         sessionId: info.session_id,
+        turnId: info.active_turn_id,
       };
       sessionNotice.value =
         info.status === 'unknown'
@@ -589,8 +590,8 @@ const recoverTurn = async () => {
     }
     const response = await assistantQuery(
       {
-        question: pending.question,
         mode: pending.mode,
+        question: pending.question,
         session_id: pending.sessionId,
         turn_id: pending.turnId,
       },
@@ -656,28 +657,28 @@ const sendMessage = async (value) => {
       persistState();
     }
     const sid = sessionId.value;
-    pendingTurn.value = { question, mode, turnId, sessionId: sid };
+    pendingTurn.value = { mode, question, sessionId: sid, turnId };
     globalInputMessage.value = '';
     lastFailedQuestion.value = '';
     chatMessages.push({
       content: question,
-      type: 'user',
       time: formatTime(new Date()),
+      type: 'user',
     });
-    chatHistory.value.push({ role: 'user', content: question });
+    chatHistory.value.push({ content: question, role: 'user' });
     const placeholder = {
       content: '',
-      type: 'ai',
-      time: formatTime(new Date()),
-      sources: [],
       followUpQuestions: [],
+      sources: [],
+      time: formatTime(new Date()),
+      type: 'ai',
     };
     chatMessages.push(placeholder);
     await nextTick();
     if (!accountScope.current(ticket)) return;
     sent = true;
     const response = await assistantQuery(
-      { question, mode, session_id: sid, turn_id: turnId },
+      { mode, question, session_id: sid, turn_id: turnId },
       { signal },
     );
     if (!accountScope.current(ticket)) return;
@@ -692,7 +693,7 @@ const sendMessage = async (value) => {
     displayed.followUpQuestions = response.follow_up_questions || [];
     await simulateStreamResponse(displayed, response.answer, ticket);
     if (!accountScope.current(ticket)) return;
-    chatHistory.value.push({ role: 'assistant', content: response.answer });
+    chatHistory.value.push({ content: response.answer, role: 'assistant' });
     pendingTurn.value = null;
     sessionNotice.value = '';
     errorMessage.value = '';
@@ -791,9 +792,9 @@ const cancelGeneration = () => {
 const createNewSession = (silent = false) => {
   cancelGeneration();
   const newSession = {
+    createdAt: Date.now(),
     localId: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     name: `会话 ${sessions.value.length + 1}`,
-    createdAt: Date.now(),
   };
   sessions.value.push(newSession);
   currentLocalSessionId.value = newSession.localId;
@@ -958,14 +959,14 @@ print(f"系统状态: {result}")
 
     const demoMessage = {
       content: demoContent,
-      type: 'ai',
-      time: formatTime(new Date()),
-      sources: [],
       followUpQuestions: [
         '如何监控服务器状态？',
         '告警阈值如何设置？',
         '性能优化建议',
       ],
+      sources: [],
+      time: formatTime(new Date()),
+      type: 'ai',
     };
 
     chatMessages.push(demoMessage);
@@ -1120,6 +1121,20 @@ const escapeHtml = (text) => {
 // 简单的代码高亮函数
 const highlightCode = (code, lang) => {
   const keywords = {
+    bash: [
+      'echo',
+      'cd',
+      'ls',
+      'mkdir',
+      'rm',
+      'cp',
+      'mv',
+      'grep',
+      'find',
+      'sudo',
+      'chmod',
+      'chown',
+    ],
     javascript: [
       'const',
       'let',
@@ -1152,20 +1167,6 @@ const highlightCode = (code, lang) => {
       'except',
       'with',
       'as',
-    ],
-    bash: [
-      'echo',
-      'cd',
-      'ls',
-      'mkdir',
-      'rm',
-      'cp',
-      'mv',
-      'grep',
-      'find',
-      'sudo',
-      'chmod',
-      'chown',
     ],
     sql: [
       'SELECT',
@@ -1231,8 +1232,6 @@ marked.setOptions({
   breaks: true, // 支持换行
   gfm: true, // 启用GitHub风格的Markdown
   headerIds: false, // 禁用header id生成
-  mangle: false, // 禁用header mangle
-  sanitize: false, // 交给DOMPurify处理
   highlight(code, lang) {
     const highlightedCode = highlightCode(code, lang);
     const escapedCode = escapeHtml(code);
@@ -1249,6 +1248,8 @@ marked.setOptions({
       <code>${highlightedCode}</code>
     </pre>`;
   },
+  mangle: false, // 禁用header mangle
+  sanitize: false, // 交给DOMPurify处理
 });
 
 const renderMarkdown = (content) => {
@@ -1259,6 +1260,43 @@ const renderMarkdown = (content) => {
     const html = marked(content);
     // 使用 DOMPurify 清理 HTML，防止 XSS 攻击
     return DOMPurify.sanitize(html, {
+      ALLOW_DATA_ATTR: true,
+      ALLOWED_ATTR: [
+        'href',
+        'target',
+        'rel',
+        'src',
+        'alt',
+        'title',
+        'class',
+        'style',
+        'data-code',
+        'width',
+        'height',
+        'viewBox',
+        'fill',
+        'stroke',
+        'stroke-width',
+        'x',
+        'y',
+        'rx',
+        'ry',
+        'd',
+        'points',
+      ],
+      ALLOWED_CLASSES: {
+        button: ['code-copy-btn'],
+        div: ['code-header'],
+        pre: [/^language-/],
+        span: [
+          'code-keyword',
+          'code-string',
+          'code-comment',
+          'code-number',
+          'code-operator',
+          'code-lang',
+        ],
+      },
       ALLOWED_TAGS: [
         'p',
         'br',
@@ -1296,43 +1334,6 @@ const renderMarkdown = (content) => {
         'path',
         'polyline',
       ],
-      ALLOWED_ATTR: [
-        'href',
-        'target',
-        'rel',
-        'src',
-        'alt',
-        'title',
-        'class',
-        'style',
-        'data-code',
-        'width',
-        'height',
-        'viewBox',
-        'fill',
-        'stroke',
-        'stroke-width',
-        'x',
-        'y',
-        'rx',
-        'ry',
-        'd',
-        'points',
-      ],
-      ALLOWED_CLASSES: {
-        span: [
-          'code-keyword',
-          'code-string',
-          'code-comment',
-          'code-number',
-          'code-operator',
-          'code-lang',
-        ],
-        pre: [/^language-/],
-        div: ['code-header'],
-        button: ['code-copy-btn'],
-      },
-      ALLOW_DATA_ATTR: true,
     });
   } catch {
     // 如果解析失败，返回原始内容（转义HTML）
@@ -1459,7 +1460,7 @@ watch(
     initChatMessages();
     if (owner) loadState();
   },
-  { immediate: true, flush: 'sync' },
+  { flush: 'sync', immediate: true },
 );
 
 onMounted(() => {
@@ -1491,9 +1492,9 @@ onBeforeUnmount(() => {
   <div class="ai-assistant-container">
     <!-- 优化的悬浮按钮 -->
     <div
+      :class="{ active: isFloatWindowVisible }"
       class="assistant-float-button"
       @click="toggleFloatWindow"
-      :class="{ active: isFloatWindowVisible }"
     >
       <div class="float-button-icon">
         <MessageCircle :size="24" />
@@ -1553,11 +1554,11 @@ onBeforeUnmount(() => {
           </button>
           <button
             v-if="can('aiops.assistant.refreshKnowledge')"
-            class="action-button refresh-btn"
-            @mousedown.stop
-            @click="refreshKnowledge"
-            title="刷新知识库"
             :disabled="isRefreshing"
+            class="action-button refresh-btn"
+            title="刷新知识库"
+            @click="refreshKnowledge"
+            @mousedown.stop
           >
             <RefreshCw :class="{ spinning: isRefreshing }" :size="16" />
           </button>
@@ -1576,7 +1577,7 @@ onBeforeUnmount(() => {
       <div class="status-bar">
         <div class="status-left">
           <div class="status-indicator">
-            <div class="status-dot" :class="{ online: isConnected }"></div>
+            <div :class="{ online: isConnected }" class="status-dot"></div>
             <span class="status-text">
               {{ connectionStatus }}
             </span>
@@ -1585,21 +1586,21 @@ onBeforeUnmount(() => {
           <!-- 模式切换器 -->
           <div class="mode-switcher">
             <button
-              class="mode-button"
-              :disabled="sending || !!pendingTurn || !!sessionNotice"
               :class="{ active: currentMode === 1 }"
-              @click="switchMode('rag')"
+              :disabled="sending || !!pendingTurn || !!sessionNotice"
+              class="mode-button"
               title="RAG模式 - 基于知识库回答"
+              @click="switchMode('rag')"
             >
               <FileText :size="12" />
               RAG
             </button>
             <button
-              class="mode-button"
-              :disabled="sending || !!pendingTurn || !!sessionNotice"
               :class="{ active: currentMode === 2 }"
-              @click="switchMode('mcp')"
+              :disabled="sending || !!pendingTurn || !!sessionNotice"
+              class="mode-button"
               title="MCP模式 - 工具调用模式"
+              @click="switchMode('mcp')"
             >
               <Zap :size="12" />
               MCP
@@ -1630,8 +1631,8 @@ onBeforeUnmount(() => {
                 <div
                   v-for="s in sessions"
                   :key="s.localId"
-                  class="session-item"
                   :class="{ active: s.localId === currentLocalSessionId }"
+                  class="session-item"
                   @click="switchToSession(s.localId)"
                 >
                   <span class="session-name">{{ s.name }}</span>
@@ -1711,14 +1712,14 @@ onBeforeUnmount(() => {
         <div
           v-for="(msg, index) in chatMessages"
           :key="`msg-${index}-${msg.time}`"
-          class="message"
           :class="[msg.type]"
+          class="message"
         >
           <div class="message-wrapper">
             <div class="avatar">
               <div
-                class="avatar-container"
                 :class="msg.type === 'ai' ? 'ai-avatar' : 'user-avatar'"
+                class="avatar-container"
               >
                 <Bot v-if="msg.type === 'ai'" :size="18" />
                 <User v-else :size="18" />
@@ -1746,8 +1747,8 @@ onBeforeUnmount(() => {
                   <span class="typing-text">AI正在思考中...</span>
                   <div class="typing-details">
                     <span
-                      class="mode-badge"
                       :class="currentMode === 1 ? 'rag' : 'mcp'"
+                      class="mode-badge"
                     >
                       {{ currentMode === 1 ? 'RAG模式' : 'MCP模式' }}
                     </span>
@@ -1784,7 +1785,7 @@ onBeforeUnmount(() => {
                     <div class="source-preview">
                       {{
                         source.content
-                          ? source.content.substring(0, 100) + '...'
+                          ? `${source.content.substring(0, 100)}...`
                           : '内容不可用'
                       }}
                     </div>
@@ -1895,10 +1896,10 @@ onBeforeUnmount(() => {
             <div class="input-actions">
               <!-- 高级选项按钮 -->
               <button
-                class="advanced-options-btn"
-                @click="showAdvancedOptions = !showAdvancedOptions"
-                title="高级选项"
                 :class="{ active: showAdvancedOptions }"
+                class="advanced-options-btn"
+                title="高级选项"
+                @click="showAdvancedOptions = !showAdvancedOptions"
               >
                 <Settings2 :size="16" />
               </button>
@@ -1913,15 +1914,15 @@ onBeforeUnmount(() => {
               </button>
 
               <button
-                class="send-button"
+                :class="{ loading: sending }"
                 :disabled="
                   !globalInputMessage.trim() ||
                   sending ||
                   !!pendingTurn ||
                   !!sessionNotice
                 "
+                class="send-button"
                 @click="handleSearch"
-                :class="{ loading: sending }"
               >
                 <Send v-if="!sending" :size="16" />
                 <div v-else class="loading-spinner"></div>
@@ -1959,8 +1960,8 @@ onBeforeUnmount(() => {
           <span class="hint-item">Enter发送 / Shift+Enter换行</span>
           <div class="mode-info">
             <span
-              class="mode-indicator"
               :class="currentMode === 1 ? 'rag' : 'mcp'"
+              class="mode-indicator"
             >
               {{ currentMode === 1 ? 'RAG模式' : 'MCP模式' }}
             </span>
@@ -1990,7 +1991,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-@keyframes messageSlideIn {
+@keyframes message-slide-in {
   from {
     opacity: 0;
     transform: translateY(20px);
@@ -2417,7 +2418,7 @@ onBeforeUnmount(() => {
 .message {
   margin-bottom: 16px;
   opacity: 0;
-  animation: messageSlideIn 0.3s ease-out forwards;
+  animation: message-slide-in 0.3s ease-out forwards;
 }
 
 .message-wrapper {

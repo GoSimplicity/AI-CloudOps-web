@@ -2,94 +2,94 @@ import { requestClient } from '#/api/request';
 
 // 工单事件类型常量
 export const WorkorderEventTypes = {
-  INSTANCE_CREATED: 'instance_created', // 工单创建
-  INSTANCE_SUBMITTED: 'instance_submitted', // 工单提交
-  INSTANCE_ASSIGNED: 'instance_assigned', // 工单指派
   INSTANCE_APPROVED: 'instance_approved', // 工单审批通过
-  INSTANCE_REJECTED: 'instance_rejected', // 工单拒绝
-  INSTANCE_COMPLETED: 'instance_completed', // 工单完成
+  INSTANCE_ASSIGNED: 'instance_assigned', // 工单指派
   INSTANCE_CANCELLED: 'instance_cancelled', // 工单取消
-  INSTANCE_UPDATED: 'instance_updated', // 工单更新
   INSTANCE_COMMENTED: 'instance_commented', // 工单评论
+  INSTANCE_COMPLETED: 'instance_completed', // 工单完成
+  INSTANCE_CREATED: 'instance_created', // 工单创建
   INSTANCE_DELETED: 'instance_deleted', // 工单删除
+  INSTANCE_REJECTED: 'instance_rejected', // 工单拒绝
   INSTANCE_RETURNED: 'instance_returned', // 工单退回
+  INSTANCE_SUBMITTED: 'instance_submitted', // 工单提交
+  INSTANCE_UPDATED: 'instance_updated', // 工单更新
 } as const;
 
 // 通知状态常量
 export const NotificationStatus = {
-  Enabled: 1, // 启用
   Disabled: 2, // 禁用
+  Enabled: 1, // 启用
 } as const;
 
 // 优先级常量
 export const NotificationPriority = {
   High: 1, // 高
-  Medium: 2, // 中
   Low: 3, // 低
+  Medium: 2, // 中
 } as const;
 
 // 是否默认配置常量
 export const IsDefault = {
-  Yes: 1, // 是
   No: 2, // 否
+  Yes: 1, // 是
 } as const;
 
 // 通知渠道常量
 export const NotificationChannel = {
-  IN_APP: 'in_app', // 站内消息
   EMAIL: 'email', // 邮箱
   FEISHU: 'feishu', // 飞书
+  IN_APP: 'in_app', // 站内消息
   SMS: 'sms', // 短信
   WEBHOOK: 'webhook', // Webhook
 } as const;
 
 // 触发类型常量
 export const NotificationTrigger = {
-  IMMEDIATE: 'immediate', // 立即触发
-  DELAYED: 'delayed', // 延迟触发
-  SCHEDULED: 'scheduled', // 定时触发
   CONDITIONAL: 'conditional', // 条件触发
+  DELAYED: 'delayed', // 延迟触发
+  IMMEDIATE: 'immediate', // 立即触发
+  SCHEDULED: 'scheduled', // 定时触发
 } as const;
 
 // 接收人类型常量
 export const RecipientTypes = {
-  CREATOR: 'creator', // 工单创建人
   ASSIGNEE: 'assignee', // 工单处理人
-  USER: 'user', // 指定用户
-  ROLE: 'role', // 角色用户
-  DEPT: 'dept', // 部门用户
+  CREATOR: 'creator', // 工单创建人
   CUSTOM: 'custom', // 自定义用户
+  DEPT: 'dept', // 部门用户
+  ROLE: 'role', // 角色用户
+  USER: 'user', // 指定用户
 } as const;
 
 // 发送状态常量
 export const SendStatus = {
+  Cancelled: 5, // 已取消
+  Failed: 4, // 发送失败
   Pending: 1, // 待发送
   Sending: 2, // 发送中
   Success: 3, // 发送成功
-  Failed: 4, // 发送失败
-  Cancelled: 5, // 已取消
 } as const;
 
 // 队列状态常量
 export const QueueStatus = {
+  Failed: 4, // 处理失败
   Pending: 1, // 待处理
   Processing: 2, // 处理中
   Success: 3, // 处理成功
-  Failed: 4, // 处理失败
 } as const;
 
 // 通知任务类型常量
 export const TaskTypes = {
-  SEND_NOTIFICATION: 'notification:send',
   BATCH_SEND_NOTIFICATION: 'notification:batch_send',
-  SCHEDULED_NOTIFICATION: 'notification:scheduled',
   RETRY_FAILED_NOTIFICATION: 'notification:retry_failed',
+  SCHEDULED_NOTIFICATION: 'notification:scheduled',
+  SEND_NOTIFICATION: 'notification:send',
 } as const;
 
 // 流程动作常量
 export const FlowActions = {
-  UPDATE: 'update', // 更新
   COMMENT: 'comment', // 评论
+  UPDATE: 'update', // 更新
 } as const;
 
 // 类型定义
@@ -334,26 +334,26 @@ export interface ManualSendNotificationReq {
 
 export const getEventTypeName = (eventType: string): string => {
   const eventNames: Record<string, string> = {
-    [WorkorderEventTypes.INSTANCE_CREATED]: '工单创建',
-    [WorkorderEventTypes.INSTANCE_SUBMITTED]: '工单提交',
-    [WorkorderEventTypes.INSTANCE_ASSIGNED]: '工单指派',
     [WorkorderEventTypes.INSTANCE_APPROVED]: '工单审批通过',
-    [WorkorderEventTypes.INSTANCE_REJECTED]: '工单拒绝',
-    [WorkorderEventTypes.INSTANCE_COMPLETED]: '工单完成',
+    [WorkorderEventTypes.INSTANCE_ASSIGNED]: '工单指派',
     [WorkorderEventTypes.INSTANCE_CANCELLED]: '工单取消',
-    [WorkorderEventTypes.INSTANCE_UPDATED]: '工单更新',
     [WorkorderEventTypes.INSTANCE_COMMENTED]: '工单评论',
+    [WorkorderEventTypes.INSTANCE_COMPLETED]: '工单完成',
+    [WorkorderEventTypes.INSTANCE_CREATED]: '工单创建',
     [WorkorderEventTypes.INSTANCE_DELETED]: '工单删除',
+    [WorkorderEventTypes.INSTANCE_REJECTED]: '工单拒绝',
     [WorkorderEventTypes.INSTANCE_RETURNED]: '工单退回',
+    [WorkorderEventTypes.INSTANCE_SUBMITTED]: '工单提交',
+    [WorkorderEventTypes.INSTANCE_UPDATED]: '工单更新',
   };
   return eventNames[eventType] || '未知事件';
 };
 
 export const getNotificationChannelName = (channel: string): string => {
   const channelNames: Record<string, string> = {
-    [NotificationChannel.IN_APP]: '站内消息',
     [NotificationChannel.EMAIL]: '邮件',
     [NotificationChannel.FEISHU]: '飞书',
+    [NotificationChannel.IN_APP]: '站内消息',
     [NotificationChannel.SMS]: '短信',
     [NotificationChannel.WEBHOOK]: 'Webhook',
   };
@@ -362,12 +362,12 @@ export const getNotificationChannelName = (channel: string): string => {
 
 export const getRecipientTypeName = (recipientType: string): string => {
   const typeNames: Record<string, string> = {
-    [RecipientTypes.CREATOR]: '工单创建人',
     [RecipientTypes.ASSIGNEE]: '工单处理人',
-    [RecipientTypes.USER]: '指定用户',
-    [RecipientTypes.ROLE]: '角色用户',
-    [RecipientTypes.DEPT]: '部门用户',
+    [RecipientTypes.CREATOR]: '工单创建人',
     [RecipientTypes.CUSTOM]: '自定义地址',
+    [RecipientTypes.DEPT]: '部门用户',
+    [RecipientTypes.ROLE]: '角色用户',
+    [RecipientTypes.USER]: '指定用户',
   };
   return typeNames[recipientType] || '未知类型';
 };
@@ -429,9 +429,9 @@ export const sendNotificationManually = (data: ManualSendNotificationReq) => {
 /** 通知发送记录状态，与服务端 SendStatus 保持一致 */
 export const getNotificationSendStatus = (status: number) =>
   ({
-    [SendStatus.Pending]: { label: '待发送', color: 'default' },
-    [SendStatus.Sending]: { label: '发送中', color: 'processing' },
-    [SendStatus.Success]: { label: '发送成功', color: 'success' },
-    [SendStatus.Failed]: { label: '发送失败', color: 'error' },
-    [SendStatus.Cancelled]: { label: '已取消', color: 'default' },
-  })[status] || { label: '未知', color: 'default' };
+    [SendStatus.Cancelled]: { color: 'default', label: '已取消' },
+    [SendStatus.Failed]: { color: 'error', label: '发送失败' },
+    [SendStatus.Pending]: { color: 'default', label: '待发送' },
+    [SendStatus.Sending]: { color: 'processing', label: '发送中' },
+    [SendStatus.Success]: { color: 'success', label: '发送成功' },
+  })[status] || { color: 'default', label: '未知' };

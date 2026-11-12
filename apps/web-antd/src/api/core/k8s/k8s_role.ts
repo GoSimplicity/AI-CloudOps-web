@@ -101,8 +101,8 @@ export async function getRoleListApi(params: GetRoleListReq) {
   return requestClient.get(`/k8s/role/${params.cluster_id}/list`, {
     params: {
       namespace: params.namespace,
-      search: params.search,
       page: params.page,
+      search: params.search,
       size: params.size,
     },
   });

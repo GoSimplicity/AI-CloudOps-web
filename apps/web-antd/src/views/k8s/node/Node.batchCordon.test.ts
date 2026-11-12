@@ -32,8 +32,8 @@ vi.setConfig({ testTimeout: 15_000 });
  * 只替换 axios adapter，断言实际发出的请求条数、URL 和并发数。
  */
 const api = vi.hoisted(() => ({
-  getK8sNodeList: vi.fn(),
   getClustersListApi: vi.fn(),
+  getK8sNodeList: vi.fn(),
 }));
 vi.mock('#/api/core/k8s/k8s_node', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/api/core/k8s/k8s_node')>()),
@@ -71,10 +71,10 @@ const makeNodes = (count: number, unschedulable: string[] = []): TestNode[] =>
   Array.from({ length: count }, (_, i) => {
     const name = `node-${i + 1}`;
     return {
-      name,
       cluster_id: 7,
-      status: 1,
+      name,
       schedulable: unschedulable.includes(name) ? 2 : 1,
+      status: 1,
       taints: [],
     };
   });
@@ -86,8 +86,8 @@ let requests: { method: string; url: string }[] = [];
 let inFlight = 0;
 let maxInFlight = 0;
 let replyFor: (url: string) => Reply = () => ({
-  status: 200,
   data: { code: 0, data: null, message: 'ok' },
+  status: 200,
 });
 const adapter: AxiosAdapter = async (config) => {
   const url = config.url ?? '';
@@ -96,7 +96,7 @@ const adapter: AxiosAdapter = async (config) => {
   maxInFlight = Math.max(maxInFlight, inFlight);
   await new Promise((resolve) => setTimeout(resolve, 1));
   inFlight -= 1;
-  const { status, data } = replyFor(url);
+  const { data, status } = replyFor(url);
   const response = { config, data, headers: {}, status, statusText: '' } as any;
   if (status >= 200 && status < 300) return response;
   throw new AxiosError(
@@ -209,8 +209,8 @@ function rowScheduleButton(rowIndex: number) {
 }
 
 const forbidden403: Reply = {
-  status: 403,
   data: { code: 403, data: null, message: '无权限访问该接口' },
+  status: 403,
 };
 
 beforeEach(() => {
@@ -222,8 +222,8 @@ beforeEach(() => {
   inFlight = 0;
   maxInFlight = 0;
   replyFor = () => ({
-    status: 200,
     data: { code: 0, data: null, message: 'ok' },
+    status: 200,
   });
   (requestClient as any).instance.defaults.adapter = adapter;
   vi.spyOn(message, 'error');
@@ -233,11 +233,11 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
       addEventListener: vi.fn(),
+      addListener: vi.fn(),
+      matches: false,
       removeEventListener: vi.fn(),
+      removeListener: vi.fn(),
     })),
   );
   const computedStyle = window.getComputedStyle;
@@ -245,12 +245,12 @@ beforeEach(() => {
     computedStyle(element),
   );
   api.getClustersListApi.mockResolvedValue({
-    items: [{ id: 7, name: 'c7' }],
     total: 1,
+    items: [{ id: 7, name: 'c7' }],
   });
   api.getK8sNodeList.mockImplementation(async () => ({
-    items: NODES.map((node) => ({ ...node })),
     total: NODES.length,
+    items: NODES.map((node) => ({ ...node })),
   }));
 });
 
@@ -338,8 +338,8 @@ describe('node 批量禁用调度（逐个调用单节点 cordon）', () => {
     await selectRows(3);
     replyFor = (url) =>
       url === cordonUrl('node-2')
-        ? { status: 500, data: { code: 1, data: null, message: 'boom' } }
-        : { status: 200, data: { code: 0, data: null, message: 'ok' } };
+        ? { data: { code: 1, data: null, message: 'boom' }, status: 500 }
+        : { data: { code: 0, data: null, message: 'ok' }, status: 200 };
     await runBatch();
     expect(cordonRequests()).toHaveLength(3);
     expect(message.warning).toHaveBeenCalledWith(
@@ -358,7 +358,7 @@ describe('node 批量禁用调度（逐个调用单节点 cordon）', () => {
     replyFor = (url) =>
       url === cordonUrl('node-2')
         ? forbidden403
-        : { status: 200, data: { code: 0, data: null, message: 'ok' } };
+        : { data: { code: 0, data: null, message: 'ok' }, status: 200 };
     await runBatch();
     expect(message.warning).toHaveBeenCalledWith(
       '批量禁用调度部分成功：成功 1 个，失败 1 个（node-2）',
@@ -395,8 +395,8 @@ describe('node 批量禁用调度（逐个调用单节点 cordon）', () => {
     await mountPage();
     await selectRows(2);
     replyFor = () => ({
-      status: 500,
       data: { code: 1, data: null, message: 'boom' },
+      status: 500,
     });
     await runBatch();
     expect(message.error).toHaveBeenCalledWith(
@@ -417,8 +417,8 @@ describe('node 批量禁用调度（逐个调用单节点 cordon）', () => {
     );
     expect(selected).toBe(50);
     replyFor = () => ({
-      status: 500,
       data: { code: 1, data: null, message: 'boom' },
+      status: 500,
     });
     await runBatch();
     expect(cordonRequests()).toHaveLength(selected);

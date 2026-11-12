@@ -1,19 +1,19 @@
 import { RequestOwnerChangedError } from '@vben/request';
 
-import axios from 'axios';
 import { message } from 'ant-design-vue';
+import axios from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createDeferred } from '../../../../../../internal/test-utils/deferred';
+import { useConfigMapPage } from '../configmap/ConfigMap';
 import { useDeploymentPage } from '../deployment/Deployment';
 import { usePodPage } from '../pod/Pod';
 import { useServicePage } from '../service/Service';
-import { createDeferred } from '../../../../../../internal/test-utils/deferred';
-import { useConfigMapPage } from '../configmap/ConfigMap';
 
 const client = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 vi.mock('ant-design-vue', () => ({
-  message: { error: vi.fn(), warning: vi.fn(), info: vi.fn() },
+  message: { error: vi.fn(), info: vi.fn(), warning: vi.fn() },
   Modal: { confirm: vi.fn() },
 }));
 vi.mock('xterm', () => ({ Terminal: class {} }));
@@ -22,52 +22,52 @@ vi.mock('xterm-addon-web-links', () => ({ WebLinksAddon: class {} }));
 
 const cases = [
   {
-    name: 'Service',
     create: () => {
       const state = useServicePage();
       return {
+        clear: state.clearServices,
+        fetch: state.fetchServices,
         state,
         items: state.services,
-        fetch: state.fetchServices,
-        clear: state.clearServices,
       };
     },
+    name: 'Service',
   },
   {
-    name: 'ConfigMap',
     create: () => {
       const state = useConfigMapPage();
       return {
+        clear: state.clearConfigMaps,
+        fetch: state.fetchConfigMaps,
         state,
         items: state.configMaps,
-        fetch: state.fetchConfigMaps,
-        clear: state.clearConfigMaps,
       };
     },
+    name: 'ConfigMap',
   },
   {
-    name: 'Deployment',
     create: () => {
       const state = useDeploymentPage();
       return {
+        clear: state.clearDeployments,
+        fetch: state.fetchDeployments,
         state,
         items: state.deployments,
-        fetch: state.fetchDeployments,
-        clear: state.clearDeployments,
       };
     },
+    name: 'Deployment',
   },
   {
-    name: 'Pod',
     create: () => {
       const state = usePodPage();
       return {
+        clear: state.clearPods,
+        fetch: state.fetchPods,
         state,
         items: state.pods,
-        fetch: state.fetchPods,
-        clear: state.clearPods,
       };
     },
+    name: 'Pod',
   },
 ];
 type Result = {
@@ -87,13 +87,13 @@ for (const testCase of cases) {
       const pending = page.fetch();
       page.state.filterNamespace.value = 'beta';
       client.get.mockResolvedValueOnce({
-        items: [{ name: 'current', namespace: 'beta', cluster_id: 1 }],
         total: 1,
+        items: [{ cluster_id: 1, name: 'current', namespace: 'beta' }],
       });
       await page.fetch();
       old.resolve({
-        items: [{ name: 'old', namespace: 'alpha', cluster_id: 1 }],
         total: 1,
+        items: [{ cluster_id: 1, name: 'old', namespace: 'alpha' }],
       });
       await pending;
       expect(page.items.value.map((item) => item.name)).toEqual(['current']);
@@ -110,8 +110,8 @@ for (const testCase of cases) {
       page.state.filterClusterId.value = undefined;
       page.clear();
       old.resolve({
-        items: [{ name: 'old', namespace: 'alpha', cluster_id: 1 }],
         total: 1,
+        items: [{ cluster_id: 1, name: 'old', namespace: 'alpha' }],
       });
       await pending;
       expect(page.items.value).toEqual([]);
@@ -124,8 +124,8 @@ for (const testCase of cases) {
       const page = testCase.create();
       page.state.filterClusterId.value = 1;
       client.get.mockResolvedValueOnce({
-        items: [{ name: 'old', namespace: 'alpha', cluster_id: 1 }],
         total: 1,
+        items: [{ cluster_id: 1, name: 'old', namespace: 'alpha' }],
       });
       await page.fetch();
       client.get.mockRejectedValueOnce(new Error('unavailable'));
@@ -133,7 +133,7 @@ for (const testCase of cases) {
       expect(page.state.loadError.value).not.toBe('');
       expect(page.items.value).toEqual([]);
       expect(page.state.total.value).toBe(0);
-      client.get.mockResolvedValueOnce({ items: [], total: 0 });
+      client.get.mockResolvedValueOnce({ total: 0, items: [] });
       await page.fetch();
       expect(page.state.loadError.value).toBe('');
     });
@@ -173,8 +173,8 @@ for (const testCase of cases) {
         const page = testCase.create();
         page.state.filterClusterId.value = 1;
         client.get.mockResolvedValueOnce({
-          items: [{ name: 'old', namespace: 'alpha', cluster_id: 1 }],
           total: 1,
+          items: [{ cluster_id: 1, name: 'old', namespace: 'alpha' }],
         });
         await page.fetch();
         expect(page.items.value).toHaveLength(1);
@@ -198,8 +198,8 @@ for (const testCase of cases) {
 }
 
 const selectorCases = [
-  { name: 'Deployment', create: () => useDeploymentPage() },
-  { name: 'Pod', create: () => usePodPage() },
+  { create: () => useDeploymentPage(), name: 'Deployment' },
+  { create: () => usePodPage(), name: 'Pod' },
 ];
 for (const testCase of selectorCases) {
   describe(`fE-02b 拍板 3：${testCase.name} 集群 / 命名空间下拉被取消不写错误状态`, () => {
@@ -257,7 +257,7 @@ describe('资源过滤请求契约', () => {
     state.filterNamespace.value = 'alpha';
     state.searchText.value = 'web';
     state.filterStatus.value = 2;
-    client.get.mockResolvedValue({ items: [], total: 0 });
+    client.get.mockResolvedValue({ total: 0, items: [] });
     await state.fetchServices();
     expect(client.get).toHaveBeenLastCalledWith('/k8s/service/1/list', {
       params: expect.objectContaining({
@@ -273,13 +273,13 @@ describe('资源过滤请求契约', () => {
     state.filterNamespace.value = 'alpha';
     state.searchText.value = 'content';
     state.filterDataKey.value = 'INDEX';
-    client.get.mockResolvedValue({ items: [], total: 0 });
+    client.get.mockResolvedValue({ total: 0, items: [] });
     await state.fetchConfigMaps();
     expect(client.get).toHaveBeenLastCalledWith('/k8s/configmap/1/list', {
       params: expect.objectContaining({
+        data_key: 'INDEX',
         namespace: 'alpha',
         search: 'content',
-        data_key: 'INDEX',
       }),
     });
   });

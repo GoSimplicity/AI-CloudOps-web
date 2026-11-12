@@ -7,9 +7,9 @@ import {
 } from './managed-operation-marker';
 
 const marker = {
-  version: 2 as const,
   operation_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   resource_ids: ['rm-one'],
+  version: 2 as const,
 };
 beforeEach(() => localStorage.clear());
 it('只保存并恢复有界合法操作指针', () => {

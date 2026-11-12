@@ -1,13 +1,6 @@
 <script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
-
-import { namespacedResourceKey } from '../shared/utils';
 import { onMounted, ref } from 'vue';
 
-import { message, Modal } from 'ant-design-vue';
-
-import { useDeploymentPage } from './Deployment';
-import { rollbackDeploymentApi } from '#/api/core/k8s/k8s_deployment';
 import {
   AppstoreOutlined,
   CheckCircleOutlined,
@@ -31,163 +24,168 @@ import {
   SearchOutlined,
   TagsOutlined,
 } from '@ant-design/icons-vue';
+import { message, Modal } from 'ant-design-vue';
 
+import { rollbackDeploymentApi } from '#/api/core/k8s/k8s_deployment';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 import { useWorkloadRollbackScope } from '../shared/use-workload-rollback-scope';
+import { namespacedResourceKey } from '../shared/utils';
+import { useDeploymentPage } from './Deployment';
 
 const { can } = usePermission();
 
 const {
+  // filter operations
+  addFilterLabel,
+  // form field operations
+  addImageField,
+  // batch operations
+  batchOperation,
+  // operations
+  clearDeployments,
+  clearFilterLabels,
+  clearNamespaces,
+  // yaml operations
+  clearYaml,
+  // create operations
+  closeCreateModal,
+  closeCreateYamlModal,
+  // detail operations
+  closeDetailModal,
+  // edit operations
+  closeEditModal,
+  // history operations
+  closeHistoryModal,
+  // pod operations
+  closePodModal,
+  // scale operations
+  closeScaleModal,
+  // YAML operations
+  closeYamlModal,
   // state
   clusters,
   clustersError,
   clustersLoading,
   clustersTotal,
-  currentPage,
-  filterClusterId,
-  filterLabels,
-  filterNamespace,
-  filterStatus,
-  loadError,
-  loading,
-  namespaces,
-  namespacesError,
-  namespacesLoading,
-  namespacesTotal,
-  pageSize,
-  searchText,
-  selectedRows,
-  total,
-
-  // modal state
-  detailLoading,
-  isCreateModalVisible,
-  isCreateYamlModalVisible,
-  isDetailModalVisible,
-  isEditModalVisible,
-  isHistoryModalVisible,
-  isPodModalVisible,
-  isScaleModalVisible,
-  isYamlModalVisible,
-  submitLoading,
-
-  // operation targets
-  currentDeploymentDetail,
-  currentOperationDeployment,
-  deploymentHistory,
-  deploymentPods,
 
   // form models
   createFormModel,
-  createYamlFormModel,
-  editFormModel,
-  scaleFormModel,
-  yamlFormModel,
-
-  // form refs
-  createYamlFormRef,
-  editFormRef,
-  formRef,
-  scaleFormRef,
-  yamlFormRef,
-
   // form rules
   createFormRules,
+  createYamlFormModel,
+  // form refs
+  createYamlFormRef,
   createYamlFormRules,
+  // operation targets
+  currentDeploymentDetail,
+  currentOperationDeployment,
+  currentPage,
+  // deployment operations
+  deleteDeployment,
+  deploymentHistory,
+
+  deploymentPods,
+  // modal state
+  detailLoading,
+  editFormModel,
+  editFormRef,
+
   editFormRules,
-  scaleFormRules,
-  yamlFormRules,
+  fetchClusters,
+  fetchDeployments,
+  fetchNamespaces,
+  filterClusterId,
 
   // computed
   filteredDeployments,
-  rowSelection,
+  filterLabels,
+  filterNamespace,
+  filterStatus,
+  formatEditYaml,
 
+  formatYaml,
+  formRef,
   // helpers
   getEnvText,
   getStatusColor,
   getStatusText,
 
-  // operations
-  clearDeployments,
-  clearNamespaces,
-  fetchClusters,
-  fetchDeployments,
-  fetchNamespaces,
-  loadMoreClusters,
-  loadMoreNamespaces,
-
-  // detail operations
-  closeDetailModal,
-  showDeploymentDetail,
-
-  // YAML operations
-  closeYamlModal,
-  showYamlModal,
-  submitYamlForm,
-
-  // create operations
-  closeCreateModal,
-  closeCreateYamlModal,
-  openCreateModal,
-  openCreateYamlModal,
-  submitCreateForm,
-  submitCreateYamlForm,
-
-  // edit operations
-  closeEditModal,
-  openEditModal,
-  submitEditForm,
-
-  // deployment operations
-  deleteDeployment,
-  pauseDeployment,
-  restartDeployment,
-  resumeDeployment,
-
-  // scale operations
-  closeScaleModal,
-  openScaleModal,
-  submitScaleForm,
-
-  // pod operations
-  closePodModal,
-  showPodModal,
-
-  // history operations
-  closeHistoryModal,
-  historyLoading,
-  isHistoryCurrent,
-  showHistoryModal,
-
-  // filter operations
-  addFilterLabel,
-  clearFilterLabels,
-  removeFilterLabel,
-
-  // batch operations
-  batchOperation,
-
   // pagination operations
   handlePageChange,
+  historyLoading,
 
-  // form field operations
-  addImageField,
-  removeAnnotationField,
-  removeImageField,
-  removeLabelField,
-
-  // yaml operations
-  clearYaml,
-  formatEditYaml,
-  formatYaml,
   insertYamlTemplate,
-  validateEditYaml,
-  validateYaml,
+  isCreateModalVisible,
+  isCreateYamlModalVisible,
+
+  isDetailModalVisible,
+  isEditModalVisible,
+  isHistoryCurrent,
+  isHistoryModalVisible,
+  isPodModalVisible,
+  isScaleModalVisible,
+  isYamlModalVisible,
 
   // constants
   K8sDeploymentStatus,
+  loadError,
+
+  loading,
+  loadMoreClusters,
+  loadMoreNamespaces,
+
+  namespaces,
+  namespacesError,
+  namespacesLoading,
+  namespacesTotal,
+  openCreateModal,
+  openCreateYamlModal,
+
+  openEditModal,
+  openScaleModal,
+  pageSize,
+
+  pauseDeployment,
+  removeAnnotationField,
+  removeFilterLabel,
+  removeImageField,
+
+  removeLabelField,
+  restartDeployment,
+  resumeDeployment,
+
+  rowSelection,
+  scaleFormModel,
+
+  scaleFormRef,
+  scaleFormRules,
+  searchText,
+  selectedRows,
+
+  showDeploymentDetail,
+  showHistoryModal,
+  showPodModal,
+
+  showYamlModal,
+
+  submitCreateForm,
+
+  submitCreateYamlForm,
+  submitEditForm,
+  submitLoading,
+  submitScaleForm,
+
+  submitYamlForm,
+  total,
+  validateEditYaml,
+  validateYaml,
+  yamlFormModel,
+  yamlFormRef,
+
+  yamlFormRules,
 } = useDeploymentPage();
 
 // 添加新标签/注解的方法
@@ -464,12 +462,11 @@ const rollbackToVersion = (revision: number) => {
   if (!ticket) return;
 
   Modal.confirm({
-    title: '回滚确认',
+    cancelText: '取消',
+    centered: true,
     content: `确定要将 Deployment "${ticket.name}" 回滚到版本 ${ticket.revision} 吗？`,
     okText: '确认回滚',
     okType: 'primary',
-    cancelText: '取消',
-    centered: true,
     onCancel: () => rollbackScope.cancel(ticket),
     onOk: async () => {
       if (!isHistoryCurrent() || !rollbackScope.begin(ticket)) return;
@@ -493,6 +490,7 @@ const rollbackToVersion = (revision: number) => {
           message.error(`Deployment 回滚到版本 ${ticket.revision} 失败`);
       }
     },
+    title: '回滚确认',
   });
 };
 
@@ -682,7 +680,7 @@ onMounted(async () => {
             class="k8s-search-input"
             placeholder="搜索 Deployment 名称"
             @input="onSearch"
-            @pressEnter="onSearch"
+            @press-enter="onSearch"
           >
             <template #suffix>
               <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -695,7 +693,6 @@ onMounted(async () => {
       <div class="k8s-toolbar-actions">
         <div class="k8s-action-buttons">
           <a-button
-            @click="resetFilters"
             :disabled="
               !filterStatus &&
               !searchText &&
@@ -705,6 +702,7 @@ onMounted(async () => {
             "
             class="k8s-toolbar-btn"
             title="重置所有筛选条件"
+            @click="resetFilters"
           >
             <template #icon><DeleteOutlined aria-hidden="true" /></template>
             重置筛选
@@ -721,13 +719,13 @@ onMounted(async () => {
           </a-button>
 
           <a-button
-            type="primary"
-            danger
-            @click="() => batchOperation('删除')"
-            :disabled="selectedRows.length === 0"
             v-if="can('k8s.deployment.batchDelete') && selectedRows.length > 0"
+            :disabled="selectedRows.length === 0"
             class="k8s-toolbar-btn"
+            danger
             title="批量删除选中的 Deployment"
+            type="primary"
+            @click="() => batchOperation('删除')"
           >
             <template #icon><DeleteOutlined aria-hidden="true" /></template>
             删除 ({{ selectedRows.length }})
@@ -1236,9 +1234,9 @@ onMounted(async () => {
                   @press-enter="addNewEditLabel"
                 />
                 <a-button
+                  :disabled="!newEditLabelKey.trim()"
                   type="primary"
                   @click="addNewEditLabel"
-                  :disabled="!newEditLabelKey.trim()"
                 >
                   <template #icon><PlusOutlined aria-hidden="true" /></template>
                   添加
@@ -1297,9 +1295,9 @@ onMounted(async () => {
                   @press-enter="addNewEditAnnotation"
                 />
                 <a-button
+                  :disabled="!newEditAnnotationKey.trim()"
                   type="primary"
                   @click="addNewEditAnnotation"
-                  :disabled="!newEditAnnotationKey.trim()"
                 >
                   <template #icon><PlusOutlined aria-hidden="true" /></template>
                   添加
@@ -1470,9 +1468,9 @@ onMounted(async () => {
                   @press-enter="addNewLabel"
                 />
                 <a-button
+                  :disabled="!newLabelKey.trim()"
                   type="primary"
                   @click="addNewLabel"
-                  :disabled="!newLabelKey.trim()"
                 >
                   <template #icon><PlusOutlined aria-hidden="true" /></template>
                   添加
@@ -1531,9 +1529,9 @@ onMounted(async () => {
                   @press-enter="addNewAnnotation"
                 />
                 <a-button
+                  :disabled="!newAnnotationKey.trim()"
                   type="primary"
                   @click="addNewAnnotation"
-                  :disabled="!newAnnotationKey.trim()"
                 >
                   <template #icon><PlusOutlined aria-hidden="true" /></template>
                   添加
@@ -1926,8 +1924,8 @@ onMounted(async () => {
         class="k8s-table"
         size="small"
       >
-        <a-table-column key="name" dataIndex="name" title="Pod 名称" />
-        <a-table-column key="status" dataIndex="status" title="状态">
+        <a-table-column key="name" data-index="name" title="Pod 名称" />
+        <a-table-column key="status" data-index="status" title="状态">
           <template #default="{ text }">
             <a-badge
               :status="text === 'Running' ? 'success' : 'error'"
@@ -1937,12 +1935,12 @@ onMounted(async () => {
         </a-table-column>
         <a-table-column
           key="restart_count"
-          dataIndex="restart_count"
+          data-index="restart_count"
           title="重启次数"
         />
         <a-table-column
           key="created_at"
-          dataIndex="created_at"
+          data-index="created_at"
           title="创建时间"
         />
       </a-table>
@@ -1965,9 +1963,9 @@ onMounted(async () => {
         class="k8s-table"
         size="small"
       >
-        <a-table-column key="revision" dataIndex="revision" title="版本" />
-        <a-table-column key="date" dataIndex="date" title="日期" />
-        <a-table-column key="message" dataIndex="message" title="变更说明" />
+        <a-table-column key="revision" data-index="revision" title="版本" />
+        <a-table-column key="date" data-index="date" title="日期" />
+        <a-table-column key="message" data-index="message" title="变更说明" />
         <a-table-column key="actions" title="操作" width="100">
           <template #default="{ record }">
             <a-button
@@ -1997,8 +1995,8 @@ onMounted(async () => {
     >
       <div class="labels-filter-form">
         <div
-          class="current-filters"
           v-if="Object.keys(filterLabels).length > 0"
+          class="current-filters"
         >
           <h4>当前过滤条件：</h4>
           <div class="filter-tags">
@@ -2037,10 +2035,10 @@ onMounted(async () => {
               style="flex: 1"
             />
             <a-button
-              type="primary"
-              @click="addNewFilterLabel"
               :disabled="!newFilterKey.trim()"
               size="small"
+              type="primary"
+              @click="addNewFilterLabel"
             >
               <template #icon><PlusOutlined aria-hidden="true" /></template>
             </a-button>

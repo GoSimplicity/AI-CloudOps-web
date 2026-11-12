@@ -18,11 +18,11 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
       addEventListener: vi.fn(),
+      addListener: vi.fn(),
+      matches: false,
       removeEventListener: vi.fn(),
+      removeListener: vi.fn(),
     })),
   );
 });
@@ -34,14 +34,14 @@ afterEach(() => {
 
 function start(model: UpdateCronJobReq) {
   wrapper = mount(CronEditFields, {
+    global: { plugins: [Antd] },
     props: {
+      loading: false,
       modelValue: model,
       'onUpdate:modelValue': (value: UpdateCronJobReq) =>
         wrapper.setProps({ modelValue: value }),
       resources: [],
-      loading: false,
     },
-    global: { plugins: [Antd] },
   });
   return wrapper;
 }
@@ -57,11 +57,11 @@ describe('已有任务的执行配置', () => {
   it('hTTP可编辑地址、方法、请求体及请求头，敏感值默认遮挡且不修改原对象', async () => {
     const original: UpdateCronJobReq = {
       ...base,
-      job_type: CronJobType.HTTP,
-      http_method: 'POST',
-      http_url: 'https://old.invalid',
       http_body: 'original',
       http_headers: [{ key: 'Authorization', value: 'fixture-secret' }],
+      http_method: 'POST',
+      http_url: 'https://old.invalid',
+      job_type: CronJobType.HTTP,
     };
     const view = start(original);
     await view
@@ -75,10 +75,10 @@ describe('已有任务的执行配置', () => {
       .setValue('updated');
     const updated = updatedModel(view);
     expect(updated).toMatchObject({
-      http_method: 'POST',
-      http_url: 'https://new.invalid',
       http_body: 'updated',
       http_headers: [{ key: 'Authorization', value: 'replacement-secret' }],
+      http_method: 'POST',
+      http_url: 'https://new.invalid',
     });
     expect(original.http_headers?.[0]?.value).toBe('fixture-secret');
     const add = view
@@ -107,10 +107,10 @@ describe('已有任务的执行配置', () => {
     const view = start({
       ...base,
       job_type: CronJobType.SSH,
-      ssh_resource_id: 23,
       ssh_command: 'old',
-      ssh_work_dir: '/old',
       ssh_environment: [{ key: 'TOKEN', value: 'fixture' }],
+      ssh_resource_id: 23,
+      ssh_work_dir: '/old',
     });
     await view
       .get('textarea[placeholder="请输入要在远程服务器执行的命令"]')
@@ -122,13 +122,13 @@ describe('已有任务的执行配置', () => {
       'password',
     );
     expect(updatedModel(view)).toMatchObject({
-      ssh_resource_id: 23,
       ssh_command: 'new-command',
-      ssh_work_dir: '/new',
       ssh_environment: [{ key: 'TOKEN', value: 'fixture' }],
+      ssh_resource_id: 23,
+      ssh_work_dir: '/new',
     });
     await view.setProps({
-      resources: [{ id: 24, name: '测试主机', ip_addr: '127.0.0.1', port: 22 }],
+      resources: [{ id: 24, ip_addr: '127.0.0.1', name: '测试主机', port: 22 }],
     });
     await view.get('.ant-select-selector').trigger('mousedown');
     await flushPromises();
@@ -144,32 +144,32 @@ describe('已有任务的执行配置', () => {
   it('命令可修改参数和环境变量，脚本可修改类型及内容', async () => {
     const command = start({
       ...base,
-      job_type: CronJobType.COMMAND,
-      command: 'old',
       args: ['first'],
+      command: 'old',
       environment: [],
+      job_type: CronJobType.COMMAND,
     });
     await command
       .get('textarea[placeholder="请输入要执行的命令"]')
       .setValue('new');
     await command.get('input[placeholder="输入参数"]').setValue('second');
     expect(updatedModel(command)).toMatchObject({
-      command: 'new',
       args: ['second'],
+      command: 'new',
     });
     command.unmount();
     const script = start({
       ...base,
       job_type: CronJobType.SCRIPT,
-      script_type: 'python',
       script_content: 'old',
+      script_type: 'python',
     });
     await script
       .get('textarea[placeholder="请输入脚本内容"]')
       .setValue('print(1)');
     expect(updatedModel(script)).toMatchObject({
-      script_type: 'python',
       script_content: 'print(1)',
+      script_type: 'python',
     });
     await script.get('.ant-select-selector').trigger('mousedown');
     await flushPromises();

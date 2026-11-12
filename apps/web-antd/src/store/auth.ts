@@ -13,14 +13,13 @@ import {
 } from '@vben/stores';
 import { resetStaticRoutes } from '@vben/utils';
 
-import { routes } from '#/router/routes';
-
 import { notification } from 'ant-design-vue';
 import { defineStore } from 'pinia';
 
 import { getAccessCodesApi, getUserInfoApi, loginApi, logoutApi } from '#/api';
 import { readLoginLockState } from '#/api/login-lock';
 import { $t } from '#/locales';
+import { routes } from '#/router/routes';
 
 export const useAuthStore = defineStore('auth', () => {
   const accessStore = useAccessStore();

@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-
-import { useListRequest } from './useListRequest';
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 
-import { message, Modal } from 'ant-design-vue';
+import { useUserStore } from '@vben/stores';
+
 import { DownOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
-import { useUserStore } from '@vben/stores';
+import { message, Modal } from 'ant-design-vue';
 
 import {
   eventAlertClaimApi,
@@ -21,9 +19,12 @@ import {
   type MonitorAlertEvent,
   MonitorAlertEventStatus,
 } from '#/api/core/prometheus/prometheus_alert_event';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { useAuthStore } from '#/store';
 import { getAvatarColor } from '#/utils/avatar-color';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
+import { useListRequest } from './useListRequest';
 
 let disposed = false;
 let detailRevision = 0;
@@ -133,20 +134,20 @@ onBeforeUnmount(() => {
 const paginationConfig = reactive({
   current: 1,
   pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
   showQuickJumper: true,
+  showSizeChanger: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
   size: 'default' as const,
+  total: 0,
 });
 
 // 统计数据
 const stats = reactive({
-  total: 0,
-  firing: 0,
-  silenced: 0,
   claimed: 0,
+  firing: 0,
   resolved: 0,
+  silenced: 0,
+  total: 0,
 });
 
 // 对话框状态
@@ -159,17 +160,17 @@ const detailDialog = reactive({
 
 const getAlertStatusClass = (record: MonitorAlertEvent): string => {
   switch (record.status) {
-    case MonitorAlertEventStatus.FIRING: {
-      return 'status-firing';
-    }
-    case MonitorAlertEventStatus.SILENCED: {
-      return 'status-silenced';
-    }
     case MonitorAlertEventStatus.CLAIMED: {
       return 'status-claimed';
     }
+    case MonitorAlertEventStatus.FIRING: {
+      return 'status-firing';
+    }
     case MonitorAlertEventStatus.RESOLVED: {
       return 'status-resolved';
+    }
+    case MonitorAlertEventStatus.SILENCED: {
+      return 'status-silenced';
     }
     case MonitorAlertEventStatus.UPGRADED: {
       return 'status-claimed';
@@ -182,17 +183,17 @@ const getAlertStatusClass = (record: MonitorAlertEvent): string => {
 
 const getStatusColor = (status: MonitorAlertEventStatus): string => {
   switch (status) {
-    case MonitorAlertEventStatus.FIRING: {
-      return 'error';
-    }
-    case MonitorAlertEventStatus.SILENCED: {
-      return 'warning';
-    }
     case MonitorAlertEventStatus.CLAIMED: {
       return 'processing';
     }
+    case MonitorAlertEventStatus.FIRING: {
+      return 'error';
+    }
     case MonitorAlertEventStatus.RESOLVED: {
       return 'success';
+    }
+    case MonitorAlertEventStatus.SILENCED: {
+      return 'warning';
     }
     case MonitorAlertEventStatus.UPGRADED: {
       return 'purple';
@@ -205,17 +206,17 @@ const getStatusColor = (status: MonitorAlertEventStatus): string => {
 
 const getStatusText = (status: MonitorAlertEventStatus): string => {
   switch (status) {
-    case MonitorAlertEventStatus.FIRING: {
-      return '告警中';
-    }
-    case MonitorAlertEventStatus.SILENCED: {
-      return '已屏蔽';
-    }
     case MonitorAlertEventStatus.CLAIMED: {
       return '已认领';
     }
+    case MonitorAlertEventStatus.FIRING: {
+      return '告警中';
+    }
     case MonitorAlertEventStatus.RESOLVED: {
       return '已恢复';
+    }
+    case MonitorAlertEventStatus.SILENCED: {
+      return '已屏蔽';
     }
     case MonitorAlertEventStatus.UPGRADED: {
       return '已升级';
@@ -272,8 +273,8 @@ const fetchResources = async (): Promise<void> => {
   try {
     const params: GetMonitorAlertEventListReq = {
       page: paginationConfig.current,
-      size: paginationConfig.pageSize,
       search: searchText.value || undefined,
+      size: paginationConfig.pageSize,
       status: statusFilter.value,
     };
 
@@ -379,10 +380,9 @@ const confirmEventAction = (
     (!fromDetail || detailRevision === detailTicket);
   let confirmationConsumed = false;
   Modal.confirm({
-    title: `确认${action.label}`,
+    cancelText: '取消',
     content: `您确定要${action.label}告警 "${name}" 吗？`,
     okText: '确认',
-    cancelText: '取消',
     onOk: async () => {
       if (confirmationConsumed || !inScope()) return;
       confirmationConsumed = true;
@@ -412,13 +412,14 @@ const confirmEventAction = (
         }
       }
     },
+    title: `确认${action.label}`,
   });
 };
 
 const handleCancelSilence = (record: MonitorAlertEvent): void => {
   confirmEventAction(record, {
-    label: '取消屏蔽',
     closeDetail: false,
+    label: '取消屏蔽',
     run: (id, userId) => {
       const params: EventAlertUnSilenceReq = { id, user_id: userId };
       return eventAlertUnSilenceApi(params);
@@ -441,10 +442,10 @@ const handleMenuClick = (command: string, record: MonitorAlertEvent): void => {
 
 const handleSilence = (record: MonitorAlertEvent): void => {
   confirmEventAction(record, {
-    label: '屏蔽',
     closeDetail: true,
+    label: '屏蔽',
     run: (id, userId) => {
-      const params: EventAlertSilenceReq = { id, user_id: userId, time: '2h' };
+      const params: EventAlertSilenceReq = { id, time: '2h', user_id: userId };
       return eventAlertSilenceApi(params);
     },
   });
@@ -452,8 +453,8 @@ const handleSilence = (record: MonitorAlertEvent): void => {
 
 const handleClaim = (record: MonitorAlertEvent): void => {
   confirmEventAction(record, {
-    label: '认领',
     closeDetail: true,
+    label: '认领',
     run: (id, userId) => {
       const params: EventAlertClaimReq = { id, user_id: userId };
       return eventAlertClaimApi(params);
@@ -602,8 +603,8 @@ onMounted(() => {
             <template v-if="column.key === 'alert_name'">
               <div class="alert-name-cell">
                 <div
-                  class="alert-badge"
                   :class="getAlertStatusClass(record)"
+                  class="alert-badge"
                 ></div>
                 <span class="alert-name-text">{{ record.alert_name }}</span>
               </div>
@@ -642,12 +643,12 @@ onMounted(() => {
             <template v-if="column.key === 'send_group_name'">
               <div class="group-info">
                 <a-avatar
-                  size="small"
                   :style="{
                     backgroundColor: getAvatarColor(
                       (record.send_group?.name as string) || '',
                     ),
                   }"
+                  size="small"
                 >
                   {{ getInitials((record.send_group?.name as string) || '') }}
                 </a-avatar>
@@ -730,7 +731,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <a-descriptions :column="1" :labelStyle="{ width: '150px' }" bordered>
+        <a-descriptions :column="1" :label-style="{ width: '150px' }" bordered>
           <a-descriptions-item label="告警ID">
             {{ detailDialog.form.id }}
           </a-descriptions-item>

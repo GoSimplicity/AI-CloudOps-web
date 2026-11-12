@@ -1,14 +1,13 @@
 <script lang="ts" setup>
 import type { FormInstance } from 'ant-design-vue';
 
-import OpsPage from '#/components/ops/OpsPage.vue';
-
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 
-import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
+import { message } from 'ant-design-vue';
 import { debounce } from 'lodash-es';
 
+import { listApisApi } from '#/api/core/system/api';
 import {
   assignApisToRoleApi,
   createRoleApi,
@@ -21,7 +20,7 @@ import {
   type Role,
   updateRoleApi,
 } from '#/api/core/system/system';
-import { listApisApi } from '#/api/core/system/api';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
@@ -65,8 +64,8 @@ const typeFilter = ref<number | undefined>(undefined);
 // 搜索参数
 const searchParams = reactive<ListRolesReq>({
   page: 1,
-  size: 20,
   search: '',
+  size: 20,
   status: undefined,
 });
 
@@ -79,12 +78,12 @@ const apiSearchParams = reactive({
 const paginationConfig = reactive({
   current: 1,
   pageSize: 20,
-  total: 0,
-  showSizeChanger: true,
-  showQuickJumper: true,
   pageSizeOptions: ['10', '20', '50', '100'],
+  showQuickJumper: true,
+  showSizeChanger: true,
   showTotal: (total: number, range: [number, number]) =>
     `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+  total: 0,
 });
 
 // API分页配置
@@ -96,20 +95,20 @@ const apiPagination = reactive({
 
 // 表单数据初始化
 const initFormData = () => ({
-  id: undefined as number | undefined,
-  name: '',
+  api_ids: [] as number[],
   code: '',
   description: '',
+  id: undefined as number | undefined,
+  name: '',
   status: 1 as 0 | 1,
-  api_ids: [] as number[],
 });
 
 const formData = reactive(initFormData());
 
 // 表单验证规则
 const formRules = {
-  name: [{ message: '请输入角色名称', required: true, trigger: 'blur' }],
   code: [{ message: '请输入角色编码', required: true, trigger: 'blur' }],
+  name: [{ message: '请输入角色名称', required: true, trigger: 'blur' }],
   status: [{ message: '请选择状态', required: true, trigger: 'change' }],
 };
 
@@ -238,8 +237,8 @@ const selectAllSearchedApis = async () => {
 
     // 获取所有搜索结果
     const response = await listApisApi({
-      search: apiSearchParams.search || undefined,
       page: 1,
+      search: apiSearchParams.search || undefined,
       size: apiPagination.total,
     });
 
@@ -338,8 +337,8 @@ const fetchModalApiList = async () => {
   apiLoading.value = true;
   try {
     const response = await listApisApi({
-      search: apiSearchParams.search || undefined,
       page: apiPagination.current,
+      search: apiSearchParams.search || undefined,
       size: apiPagination.pageSize,
     });
 
@@ -454,12 +453,12 @@ const handleEdit = async (role: Role) => {
     selectedApis.value = roleApis;
 
     Object.assign(formData, {
-      id: response.id,
-      name: response.name,
+      api_ids: roleApis.map((api: any) => api.id),
       code: response.code,
       description: response.description,
+      id: response.id,
+      name: response.name,
       status: response.status,
-      api_ids: roleApis.map((api: any) => api.id),
     });
 
     // 重置API搜索
@@ -511,12 +510,12 @@ const handleStatusChange = async (role: Role, newStatus: 0 | 1) => {
     role.status = newStatus;
 
     await updateRoleApi({
-      id: role.id,
-      name: role.name,
+      api_ids: role.apis?.map((api: any) => api.id) || [],
       code: role.code,
       description: role.description,
+      id: role.id,
+      name: role.name,
       status: newStatus,
-      api_ids: role.apis?.map((api: any) => api.id) || [],
     });
     message.success('状态更新成功');
   } catch (error: any) {
@@ -533,21 +532,21 @@ const handleSubmit = async () => {
 
     if (formData.id) {
       await updateRoleApi({
-        id: formData.id,
-        name: formData.name,
+        api_ids: formData.api_ids,
         code: formData.code,
         description: formData.description,
+        id: formData.id,
+        name: formData.name,
         status: formData.status,
-        api_ids: formData.api_ids,
       });
       message.success('更新成功');
     } else {
       await createRoleApi({
-        name: formData.name,
+        api_ids: formData.api_ids,
         code: formData.code,
         description: formData.description,
+        name: formData.name,
         status: formData.status,
-        api_ids: formData.api_ids,
       });
       message.success('创建成功');
     }
@@ -555,10 +554,8 @@ const handleSubmit = async () => {
     modalVisible.value = false;
     await fetchRoleList();
   } catch (error: any) {
-    if (!error.errorFields) {
-      if (shouldNotifyPageError(error))
-        message.error(error.message || '操作失败');
-    }
+    if (!error.errorFields && shouldNotifyPageError(error))
+      message.error(error.message || '操作失败');
   } finally {
     submitLoading.value = false;
   }
@@ -569,8 +566,8 @@ const handleAssignApi = async (api: any) => {
 
   try {
     await assignApisToRoleApi({
-      role_id: currentRole.value.id,
       api_ids: [api.id],
+      role_id: currentRole.value.id,
     });
     message.success('权限分配成功');
     await fetchRoleApis(currentRole.value.id);
@@ -586,8 +583,8 @@ const handleRevokeApi = async (api: any) => {
 
   try {
     await revokeApisFromRoleApi({
-      role_id: currentRole.value.id,
       api_ids: [api.id],
+      role_id: currentRole.value.id,
     });
     message.success('权限移除成功');
     await fetchRoleApis(currentRole.value.id);
@@ -671,7 +668,7 @@ onMounted(() => {
             aria-label="搜索角色"
             class="search-input"
             placeholder="搜索角色名称或编码"
-            @pressEnter="handleSearch"
+            @press-enter="handleSearch"
           >
             <template #prefix>
               <Icon icon="material-symbols:search" />
@@ -792,9 +789,9 @@ onMounted(() => {
               </a-button>
               <a-popconfirm
                 v-if="can('system.role.delete')"
+                :disabled="record.is_system === 1"
                 title="确定要删除吗？"
                 @confirm="handleDelete(record)"
-                :disabled="record.is_system === 1"
               >
                 <a-button
                   :disabled="record.is_system === 1"
@@ -866,7 +863,7 @@ onMounted(() => {
               :key="api.id"
               class="api-item"
             >
-              <div class="api-method" :class="getMethodClass(api.method)">
+              <div :class="getMethodClass(api.method)" class="api-method">
                 {{ formatMethod(api.method) }}
               </div>
               <div class="api-info">
@@ -943,7 +940,7 @@ onMounted(() => {
                 allow-clear
                 class="api-search-input"
                 placeholder="搜索API名称"
-                @pressEnter="handleApiSearch"
+                @press-enter="handleApiSearch"
               >
                 <template #prefix>
                   <Icon icon="material-symbols:search" />
@@ -975,7 +972,7 @@ onMounted(() => {
                   :key="api.id"
                   class="selected-api-item"
                 >
-                  <div class="api-method" :class="getMethodClass(api.method)">
+                  <div :class="getMethodClass(api.method)" class="api-method">
                     {{ formatMethod(api.method) }}
                   </div>
                   <div class="api-info">
@@ -1023,11 +1020,11 @@ onMounted(() => {
                 <div
                   v-for="api in modalApiList"
                   :key="api.id"
-                  class="api-list-item"
                   :class="{
                     selected: isApiSelected(api.id),
                     disabled: isApiSelected(api.id),
                   }"
+                  class="api-list-item"
                   @click="toggleApiSelection(api)"
                 >
                   <a-checkbox
@@ -1035,7 +1032,7 @@ onMounted(() => {
                     @change="() => toggleApiSelection(api)"
                     @click.stop
                   />
-                  <div class="api-method" :class="getMethodClass(api.method)">
+                  <div :class="getMethodClass(api.method)" class="api-method">
                     {{ formatMethod(api.method) }}
                   </div>
                   <div class="api-info">
@@ -1062,17 +1059,17 @@ onMounted(() => {
                 <a-pagination
                   v-model:current="apiPagination.current"
                   v-model:page-size="apiPagination.pageSize"
-                  :total="apiPagination.total"
-                  :show-size-changer="true"
                   :page-size-options="['10', '20', '50']"
                   :show-quick-jumper="true"
+                  :show-size-changer="true"
                   :show-total="
                     (total: number, range: [number, number]) =>
                       `第 ${range[0]}-${range[1]} 条，共 ${total} 条`
                   "
+                  :total="apiPagination.total"
                   size="small"
                   @change="handleApiPageChange"
-                  @showSizeChange="handleApiPageSizeChange"
+                  @show-size-change="handleApiPageSizeChange"
                 />
               </div>
             </div>
@@ -1104,7 +1101,7 @@ onMounted(() => {
                 :key="api.id"
                 class="permission-item"
               >
-                <div class="api-method" :class="getMethodClass(api.method)">
+                <div :class="getMethodClass(api.method)" class="api-method">
                   {{ formatMethod(api.method) }}
                 </div>
                 <div class="permission-info">
@@ -1133,7 +1130,7 @@ onMounted(() => {
                 :key="api.id"
                 class="permission-item"
               >
-                <div class="api-method" :class="getMethodClass(api.method)">
+                <div :class="getMethodClass(api.method)" class="api-method">
                   {{ formatMethod(api.method) }}
                 </div>
                 <div class="permission-info">

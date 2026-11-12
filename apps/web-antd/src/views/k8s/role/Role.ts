@@ -6,6 +6,16 @@ import { message, Modal } from 'ant-design-vue';
 import yaml from 'js-yaml';
 
 import {
+  Env,
+  getClustersListApi,
+  type K8sCluster,
+  type ListClustersReq,
+} from '#/api/core/k8s/k8s_cluster';
+import {
+  getNamespacesListApi,
+  type K8sNamespace,
+} from '#/api/core/k8s/k8s_namespace';
+import {
   createRoleApi,
   createRoleByYamlApi,
   type CreateRoleByYamlReq,
@@ -25,16 +35,6 @@ import {
   type UpdateRoleReq,
   updateRoleYamlApi,
 } from '#/api/core/k8s/k8s_role';
-import {
-  Env,
-  getClustersListApi,
-  type K8sCluster,
-  type ListClustersReq,
-} from '#/api/core/k8s/k8s_cluster';
-import {
-  getNamespacesListApi,
-  type K8sNamespace,
-} from '#/api/core/k8s/k8s_namespace';
 import {
   shouldNotifyPageError,
   shouldRecordPageError,
@@ -111,18 +111,18 @@ export function useRolePage() {
     namespace: string;
     rules: PolicyRuleParam[];
   }>({
+    annotations: {},
+    labels: {},
     name: '',
     namespace: '',
     rules: [
       {
-        verbs: [],
         api_groups: [],
-        resources: [],
         resource_names: [],
+        resources: [],
+        verbs: [],
       },
     ],
-    labels: {},
-    annotations: {},
   });
 
   const editFormModel = ref<{
@@ -132,11 +132,11 @@ export function useRolePage() {
     namespace: string;
     rules: PolicyRuleParam[];
   }>({
+    annotations: {},
+    labels: {},
     name: '',
     namespace: '',
     rules: [],
-    labels: {},
-    annotations: {},
   });
 
   const createYamlFormModel = ref<{
@@ -154,37 +154,37 @@ export function useRolePage() {
   // form rules
   const createFormRules: Record<string, Rule[]> = {
     name: [
-      { required: true, message: '请输入 Role 名称', trigger: 'blur' },
+      { message: '请输入 Role 名称', required: true, trigger: 'blur' },
       {
-        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         message: '名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         trigger: 'blur',
       },
       { max: 63, message: '名称长度不能超过63个字符', trigger: 'blur' },
     ],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' },
+      { message: '请选择命名空间', required: true, trigger: 'change' },
     ],
   };
 
   const editFormRules: Record<string, Rule[]> = {
-    name: [{ required: true, message: '请输入 Role 名称', trigger: 'blur' }],
+    name: [{ message: '请输入 Role 名称', required: true, trigger: 'blur' }],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' },
+      { message: '请选择命名空间', required: true, trigger: 'change' },
     ],
   };
 
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
@@ -205,7 +205,6 @@ export function useRolePage() {
   });
 
   const rowSelection = computed(() => ({
-    selectedRowKeys: selectedRowKeys.value,
     onChange: (keys: string[], rows: K8sRole[]) => {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
@@ -233,6 +232,7 @@ export function useRolePage() {
         );
       }
     },
+    selectedRowKeys: selectedRowKeys.value,
   }));
 
   // helpers
@@ -249,11 +249,11 @@ export function useRolePage() {
     if (env === undefined || env === null) return '未知环境';
     const value = typeof env === 'string' ? Number.parseInt(env) : env;
     const map: Record<number, string> = {
-      [Env.Prod]: '生产',
       [Env.Dev]: '开发',
-      [Env.Stage]: '预发',
-      [Env.Rc]: '测试',
       [Env.Press]: '灰度',
+      [Env.Prod]: '生产',
+      [Env.Rc]: '测试',
+      [Env.Stage]: '预发',
     };
     return map[value] || '未知环境';
   };
@@ -354,8 +354,8 @@ export function useRolePage() {
       const params: GetRoleListReq = {
         cluster_id: clusterId,
         namespace,
-        search: searchText.value || undefined,
         page: currentPage.value,
+        search: searchText.value || undefined,
         size: pageSize.value,
       };
 
@@ -466,15 +466,15 @@ export function useRolePage() {
 
       const params: GetRoleDetailsReq = {
         cluster_id: clusterId,
-        namespace: role.namespace,
         name: role.name,
+        namespace: role.namespace,
       };
 
       const response = await getRoleDetailsApi(params);
       currentRoleDetail.value = response || role;
     } catch (error: any) {
       if (shouldNotifyPageError(error))
-        message.error('获取 Role 详情失败：' + (error.message || '未知错误'));
+        message.error(`获取 Role 详情失败：${error.message || '未知错误'}`);
       currentRoleDetail.value = role;
     } finally {
       detailLoading.value = false;
@@ -498,8 +498,8 @@ export function useRolePage() {
 
       const params: GetRoleYamlReq = {
         cluster_id: clusterId,
-        namespace: role.namespace,
         name: role.name,
+        namespace: role.namespace,
       };
 
       const response = await getRoleYamlApi(params);
@@ -508,7 +508,7 @@ export function useRolePage() {
       isYamlModalVisible.value = true;
     } catch (error: any) {
       if (shouldNotifyPageError(error))
-        message.error('获取 Role YAML 失败：' + (error.message || '未知错误'));
+        message.error(`获取 Role YAML 失败：${error.message || '未知错误'}`);
     } finally {
       submitLoading.value = false;
     }
@@ -533,8 +533,8 @@ export function useRolePage() {
 
       const params: UpdateRoleByYamlReq = {
         cluster_id: clusterId,
-        namespace: currentOperationRole.value.namespace,
         name: currentOperationRole.value.name,
+        namespace: currentOperationRole.value.namespace,
         yaml_content: yamlFormModel.value.yaml,
       };
 
@@ -546,7 +546,7 @@ export function useRolePage() {
       if (error.errorFields) return;
 
       if (shouldNotifyPageError(error))
-        message.error('更新 Role YAML 失败：' + (error.message || '未知错误'));
+        message.error(`更新 Role YAML 失败：${error.message || '未知错误'}`);
     } finally {
       submitLoading.value = false;
     }
@@ -554,18 +554,18 @@ export function useRolePage() {
 
   const resetCreateForm = () => {
     createFormModel.value = {
+      annotations: {},
+      labels: {},
       name: '',
       namespace: filterNamespace.value || '',
       rules: [
         {
-          verbs: [],
           api_groups: [],
-          resources: [],
           resource_names: [],
+          resources: [],
+          verbs: [],
         },
       ],
-      labels: {},
-      annotations: {},
     };
     formRef.value?.resetFields();
   };
@@ -623,26 +623,26 @@ export function useRolePage() {
             .filter((resource) => resource);
 
           return {
-            verbs: rule.verbs,
             api_groups: cleanedApiGroups,
-            resources: cleanedResources,
             resource_names: rule.resource_names || [],
+            resources: cleanedResources,
+            verbs: rule.verbs,
           };
         });
 
       const params: CreateRoleReq = {
-        cluster_id: filterClusterId.value,
-        namespace: createFormModel.value.namespace,
-        name: createFormModel.value.name,
-        rules: cleanedRules,
-        labels:
-          Object.keys(createFormModel.value.labels).length > 0
-            ? createFormModel.value.labels
-            : undefined,
         annotations:
           Object.keys(createFormModel.value.annotations).length > 0
             ? createFormModel.value.annotations
             : undefined,
+        cluster_id: filterClusterId.value,
+        labels:
+          Object.keys(createFormModel.value.labels).length > 0
+            ? createFormModel.value.labels
+            : undefined,
+        name: createFormModel.value.name,
+        namespace: createFormModel.value.namespace,
+        rules: cleanedRules,
       };
 
       await createRoleApi(params);
@@ -653,7 +653,7 @@ export function useRolePage() {
       if (error.errorFields) return;
 
       if (shouldNotifyPageError(error))
-        message.error('创建 Role 失败：' + (error.message || '未知错误'));
+        message.error(`创建 Role 失败：${error.message || '未知错误'}`);
     } finally {
       submitLoading.value = false;
     }
@@ -670,30 +670,30 @@ export function useRolePage() {
       submitLoading.value = true;
       const params = {
         cluster_id: clusterId,
-        namespace: role.namespace,
         name: role.name,
+        namespace: role.namespace,
       };
 
       const response = await getRoleDetailsApi(params);
 
       // 填充表单
       editFormModel.value = {
+        annotations: response.annotations || {},
+        labels: response.labels || {},
         name: response.name,
         namespace: response.namespace,
         rules: (response.rules || []).map((rule: any) => ({
-          verbs: rule.verbs || [],
           api_groups: rule.apiGroups || [],
-          resources: rule.resources || [],
           resource_names: rule.resourceNames || [],
+          resources: rule.resources || [],
+          verbs: rule.verbs || [],
         })),
-        labels: response.labels || {},
-        annotations: response.annotations || {},
       };
 
       isEditModalVisible.value = true;
     } catch (error: any) {
       if (shouldNotifyPageError(error))
-        message.error('获取 Role 详情失败：' + (error.message || '未知错误'));
+        message.error(`获取 Role 详情失败：${error.message || '未知错误'}`);
     } finally {
       submitLoading.value = false;
     }
@@ -702,11 +702,11 @@ export function useRolePage() {
   const closeEditModal = () => {
     isEditModalVisible.value = false;
     editFormModel.value = {
+      annotations: {},
+      labels: {},
       name: '',
       namespace: '',
       rules: [],
-      labels: {},
-      annotations: {},
     };
     editFormRef.value?.resetFields();
   };
@@ -749,26 +749,26 @@ export function useRolePage() {
             .filter((resource) => resource);
 
           return {
-            verbs: rule.verbs,
             api_groups: cleanedApiGroups,
-            resources: cleanedResources,
             resource_names: rule.resource_names || [],
+            resources: cleanedResources,
+            verbs: rule.verbs,
           };
         });
 
       const params: UpdateRoleReq = {
-        cluster_id: clusterId,
-        namespace: currentOperationRole.value.namespace,
-        name: currentOperationRole.value.name,
-        rules: cleanedRules,
-        labels:
-          Object.keys(editFormModel.value.labels).length > 0
-            ? editFormModel.value.labels
-            : undefined,
         annotations:
           Object.keys(editFormModel.value.annotations).length > 0
             ? editFormModel.value.annotations
             : undefined,
+        cluster_id: clusterId,
+        labels:
+          Object.keys(editFormModel.value.labels).length > 0
+            ? editFormModel.value.labels
+            : undefined,
+        name: currentOperationRole.value.name,
+        namespace: currentOperationRole.value.namespace,
+        rules: cleanedRules,
       };
 
       await updateRoleApi(params);
@@ -779,7 +779,7 @@ export function useRolePage() {
       if (error.errorFields) return;
 
       if (shouldNotifyPageError(error))
-        message.error('更新 Role 失败：' + (error.message || '未知错误'));
+        message.error(`更新 Role 失败：${error.message || '未知错误'}`);
     } finally {
       submitLoading.value = false;
     }
@@ -821,7 +821,7 @@ export function useRolePage() {
 
       if (shouldNotifyPageError(error))
         message.error(
-          '通过 YAML 创建 Role 失败：' + (error.message || '未知错误'),
+          `通过 YAML 创建 Role 失败：${error.message || '未知错误'}`,
         );
     } finally {
       submitLoading.value = false;
@@ -834,18 +834,17 @@ export function useRolePage() {
     if (!clusterId) return;
 
     Modal.confirm({
-      title: '删除确认',
+      cancelText: '取消',
+      centered: true,
       content: `确定要删除 Role "${role.namespace}/${role.name}" 吗？此操作不可逆！`,
       okText: '确认删除',
       okType: 'danger',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           const params: DeleteRoleReq = {
             cluster_id: clusterId,
-            namespace: role.namespace,
             name: role.name,
+            namespace: role.namespace,
           };
 
           await deleteRoleApi(params);
@@ -853,9 +852,10 @@ export function useRolePage() {
           await fetchRoles();
         } catch (error: any) {
           if (shouldNotifyPageError(error))
-            message.error('删除 Role 失败：' + (error.message || '未知错误'));
+            message.error(`删除 Role 失败：${error.message || '未知错误'}`);
         }
       },
+      title: '删除确认',
     });
   };
 
@@ -891,12 +891,11 @@ export function useRolePage() {
 
     if (operation === '删除') {
       Modal.confirm({
-        title: '批量删除确认',
+        cancelText: '取消',
+        centered: true,
         content: `确定要删除以下 ${selectedRows.value.length} 个 Role 吗？\n\n${names}\n\n此操作不可逆！`,
         okText: '确认删除',
         okType: 'danger',
-        cancelText: '取消',
-        centered: true,
         onOk: async () => {
           const deletePromises = selectedRows.value.map((role) => {
             const clusterId = validateClusterId(role);
@@ -904,8 +903,8 @@ export function useRolePage() {
 
             const params: DeleteRoleReq = {
               cluster_id: clusterId,
-              namespace: role.namespace,
               name: role.name,
+              namespace: role.namespace,
             };
             return deleteRoleApi(params);
           });
@@ -919,11 +918,12 @@ export function useRolePage() {
           } catch (error: any) {
             if (shouldNotifyPageError(error))
               message.error(
-                '批量删除部分 Role 失败：' + (error.message || '未知错误'),
+                `批量删除部分 Role 失败：${error.message || '未知错误'}`,
               );
             await fetchRoles();
           }
         },
+        title: '批量删除确认',
       });
     }
   };
@@ -946,10 +946,10 @@ export function useRolePage() {
 
   const addRuleField = () => {
     getCurrentFormModel().rules.push({
-      verbs: [],
       api_groups: [],
-      resources: [],
       resource_names: [],
+      resources: [],
+      verbs: [],
     });
   };
 
@@ -973,10 +973,8 @@ export function useRolePage() {
 
   const addApiGroupToRule = (ruleIndex: number, apiGroup: string) => {
     const formModel = getCurrentFormModel();
-    if (!formModel.rules[ruleIndex]?.api_groups) {
-      if (formModel.rules[ruleIndex]) {
-        formModel.rules[ruleIndex].api_groups = [];
-      }
+    if (!formModel.rules[ruleIndex]?.api_groups && formModel.rules[ruleIndex]) {
+      formModel.rules[ruleIndex].api_groups = [];
     }
     if (
       apiGroup !== undefined &&
@@ -992,10 +990,8 @@ export function useRolePage() {
 
   const addResourceToRule = (ruleIndex: number, resource: string) => {
     const formModel = getCurrentFormModel();
-    if (!formModel.rules[ruleIndex]?.resources) {
-      if (formModel.rules[ruleIndex]) {
-        formModel.rules[ruleIndex].resources = [];
-      }
+    if (!formModel.rules[ruleIndex]?.resources && formModel.rules[ruleIndex]) {
+      formModel.rules[ruleIndex].resources = [];
     }
     if (
       resource &&
@@ -1281,129 +1277,129 @@ export function useRolePage() {
   };
 
   return {
+    // form field operations
+    addApiGroupToRule,
+    // filter operations
+    addFilterLabel,
+    addResourceToRule,
+    addRuleField,
+    addVerbToRule,
+    // batch operations
+    batchOperation,
+    clearFilterLabels,
+    // operations
+    clearNamespaces,
+    clearRoles,
+    // YAML utility functions
+    clearYaml,
+    // create operations
+    closeCreateModal,
+    closeCreateYamlModal,
+    // detail operations
+    closeDetailModal,
+    // edit operations
+    closeEditModal,
+    // YAML operations
+    closeYamlModal,
     // state
     clusters,
     clustersError,
     clustersLoading,
     clustersTotal,
+
+    // form models
+    createFormModel,
+    // form rules
+    createFormRules,
+    createYamlFormModel,
+    // form refs
+    createYamlFormRef,
+    createYamlFormRules,
+    // operation targets
+    currentOperationRole,
     currentPage,
-    filterClusterId,
-    filterLabels,
-    filterNamespace,
-    loadError,
-    loading,
-    namespaces,
-    namespacesError,
-    namespacesLoading,
-    namespacesTotal,
-    pageSize,
-    roles,
-    searchText,
-    selectedRows,
-    total,
+
+    currentRoleDetail,
+    // role operations
+    deleteRole,
 
     // modal state
     detailLoading,
+    editFormModel,
+    editFormRef,
+    editFormRules,
+
+    fetchClusters,
+    fetchNamespaces,
+    fetchRoles,
+    filterClusterId,
+
+    // computed
+    filteredRoles,
+    filterLabels,
+    filterNamespace,
+    formatEditYaml,
+
+    formatYaml,
+    formRef,
+
+    // helpers
+    getEnvText,
+    // pagination operations
+    handlePageChange,
+
+    insertYamlTemplate,
     isCreateModalVisible,
     isCreateYamlModalVisible,
     isDetailModalVisible,
     isEditModalVisible,
     isYamlModalVisible,
-    submitLoading,
+    loadError,
 
-    // operation targets
-    currentOperationRole,
-    currentRoleDetail,
-
-    // form models
-    createFormModel,
-    createYamlFormModel,
-    editFormModel,
-    yamlFormModel,
-
-    // form refs
-    createYamlFormRef,
-    editFormRef,
-    formRef,
-    yamlFormRef,
-
-    // form rules
-    createFormRules,
-    createYamlFormRules,
-    editFormRules,
-    yamlFormRules,
-
-    // computed
-    filteredRoles,
-    rowSelection,
-
-    // helpers
-    getEnvText,
-    validateClusterId,
-
-    // operations
-    clearNamespaces,
-    clearRoles,
-    fetchClusters,
-    fetchNamespaces,
-    fetchRoles,
+    loading,
     loadMoreClusters,
+
     loadMoreNamespaces,
+    namespaces,
+    namespacesError,
 
-    // detail operations
-    closeDetailModal,
-    showRoleDetail,
-
-    // YAML operations
-    closeYamlModal,
-    showYamlModal,
-    submitYamlForm,
-
-    // create operations
-    closeCreateModal,
-    closeCreateYamlModal,
+    namespacesLoading,
+    namespacesTotal,
     openCreateModal,
     openCreateYamlModal,
-    submitCreateForm,
-    submitCreateYamlForm,
-
-    // edit operations
-    closeEditModal,
     openEditModal,
-    submitEditForm,
+    pageSize,
 
-    // role operations
-    deleteRole,
-
-    // filter operations
-    addFilterLabel,
-    clearFilterLabels,
-    removeFilterLabel,
-
-    // batch operations
-    batchOperation,
-
-    // pagination operations
-    handlePageChange,
-
-    // form field operations
-    addApiGroupToRule,
-    addResourceToRule,
-    addRuleField,
-    addVerbToRule,
     removeAnnotationField,
     removeApiGroupFromRule,
+    removeFilterLabel,
+
     removeLabelField,
+
     removeResourceFromRule,
     removeRuleField,
     removeVerbFromRule,
 
-    // YAML utility functions
-    clearYaml,
-    formatEditYaml,
-    formatYaml,
-    insertYamlTemplate,
+    roles,
+
+    rowSelection,
+
+    searchText,
+    selectedRows,
+    showRoleDetail,
+    showYamlModal,
+    submitCreateForm,
+    submitCreateYamlForm,
+    submitEditForm,
+    submitLoading,
+    submitYamlForm,
+    total,
+
+    validateClusterId,
     validateEditYaml,
     validateYaml,
+    yamlFormModel,
+    yamlFormRef,
+    yamlFormRules,
   };
 }

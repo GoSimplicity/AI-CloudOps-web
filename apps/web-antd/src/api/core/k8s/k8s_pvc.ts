@@ -2,9 +2,9 @@ import { requestClient } from '#/api/request';
 
 // PVC状态枚举
 export enum K8sPVCStatus {
-  Pending = 1, // 等待中
   Bound = 2, // 已绑定
   Lost = 3, // 丢失
+  Pending = 1, // 等待中
   Terminating = 4, // 终止中
   Unknown = 5, // 未知
 }

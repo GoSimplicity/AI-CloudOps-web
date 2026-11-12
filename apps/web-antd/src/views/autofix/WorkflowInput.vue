@@ -4,7 +4,7 @@ import type { AutoFixTemplateKey } from './useAutoFixWorkflow';
 import { usePermission } from '#/utils/permission';
 
 defineProps<{ busy: boolean; valid: boolean }>();
-const emit = defineEmits<{ run: []; reset: []; templateChange: [] }>();
+const emit = defineEmits<{ reset: []; run: []; templateChange: [] }>();
 const { can } = usePermission();
 const namespace = defineModel<string>('namespace', { required: true });
 const deployment = defineModel<string>('deployment', { required: true });
@@ -64,9 +64,9 @@ const templateKey = defineModel<AutoFixTemplateKey>('templateKey', {
       <a-button :disabled="busy" @click="emit('reset')">重置</a-button>
       <a-button
         v-if="can('aiops.autofix.run')"
-        type="primary"
-        :loading="busy"
         :disabled="!valid || busy"
+        :loading="busy"
+        type="primary"
         @click="emit('run')"
       >
         执行自动修复

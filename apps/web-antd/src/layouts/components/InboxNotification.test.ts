@@ -1,7 +1,6 @@
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
-
 import { reactive } from 'vue';
 
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
@@ -14,33 +13,33 @@ function required<T>(value: null | T | undefined): T {
   return value;
 }
 
-const account = vi.hoisted(() => ({ user: null as any, access: null as any }));
+const account = vi.hoisted(() => ({ access: null as any, user: null as any }));
 const api = vi.hoisted(() => ({
+  deleteInboxMessage: vi.fn(),
+  getInboxMessages: vi.fn(),
   getInboxPermissions: vi.fn(),
   getInboxUnreadCount: vi.fn(),
-  getInboxMessages: vi.fn(),
-  markInboxRead: vi.fn(),
   markAllInboxRead: vi.fn(),
-  deleteInboxMessage: vi.fn(),
+  markInboxRead: vi.fn(),
 }));
 const http = vi.hoisted(() => ({
+  delete: vi.fn(),
   get: vi.fn(),
   post: vi.fn(),
-  delete: vi.fn(),
 }));
 vi.mock('@vben/stores', () => ({
-  useUserStore: () => account.user,
   useAccessStore: () => account.access,
+  useUserStore: () => account.user,
 }));
 vi.mock('#/api/request', () => ({ requestClient: http }));
 vi.mock('#/api/core/workorder/inbox', () => ({
   ...api,
   inboxPermissions: {
-    list: 'GET /api/workorder/notification/inbox',
-    unread: 'GET /api/workorder/notification/inbox/unread',
+    delete: 'DELETE /api/workorder/notification/inbox/:id',
     read: 'POST /api/workorder/notification/inbox/:id/read',
     readAll: 'POST /api/workorder/notification/inbox/read-all',
-    delete: 'DELETE /api/workorder/notification/inbox/:id',
+    unread: 'GET /api/workorder/notification/inbox/unread',
+    list: 'GET /api/workorder/notification/inbox',
   },
 }));
 const codes = [
@@ -51,20 +50,20 @@ const codes = [
   'DELETE /api/workorder/notification/inbox/:id',
 ];
 const perms = (permissions = codes, super_admin = false) => ({
-  version: 2,
-  super_admin,
   permissions,
+  super_admin,
+  version: 2,
 });
 const record = (id = 11) => ({
-  id,
-  event_id: 3,
-  notification_id: 4,
-  instance_id: 5,
-  event_type: 'instance_created',
-  subject: '测试消息',
   content: '<img src=x onerror=alert(1)>',
-  read_at: null,
   created_at: '2026-10-29T10:00:00Z',
+  event_id: 3,
+  event_type: 'instance_created',
+  id,
+  instance_id: 5,
+  notification_id: 4,
+  read_at: null,
+  subject: '测试消息',
 });
 const deferred = () => {
   let resolve!: (value: any) => void;
@@ -106,15 +105,15 @@ beforeEach(() => {
   account.access = reactive({ accessToken: 'fixture' });
   api.getInboxPermissions.mockResolvedValue(perms());
   api.getInboxUnreadCount.mockResolvedValue({ unread: 1 });
-  api.getInboxMessages.mockResolvedValue({ items: [record()], total: 1 });
+  api.getInboxMessages.mockResolvedValue({ total: 1, items: [record()] });
   api.markInboxRead.mockResolvedValue(undefined);
   api.markAllInboxRead.mockResolvedValue(undefined);
   api.deleteInboxMessage.mockResolvedValue(undefined);
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -199,8 +198,8 @@ it('用户切换清空旧消息，迟到响应不能显示给新用户', async (
   account.access.accessToken = 'other';
   await flushPromises();
   pending.resolve({
-    items: [{ ...record(), subject: 'old-private-content' }],
     total: 1,
+    items: [{ ...record(), subject: 'old-private-content' }],
   });
   await flushPromises();
   expect(document.body.textContent).not.toContain('old-private-content');
@@ -246,7 +245,7 @@ it('同一用户token轮换不解除在途请求锁', async () => {
   await flushPromises();
 });
 it('未读筛选与分页参数一致，旧请求不会覆盖新结果', async () => {
-  api.getInboxMessages.mockResolvedValue({ items: [record()], total: 21 });
+  api.getInboxMessages.mockResolvedValue({ total: 21, items: [record()] });
   await start();
   await open();
   const checkbox = document.querySelector<HTMLInputElement>(

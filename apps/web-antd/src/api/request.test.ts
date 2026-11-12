@@ -12,17 +12,17 @@ import { requestClient } from './request';
 
 const notices = vi.hoisted(() => ({
   error: vi.fn(),
-  warning: vi.fn(),
-  success: vi.fn(),
   info: vi.fn(),
+  success: vi.fn(),
+  warning: vi.fn(),
 }));
 
 vi.mock('ant-design-vue', () => ({ message: notices }));
 vi.mock('@vben/stores', () => ({
   useAccessStore: () => ({
     accessToken: 'token',
-    refreshToken: 'refresh',
     isAccessChecked: true,
+    refreshToken: 'refresh',
     setAccessToken: vi.fn(),
     setLoginExpired: vi.fn(),
   }),
@@ -136,7 +136,7 @@ describe('请求层 403 统一提示', () => {
   it('同一个错误对象重复经过拦截器（如 401 刷新后重放）只提示一次', async () => {
     const notify = vi.fn();
     const { rejected } = createForbiddenResponseInterceptor(notify);
-    const error = { response: { status: 403, data: { code: 403 } } };
+    const error = { response: { data: { code: 403 }, status: 403 } };
     await rejected(error).catch(() => {});
     await rejected(error).catch(() => {});
     expect(notify).toHaveBeenCalledTimes(1);
@@ -145,7 +145,7 @@ describe('请求层 403 统一提示', () => {
   it('非 403 不触发统一权限提示', async () => {
     const notify = vi.fn();
     const { rejected } = createForbiddenResponseInterceptor(notify);
-    await rejected({ response: { status: 500, data: { code: 1 } } }).catch(
+    await rejected({ response: { data: { code: 1 }, status: 500 } }).catch(
       () => {},
     );
     expect(notify).not.toHaveBeenCalled();

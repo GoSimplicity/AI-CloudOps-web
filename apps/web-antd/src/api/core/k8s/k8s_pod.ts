@@ -2,19 +2,19 @@ import { requestClient } from '#/api/request';
 
 // K8sPod状态枚举
 export enum K8sPodStatus {
+  Failed = 'Failed',
   Pending = 'Pending',
   Running = 'Running',
   Succeeded = 'Succeeded',
-  Failed = 'Failed',
   Unknown = 'Unknown',
 }
 
 // Pod阶段枚举
 export enum K8sPodPhase {
+  Failed = 'Failed',
   Pending = 'Pending',
   Running = 'Running',
   Succeeded = 'Succeeded',
-  Failed = 'Failed',
   Unknown = 'Unknown',
 }
 
@@ -420,7 +420,7 @@ export const createK8sPodWebSocketConnection = (params: PodExecReq) => {
 
 // 保留原有的简单版本API作为备用
 export const execK8sPod = (params: PodExecReq) => {
-  const { cluster_id, namespace, pod_name, container, shell } = params;
+  const { cluster_id, container, namespace, pod_name, shell } = params;
   return requestClient.post(
     `/k8s/pod/${cluster_id}/${namespace}/${pod_name}/containers/${container}/exec`,
     {
@@ -465,12 +465,12 @@ export const downloadK8sPodFile = (params: PodFileDownloadReq) => {
   queryParams.append('file_path', params.file_path);
 
   const config = {
-    responseType: 'blob' as const,
-    params: queryParams,
-    timeout: 300_000, // 5分钟超时
     headers: {
       Accept: 'application/octet-stream, */*',
     },
+    params: queryParams,
+    responseType: 'blob' as const,
+    timeout: 300_000, // 5分钟超时
   };
 
   return requestClient.get(url, config);

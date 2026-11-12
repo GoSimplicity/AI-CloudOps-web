@@ -2,14 +2,14 @@ import { requestClient } from '#/api/request';
 
 // K8s Secret类型枚举
 export enum K8sSecretType {
-  Opaque = 'Opaque', // 通用Secret
-  ServiceAccountToken = 'kubernetes.io/service-account-token', // ServiceAccount令牌
+  BasicAuth = 'kubernetes.io/basic-auth', // 基础认证
+  BootstrapToken = 'bootstrap.kubernetes.io/token', // 引导令牌
   Dockercfg = 'kubernetes.io/dockercfg', // Docker配置
   DockerConfigJson = 'kubernetes.io/dockerconfigjson', // Docker配置JSON
-  BasicAuth = 'kubernetes.io/basic-auth', // 基础认证
+  Opaque = 'Opaque', // 通用Secret
+  ServiceAccountToken = 'kubernetes.io/service-account-token', // ServiceAccount令牌
   SSHAuth = 'kubernetes.io/ssh-auth', // SSH认证
   TLS = 'kubernetes.io/tls', // TLS证书
-  BootstrapToken = 'bootstrap.kubernetes.io/token', // 引导令牌
 }
 
 // K8s Secret模型
@@ -136,11 +136,11 @@ export interface DeleteSecretReq {
 export async function getSecretListApi(params: GetSecretListReq) {
   return requestClient.get(`/k8s/secret/${params.cluster_id}/list`, {
     params: {
-      namespace: params.namespace,
-      type: params.type,
       labels: params.labels,
+      namespace: params.namespace,
       page: params.page,
       size: params.size,
+      type: params.type,
     },
   });
 }

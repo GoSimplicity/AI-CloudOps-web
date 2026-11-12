@@ -12,17 +12,17 @@ import { requestClientAIOps } from '../../request';
 export enum SeverityLevel {
   CRITICAL = 'critical',
   HIGH = 'high',
-  MEDIUM = 'medium',
   LOW = 'low',
+  MEDIUM = 'medium',
 }
 
 /**
  * 数据源类型枚举
  */
 export enum DataSourceType {
-  METRICS = 'metrics',
   EVENTS = 'events',
   LOGS = 'logs',
+  METRICS = 'metrics',
 }
 
 /**
@@ -204,17 +204,17 @@ export interface RCAErrorSummaryRequest {
  * 根因分析响应模型
  */
 export interface RCACollectionSource {
-  status?: 'success' | 'empty' | 'partial' | 'failed';
+  status?: 'empty' | 'failed' | 'partial' | 'success';
   count?: number;
   succeeded?: number;
   failed?: number;
 }
 
 export interface RCACollection {
-  status?: 'complete' | 'partial' | 'failed';
+  status?: 'complete' | 'failed' | 'partial';
   coverage?: null | number;
   coverage_basis?: string;
-  sources?: Partial<Record<'metrics' | 'events' | 'logs', RCACollectionSource>>;
+  sources?: Partial<Record<'events' | 'logs' | 'metrics', RCACollectionSource>>;
 }
 
 export interface RCAAnalysisResponse {

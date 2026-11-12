@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
 import {
   computed,
   nextTick,
@@ -13,7 +12,6 @@ import { useRouter } from 'vue-router';
 
 import { useUserStore } from '@vben/stores';
 
-import { Empty, type FormInstance, message, Modal } from 'ant-design-vue';
 import {
   ApiOutlined,
   CodeOutlined,
@@ -26,6 +24,7 @@ import {
   WindowsOutlined,
 } from '@ant-design/icons-vue';
 import { useWindowSize } from '@vueuse/core';
+import { Empty, type FormInstance, message, Modal } from 'ant-design-vue';
 
 import {
   AuthMode,
@@ -45,6 +44,7 @@ import {
   updateTreeLocal,
 } from '#/api/core/tree/tree_local';
 import { getTreeList } from '#/api/core/tree/tree_node';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { useAuthStore } from '#/store';
 import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
@@ -156,10 +156,10 @@ function knownTreeNodeIds(nodes: BindingTreeNode[]): Set<number> {
 const pagination = reactive({
   current: 1,
   pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
   showQuickJumper: true,
+  showSizeChanger: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
+  total: 0,
 });
 
 const filterForm = reactive<GetTreeLocalResourceListReq>({
@@ -169,20 +169,20 @@ const filterForm = reactive<GetTreeLocalResourceListReq>({
 });
 
 // 修复：使用 ref 而不是 reactive 来保证 tags 数组的响应式
-const formData = ref<CreateTreeLocalResourceReq & { id?: number }>({
-  name: '',
-  environment: 'local',
-  description: '',
-  tags: [],
-  ip_addr: '',
-  port: 22,
-  username: 'root',
-  password: '',
-  os_type: 'linux',
-  os_name: '',
-  image_name: '',
+const formData = ref<{ id?: number } & CreateTreeLocalResourceReq>({
   auth_mode: AuthMode.PASSWORD,
+  description: '',
+  environment: 'local',
+  image_name: '',
+  ip_addr: '',
   key: '',
+  name: '',
+  os_name: '',
+  os_type: 'linux',
+  password: '',
+  port: 22,
+  tags: [],
+  username: 'root',
 });
 
 const modalWidth = computed(() => {
@@ -257,10 +257,7 @@ const paginationConfig = computed(() => ({
 }));
 
 const formRules = computed(() => ({
-  name: [
-    { message: '请输入服务器名称', required: true, trigger: 'blur' },
-    { max: 50, message: '名称长度在2-50个字符之间', min: 2, trigger: 'blur' },
-  ],
+  auth_mode: [{ message: '请选择认证方式', required: true, trigger: 'change' }],
   ip_addr: [
     { message: '请输入IP地址', required: true, trigger: 'blur' },
     {
@@ -270,6 +267,32 @@ const formRules = computed(() => ({
       trigger: 'blur',
     },
   ],
+  key:
+    formData.value.auth_mode === AuthMode.KEY
+      ? [
+          {
+            message: '请输入SSH私钥',
+            required: !isEdit.value || existingAuthMode.value !== AuthMode.KEY,
+            trigger: 'blur',
+          },
+          { trigger: 'blur', validator: validatePrivateKey },
+        ]
+      : [],
+  name: [
+    { message: '请输入服务器名称', required: true, trigger: 'blur' },
+    { max: 50, message: '名称长度在2-50个字符之间', min: 2, trigger: 'blur' },
+  ],
+  os_type: [
+    { message: '请选择操作系统类型', required: true, trigger: 'change' },
+  ],
+  password:
+    formData.value.auth_mode === AuthMode.PASSWORD &&
+    (!isEdit.value || existingAuthMode.value !== AuthMode.PASSWORD)
+      ? [
+          { message: '请输入登录密码', required: true, trigger: 'blur' },
+          { message: '密码长度至少6位', min: 6, trigger: 'blur' },
+        ]
+      : [],
   port: [
     { message: '请输入SSH端口', required: true, trigger: 'blur' },
     {
@@ -284,29 +307,6 @@ const formRules = computed(() => ({
     { message: '请输入用户名', required: true, trigger: 'blur' },
     { max: 50, message: '用户名长度在1-50个字符之间', min: 1, trigger: 'blur' },
   ],
-  os_type: [
-    { message: '请选择操作系统类型', required: true, trigger: 'change' },
-  ],
-  auth_mode: [{ message: '请选择认证方式', required: true, trigger: 'change' }],
-  password:
-    formData.value.auth_mode === AuthMode.PASSWORD &&
-    (!isEdit.value || existingAuthMode.value !== AuthMode.PASSWORD)
-      ? [
-          { message: '请输入登录密码', required: true, trigger: 'blur' },
-          { message: '密码长度至少6位', min: 6, trigger: 'blur' },
-        ]
-      : [],
-  key:
-    formData.value.auth_mode === AuthMode.KEY
-      ? [
-          {
-            required: !isEdit.value || existingAuthMode.value !== AuthMode.KEY,
-            message: '请输入SSH私钥',
-            trigger: 'blur',
-          },
-          { validator: validatePrivateKey, trigger: 'blur' },
-        ]
-      : [],
 }));
 
 const showUnbindModal = (record: TreeLocalResource): void => {
@@ -346,14 +346,14 @@ const columns = [
 
 const getServerStatusClass = (record: TreeLocalResource): string => {
   switch (record.status) {
+    case ResourceStatus.ERROR: {
+      return 'status-error';
+    }
     case ResourceStatus.RUNNING: {
       return 'status-running';
     }
     case ResourceStatus.STOPPED: {
       return 'status-stopped';
-    }
-    case ResourceStatus.ERROR: {
-      return 'status-error';
     }
     default: {
       return 'status-unknown';
@@ -390,34 +390,34 @@ const formatDateTime = (dateTime?: string): string => {
 
 const getStatusBadge = (status: ResourceStatus): string => {
   const statusMap: Record<ResourceStatus, string> = {
-    [ResourceStatus.RUNNING]: 'success',
-    [ResourceStatus.STOPPED]: 'error',
-    [ResourceStatus.STARTING]: 'processing',
-    [ResourceStatus.STOPPING]: 'warning',
-    [ResourceStatus.RESTARTING]: 'processing',
     [ResourceStatus.DELETING]: 'warning',
     [ResourceStatus.ERROR]: 'error',
+    [ResourceStatus.RESTARTING]: 'processing',
+    [ResourceStatus.RUNNING]: 'success',
+    [ResourceStatus.STARTING]: 'processing',
+    [ResourceStatus.STOPPED]: 'error',
+    [ResourceStatus.STOPPING]: 'warning',
   };
   return statusMap[status] || 'default';
 };
 
 const getStatusText = (status: ResourceStatus): string => {
   const statusMap: Record<ResourceStatus, string> = {
-    [ResourceStatus.RUNNING]: '运行中',
-    [ResourceStatus.STOPPED]: '已停止',
-    [ResourceStatus.STARTING]: '启动中',
-    [ResourceStatus.STOPPING]: '停止中',
-    [ResourceStatus.RESTARTING]: '重启中',
     [ResourceStatus.DELETING]: '删除中',
     [ResourceStatus.ERROR]: '错误',
+    [ResourceStatus.RESTARTING]: '重启中',
+    [ResourceStatus.RUNNING]: '运行中',
+    [ResourceStatus.STARTING]: '启动中',
+    [ResourceStatus.STOPPED]: '已停止',
+    [ResourceStatus.STOPPING]: '停止中',
   };
   return statusMap[status] || '未知';
 };
 
 const getAuthModeText = (authMode: AuthMode): string => {
   const authModeMap: Record<AuthMode, string> = {
-    [AuthMode.PASSWORD]: '密码认证',
     [AuthMode.KEY]: '密钥认证',
+    [AuthMode.PASSWORD]: '密码认证',
   };
   return authModeMap[authMode] || '未知';
 };
@@ -517,19 +517,19 @@ const handleConnectTerminal = (record: TreeLocalResource): void => {
 const resetFormData = (): void => {
   clearDraftSecrets();
   formData.value = {
-    name: '',
-    environment: 'local',
-    description: '',
-    tags: [],
-    ip_addr: '',
-    port: 22,
-    username: 'root',
-    password: '',
-    os_type: 'linux',
-    os_name: '',
-    image_name: '',
     auth_mode: AuthMode.PASSWORD,
+    description: '',
+    environment: 'local',
+    image_name: '',
+    ip_addr: '',
     key: '',
+    name: '',
+    os_name: '',
+    os_type: 'linux',
+    password: '',
+    port: 22,
+    tags: [],
+    username: 'root',
   };
   newTag.value = '';
 };
@@ -562,20 +562,20 @@ const handleEdit = (record: TreeLocalResource): void => {
   existingAuthMode.value = record.auth_mode;
   isEdit.value = true;
   formData.value = {
-    id: record.id,
-    name: record.name,
-    environment: record.environment,
-    description: record.description,
-    tags: record.tags?.map((tag) => ({ ...tag })) ?? [],
-    ip_addr: record.ip_addr,
-    port: record.port,
-    username: record.username,
-    password: '',
-    os_type: record.os_type,
-    os_name: record.os_name,
-    image_name: record.image_name,
     auth_mode: record.auth_mode,
+    description: record.description,
+    environment: record.environment,
+    id: record.id,
+    image_name: record.image_name,
+    ip_addr: record.ip_addr,
     key: '',
+    name: record.name,
+    os_name: record.os_name,
+    os_type: record.os_type,
+    password: '',
+    port: record.port,
+    tags: record.tags?.map((tag) => ({ ...tag })) ?? [],
+    username: record.username,
   };
   modalVisible.value = true;
 };
@@ -971,11 +971,10 @@ const handleDelete = (record: TreeLocalResource): void => {
   deleteDialog?.destroy();
   let consumed = false;
   const dialog = Modal.confirm({
-    title: '确定要删除此服务器吗？',
+    cancelText: '取消',
     content: `您正在删除服务器: ${record.name} (${record.ip_addr})，该操作不可恢复。`,
     okText: '确认删除',
     okType: 'danger',
-    cancelText: '取消',
     onCancel() {
       if (deleteRevision === request) {
         deleteRevision += 1;
@@ -1005,6 +1004,7 @@ const handleDelete = (record: TreeLocalResource): void => {
         if (deleteDialog === dialog) deleteDialog = undefined;
       }
     },
+    title: '确定要删除此服务器吗？',
   });
   deleteDialog = dialog;
 };
@@ -1136,12 +1136,12 @@ onBeforeUnmount(() => {
           <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页运行中"
                 :value="
                   localResources.filter(
                     (item) => item.status === ResourceStatus.RUNNING,
                   ).length
                 "
+                title="本页运行中"
               >
                 <template #prefix>
                   <ApiOutlined />
@@ -1152,11 +1152,11 @@ onBeforeUnmount(() => {
           <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页Linux系统"
                 :value="
                   localResources.filter((item) => item.os_type === 'linux')
                     .length
                 "
+                title="本页Linux系统"
               >
                 <template #prefix>
                   <DesktopOutlined />
@@ -1167,12 +1167,12 @@ onBeforeUnmount(() => {
           <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页已绑定节点"
                 :value="
                   localResources.filter(
                     (item) => item.tree_nodes && item.tree_nodes.length > 0,
                   ).length
                 "
+                title="本页已绑定节点"
               >
                 <template #prefix>
                   <DeploymentUnitOutlined />
@@ -1202,8 +1202,8 @@ onBeforeUnmount(() => {
             <template v-if="column.key === 'name'">
               <div class="server-name-cell">
                 <div
-                  class="server-badge"
                   :class="getServerStatusClass(record)"
+                  class="server-badge"
                 ></div>
                 <span class="server-name-text">{{ record.name }}</span>
               </div>
@@ -1292,12 +1292,12 @@ onBeforeUnmount(() => {
             <template v-if="column.key === 'creator'">
               <div class="creator-info">
                 <a-avatar
-                  size="small"
                   :style="{
                     backgroundColor: getAvatarColor(
                       record.create_user_name || '',
                     ),
                   }"
+                  size="small"
                 >
                   {{ getInitials(record.create_user_name || 'Admin') }}
                 </a-avatar>
@@ -1356,8 +1356,8 @@ onBeforeUnmount(() => {
                       <a-menu-item
                         v-if="can('tree.local.delete')"
                         key="delete"
-                        @click="handleDelete(record)"
                         danger
+                        @click="handleDelete(record)"
                       >
                         <DeleteOutlined /> 删除
                       </a-menu-item>
@@ -1537,7 +1537,7 @@ onBeforeUnmount(() => {
                   v-model:value="newTag"
                   placeholder="输入标签（如 team=ops），按回车添加"
                   style="width: 200px; margin-right: 8px"
-                  @pressEnter="addTag"
+                  @press-enter="addTag"
                 />
                 <a-button class="add-tag-btn" type="dashed" @click="addTag">
                   <PlusOutlined /> 添加标签

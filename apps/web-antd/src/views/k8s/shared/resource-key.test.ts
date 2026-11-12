@@ -17,9 +17,9 @@ describe('kubernetes 表格资源身份', () => {
   });
   it('跨命名空间及集群的同名资源不会共享选择键', () => {
     const records = [
-      { cluster_id: 1, namespace: 'alpha', name: 'web' },
-      { cluster_id: 1, namespace: 'beta', name: 'web' },
-      { cluster_id: 2, namespace: 'alpha', name: 'web' },
+      { cluster_id: 1, name: 'web', namespace: 'alpha' },
+      { cluster_id: 1, name: 'web', namespace: 'beta' },
+      { cluster_id: 2, name: 'web', namespace: 'alpha' },
     ];
     expect(new Set(records.map(namespacedResourceKey)).size).toBe(3);
     expect(namespacedResourceKey({ ...required(records[0]) })).toBe(

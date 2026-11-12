@@ -1,12 +1,10 @@
 <script lang="ts" setup>
 import type { Dayjs } from 'dayjs';
 
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { downloadCsv } from '#/utils/export-csv';
 import { computed, onMounted, reactive, ref } from 'vue';
 
-import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
+import { message } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
 import {
@@ -25,6 +23,8 @@ import {
   type SearchAuditLogsRequest,
 } from '#/api/core/system/audit';
 import { getUserDetailApi } from '#/api/core/system/user';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { downloadCsv } from '#/utils/export-csv';
 import { getOwnLookupValue } from '#/utils/own-lookup';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
@@ -63,14 +63,14 @@ const advancedSearchVisible = ref(false);
 const auditLogList = ref<AuditLogWithUser[]>([]);
 const viewLogData = ref<AuditLogWithUser | null>(null);
 const auditStatistics = ref<AuditStatistics>({
-  total_count: 0,
-  today_count: 0,
-  error_count: 0,
   avg_duration: 0,
-  type_distribution: [],
-  status_distribution: [],
-  recent_activity: [],
+  error_count: 0,
   hourly_trend: [],
+  recent_activity: [],
+  status_distribution: [],
+  today_count: 0,
+  total_count: 0,
+  type_distribution: [],
 });
 const auditTypes = ref<AuditTypeInfo[]>([]);
 
@@ -85,32 +85,32 @@ const endTime = ref<Dayjs>();
 
 // 搜索参数
 const searchParams = reactive({
-  search: '',
   operation_type: undefined as string | undefined,
-  target_type: undefined as string | undefined,
+  search: '',
   status_code: undefined as number | undefined,
+  target_type: undefined as string | undefined,
 });
 
 // 高级搜索参数
 const advancedSearchParams = reactive<AdvancedSearchOptions>({
+  duration_max: undefined,
+  duration_min: undefined,
+  endpoint_pattern: '',
+  has_error: false,
   ip_address_list: [],
   status_code_list: [],
-  duration_min: undefined,
-  duration_max: undefined,
-  has_error: false,
-  endpoint_pattern: '',
 });
 
 // 分页配置
 const paginationConfig = reactive({
   current: 1,
   pageSize: 20,
-  total: 0,
-  showSizeChanger: true,
-  showQuickJumper: true,
   pageSizeOptions: ['10', '20', '50', '100'],
+  showQuickJumper: true,
+  showSizeChanger: true,
   showTotal: (total: number, range: [number, number]) =>
     `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+  total: 0,
 });
 
 // 计算属性
@@ -303,9 +303,9 @@ const performAdvancedSearch = async () => {
   loading.value = true;
   try {
     const params: SearchAuditLogsRequest = {
+      advanced: { ...advancedSearchParams },
       page: paginationConfig.current,
       size: paginationConfig.pageSize,
-      advanced: { ...advancedSearchParams },
     };
 
     // 添加基础搜索条件
@@ -371,12 +371,12 @@ const handleReset = () => {
 
   // 重置高级搜索参数
   Object.assign(advancedSearchParams, {
+    duration_max: undefined,
+    duration_min: undefined,
+    endpoint_pattern: '',
+    has_error: false,
     ip_address_list: [],
     status_code_list: [],
-    duration_min: undefined,
-    duration_max: undefined,
-    has_error: false,
-    endpoint_pattern: '',
   });
 
   paginationConfig.current = 1;
@@ -484,8 +484,8 @@ onMounted(() => {
       </a-button>
       <a-button
         v-if="selectedRowKeys.length > 0 && can('system.audit.batchDelete')"
-        type="primary"
         danger
+        type="primary"
         @click="handleBatchDelete"
       >
         批量删除 ({{ selectedRowKeys.length }})
@@ -526,7 +526,7 @@ onMounted(() => {
             aria-label="搜索审计日志"
             class="search-input"
             placeholder="搜索关键词、Trace ID..."
-            @pressEnter="handleSearch"
+            @press-enter="handleSearch"
           >
             <template #prefix>
               <Icon icon="material-symbols:search" />

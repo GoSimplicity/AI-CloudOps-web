@@ -1,7 +1,7 @@
+import { readFileSync } from 'node:fs';
 import process from 'node:process';
 
 import { expect, test } from '@playwright/test';
-import { readFileSync } from 'node:fs';
 
 import { requireFixtureValue } from '../../internal/test-utils/required-fixture-value';
 
@@ -39,7 +39,7 @@ test('welcome displays local metrics, read-only refresh and compact themed mobil
     )
       forbidden.push(`${request.method()} ${path}`);
   });
-  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.setViewportSize({ height: 1000, width: 1440 });
   await page.goto(route('/auth/login'));
   await page.getByLabel('账号', { exact: true }).fill('admin');
   try {
@@ -93,18 +93,18 @@ test('welcome displays local metrics, read-only refresh and compact themed mobil
     await page.getByLabel('浅色', { exact: true }).click();
   await expect(page.locator('html')).not.toHaveClass(/dark/);
   await page.screenshot({
-    path: '.cache/ui-verification/system-welcome-desktop-light.png',
-    fullPage: true,
     animations: 'disabled',
+    fullPage: true,
+    path: '.cache/ui-verification/system-welcome-desktop-light.png',
   });
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ height: 844, width: 390 });
   await page.getByLabel('深色', { exact: true }).click();
   await expect(page.locator('html')).toHaveClass(/dark/);
   await page.waitForTimeout(180);
   const boxes = await page.locator('.metric-card').evaluateAll((cards) =>
     cards.map((card) => {
       const box = card.getBoundingClientRect();
-      return { width: box.width, height: box.height, top: box.top };
+      return { height: box.height, top: box.top, width: box.width };
     }),
   );
   expect(
@@ -138,20 +138,20 @@ test('welcome displays local metrics, read-only refresh and compact themed mobil
     }),
   ).toBe(true);
   await page.screenshot({
-    path: '.cache/ui-verification/system-welcome-mobile-dark.png',
-    fullPage: true,
     animations: 'disabled',
+    fullPage: true,
+    path: '.cache/ui-verification/system-welcome-mobile-dark.png',
   });
   // 仅浏览器隔离故障注入，不改变后端采样或业务数据
   await page.route('**/api/system/metrics', (route) =>
     route.fulfill({
-      status: 503,
-      contentType: 'application/json',
       body: JSON.stringify({
         code: 503,
-        message: '隔离验收：采样不可用',
         data: null,
+        message: '隔离验收：采样不可用',
       }),
+      contentType: 'application/json',
+      status: 503,
     }),
   );
   await page.getByRole('button', { exact: true, name: '刷新采样' }).click();
@@ -166,9 +166,9 @@ test('welcome displays local metrics, read-only refresh and compact themed mobil
   await page.unroute('**/api/system/metrics');
   await page.route('**/api/system/metrics', (route) =>
     route.fulfill({
-      status: 200,
-      contentType: 'application/json',
       body: JSON.stringify({ code: 0, data: null }),
+      contentType: 'application/json',
+      status: 200,
     }),
   );
   await page.getByRole('button', { exact: true, name: '刷新采样' }).click();

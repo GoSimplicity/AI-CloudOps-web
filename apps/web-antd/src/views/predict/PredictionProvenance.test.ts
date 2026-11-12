@@ -3,8 +3,8 @@ import type { PredictionResponse } from '#/api/core/aiops/predict';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 
-import PredictionProvenance from './PredictionProvenance.vue';
 import { formatProbability } from './prediction-display';
+import PredictionProvenance from './PredictionProvenance.vue';
 
 const result = (fields: Partial<PredictionResponse>) =>
   fields as PredictionResponse;
@@ -15,13 +15,13 @@ describe('预测来源展示', () => {
       props: {
         aiRequested: true,
         result: result({
-          method: 'rule_based',
-          model_version: null,
-          fallback_mode: true,
-          fallback_reason: '预测模型不可用',
           ai_enhanced: false,
           ai_fallback_reason: 'AI分析未完成',
           analysis_failures: ['成本分析失败'],
+          fallback_mode: true,
+          fallback_reason: '预测模型不可用',
+          method: 'rule_based',
+          model_version: null,
         }),
       },
     });
@@ -36,10 +36,10 @@ describe('预测来源展示', () => {
       props: {
         aiRequested: true,
         result: result({
-          method: 'model:Example',
-          model_version: 'v1',
           ai_enhanced: false,
           ai_fallback_reason: 'AI分析未完成',
+          method: 'model:Example',
+          model_version: 'v1',
         }),
       },
     });

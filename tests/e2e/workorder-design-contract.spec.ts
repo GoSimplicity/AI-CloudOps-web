@@ -1,8 +1,8 @@
+import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import process from 'node:process';
 
 import { expect, test } from '@playwright/test';
-import { readFileSync } from 'node:fs';
-import { randomUUID } from 'node:crypto';
 
 import { requireFixtureValue } from '../../internal/test-utils/required-fixture-value';
 
@@ -46,12 +46,12 @@ test('workorder local form and process design save round-trip and cancel', async
   let processId = 0;
   const api = async (path: string, data?: unknown, method = 'GET') => {
     const response = await fetch(`http://localhost:18080/api${path}`, {
-      method,
+      body: data === undefined ? undefined : JSON.stringify(data),
       headers: {
         Authorization: `Bearer ${token}`,
         ...(data === undefined ? {} : { 'Content-Type': 'application/json' }),
       },
-      body: data === undefined ? undefined : JSON.stringify(data),
+      method,
       signal: AbortSignal.timeout(10_000),
     });
     const result = await response.json();
@@ -60,7 +60,7 @@ test('workorder local form and process design save round-trip and cancel', async
     return result.data;
   };
   try {
-    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.setViewportSize({ height: 1000, width: 1440 });
     await page.goto(route('/auth/login'));
     await page.getByLabel('账号', { exact: true }).fill('admin');
     try {
@@ -85,9 +85,9 @@ test('workorder local form and process design save round-trip and cancel', async
     const capture = async (name: string) => {
       if (process.env.CLOUDOPS_CAPTURE_DESIGNS === '1')
         await page.screenshot({
-          path: `.cache/ui-verification/${name}.png`,
-          fullPage: true,
           animations: 'disabled',
+          fullPage: true,
+          path: `.cache/ui-verification/${name}.png`,
         });
     };
     const noOverflow = async () =>
@@ -143,13 +143,13 @@ test('workorder local form and process design save round-trip and cancel', async
     expect(form.status).toBe(2);
     expect(form.schema.fields).toEqual([
       expect.objectContaining({
-        name: 'request_summary',
         label: '申请说明',
+        name: 'request_summary',
         type: 'text',
       }),
     ]);
     await page.getByLabel('深色', { exact: true }).click();
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ height: 844, width: 390 });
     await noOverflow();
     await page.locator('.field-panel .ant-collapse-header').click();
     await expect(page.getByPlaceholder('请输入字段标签')).toHaveValue(
@@ -163,7 +163,7 @@ test('workorder local form and process design save round-trip and cancel', async
       .getByRole('button', { name: /^取\s*消$/ })
       .click();
     await expect(page.locator('.field-panel')).toHaveCount(1);
-    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.setViewportSize({ height: 1000, width: 1440 });
     await page.goto(route('/process_design'));
     await expect(page.locator('.ops-page h1')).toHaveText('流程设计');
     await page.getByLabel('浅色', { exact: true }).click();
@@ -192,23 +192,23 @@ test('workorder local form and process design save round-trip and cancel', async
       .filter({ hasText: '已发布' })
       .click();
     const definition = {
+      connections: [{ from: 'owned_start', to: 'owned_end' }],
       steps: [
         {
+          actions: ['submit'],
           id: 'owned_start',
-          type: 'start',
           name: '开始',
           sort_order: 1,
-          actions: ['submit'],
+          type: 'start',
         },
         {
+          actions: [],
           id: 'owned_end',
-          type: 'end',
           name: '结束',
           sort_order: 2,
-          actions: [],
+          type: 'end',
         },
       ],
-      connections: [{ from: 'owned_start', to: 'owned_end' }],
     };
     await page.getByRole('tab', { exact: true, name: 'JSON编辑' }).click();
     await page
@@ -223,7 +223,7 @@ test('workorder local form and process design save round-trip and cancel', async
     await noOverflow();
     await capture('process-designer-desktop');
     await page.getByLabel('深色', { exact: true }).click();
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ height: 844, width: 390 });
     await noOverflow();
     await capture('process-designer-mobile');
     const savedProcess = page.waitForResponse(

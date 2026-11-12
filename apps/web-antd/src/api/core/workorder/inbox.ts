@@ -17,11 +17,11 @@ export interface InboxPermissions {
   permissions: string[];
 }
 export const inboxPermissions = {
-  list: 'GET /api/workorder/notification/inbox',
-  unread: 'GET /api/workorder/notification/inbox/unread',
+  delete: 'DELETE /api/workorder/notification/inbox/:id',
   read: 'POST /api/workorder/notification/inbox/:id/read',
   readAll: 'POST /api/workorder/notification/inbox/read-all',
-  delete: 'DELETE /api/workorder/notification/inbox/:id',
+  unread: 'GET /api/workorder/notification/inbox/unread',
+  list: 'GET /api/workorder/notification/inbox',
 } as const;
 export const getInboxPermissions = () =>
   requestClient.get<InboxPermissions>('/user/permissions');

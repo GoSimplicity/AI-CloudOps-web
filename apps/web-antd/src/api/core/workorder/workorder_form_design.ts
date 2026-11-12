@@ -3,21 +3,21 @@ import type { WorkorderCategoryItem } from './workorder_category';
 import { requestClient } from '#/api/request';
 
 export const FormDesignStatus = {
+  Archived: 3,
   Draft: 1,
   Published: 2,
-  Archived: 3,
 } as const;
 
 export const FormFieldType = {
-  Text: 'text',
-  Number: 'number',
-  Password: 'password',
-  Textarea: 'textarea',
-  Select: 'select',
-  Radio: 'radio',
   Checkbox: 'checkbox',
   Date: 'date',
+  Number: 'number',
+  Password: 'password',
+  Radio: 'radio',
+  Select: 'select',
   Switch: 'switch',
+  Text: 'text',
+  Textarea: 'textarea',
 } as const;
 
 export interface FormField {

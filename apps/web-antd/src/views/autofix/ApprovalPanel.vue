@@ -1,24 +1,24 @@
 <script setup lang="ts">
 import type { AutoFixAction } from '#/api/core/aiops/autofix';
 
-import { getActionLabel } from './autofix-format';
-
 import { usePermission } from '#/utils/permission';
+
+import { getActionLabel } from './autofix-format';
 
 defineProps<{
   actions: AutoFixAction[];
-  selected: string[];
   busy: boolean;
   canConfirm: boolean;
   canConfirmAll?: boolean;
-  issue: string;
   expiresAt?: string;
+  issue: string;
+  selected: string[];
 }>();
 const emit = defineEmits<{
-  toggle: [id: string, checked: boolean];
   confirm: [];
-  confirmOne: [id: string];
   confirmAll: [];
+  confirmOne: [id: string];
+  toggle: [id: string, checked: boolean];
 }>();
 const { can } = usePermission();
 // SEC-25/26 规则 4：逐项「确认此项」+ 批量「全部确认」；后端没有拒绝接口，不提供拒绝按钮
@@ -74,9 +74,9 @@ const { can } = usePermission();
         </div>
         <a-button
           v-if="can('aiops.autofix.confirm')"
-          size="small"
-          class="confirm-action-one"
           :disabled="busy || !!issue"
+          class="confirm-action-one"
+          size="small"
           @click.prevent.stop="emit('confirmOne', action.action_id || '')"
           >确认此项</a-button
         >
@@ -84,17 +84,17 @@ const { can } = usePermission();
     </div>
     <a-button
       v-if="can('aiops.autofix.confirm')"
-      type="primary"
-      :loading="busy"
       :disabled="!canConfirm"
+      :loading="busy"
+      type="primary"
       @click="emit('confirm')"
     >
       确认并继续执行
     </a-button>
     <a-button
       v-if="can('aiops.autofix.confirm') && actions.length > 0"
-      :loading="busy"
       :disabled="!canConfirmAll"
+      :loading="busy"
       @click="emit('confirmAll')"
     >
       全部确认

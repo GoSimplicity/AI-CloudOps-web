@@ -11,9 +11,9 @@ vi.mock('@vben/preferences', () => ({
 vi.mock('@vben/locales', () => ({
   $t: (key: string) =>
     ({
-      'preferences.theme.light': '浅色',
-      'preferences.theme.dark': '深色',
       'preferences.followSystem': '跟随系统',
+      'preferences.theme.dark': '深色',
+      'preferences.theme.light': '浅色',
     })[key] || key,
 }));
 

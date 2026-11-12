@@ -6,9 +6,9 @@ export const CommentType = {
 } as const;
 
 export const CommentStatus = {
-  NORMAL: 1, // 正常
   DELETED: 2, // 已删除
   HIDDEN: 3, // 已隐藏
+  NORMAL: 1, // 正常
 } as const;
 
 export interface WorkorderInstanceCommentItem {

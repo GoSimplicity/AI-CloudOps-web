@@ -1,13 +1,12 @@
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
-
 import { reactive } from 'vue';
 
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import Antd from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import AssistantSession from './AssistantSession.vue';
-
 import { createAssistantAccountScope } from '#/utils/assistant-account-scope';
+
+import AssistantSession from './AssistantSession.vue';
 
 function required<T>(value: null | T | undefined): T {
   if (value === null || value === undefined) {
@@ -16,11 +15,11 @@ function required<T>(value: null | T | undefined): T {
   return value;
 }
 
-const state = vi.hoisted(() => ({ user: null as any, access: null as any }));
+const state = vi.hoisted(() => ({ access: null as any, user: null as any }));
 const api = vi.hoisted(() => ({ getSessionInfo: vi.fn() }));
 vi.mock('@vben/stores', () => ({
-  useUserStore: () => state.user,
   useAccessStore: () => state.access,
+  useUserStore: () => state.user,
 }));
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('#/api/core/aiops/assistant', () => api);
@@ -34,8 +33,8 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -48,18 +47,18 @@ afterEach(() => {
 describe('服务端会话详情', () => {
   it('显示已保存对话和未知请求，本地只保存索引', async () => {
     api.getSessionInfo.mockResolvedValue({
-      session_id: 'owned',
+      active_question: 'private-pending-canary',
+      active_turn_id: 'turn-fixture',
+      conversation_history: [
+        { a: 'private-answer-canary', mode: 1, q: 'private-question-canary' },
+      ],
       created_time: '2026-01-01T00:00:00Z',
       last_activity: '2026-01-01T00:00:00Z',
       message_count: 2,
       mode: 1,
-      status: 'unknown',
       revision: 1,
-      active_turn_id: 'turn-fixture',
-      active_question: 'private-pending-canary',
-      conversation_history: [
-        { q: 'private-question-canary', a: 'private-answer-canary', mode: 1 },
-      ],
+      session_id: 'owned',
+      status: 'unknown',
     });
     wrapper = mount(AssistantSession, {
       global: { plugins: [Antd], stubs: { Icon: true } },
@@ -93,12 +92,12 @@ describe('服务端会话详情', () => {
     scope.setOwner('1');
     scope.write('history', [
       {
-        session_id: 'old',
-        mode: 1,
-        status: 'idle',
         conversation_history: [
-          { q: 'legacy-private-canary', a: 'secret', mode: 1 },
+          { a: 'secret', mode: 1, q: 'legacy-private-canary' },
         ],
+        mode: 1,
+        session_id: 'old',
+        status: 'idle',
       },
     ]);
     wrapper = mount(AssistantSession, {

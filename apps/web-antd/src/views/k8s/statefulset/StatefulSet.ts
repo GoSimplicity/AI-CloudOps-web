@@ -6,6 +6,18 @@ import { message, Modal } from 'ant-design-vue';
 import yaml from 'js-yaml';
 
 import {
+  Env,
+  getClustersListApi,
+  type K8sCluster,
+  type KeyValueList,
+  type ListClustersReq,
+} from '#/api/core/k8s/k8s_cluster';
+import {
+  getNamespacesListApi,
+  type K8sNamespace,
+  type K8sNamespaceListReq,
+} from '#/api/core/k8s/k8s_namespace';
+import {
   createStatefulSetApi,
   createStatefulSetByYamlApi,
   type CreateStatefulSetByYamlReq,
@@ -31,18 +43,6 @@ import {
   type UpdateStatefulSetByYamlReq,
   type UpdateStatefulSetReq,
 } from '#/api/core/k8s/k8s_statefulset';
-import {
-  Env,
-  getClustersListApi,
-  type K8sCluster,
-  type KeyValueList,
-  type ListClustersReq,
-} from '#/api/core/k8s/k8s_cluster';
-import {
-  getNamespacesListApi,
-  type K8sNamespace,
-  type K8sNamespaceListReq,
-} from '#/api/core/k8s/k8s_namespace';
 import {
   shouldNotifyPageError,
   shouldRecordPageError,
@@ -162,13 +162,13 @@ export function useStatefulSetPage() {
     replicas: number;
     service_name: string;
   }>({
+    annotations: {},
+    images: [''],
+    labels: {},
     name: '',
     namespace: '',
     replicas: 1,
     service_name: '',
-    images: [''],
-    labels: {},
-    annotations: {},
   });
 
   const editFormModel = ref<{
@@ -180,13 +180,13 @@ export function useStatefulSetPage() {
     replicas: number;
     service_name: string;
   }>({
+    annotations: [],
+    images: [''],
+    labels: [],
     name: '',
     namespace: '',
     replicas: 1,
     service_name: '',
-    images: [''],
-    labels: [],
-    annotations: [],
   });
 
   const scaleFormModel = ref<{
@@ -216,11 +216,11 @@ export function useStatefulSetPage() {
   // form validation rules
   const createFormRules: Record<string, Rule[]> = {
     name: [
-      { required: true, message: '请输入 StatefulSet 名称', trigger: 'blur' },
+      { message: '请输入 StatefulSet 名称', required: true, trigger: 'blur' },
       {
-        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         message:
           'StatefulSet 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         trigger: 'blur',
       },
       {
@@ -230,24 +230,24 @@ export function useStatefulSetPage() {
       },
     ],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' },
+      { message: '请选择命名空间', required: true, trigger: 'change' },
     ],
     replicas: [
-      { required: true, message: '请输入副本数量', trigger: 'blur' },
+      { message: '请输入副本数量', required: true, trigger: 'blur' },
       {
-        type: 'number',
-        min: 0,
         max: 100,
         message: '副本数量必须在0-100之间',
+        min: 0,
         trigger: 'blur',
+        type: 'number',
       },
     ],
     service_name: [
-      { required: true, message: '请输入服务名称', trigger: 'blur' },
+      { message: '请输入服务名称', required: true, trigger: 'blur' },
       {
-        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         message:
           '服务名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         trigger: 'blur',
       },
     ],
@@ -255,45 +255,45 @@ export function useStatefulSetPage() {
 
   const scaleFormRules: Record<string, Rule[]> = {
     replicas: [
-      { required: true, message: '请输入副本数量', trigger: 'blur' },
+      { message: '请输入副本数量', required: true, trigger: 'blur' },
       {
-        type: 'number',
-        min: 0,
         max: 100,
         message: '副本数量必须在0-100之间',
+        min: 0,
         trigger: 'blur',
+        type: 'number',
       },
     ],
   };
 
   const rollbackFormRules: Record<string, Rule[]> = {
     revision: [
-      { required: true, message: '请输入回滚版本', trigger: 'blur' },
-      { type: 'number', min: 1, message: '版本号必须大于0', trigger: 'blur' },
+      { message: '请输入回滚版本', required: true, trigger: 'blur' },
+      { message: '版本号必须大于0', min: 1, trigger: 'blur', type: 'number' },
     ],
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
   const editFormRules: Record<string, Rule[]> = {
     name: [
-      { required: true, message: '请输入 StatefulSet 名称', trigger: 'blur' },
+      { message: '请输入 StatefulSet 名称', required: true, trigger: 'blur' },
       {
-        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         message:
           'StatefulSet 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         trigger: 'blur',
       },
       {
@@ -303,16 +303,16 @@ export function useStatefulSetPage() {
       },
     ],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' },
+      { message: '请选择命名空间', required: true, trigger: 'change' },
     ],
     replicas: [
-      { required: true, message: '请输入副本数量', trigger: 'blur' },
+      { message: '请输入副本数量', required: true, trigger: 'blur' },
       {
-        type: 'number',
-        min: 0,
         max: 100,
         message: '副本数量必须在0-100之间',
+        min: 0,
         trigger: 'blur',
+        type: 'number',
       },
     ],
   };
@@ -323,11 +323,11 @@ export function useStatefulSetPage() {
   });
 
   const rowSelection = computed(() => ({
-    selectedRowKeys: selectedRowKeys.value,
     onChange: (keys: string[], rows: K8sStatefulSet[]) => {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
     },
+    selectedRowKeys: selectedRowKeys.value,
   }));
 
   // helpers
@@ -344,31 +344,31 @@ export function useStatefulSetPage() {
     if (env === undefined || env === null) return '未知环境';
     const value = typeof env === 'string' ? Number.parseInt(env) : env;
     const map: Record<number, string> = {
-      [Env.Prod]: '生产',
       [Env.Dev]: '开发',
-      [Env.Stage]: '预发',
-      [Env.Rc]: '测试',
       [Env.Press]: '灰度',
+      [Env.Prod]: '生产',
+      [Env.Rc]: '测试',
+      [Env.Stage]: '预发',
     };
     return map[value] || '未知环境';
   };
 
   const getStatusText = (status?: K8sStatefulSetStatus) => {
     const map: Record<K8sStatefulSetStatus, string> = {
+      [K8sStatefulSetStatus.Error]: '异常',
       [K8sStatefulSetStatus.Running]: '运行中',
       [K8sStatefulSetStatus.Stopped]: '已停止',
       [K8sStatefulSetStatus.Updating]: '更新中',
-      [K8sStatefulSetStatus.Error]: '异常',
     };
     return status === undefined ? '未知' : map[status] || '未知';
   };
 
   const getStatusColor = (status?: K8sStatefulSetStatus) => {
     const map: Record<K8sStatefulSetStatus, string> = {
+      [K8sStatefulSetStatus.Error]: 'error',
       [K8sStatefulSetStatus.Running]: 'success',
       [K8sStatefulSetStatus.Stopped]: 'default',
       [K8sStatefulSetStatus.Updating]: 'processing',
-      [K8sStatefulSetStatus.Error]: 'error',
     };
     return status === undefined ? 'default' : map[status] || 'default';
   };
@@ -512,17 +512,17 @@ export function useStatefulSetPage() {
       selectedRowKeys.value = [];
       selectedRows.value = [];
       const params: GetStatefulSetListReq = {
-        page: currentPage.value,
-        size: pageSize.value,
-        search: searchText.value || undefined,
         cluster_id: clusterId,
-        namespace: namespace || undefined,
-        status: filterStatus.value?.toString() || undefined,
-        service_name: filterServiceName.value || undefined,
         labels:
           Object.keys(filterLabels.value).length > 0
             ? filterLabels.value
             : undefined,
+        namespace: namespace || undefined,
+        page: currentPage.value,
+        search: searchText.value || undefined,
+        service_name: filterServiceName.value || undefined,
+        size: pageSize.value,
+        status: filterStatus.value?.toString() || undefined,
       };
       const res = await getStatefulSetListApi(clusterId, params);
       if (
@@ -624,15 +624,15 @@ export function useStatefulSetPage() {
       const processedDetail = res
         ? {
             ...res,
+            annotations: res.annotations,
             cluster_id: clusterId,
             labels: res.labels,
-            annotations: res.annotations,
           }
         : {
             ...record,
+            annotations: record.annotations,
             cluster_id: clusterId,
             labels: record.labels,
-            annotations: record.annotations,
           };
 
       currentStatefulSetDetail.value = processedDetail;
@@ -643,9 +643,9 @@ export function useStatefulSetPage() {
       // 错误时也要处理格式转换
       const fallbackDetail = {
         ...record,
+        annotations: record.annotations,
         cluster_id: clusterId,
         labels: record.labels,
-        annotations: record.annotations,
       };
       currentStatefulSetDetail.value = fallbackDetail;
     } finally {
@@ -698,8 +698,8 @@ export function useStatefulSetPage() {
 
       const params: UpdateStatefulSetByYamlReq = {
         cluster_id: currentOperationStatefulSet.value.cluster_id,
-        namespace: currentOperationStatefulSet.value.namespace,
         name: currentOperationStatefulSet.value.name,
+        namespace: currentOperationStatefulSet.value.namespace,
         yaml: yamlFormModel.value.yaml,
       };
 
@@ -728,13 +728,13 @@ export function useStatefulSetPage() {
   // 创建 StatefulSet
   const openCreateModal = () => {
     createFormModel.value = {
+      annotations: {},
+      images: [''],
+      labels: {},
       name: '',
       namespace: '',
       replicas: 1,
       service_name: '',
-      images: [''],
-      labels: {},
-      annotations: {},
     };
     isCreateModalVisible.value = true;
   };
@@ -762,20 +762,20 @@ export function useStatefulSetPage() {
       submitLoading.value = true;
 
       const params: CreateStatefulSetReq = {
+        annotations:
+          Object.keys(createFormModel.value.annotations).length > 0
+            ? createFormModel.value.annotations
+            : undefined,
         cluster_id: filterClusterId.value,
-        name: createFormModel.value.name,
-        namespace: createFormModel.value.namespace,
-        replicas: createFormModel.value.replicas,
-        service_name: createFormModel.value.service_name,
         images: createFormModel.value.images.filter((img) => img.trim()),
         labels:
           Object.keys(createFormModel.value.labels).length > 0
             ? createFormModel.value.labels
             : undefined,
-        annotations:
-          Object.keys(createFormModel.value.annotations).length > 0
-            ? createFormModel.value.annotations
-            : undefined,
+        name: createFormModel.value.name,
+        namespace: createFormModel.value.namespace,
+        replicas: createFormModel.value.replicas,
+        service_name: createFormModel.value.service_name,
         spec: {
           replicas: createFormModel.value.replicas,
           service_name: createFormModel.value.service_name,
@@ -833,12 +833,11 @@ export function useStatefulSetPage() {
     if (!clusterId) return;
 
     Modal.confirm({
-      title: '删除 StatefulSet',
+      cancelText: '取消',
+      centered: true,
       content: `确定要删除 StatefulSet "${record.name}" 吗？此操作不可逆！`,
       okText: '确认删除',
       okType: 'danger',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           await deleteStatefulSetApi(clusterId, record.namespace, record.name);
@@ -849,6 +848,7 @@ export function useStatefulSetPage() {
             message.error('StatefulSet 删除失败');
         }
       },
+      title: '删除 StatefulSet',
     });
   };
 
@@ -858,18 +858,17 @@ export function useStatefulSetPage() {
     if (!clusterId) return;
 
     Modal.confirm({
-      title: '重启 StatefulSet',
+      cancelText: '取消',
+      centered: true,
       content: `确定要重启 StatefulSet "${record.name}" 吗？这将重启所有 Pod。`,
       okText: '确认重启',
       okType: 'primary',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           const params: RestartStatefulSetReq = {
             cluster_id: clusterId,
-            namespace: record.namespace,
             name: record.name,
+            namespace: record.namespace,
           };
           await restartStatefulSetApi(
             clusterId,
@@ -884,6 +883,7 @@ export function useStatefulSetPage() {
             message.error('StatefulSet 重启失败');
         }
       },
+      title: '重启 StatefulSet',
     });
   };
 
@@ -896,15 +896,15 @@ export function useStatefulSetPage() {
 
     // 填充编辑表单数据
     editFormModel.value = {
+      annotations: recordToKeyValueList(
+        keyValueListToRecord(record.annotations),
+      ),
+      images: record.images || [],
+      labels: recordToKeyValueList(keyValueListToRecord(record.labels)),
       name: record.name,
       namespace: record.namespace,
       replicas: record.replicas,
       service_name: record.service_name || '',
-      images: record.images || [],
-      labels: recordToKeyValueList(keyValueListToRecord(record.labels)),
-      annotations: recordToKeyValueList(
-        keyValueListToRecord(record.annotations),
-      ),
     };
 
     isEditModalVisible.value = true;
@@ -914,13 +914,13 @@ export function useStatefulSetPage() {
     isEditModalVisible.value = false;
     currentOperationStatefulSet.value = null;
     editFormModel.value = {
+      annotations: [],
+      images: [''],
+      labels: [],
       name: '',
       namespace: '',
       replicas: 1,
       service_name: '',
-      images: [''],
-      labels: [],
-      annotations: [],
     };
   };
 
@@ -932,19 +932,19 @@ export function useStatefulSetPage() {
       submitLoading.value = true;
 
       const params: UpdateStatefulSetReq = {
+        annotations:
+          editFormModel.value.annotations.length > 0
+            ? keyValueListToRecord(editFormModel.value.annotations)
+            : undefined,
         cluster_id: currentOperationStatefulSet.value.cluster_id,
-        name: editFormModel.value.name,
-        namespace: editFormModel.value.namespace,
-        replicas: editFormModel.value.replicas,
         images: editFormModel.value.images.filter((img) => img.trim()),
         labels:
           editFormModel.value.labels.length > 0
             ? keyValueListToRecord(editFormModel.value.labels)
             : undefined,
-        annotations:
-          editFormModel.value.annotations.length > 0
-            ? keyValueListToRecord(editFormModel.value.annotations)
-            : undefined,
+        name: editFormModel.value.name,
+        namespace: editFormModel.value.namespace,
+        replicas: editFormModel.value.replicas,
       };
 
       await updateStatefulSetApi(
@@ -992,8 +992,8 @@ export function useStatefulSetPage() {
 
       const params: ScaleStatefulSetReq = {
         cluster_id: currentOperationStatefulSet.value.cluster_id,
-        namespace: currentOperationStatefulSet.value.namespace,
         name: currentOperationStatefulSet.value.name,
+        namespace: currentOperationStatefulSet.value.namespace,
         replicas: scaleFormModel.value.replicas,
       };
 
@@ -1042,8 +1042,8 @@ export function useStatefulSetPage() {
 
       const params: RollbackStatefulSetReq = {
         cluster_id: currentOperationStatefulSet.value.cluster_id,
-        namespace: currentOperationStatefulSet.value.namespace,
         name: currentOperationStatefulSet.value.name,
+        namespace: currentOperationStatefulSet.value.namespace,
         revision: rollbackFormModel.value.revision,
       };
 
@@ -1137,12 +1137,11 @@ export function useStatefulSetPage() {
     if (selectedRows.value.length === 0) return;
 
     Modal.confirm({
-      title: `批量${operation}`,
+      cancelText: '取消',
+      centered: true,
       content: `确定要对选中的 ${selectedRows.value.length} 个 StatefulSet 执行${operation}操作吗？`,
       okText: '确认执行',
       okType: operation === '删除' ? 'danger' : 'primary',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           for (const statefulSet of selectedRows.value) {
@@ -1163,8 +1162,8 @@ export function useStatefulSetPage() {
             } else if (operation === '重启') {
               const params: RestartStatefulSetReq = {
                 cluster_id: clusterId,
-                namespace: statefulSet.namespace,
                 name: statefulSet.name,
+                namespace: statefulSet.namespace,
               };
               await restartStatefulSetApi(
                 clusterId,
@@ -1183,6 +1182,7 @@ export function useStatefulSetPage() {
             message.error(`批量${operation}失败`);
         }
       },
+      title: `批量${operation}`,
     });
   };
 
@@ -1343,10 +1343,10 @@ export function useStatefulSetPage() {
 
       if (issues.length > 0) {
         Modal.warning({
-          title: 'YAML 检查发现问题',
+          centered: true,
           content: issues.join('\n'),
           okText: '知道了',
-          centered: true,
+          title: 'YAML 检查发现问题',
         });
       } else {
         message.success('YAML 格式检查通过');
@@ -1446,10 +1446,10 @@ export function useStatefulSetPage() {
 
       if (issues.length > 0) {
         Modal.warning({
-          title: 'YAML 检查发现问题',
+          centered: true,
           content: issues.join('\n'),
           okText: '知道了',
-          centered: true,
+          title: 'YAML 检查发现问题',
         });
       } else {
         message.success('YAML 格式检查通过');
@@ -1460,6 +1460,35 @@ export function useStatefulSetPage() {
   };
 
   return {
+    // form field operations
+    addEditImageField,
+    // filter operations
+    addFilterLabel,
+    addImageField,
+    // batch operations
+    batchOperation,
+    clearFilterLabels,
+    // operations
+    clearNamespaces,
+    clearStatefulSets,
+    // YAML operations
+    clearYaml,
+    // create operations
+    closeCreateModal,
+    closeCreateYamlModal,
+    // detail operations
+    closeDetailModal,
+    // edit operations
+    closeEditModal,
+    // history operations
+    closeHistoryModal,
+    // pod operations
+    closePodModal,
+    // rollback operations
+    closeRollbackModal,
+    // scale operations
+    closeScaleModal,
+    closeYamlModal,
     // state
     clusters,
     clustersError,
@@ -1467,168 +1496,139 @@ export function useStatefulSetPage() {
     clustersPage,
     clustersSize,
     clustersTotal,
-    currentPage,
-    filterClusterId,
-    filterLabels,
-    filterNamespace,
-    filterServiceName,
-    filterStatus,
-    loadError,
-    loading,
-    namespaces,
-    namespacesError,
-    namespacesLoading,
-    namespacesPage,
-    namespacesSize,
-    namespacesTotal,
-    pageSize,
-    searchText,
-    selectedRowKeys,
-    selectedRows,
-    statefulSets,
-    total,
+    // form models
+    createFormModel,
+    // form rules
+    createFormRules,
+    createYamlFormModel,
 
     // form refs
     createYamlFormRef,
-    editFormRef,
-    formRef,
-    rollbackFormRef,
-    scaleFormRef,
-    yamlFormRef,
+    createYamlFormRules,
+    // operation targets
+    currentOperationStatefulSet,
+    currentPage,
+    currentStatefulSetDetail,
+    currentYamlContent,
 
+    // statefulSet operations
+    deleteStatefulSet,
     // modal state
     detailLoading,
+    editFormModel,
+    editFormRef,
+    editFormRules,
+    fetchClusters,
+    fetchNamespaces,
+    fetchStatefulSets,
+    filterClusterId,
+    // computed
+    filteredStatefulSets,
+    filterLabels,
+
+    filterNamespace,
+    filterServiceName,
+    filterStatus,
+    formatEditYaml,
+    // helpers
+    formatTime,
+
+    formatYaml,
+    formRef,
+    getEnvText,
+    getStatusColor,
+    getStatusText,
+    // pagination operations
+    handlePageChange,
+
+    historyLoading,
+    insertYamlTemplate,
     isCreateModalVisible,
     isCreateYamlModalVisible,
     isDetailModalVisible,
     isEditModalVisible,
+
+    isHistoryCurrent,
     isHistoryModalVisible,
+
     isPodModalVisible,
     isRollbackModalVisible,
     isScaleModalVisible,
     isYamlModalVisible,
-    submitLoading,
+    // constants
+    K8sStatefulSetStatus,
+    keyValueListToRecord,
+    loadError,
 
-    // operation targets
-    currentOperationStatefulSet,
-    currentStatefulSetDetail,
-    currentYamlContent,
+    loading,
+    loadMoreClusters,
+    loadMoreNamespaces,
+    namespaces,
+    namespacesError,
+    namespacesLoading,
+    namespacesPage,
+
+    namespacesSize,
+    namespacesTotal,
+
+    openCreateModal,
+    openCreateYamlModal,
+    openEditModal,
+    openRollbackModal,
+    openScaleModal,
+    pageSize,
+    recordToKeyValueList,
+    removeAnnotationField,
+    removeEditAnnotationField,
+
+    removeEditImageField,
+    removeEditLabelField,
+    removeFilterLabel,
+    removeImageField,
+    removeLabelField,
+    resetClusters,
+
+    restartStatefulSet,
+    rollbackFormModel,
+    rollbackFormRef,
+
+    rollbackFormRules,
+    rowSelection,
+
+    scaleFormModel,
+    scaleFormRef,
+    scaleFormRules,
+
+    searchText,
+    selectedRowKeys,
+    selectedRows,
+
+    showHistoryModal,
+    showPodModal,
+
+    showStatefulSetDetail,
+    showYamlModal,
     statefulSetHistory,
     statefulSetPods,
 
-    // form models
-    createFormModel,
-    createYamlFormModel,
-    editFormModel,
-    rollbackFormModel,
-    scaleFormModel,
-    yamlFormModel,
-
-    // form rules
-    createFormRules,
-    createYamlFormRules,
-    editFormRules,
-    rollbackFormRules,
-    scaleFormRules,
-    yamlFormRules,
-
-    // computed
-    filteredStatefulSets,
-    rowSelection,
-
-    // helpers
-    formatTime,
-    getEnvText,
-    getStatusColor,
-    getStatusText,
-    keyValueListToRecord,
-    recordToKeyValueList,
-    validateClusterId,
-
-    // operations
-    clearNamespaces,
-    clearStatefulSets,
-    fetchClusters,
-    fetchNamespaces,
-    fetchStatefulSets,
-    loadMoreClusters,
-    loadMoreNamespaces,
-
-    // detail operations
-    closeDetailModal,
-    showStatefulSetDetail,
-
-    // YAML operations
-    clearYaml,
-    closeYamlModal,
-    formatEditYaml,
-    formatYaml,
-    insertYamlTemplate,
-    showYamlModal,
-    submitYamlForm,
-    validateEditYaml,
-    validateYaml,
-
-    // create operations
-    closeCreateModal,
-    closeCreateYamlModal,
-    openCreateModal,
-    openCreateYamlModal,
+    statefulSets,
     submitCreateForm,
     submitCreateYamlForm,
 
-    // edit operations
-    closeEditModal,
-    openEditModal,
     submitEditForm,
 
-    // statefulSet operations
-    deleteStatefulSet,
-    restartStatefulSet,
-
-    // scale operations
-    closeScaleModal,
-    openScaleModal,
-    submitScaleForm,
-
-    // rollback operations
-    closeRollbackModal,
-    openRollbackModal,
+    submitLoading,
     submitRollbackForm,
 
-    // pod operations
-    closePodModal,
-    showPodModal,
+    submitScaleForm,
+    submitYamlForm,
+    total,
+    validateClusterId,
+    validateEditYaml,
+    validateYaml,
+    yamlFormModel,
+    yamlFormRef,
 
-    // history operations
-    closeHistoryModal,
-    historyLoading,
-    isHistoryCurrent,
-    showHistoryModal,
-
-    // filter operations
-    addFilterLabel,
-    clearFilterLabels,
-    removeFilterLabel,
-
-    // batch operations
-    batchOperation,
-
-    // pagination operations
-    handlePageChange,
-    resetClusters,
-
-    // form field operations
-    addEditImageField,
-    addImageField,
-    removeAnnotationField,
-    removeEditAnnotationField,
-    removeEditImageField,
-    removeEditLabelField,
-    removeImageField,
-    removeLabelField,
-
-    // constants
-    K8sStatefulSetStatus,
+    yamlFormRules,
   };
 }

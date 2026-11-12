@@ -24,49 +24,49 @@ const scope = {
   kind: 'rds' as const,
 };
 const marker = {
-  version: 2 as const,
-  owner_id: 7,
   operation_id: id,
+  owner_id: 7,
   resource_ids: ['rm-one'],
+  version: 2 as const,
 };
 const known = () => ({
   ...scope,
-  owner_id: 7,
   operation_id: id,
+  owner_id: 7,
   resource_ids: ['rm-one'],
-  state: 'completed',
   result: {
-    operation_id: id,
-    status: 'success',
-    history_id: 31,
     count: 1,
+    history_id: 31,
     new_count: 1,
-    update_count: 0,
+    operation_id: id,
     retry_safe: true,
+    status: 'success',
+    update_count: 0,
   },
+  state: 'completed',
 });
 const reviewed = () => ({
   ...scope,
-  owner_id: 7,
   operation_id: id,
-  resource_ids: ['rm-one'],
-  state: 'reviewed',
+  owner_id: 7,
   previous_state: 'not_recorded',
+  resource_ids: ['rm-one'],
+  review_reason: '已经核对实际云资源和本地记录的状态',
   reviewed_at: '2026-10-30T01:00:00Z',
   reviewed_by: 7,
-  review_reason: '已经核对实际云资源和本地记录的状态',
+  state: 'reviewed',
 });
 const render = () => {
   wrapper = mount(Recovery, {
+    global: { plugins: [Antd] },
     props: {
-      scope,
-      marker,
-      owner: '7',
+      authorize: async () => true,
       canRead: true,
       canReview: true,
-      authorize: async () => true,
+      marker,
+      owner: '7',
+      scope,
     },
-    global: { plugins: [Antd] },
   });
 };
 const button = (name: string) =>
@@ -110,8 +110,8 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -133,8 +133,8 @@ it('挂载不重新同步，查询已保存结果后才确认同一操作', asyn
 it.each(['running', 'unknown'])('%s 不自动确认或重新执行', async (state) => {
   api.getManagedOperation.mockResolvedValue({
     ...scope,
-    owner_id: 7,
     operation_id: id,
+    owner_id: 7,
     resource_ids: ['rm-one'],
     state,
   });
@@ -161,9 +161,9 @@ it('人工核对先提交再读回审计，不凭POST响应清除标记', async 
   await save();
   expect(api.reviewManagedOperation).toHaveBeenCalledWith(id, {
     ...scope,
+    reason: '已经核对实际云资源和本地记录的状态',
     resource_ids: ['rm-one'],
     resources_verified: true,
-    reason: '已经核对实际云资源和本地记录的状态',
   });
   expect(wrapper.emitted('acknowledged')).toEqual([[id, 7]]);
   expect(document.body.textContent).not.toContain('private-lookup-canary');
@@ -210,7 +210,7 @@ it('保存前权限复核拒绝时不发送核对', async () => {
 it('超管读取相同UUID的另一owner时不能接受本人的记录', async () => {
   api.getManagedOperation.mockResolvedValue(known());
   render();
-  await wrapper.setProps({ operationOwner: 8, allowCrossOwner: true });
+  await wrapper.setProps({ allowCrossOwner: true, operationOwner: 8 });
   await click('查询本次操作');
   expect(api.getManagedOperation).toHaveBeenCalledWith(id, 8);
   expect(wrapper.emitted('acknowledged')).toBeUndefined();

@@ -4,9 +4,9 @@ import { requestClient } from '#/api/request';
  * K8sSvcStatus Service状态枚举
  */
 export enum K8sSvcStatus {
+  Error = 3, // 异常
   Running = 1, // 运行中
   Stopped = 2, // 停止
-  Error = 3, // 异常
 }
 
 /**

@@ -55,40 +55,27 @@ export function useClusterPage() {
   // 编辑时原集群是否已配置 kubeconfig（读接口只返回布尔值，不返回原文）
   const editHasKubeConfig = ref(false);
   const formModel = ref<
-    CreateClusterReq | (UpdateClusterReq & { id?: number })
+    ({ id?: number } & UpdateClusterReq) | CreateClusterReq
   >({
+    action_timeout_seconds: undefined,
+    api_server_addr: '',
+    cpu_limit: '',
+    cpu_request: '',
+    env: undefined,
+    kube_config_content: '',
+    memory_limit: '',
+    memory_request: '',
     name: '',
     restrict_namespace: [],
-    env: undefined,
-    version: '',
-    api_server_addr: '',
-    kube_config_content: '',
-    cpu_request: '',
-    cpu_limit: '',
-    memory_request: '',
-    memory_limit: '',
-    action_timeout_seconds: undefined,
     tags: [],
+    version: '',
   });
 
   // 表单验证规则：新建时 kubeconfig 必填；编辑时留空表示不修改，填了才校验
   const formRules = computed<Record<string, Rule[]>>(() => ({
-    name: [
-      { required: true, message: '请输入集群名称', trigger: 'blur' },
-      {
-        min: 2,
-        max: 50,
-        message: '集群名称长度应在2-50个字符之间',
-        trigger: 'blur',
-      },
-      {
-        pattern: /^[a-zA-Z0-9\u4E00-\u9FA5_-]+$/,
-        message: '集群名称只能包含字母、数字、中文、下划线和横线',
-        trigger: 'blur',
-      },
-    ],
     api_server_addr: [
       {
+        trigger: 'blur',
         validator: (_rule: Rule, value: string) => {
           if (!value) return Promise.resolve();
           const urlPattern = /^https?:\/\/.+:\d+$/;
@@ -99,7 +86,6 @@ export function useClusterPage() {
           }
           return Promise.resolve();
         },
-        trigger: 'blur',
       },
     ],
     kube_config_content: [
@@ -121,6 +107,20 @@ export function useClusterPage() {
         },
       },
     ],
+    name: [
+      { message: '请输入集群名称', required: true, trigger: 'blur' },
+      {
+        max: 50,
+        message: '集群名称长度应在2-50个字符之间',
+        min: 2,
+        trigger: 'blur',
+      },
+      {
+        message: '集群名称只能包含字母、数字、中文、下划线和横线',
+        pattern: /^[a-zA-Z0-9\u4E00-\u9FA5_-]+$/,
+        trigger: 'blur',
+      },
+    ],
   }));
 
   // computed - 不在前端做过滤，因为后端API已经处理了过滤
@@ -129,11 +129,11 @@ export function useClusterPage() {
   });
 
   const rowSelection = computed(() => ({
-    selectedRowKeys: selectedRowKeys.value,
     onChange: (keys: number[], rows: K8sCluster[]) => {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
     },
+    selectedRowKeys: selectedRowKeys.value,
   }));
 
   // helpers
@@ -141,11 +141,11 @@ export function useClusterPage() {
     if (env === undefined || env === null) return '未知';
     const value = typeof env === 'string' ? parseInt(env) : env;
     const map: Record<number, string> = {
-      [Env.Prod]: '生产',
       [Env.Dev]: '开发',
-      [Env.Stage]: '预发',
-      [Env.Rc]: '测试',
       [Env.Press]: '灰度',
+      [Env.Prod]: '生产',
+      [Env.Rc]: '测试',
+      [Env.Stage]: '预发',
     };
     return map[value] || '未知';
   };
@@ -154,20 +154,20 @@ export function useClusterPage() {
     if (env === undefined || env === null) return 'default';
     const value = typeof env === 'string' ? parseInt(env) : env;
     const map: Record<number, string> = {
-      [Env.Prod]: 'red',
       [Env.Dev]: 'blue',
-      [Env.Stage]: 'orange',
-      [Env.Rc]: 'green',
       [Env.Press]: 'purple',
+      [Env.Prod]: 'red',
+      [Env.Rc]: 'green',
+      [Env.Stage]: 'orange',
     };
     return map[value] || 'default';
   };
 
   const getStatusText = (s?: ClusterStatus) => {
     const map: Record<number, string> = {
+      [ClusterStatus.Error]: '异常',
       [ClusterStatus.Running]: '运行中',
       [ClusterStatus.Stopped]: '已停止',
-      [ClusterStatus.Error]: '异常',
     } as Record<number, string>;
     return s === undefined ? '未知' : map[s] || '未知';
   };
@@ -175,9 +175,9 @@ export function useClusterPage() {
   // 防御：即使旧版后端仍回传 kubeconfig 原文，也不在前端状态里保留
   const stripKubeConfig = (cluster: K8sCluster): K8sCluster => {
     if (!cluster || typeof cluster !== 'object') return cluster;
-    const { kube_config_content: content, ...rest } = cluster as K8sCluster & {
+    const { kube_config_content: content, ...rest } = cluster as {
       kube_config_content?: string;
-    };
+    } & K8sCluster;
     return {
       ...rest,
       has_kube_config: rest.has_kube_config ?? Boolean(content),
@@ -193,11 +193,11 @@ export function useClusterPage() {
       selectedRowKeys.value = [];
       selectedRows.value = [];
       const params: ListClustersReq = {
-        page: currentPage.value,
-        size: pageSize.value,
-        search: searchText.value || undefined,
         // 将数字枚举转换为字符串
         env: filterEnv.value ? String(filterEnv.value) : undefined,
+        page: currentPage.value,
+        search: searchText.value || undefined,
+        size: pageSize.value,
         status: filterStatus.value ? String(filterStatus.value) : undefined,
       };
       const res = await getClustersListApi(params);
@@ -234,18 +234,18 @@ export function useClusterPage() {
     isEdit.value = false;
     editHasKubeConfig.value = false;
     formModel.value = {
+      action_timeout_seconds: undefined,
+      api_server_addr: '',
+      cpu_limit: '',
+      cpu_request: '',
+      env: undefined,
+      kube_config_content: '',
+      memory_limit: '',
+      memory_request: '',
       name: '',
       restrict_namespace: [],
-      env: undefined,
-      version: '',
-      api_server_addr: '',
-      kube_config_content: '',
-      cpu_request: '',
-      cpu_limit: '',
-      memory_request: '',
-      memory_limit: '',
-      action_timeout_seconds: undefined,
       tags: [],
+      version: '',
     };
     isModalVisible.value = true;
   };
@@ -259,20 +259,20 @@ export function useClusterPage() {
 
       // 显示加载状态，先用列表数据填充基本信息
       formModel.value = {
+        action_timeout_seconds: record.action_timeout_seconds,
+        api_server_addr: record.api_server_addr,
+        cpu_limit: record.cpu_limit,
+        cpu_request: record.cpu_request,
+        env: record.env,
         id: record.id,
+        kube_config_content: '', // 留空表示不修改
+        memory_limit: record.memory_limit,
+        memory_request: record.memory_request,
         name: record.name,
         restrict_namespace: record.restrict_namespace || [],
-        env: record.env,
-        version: record.version,
-        api_server_addr: record.api_server_addr,
-        kube_config_content: '', // 留空表示不修改
-        cpu_request: record.cpu_request,
-        cpu_limit: record.cpu_limit,
-        memory_request: record.memory_request,
-        memory_limit: record.memory_limit,
-        action_timeout_seconds: record.action_timeout_seconds,
         tags: record.tags || [],
-      } as UpdateClusterReq & { id?: number };
+        version: record.version,
+      } as { id?: number } & UpdateClusterReq;
       editHasKubeConfig.value = Boolean(record.has_kube_config);
 
       isModalVisible.value = true;
@@ -287,23 +287,23 @@ export function useClusterPage() {
             detailData.has_kube_config ?? record.has_kube_config,
           );
           formModel.value = {
-            id: detailData.id || record.id,
-            name: detailData.name || record.name,
-            restrict_namespace: detailData.restrict_namespace || [],
-            env: detailData.env || record.env,
-            version: detailData.version || record.version,
-            api_server_addr:
-              detailData.api_server_addr || record.api_server_addr,
-            kube_config_content: '', // 留空表示不修改，填写则整段替换
-            cpu_request: detailData.cpu_request || record.cpu_request,
-            cpu_limit: detailData.cpu_limit || record.cpu_limit,
-            memory_request: detailData.memory_request || record.memory_request,
-            memory_limit: detailData.memory_limit || record.memory_limit,
             action_timeout_seconds:
               detailData.action_timeout_seconds ||
               record.action_timeout_seconds,
+            api_server_addr:
+              detailData.api_server_addr || record.api_server_addr,
+            cpu_limit: detailData.cpu_limit || record.cpu_limit,
+            cpu_request: detailData.cpu_request || record.cpu_request,
+            env: detailData.env || record.env,
+            id: detailData.id || record.id,
+            kube_config_content: '', // 留空表示不修改，填写则整段替换
+            memory_limit: detailData.memory_limit || record.memory_limit,
+            memory_request: detailData.memory_request || record.memory_request,
+            name: detailData.name || record.name,
+            restrict_namespace: detailData.restrict_namespace || [],
             tags: detailData.tags || [],
-          } as UpdateClusterReq & { id?: number };
+            version: detailData.version || record.version,
+          } as { id?: number } & UpdateClusterReq;
         }
       }
     } catch {
@@ -327,9 +327,9 @@ export function useClusterPage() {
     if (!isEdit.value) return false; // 新建不需要确认
 
     // 获取原始数据进行对比
-    const currentFormData = formModel.value as UpdateClusterReq & {
+    const currentFormData = formModel.value as {
       id?: number;
-    };
+    } & UpdateClusterReq;
     if (!currentFormData.id) return false;
 
     try {
@@ -401,9 +401,9 @@ export function useClusterPage() {
       submitLoading.value = true;
       if (
         isEdit.value &&
-        (formModel.value as UpdateClusterReq & { id?: number }).id
+        (formModel.value as { id?: number } & UpdateClusterReq).id
       ) {
-        const m = formModel.value as UpdateClusterReq & { id?: number };
+        const m = formModel.value as { id?: number } & UpdateClusterReq;
         const payload: UpdateClusterReq = { ...(m as UpdateClusterReq) };
         // 留空 = 保留原 kubeconfig，不把空串发给后端
         if (!payload.kube_config_content?.trim()) {
@@ -433,12 +433,11 @@ export function useClusterPage() {
 
   const confirmDelete = (record: K8sCluster) => {
     Modal.confirm({
-      title: '确认删除集群',
+      cancelText: '取消',
+      centered: true,
       content: `确定要删除集群 "${record.name}" 吗？此操作不可撤销。`,
       okText: '确认删除',
-      cancelText: '取消',
       okType: 'danger',
-      centered: true,
       onOk: async () => {
         try {
           await deleteClusterApi(record.id as number);
@@ -448,6 +447,7 @@ export function useClusterPage() {
           message.error('集群删除失败');
         }
       },
+      title: '确认删除集群',
     });
   };
 
@@ -465,12 +465,11 @@ export function useClusterPage() {
   const batchDelete = () => {
     if (selectedRows.value.length === 0) return;
     Modal.confirm({
-      title: '批量删除集群',
+      cancelText: '取消',
+      centered: true,
       content: `确定要删除选中的 ${selectedRows.value.length} 个集群吗？此操作不可撤销，请谨慎操作！`,
       okText: '确认删除',
-      cancelText: '取消',
       okType: 'danger',
-      centered: true,
       onOk: async () => {
         try {
           await Promise.all(
@@ -484,6 +483,7 @@ export function useClusterPage() {
           message.error('批量删除失败');
         }
       },
+      title: '批量删除集群',
     });
   };
 
@@ -551,13 +551,19 @@ export function useClusterPage() {
   return {
     addTag,
     batchDelete,
+    // detail modal
+    closeDetailModal,
     closeModal,
     clusters,
     ClusterStatus,
     clustersTotal,
     confirmDelete,
+    currentClusterDetail,
     currentPage,
+    detailLoading,
     editDetailLoading,
+    // kubeconfig 状态
+    editHasKubeConfig,
     Env,
     fetchClusters,
     filteredClusters,
@@ -569,6 +575,9 @@ export function useClusterPage() {
     getEnvColor,
     getEnvText,
     getStatusText,
+    // pagination
+    handlePageChange,
+    isDetailModalVisible,
     isEdit,
     isModalVisible,
     loadError,
@@ -585,19 +594,10 @@ export function useClusterPage() {
     searchText,
     selectedRowKeys,
     selectedRows,
+    showClusterDetail,
     submitForm,
     submitLoading,
-    total,
-    // detail modal
-    closeDetailModal,
-    currentClusterDetail,
-    detailLoading,
-    isDetailModalVisible,
-    showClusterDetail,
-    // kubeconfig 状态
-    editHasKubeConfig,
 
-    // pagination
-    handlePageChange,
+    total,
   };
 }

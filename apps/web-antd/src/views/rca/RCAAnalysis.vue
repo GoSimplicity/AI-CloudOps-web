@@ -1,22 +1,6 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { getOwnLookupValue } from '#/utils/own-lookup';
-
-import CollectionSummary from './CollectionSummary.vue';
-import { useAiRequestScope } from '../assistant/useAiRequestScope';
-import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue';
-// 按需引入echarts，减少打包体积
-import * as echarts from 'echarts/core';
-import { BarChart, PieChart } from 'echarts/charts';
-import {
-  GridComponent,
-  LegendComponent,
-  TitleComponent,
-  TooltipComponent,
-} from 'echarts/components';
-import { CanvasRenderer } from 'echarts/renderers';
-import { message } from 'ant-design-vue';
+
 import {
   AlertOutlined,
   BugOutlined,
@@ -28,6 +12,24 @@ import {
   NodeIndexOutlined,
   PartitionOutlined,
 } from '@ant-design/icons-vue';
+import { message } from 'ant-design-vue';
+import { BarChart, PieChart } from 'echarts/charts';
+import {
+  GridComponent,
+  LegendComponent,
+  TitleComponent,
+  TooltipComponent,
+} from 'echarts/components';
+
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { getOwnLookupValue } from '#/utils/own-lookup';
+
+import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
+import { useAiRequestScope } from '../assistant/useAiRequestScope';
+import CollectionSummary from './CollectionSummary.vue';
+// 按需引入echarts，减少打包体积
+import * as echarts from 'echarts/core';
+import { CanvasRenderer } from 'echarts/renderers';
 
 import {
   analyzeRootCause,
@@ -66,9 +68,9 @@ let errorLogsChart: echarts.ECharts | null = null;
 
 // 表单数据
 const formData = reactive({
+  metrics: [] as string[],
   namespace: 'default',
   timeWindowHours: 2,
-  metrics: [] as string[],
 });
 
 const scope = useAiRequestScope(() => {
@@ -165,7 +167,7 @@ const hasAnomalies = computed(() => {
 const truncateText = (text: string, maxLength: number) => {
   if (!text) return '';
   if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + '...';
+  return `${text.substring(0, maxLength)}...`;
 };
 
 // 加载可用指标
@@ -204,10 +206,10 @@ const formatShortTime = (timestamp?: string) => {
   if (isNaN(date.getTime())) return timestamp;
 
   return date.toLocaleString('zh-CN', {
-    month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    month: '2-digit',
   });
 };
 
@@ -227,43 +229,43 @@ const initEventsChart = () => {
   );
 
   const option = {
-    textStyle: { color: chartColors().text },
     backgroundColor: 'transparent',
     grid: {
+      bottom: '15%',
+      containLabel: true,
       left: '3%',
       right: '4%',
-      bottom: '15%',
       top: '5%',
-      containLabel: true,
-    },
-    tooltip: {
-      trigger: 'axis',
-      formatter: (params: any) => {
-        const data = params[0];
-        return `${data.name}<br/>事件数: ${data.value}`;
-      },
-    },
-    xAxis: {
-      type: 'category',
-      data: sortedEvents.map((e) => formatShortTime(e.timestamp)),
-      axisLabel: {
-        rotate: 45,
-        interval: Math.floor(sortedEvents.length / 8),
-      },
-    },
-    yAxis: {
-      type: 'value',
-      name: '次数',
     },
     series: [
       {
         data: sortedEvents.map((e) => e.count),
-        type: 'bar',
         itemStyle: {
           color: chartColors().accent,
         },
+        type: 'bar',
       },
     ],
+    textStyle: { color: chartColors().text },
+    tooltip: {
+      formatter: (params: any) => {
+        const data = params[0];
+        return `${data.name}<br/>事件数: ${data.value}`;
+      },
+      trigger: 'axis',
+    },
+    xAxis: {
+      axisLabel: {
+        interval: Math.floor(sortedEvents.length / 8),
+        rotate: 45,
+      },
+      data: sortedEvents.map((e) => formatShortTime(e.timestamp)),
+      type: 'category',
+    },
+    yAxis: {
+      name: '次数',
+      type: 'value',
+    },
   };
 
   eventsChart.setOption(option);
@@ -285,36 +287,36 @@ const initClustersChart = () => {
   }));
 
   const option = {
-    textStyle: { color: chartColors().text },
     backgroundColor: 'transparent',
-    tooltip: {
-      trigger: 'item',
-      formatter: '{b}: {c} ({d}%)',
-    },
     series: [
       {
-        type: 'pie',
-        radius: ['40%', '70%'],
         avoidLabelOverlap: false,
+        data: clusterData,
+        emphasis: {
+          label: {
+            fontSize: 14,
+            fontWeight: 'bold',
+            show: true,
+          },
+        },
         itemStyle: {
-          borderRadius: 10,
           borderColor: chartColors().surface,
+          borderRadius: 10,
           borderWidth: 2,
         },
         label: {
-          show: false,
           position: 'center',
+          show: false,
         },
-        emphasis: {
-          label: {
-            show: true,
-            fontSize: 14,
-            fontWeight: 'bold',
-          },
-        },
-        data: clusterData,
+        radius: ['40%', '70%'],
+        type: 'pie',
       },
     ],
+    textStyle: { color: chartColors().text },
+    tooltip: {
+      formatter: '{b}: {c} ({d}%)',
+      trigger: 'item',
+    },
   };
 
   clustersChart.setOption(option);
@@ -340,41 +342,41 @@ const initErrorLogsChart = () => {
     .slice(0, 10);
 
   const option = {
-    textStyle: { color: chartColors().text },
     backgroundColor: 'transparent',
     grid: {
+      bottom: '20%',
+      containLabel: true,
       left: '3%',
       right: '4%',
-      bottom: '20%',
       top: '5%',
-      containLabel: true,
-    },
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: {
-        type: 'shadow',
-      },
-    },
-    xAxis: {
-      type: 'category',
-      data: errorData.map((e) => e.name),
-      axisLabel: {
-        rotate: 45,
-        interval: 0,
-      },
-    },
-    yAxis: {
-      type: 'value',
     },
     series: [
       {
         data: errorData.map((e) => e.value),
-        type: 'bar',
         itemStyle: {
           color: '#ff4d4f',
         },
+        type: 'bar',
       },
     ],
+    textStyle: { color: chartColors().text },
+    tooltip: {
+      axisPointer: {
+        type: 'shadow',
+      },
+      trigger: 'axis',
+    },
+    xAxis: {
+      axisLabel: {
+        interval: 0,
+        rotate: 45,
+      },
+      data: errorData.map((e) => e.name),
+      type: 'category',
+    },
+    yAxis: {
+      type: 'value',
+    },
   };
 
   errorLogsChart.setOption(option);
@@ -412,9 +414,9 @@ const startAnalysis = async () => {
 
   try {
     const request: RCAAnalyzeRequest = {
+      metrics: formData.metrics.length > 0 ? [...formData.metrics] : undefined,
       namespace,
       time_window_hours: formData.timeWindowHours,
-      metrics: formData.metrics.length > 0 ? [...formData.metrics] : undefined,
     };
 
     const response = await analyzeRootCause(request);
@@ -681,13 +683,13 @@ onUnmounted(() => {
             :status="analysisResult.status"
           />
           <a-statistic
-            title="分析ID"
             :value="
               analysisResult?.analysis_id
-                ? analysisResult.analysis_id.substring(0, 8) + '…'
+                ? `${analysisResult.analysis_id.substring(0, 8)}…`
                 : '未知'
             "
             style="margin-bottom: 16px"
+            title="分析ID"
           >
             <template #suffix>
               <a-tooltip :title="analysisResult?.analysis_id">
@@ -701,18 +703,18 @@ onUnmounted(() => {
               analysisResult.status === 'completed' ||
               analysisResult.status === 'degraded'
             "
-            title="置信度"
+            :suffix="
+              Number.isFinite(analysisResult?.confidence_score) ? '%' : ''
+            "
             :value="
               Number.isFinite(analysisResult?.confidence_score)
                 ? (analysisResult.confidence_score * 100).toFixed(1)
                 : '未知'
             "
-            :suffix="
-              Number.isFinite(analysisResult?.confidence_score) ? '%' : ''
-            "
             :value-style="{
               color: getConfidenceColor(analysisResult?.confidence_score || 0),
             }"
+            title="置信度"
           >
             <template #prefix>
               <CheckCircleOutlined
@@ -745,7 +747,7 @@ onUnmounted(() => {
           class="result-card"
         >
           <a-tabs
-            v-model:activeKey="activeResultTab"
+            v-model:active-key="activeResultTab"
             class="result-tabs"
             @change="onResultTabChange"
           >
@@ -955,8 +957,8 @@ onUnmounted(() => {
                     <h4 class="section-title">关键事件列表</h4>
                     <div class="table-wrapper">
                       <a-table
-                        :data-source="getCriticalEventsTableData()"
                         :columns="criticalEventsColumns"
+                        :data-source="getCriticalEventsTableData()"
                         :pagination="{ pageSize: 5, size: 'small' }"
                         size="small"
                       />
@@ -978,10 +980,10 @@ onUnmounted(() => {
                         }}</span>
                         <a-progress
                           :percent="getErrorFrequencyPercent(count as number)"
+                          :show-info="false"
                           :stroke-color="
                             getErrorFrequencyColor(count as number)
                           "
-                          :show-info="false"
                           size="small"
                         />
                         <span class="error-count">{{ count }}</span>

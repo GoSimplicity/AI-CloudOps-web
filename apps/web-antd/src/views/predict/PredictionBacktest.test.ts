@@ -1,20 +1,20 @@
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
-import Antd from 'ant-design-vue';
 import { reactive, ref } from 'vue';
 
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+import Antd from 'ant-design-vue';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import PredictionBacktest from './PredictionBacktest.vue';
 
 const fixtures = vi.hoisted(() => ({
-  user: null as any,
   access: null as any,
   allowed: null as any,
   run: vi.fn(),
+  user: null as any,
 }));
 vi.mock('@vben/stores', () => ({
-  useUserStore: () => fixtures.user,
   useAccessStore: () => fixtures.access,
+  useUserStore: () => fixtures.user,
 }));
 vi.mock('#/utils/permission', () => ({
   usePermission: () => ({ hasPerm: () => fixtures.allowed.value }),
@@ -25,30 +25,30 @@ vi.mock('#/api/core/aiops/prediction-backtest', () => ({
 
 let wrapper: VueWrapper;
 const record = {
-  issued_at: '2026-01-01T00:00:00Z',
-  target_at: '2026-01-01T01:00:00Z',
-  observed_at: '2026-01-01T01:00:00Z',
-  forecast: 4,
   actual: 5,
+  forecast: 4,
+  issued_at: '2026-01-01T00:00:00Z',
+  observed_at: '2026-01-01T01:00:00Z',
+  target_at: '2026-01-01T01:00:00Z',
 };
 const response = {
-  sample_count: 1,
+  bias: 1,
+  calibration: {
+    evaluated_count: 0,
+    method: 'test',
+    minimum_history: 20,
+    observed_coverage: null,
+    reference_time: record.observed_at,
+    residual_lower: null,
+    residual_upper: null,
+    window: 200,
+  },
+  evidence: '证据限制',
   horizon_seconds: 3600,
   mae: 1,
   rmse: 1,
-  bias: 1,
+  sample_count: 1,
   wape: null,
-  evidence: '证据限制',
-  calibration: {
-    method: 'test',
-    window: 200,
-    minimum_history: 20,
-    evaluated_count: 0,
-    observed_coverage: null,
-    residual_lower: null,
-    residual_upper: null,
-    reference_time: record.observed_at,
-  },
 };
 function render() {
   wrapper = mount(PredictionBacktest, { global: { plugins: [Antd] } });
@@ -65,8 +65,8 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );

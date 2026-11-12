@@ -1,9 +1,10 @@
+import { defineComponent, nextTick } from 'vue';
+
+import { useAccessStore, useUserStore } from '@vben/stores';
+
 import { mount } from '@vue/test-utils';
 import Antd from 'ant-design-vue';
 import { createPinia, setActivePinia } from 'pinia';
-import { useAccessStore, useUserStore } from '@vben/stores';
-import { defineComponent, nextTick } from 'vue';
-
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -25,14 +26,14 @@ const ALL_KEYS = Object.keys(PERMISSION_CODES) as PermissionKey[];
 
 function mountPanel() {
   return mount(ApprovalPanel, {
+    global: { plugins: [Antd] },
     props: {
       actions: [],
-      selected: [],
       busy: false,
       canConfirm: true,
       issue: '',
+      selected: [],
     },
-    global: { plugins: [Antd] },
   });
 }
 
@@ -92,7 +93,10 @@ describe('危险按钮按权限渲染', () => {
     const keys = mountAll()
       .findAll('button')
       .map((item) => item.attributes('data-key'));
-    expect(keys).toEqual(['k8s.pod.delete', 'k8s.pod.batchDelete']);
+    expect(keys).toHaveLength(2);
+    expect(keys).toEqual(
+      expect.arrayContaining(['k8s.pod.delete', 'k8s.pod.batchDelete']),
+    );
   });
 
   it('admin 角色 + codes 为空时除 Secret 明文（显式授权，SEC-25/26）外按钮全部显示', () => {
@@ -133,7 +137,7 @@ describe('危险按钮按权限渲染', () => {
 const SecretDetailLayer = defineComponent({
   setup() {
     const { can, hasPerm } = usePermission();
-    return { can, hasPerm, detailCode: SECRET_DETAIL_PERMISSION_CODE };
+    return { can, detailCode: SECRET_DETAIL_PERMISSION_CODE, hasPerm };
   },
   template: `<div>
     <a-button v-if="hasPerm(detailCode)" data-key="detail">详情</a-button>

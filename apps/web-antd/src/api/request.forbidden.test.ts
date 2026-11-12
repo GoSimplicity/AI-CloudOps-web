@@ -15,9 +15,9 @@ import { requestClient } from './request';
  */
 const notices = vi.hoisted(() => ({
   error: vi.fn(),
-  warning: vi.fn(),
-  success: vi.fn(),
   info: vi.fn(),
+  success: vi.fn(),
+  warning: vi.fn(),
 }));
 const refreshTokenApi = vi.hoisted(() => vi.fn());
 
@@ -34,8 +34,8 @@ vi.mock('@vben/preferences', () => ({
 const access = vi.hoisted(() => {
   const store = {
     accessToken: 'token' as null | string,
-    refreshToken: 'refresh',
     isAccessChecked: true,
+    refreshToken: 'refresh',
     setAccessToken: (token: null | string) => {
       store.accessToken = token;
     },

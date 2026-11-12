@@ -30,10 +30,10 @@ vi.mock('#/utils/permission', async (importOriginal) => ({
 }));
 
 const client = vi.hoisted(() => ({
+  delete: vi.fn(),
   get: vi.fn(),
   post: vi.fn(),
   put: vi.fn(),
-  delete: vi.fn(),
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 
@@ -50,30 +50,30 @@ beforeEach(() => {
   });
   client.get.mockImplementation((url: string) =>
     Promise.resolve({
+      total: url === '/workorder/process/list' ? 1 : 0,
       items:
         url === '/workorder/process/list'
           ? [
               {
-                id: 1,
-                name: '发布应用',
-                description: '',
-                status: 1,
                 category_id: 0,
-                tags: [],
-                form_design_id: 0,
-                is_default: 2,
                 definition: '{}',
+                description: '',
+                form_design_id: 0,
+                id: 1,
+                is_default: 2,
+                name: '发布应用',
+                status: 1,
+                tags: [],
               },
             ]
           : [],
-      total: url === '/workorder/process/list' ? 1 : 0,
     }),
   );
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -100,7 +100,7 @@ describe('工单流程列表交互', () => {
     await wrapper.get('.ops-page__filters button').trigger('click');
     await flushPromises();
     expect(client.get).toHaveBeenLastCalledWith('/workorder/process/list', {
-      params: expect.objectContaining({ search: '发布', page: 1 }),
+      params: expect.objectContaining({ page: 1, search: '发布' }),
     });
     expect(wrapper.get('.process-name-text').text()).toBe('发布应用');
   });

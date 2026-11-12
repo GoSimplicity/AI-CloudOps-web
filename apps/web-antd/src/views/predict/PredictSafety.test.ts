@@ -1,12 +1,11 @@
+import { reactive } from 'vue';
+
 import {
   flushPromises,
   mount,
   shallowMount,
   type VueWrapper,
 } from '@vue/test-utils';
-
-import { reactive } from 'vue';
-
 import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -20,44 +19,44 @@ function required<T>(value: null | T | undefined): T {
   return value;
 }
 
-const account = vi.hoisted(() => ({ user: null as any, access: null as any }));
+const account = vi.hoisted(() => ({ access: null as any, user: null as any }));
 const api = vi.hoisted(() => ({
-  predictQps: vi.fn(),
   predictCpu: vi.fn(),
-  predictMemory: vi.fn(),
   predictDisk: vi.fn(),
+  predictMemory: vi.fn(),
+  predictQps: vi.fn(),
 }));
 const charts = vi.hoisted(() => ({ instances: [] as any[] }));
 vi.mock('@vben/stores', () => ({
-  useUserStore: () => account.user,
   useAccessStore: () => account.access,
+  useUserStore: () => account.user,
 }));
 vi.mock('#/api/core/aiops/predict', () => ({
   ...api,
-  PredictionGranularity: { MINUTE: 'minute', HOUR: 'hour', DAY: 'day' },
+  PredictionGranularity: { DAY: 'day', HOUR: 'hour', MINUTE: 'minute' },
 }));
 vi.mock('echarts/core', () => ({
-  use: vi.fn(),
   init: () => {
     const chart = {
-      setOption: vi.fn(),
       clear: vi.fn(),
-      resize: vi.fn(),
       dispose: vi.fn(),
       isDisposed: () => false,
+      resize: vi.fn(),
+      setOption: vi.fn(),
     };
     charts.instances.push(chart);
     return chart;
   },
+  use: vi.fn(),
 }));
 let wrapper: undefined | VueWrapper;
 const state = () => (required(wrapper).vm as any).$.setupState;
 function render(component: any, actual = false) {
   wrapper = (actual ? mount : shallowMount)(component, {
     global: {
+      config: { warnHandler: () => {} },
       plugins: [Antd],
       stubs: { Icon: true },
-      config: { warnHandler: () => {} },
     },
   });
   return wrapper;
@@ -67,25 +66,25 @@ function deferred() {
   const promise = new Promise((yes) => {
     resolve = yes;
   });
-  return { resolve, promise };
+  return { promise, resolve };
 }
 const point = (timestamp = '2026-10-23T00:00:00Z', predicted_value = 0) => ({
-  timestamp,
   predicted_value,
+  timestamp,
 });
 const response = () => ({
+  ai_insights: ['private-one'],
   current_value: 0,
   predicted_data: [point()],
-  ai_insights: ['private-one'],
-  scaling_recommendations: [],
   resource_utilization: [],
+  scaling_recommendations: [],
 });
 function fillDashboard() {
   state().inputData = {
-    currentQps: 0,
     currentCpu: 0,
-    currentMemory: 0,
     currentDisk: 0,
+    currentMemory: 0,
+    currentQps: 0,
   };
 }
 beforeEach(() => {
@@ -100,8 +99,8 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -127,13 +126,13 @@ describe('预测显式调用与结果完整性', () => {
       render(component);
       expect(state().formatTime('2026-10-23T00:00:00Z')).toBe(
         new Date('2026-10-23T00:00:00Z').toLocaleString('zh-CN', {
-          timeZone: 'Asia/Shanghai',
-          year: 'numeric',
-          month: '2-digit',
           day: '2-digit',
           hour: '2-digit',
           minute: '2-digit',
+          month: '2-digit',
           second: '2-digit',
+          timeZone: 'Asia/Shanghai',
+          year: 'numeric',
         }),
       );
     },
@@ -218,9 +217,9 @@ describe('预测显式调用与结果完整性', () => {
       predicted_data: [
         {
           ...point(),
-          predicted_value: 5,
           confidence_lower: 0,
           confidence_upper: 0,
+          predicted_value: 5,
         },
         { ...point('2026-10-23T01:00:00Z'), predicted_value: 8 },
       ],
@@ -241,13 +240,13 @@ describe('预测显式调用与结果完整性', () => {
     state().trendChartRef = document.createElement('div');
     state().initTrendChart();
     state().predictionCache = {
-      qps: {
-        ...response(),
-        predicted_data: [point('2020-01-02T00:00:00Z', 0)],
-      },
       cpu: {
         ...response(),
         predicted_data: [point('2020-01-02T01:00:00Z', 25)],
+      },
+      qps: {
+        ...response(),
+        predicted_data: [point('2020-01-02T00:00:00Z', 0)],
       },
     };
     state().updateTrendChart();
@@ -273,11 +272,11 @@ describe('预测置信度与降级边界', () => {
   it('null 扩缩容置信度显示未知，失败的 AI 文本不会当作洞察', async () => {
     api.predictQps.mockResolvedValueOnce({
       ...response(),
-      method: 'rule_based',
-      fallback_mode: true,
-      fallback_reason: '预测模型不可用',
       ai_enhanced: false,
       ai_fallback_reason: 'AI分析未完成',
+      fallback_mode: true,
+      fallback_reason: '预测模型不可用',
+      method: 'rule_based',
       model_accuracy: null,
       scaling_recommendations: [
         {

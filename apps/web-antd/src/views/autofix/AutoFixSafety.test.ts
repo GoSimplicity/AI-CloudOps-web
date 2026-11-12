@@ -1,7 +1,7 @@
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
-import Antd, { message } from 'ant-design-vue';
 import { nextTick, reactive } from 'vue';
 
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PERMISSION_DENIED_MESSAGE } from '#/utils/permission/forbidden';
@@ -25,62 +25,62 @@ vi.mock('#/utils/permission', async (importOriginal) => ({
   }),
 }));
 
-const account = vi.hoisted(() => ({ user: null as any, access: null as any }));
+const account = vi.hoisted(() => ({ access: null as any, user: null as any }));
 const api = vi.hoisted(() => ({
-  getAutoFixInfo: vi.fn(),
-  getAutoFixReady: vi.fn(),
-  executeAutoFixWorkflow: vi.fn(),
   confirmAutoFixWorkflow: vi.fn(),
+  executeAutoFixWorkflow: vi.fn(),
   getAutoFixHistory: vi.fn(),
+  getAutoFixInfo: vi.fn(),
   getAutoFixOperation: vi.fn(),
   getAutoFixPlan: vi.fn(),
+  getAutoFixReady: vi.fn(),
 }));
 vi.mock('@vben/stores', () => ({
-  useUserStore: () => account.user,
   useAccessStore: () => account.access,
+  useUserStore: () => account.user,
 }));
 vi.mock('#/api/core/aiops/autofix', () => api);
 let wrapper: undefined | VueWrapper;
 const action = () => ({
   action_id: 'restart',
   action_type: 'restart_deployment',
-  executable: true,
   description: '原计划动作',
+  executable: true,
   risk_assessment: {
     allowed: false,
-    requires_human_confirmation: true,
-    permission_allowed: true,
     namespace_allowed: true,
+    permission_allowed: true,
+    reasons: [],
+    requires_human_confirmation: true,
     resource_exists: true,
     risk_level: 'high',
-    reasons: [],
   },
 });
 function plan(reason = '账户1私有审批结论') {
   const item = action();
   return {
-    status: 'needs_human_confirmation',
-    plan: {
-      plan_id: 'opaque-plan-one',
-      candidate_actions: [item],
-      blocked_actions: [item],
-    },
-    candidate_actions: [item],
-    blocked_actions: [item],
-    review: { approved: false, reason },
     agents_used: ['Reviewer'],
-    diagnosis: {},
-    execution: {},
-    executed_actions: [],
-    messages: [],
-    timestamp: new Date().toISOString(),
     approval: {
-      state: 'pending',
       expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
-      retry_safe: false,
       // 复审 P3-1：缺 pending_action_ids 时不允许确认，夹具按契约带上
       pending_action_ids: [item.action_id],
+      retry_safe: false,
+      state: 'pending',
     },
+    blocked_actions: [item],
+    candidate_actions: [item],
+    diagnosis: {},
+    executed_actions: [],
+    execution: {},
+    messages: [],
+    plan: {
+      blocked_actions: [item],
+      candidate_actions: [item],
+      plan_id: 'opaque-plan-one',
+    },
+    review: { approved: false, reason },
+    status: 'needs_human_confirmation',
+    timestamp: new Date().toISOString(),
   };
 }
 beforeEach(() => {
@@ -94,8 +94,8 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -104,27 +104,27 @@ beforeEach(() => {
     style(element),
   );
   api.getAutoFixInfo.mockResolvedValue({
-    service: '测试修复服务',
-    status: 'initialized',
     capabilities: [],
     endpoints: {},
+    service: '测试修复服务',
+    status: 'initialized',
   });
   api.getAutoFixReady.mockResolvedValue({
-    ready: true,
     healthy: true,
+    ready: true,
     status: 'ready',
   });
   api.executeAutoFixWorkflow.mockImplementation(async () => plan());
   api.confirmAutoFixWorkflow.mockImplementation(async () => ({
     ...plan('执行结论'),
-    status: 'completed',
-    blocked_actions: [],
-    executed_actions: [{ action_id: 'restart', status: 'succeeded' }],
     approval: {
-      state: 'completed',
       expires_at: new Date().toISOString(),
       retry_safe: false,
+      state: 'completed',
     },
+    blocked_actions: [],
+    executed_actions: [{ action_id: 'restart', status: 'succeeded' }],
+    status: 'completed',
   }));
 });
 afterEach(() => {
@@ -215,7 +215,7 @@ describe('自动修复页面的显式调用和审批状态', () => {
     async (status, text) => {
       api.confirmAutoFixWorkflow.mockRejectedValueOnce(
         Object.assign(new Error('后端原文 WORKFLOW_APPROVAL_ERROR'), {
-          response: { status, data: { error_code: 'WORKFLOW_APPROVAL_ERROR' } },
+          response: { data: { error_code: 'WORKFLOW_APPROVAL_ERROR' }, status },
         }),
       );
       await start();
@@ -248,11 +248,11 @@ describe('自动修复页面的显式调用和审批状态', () => {
     expect(required(wrapper).text()).toContain('待核对');
     expect(required(wrapper).text()).toContain('不要重复执行');
     api.getAutoFixOperation.mockResolvedValueOnce({
+      approval_state: 'pending',
       operation_id: id,
       plan_id: 'opaque-plan-one',
-      state: 'pending',
-      approval_state: 'pending',
       result: plan(),
+      state: 'pending',
     });
     await button('查询当前状态').trigger('click');
     await flushPromises();

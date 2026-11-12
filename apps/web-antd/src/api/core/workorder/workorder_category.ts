@@ -2,8 +2,8 @@ import { requestClient } from '#/api/request';
 
 // 分类状态常量
 export const CategoryStatus = {
-  Enabled: 1, // 启用
   Disabled: 2, // 禁用
+  Enabled: 1, // 启用
 } as const;
 
 // 工单分类实体

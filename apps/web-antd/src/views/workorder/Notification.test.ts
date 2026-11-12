@@ -1,9 +1,8 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import Antd, { message, Modal } from 'ant-design-vue';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { markRequestLayerNotice } from '#/utils/permission/request-notice';
-
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createDeferred } from '../../../../../internal/test-utils/deferred';
 import Notification from './Notification.vue';
@@ -21,10 +20,10 @@ vi.mock('#/utils/permission', async (importOriginal) => ({
   usePermission: () => ({ can: () => true, hasPerm: () => true }),
 }));
 const client = vi.hoisted(() => ({
+  delete: vi.fn(),
   get: vi.fn(),
   post: vi.fn(),
   put: vi.fn(),
-  delete: vi.fn(),
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 vi.mock('@vben/stores', () => ({
@@ -34,21 +33,21 @@ vi.mock('#/store', () => ({
   useAuthStore: () => ({ getAuthGeneration: () => 0 }),
 }));
 const fixture = {
-  id: 7,
-  name: '发布通知',
+  channels: ['email'],
+  created_at: '2026-10-23T10:00:00Z',
   description: '',
   event_types: ['instance_created'],
-  trigger_type: 'immediate',
-  channels: ['email'],
-  recipient_types: ['creator'],
-  message_template: '工单通知：{title}/{recipient_name}',
+  id: 7,
+  is_default: 2,
   max_retries: 3,
+  message_template: '工单通知：{title}/{recipient_name}',
+  name: '发布通知',
+  operator_id: 1,
+  priority: 2,
+  recipient_types: ['creator'],
   retry_interval: 5,
   status: 1,
-  priority: 2,
-  operator_id: 1,
-  is_default: 2,
-  created_at: '2026-10-23T10:00:00Z',
+  trigger_type: 'immediate',
   updated_at: '2026-10-23T10:00:00Z',
 };
 let wrapper: VueWrapper;
@@ -74,15 +73,15 @@ beforeEach(() => {
   client.get.mockImplementation((url: string) =>
     Promise.resolve(
       url === '/workorder/notification/list'
-        ? { items: [{ ...fixture }], total: 33 }
-        : { items: [], total: 0 },
+        ? { total: 33, items: [{ ...fixture }] }
+        : { total: 0, items: [] },
     ),
   );
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -128,11 +127,11 @@ describe('通知配置真实控件', () => {
     client.get.mockReturnValueOnce(pending.promise);
     await query();
     client.get.mockResolvedValueOnce({
-      items: [{ ...fixture, id: 8, name: '当前查询' }],
       total: 1,
+      items: [{ ...fixture, id: 8, name: '当前查询' }],
     });
     await query();
-    pending.resolve({ items: [{ ...fixture, name: '旧查询' }], total: 33 });
+    pending.resolve({ total: 33, items: [{ ...fixture, name: '旧查询' }] });
     await flushPromises();
     expect(wrapper.get('.name-text').text()).toBe('当前查询');
   });
@@ -147,17 +146,17 @@ describe('通知配置真实控件', () => {
   it('发送记录显示后端数字状态及真实地址和时间字段', async () => {
     await flushPromises();
     client.get.mockResolvedValueOnce({
+      total: 1,
       items: [
         {
-          id: 12,
           channel: 'email',
-          recipient_addr: 'safe@example.test',
-          status: 3,
-          send_at: '2026-10-23T10:00:00Z',
           error_message: '',
+          id: 12,
+          recipient_addr: 'safe@example.test',
+          send_at: '2026-10-23T10:00:00Z',
+          status: 3,
         },
       ],
-      total: 1,
     });
     await menu('发送记录');
     const modal = required(document.querySelector('.ant-modal'));
@@ -210,7 +209,7 @@ describe('通知配置真实控件', () => {
     expect(client.post).toHaveBeenCalledTimes(1);
     expect(client.post).toHaveBeenCalledWith(
       '/workorder/notification/test/send',
-      { notification_id: 7, channel: 'email', recipient: 'safe@example.test' },
+      { channel: 'email', notification_id: 7, recipient: 'safe@example.test' },
     );
     pending.resolve({});
     await flushPromises();

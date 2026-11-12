@@ -4,8 +4,8 @@ import { requestClient } from '#/api/request';
 export enum K8sPVStatus {
   Available = 1, // 可用
   Bound = 2, // 已绑定
-  Released = 3, // 已释放
   Failed = 4, // 失败
+  Released = 3, // 已释放
   Unknown = 5, // 未知
 }
 

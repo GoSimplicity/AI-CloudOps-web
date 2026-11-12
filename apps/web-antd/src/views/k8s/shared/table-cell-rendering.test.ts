@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 
+import { defineComponent } from 'vue';
+
 import {
   DeleteOutlined,
   EditOutlined,
@@ -13,11 +15,9 @@ import {
 } from '@ant-design/icons-vue';
 import { mount } from '@vue/test-utils';
 import Antd from 'ant-design-vue';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { defineComponent } from 'vue';
-
-import { compileTemplate, parse } from 'vue/compiler-sfc';
 import ts from 'typescript';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { compileTemplate, parse } from 'vue/compiler-sfc';
 
 function required<T>(value: null | T | undefined): T {
   if (value === null || value === undefined) {
@@ -63,9 +63,9 @@ function mountCells(
   );
   expect(cell, `${page} table ${tableIndex} bodyCell`).toBeDefined();
   const compiled = compileTemplate({
-    source: `<a-table :columns="testColumns" :data-source="testRecords" row-key="id" :pagination="false">${cell.loc.source}</a-table>`,
     filename,
     id: 'table-cell-regression',
+    source: `<a-table :columns="testColumns" :data-source="testRecords" row-key="id" :pagination="false">${cell.loc.source}</a-table>`,
   });
   expect(compiled.errors).toEqual([]);
   const js = ts.transpileModule(compiled.code, {
@@ -80,7 +80,6 @@ function mountCells(
     }),
     {
       global: {
-        plugins: [Antd],
         components: {
           DeleteOutlined,
           EditOutlined,
@@ -90,6 +89,7 @@ function mountCells(
           PlayCircleOutlined,
           PlaySquareOutlined,
         },
+        plugins: [Antd],
       },
     },
   );
@@ -105,11 +105,11 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
       addEventListener: vi.fn(),
+      addListener: vi.fn(),
+      matches: false,
       removeEventListener: vi.fn(),
+      removeListener: vi.fn(),
     })),
   );
 });
@@ -124,22 +124,22 @@ describe('ant Table bodyCell migration', () => {
       'k8s/service/Service.vue',
       1,
       [
-        { key: 'name', dataIndex: 'name' },
-        { key: 'protocol', dataIndex: 'protocol' },
-        { key: 'node_port', dataIndex: 'node_port' },
-        { key: 'port', dataIndex: 'port' },
+        { dataIndex: 'name', key: 'name' },
+        { dataIndex: 'protocol', key: 'protocol' },
+        { dataIndex: 'node_port', key: 'node_port' },
+        { dataIndex: 'port', key: 'port' },
         {
-          key: 'target_port',
-          dataIndex: 'target_port',
           customRender: ({ text }: any) => `target:${text}`,
+          dataIndex: 'target_port',
+          key: 'target_port',
         },
       ],
       {
         id: 1,
         name: '',
-        protocol: '',
         node_port: 0,
         port: 8080,
+        protocol: '',
         target_port: 9090,
       },
     );
@@ -156,24 +156,24 @@ describe('ant Table bodyCell migration', () => {
     const showJobDetail = vi.fn();
     const record = {
       id: 7,
-      last_run_time: 'fixture-time',
       last_run_status: 2,
+      last_run_time: 'fixture-time',
       status: 1,
     };
     const wrapper = mountCells(
       'cron/management/Management.vue',
       0,
       [
-        { key: 'last_run_status', dataIndex: 'last_run_status' },
+        { dataIndex: 'last_run_status', key: 'last_run_status' },
         { key: 'action' },
       ],
       record,
       {
+        can: () => false,
+        CronJobStatus: { DISABLED: 2, ENABLED: 1 },
         getLastRunStatusColor: () => 'error',
         getLastRunStatusText: (value: number) => `result:${value}`,
         isLocalExecLocked: () => false,
-        CronJobStatus: { ENABLED: 1, DISABLED: 2 },
-        can: () => false,
         showJobDetail,
       },
     );
@@ -194,8 +194,8 @@ describe('ant Table bodyCell migration', () => {
         [{ key: 'actions' }],
         record,
         {
-          hasPerm: (code: string) => allowed && code === 'detail',
           can: () => false,
+          hasPerm: (code: string) => allowed && code === 'detail',
           SECRET_DETAIL_PERMISSION_CODE: 'detail',
           SECRET_UPDATE_PERMISSION_CODE: 'update',
           showSecretDetail: detail,

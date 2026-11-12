@@ -7,7 +7,12 @@ import { useUserStore } from '@vben/stores';
 import { message, Modal } from 'ant-design-vue';
 import yaml from 'js-yaml';
 
-import { formatK8sTime } from '../shared/utils';
+import {
+  Env,
+  getClustersListApi,
+  type K8sCluster,
+  type ListClustersReq,
+} from '#/api/core/k8s/k8s_cluster';
 import {
   checkYamlTemplate,
   createYamlTemplate,
@@ -22,17 +27,13 @@ import {
   type YamlTemplateListReq,
   type YamlTemplateUpdateReq,
 } from '#/api/core/k8s/k8s_yaml';
-import {
-  Env,
-  getClustersListApi,
-  type K8sCluster,
-  type ListClustersReq,
-} from '#/api/core/k8s/k8s_cluster';
 import { useAuthStore } from '#/store';
 import {
   shouldNotifyPageError,
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
+
+import { formatK8sTime } from '../shared/utils';
 
 // YAML 模板常量
 const DEFAULT_YAML_TEMPLATE = `apiVersion: apps/v1
@@ -108,16 +109,16 @@ export function useTemplatePage() {
     content: string;
     name: string;
   }>({
-    name: '',
     content: '',
+    name: '',
   });
 
   const editFormModel = ref<{
     content: string;
     name: string;
   }>({
-    name: '',
     content: '',
+    name: '',
   });
 
   const yamlFormModel = ref<{
@@ -128,34 +129,34 @@ export function useTemplatePage() {
 
   // form validation rules
   const createFormRules: Record<string, Rule[]> = {
+    content: [
+      { message: '请输入YAML内容', required: true, trigger: 'blur' },
+      { message: 'YAML内容不能少于10个字符', min: 10, trigger: 'blur' },
+    ],
     name: [
-      { required: true, message: '请输入模板名称', trigger: 'blur' },
+      { message: '请输入模板名称', required: true, trigger: 'blur' },
       {
-        pattern: /^[a-zA-Z0-9-_\u4E00-\u9FA5]+$/,
         message: '模板名称只能包含中英文、数字、下划线和连字符',
+        pattern: /^[a-zA-Z0-9-_\u4E00-\u9FA5]+$/,
         trigger: 'blur',
       },
       { max: 50, message: '模板名称长度不能超过50个字符', trigger: 'blur' },
-    ],
-    content: [
-      { required: true, message: '请输入YAML内容', trigger: 'blur' },
-      { min: 10, message: 'YAML内容不能少于10个字符', trigger: 'blur' },
     ],
   };
 
   const editFormRules: Record<string, Rule[]> = {
+    content: [
+      { message: '请输入YAML内容', required: true, trigger: 'blur' },
+      { message: 'YAML内容不能少于10个字符', min: 10, trigger: 'blur' },
+    ],
     name: [
-      { required: true, message: '请输入模板名称', trigger: 'blur' },
+      { message: '请输入模板名称', required: true, trigger: 'blur' },
       {
-        pattern: /^[a-zA-Z0-9-_\u4E00-\u9FA5]+$/,
         message: '模板名称只能包含中英文、数字、下划线和连字符',
+        pattern: /^[a-zA-Z0-9-_\u4E00-\u9FA5]+$/,
         trigger: 'blur',
       },
       { max: 50, message: '模板名称长度不能超过50个字符', trigger: 'blur' },
-    ],
-    content: [
-      { required: true, message: '请输入YAML内容', trigger: 'blur' },
-      { min: 10, message: 'YAML内容不能少于10个字符', trigger: 'blur' },
     ],
   };
 
@@ -165,11 +166,11 @@ export function useTemplatePage() {
   });
 
   const rowSelection = computed(() => ({
-    selectedRowKeys: selectedRowKeys.value,
     onChange: (keys: (number | string)[], rows: K8sYamlTemplate[]) => {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
     },
+    selectedRowKeys: selectedRowKeys.value,
   }));
 
   // helpers
@@ -206,11 +207,11 @@ export function useTemplatePage() {
     if (env === undefined || env === null) return '未知环境';
     const value = typeof env === 'string' ? Number.parseInt(env) : env;
     const map: Record<number, string> = {
-      [Env.Prod]: '生产',
       [Env.Dev]: '开发',
-      [Env.Stage]: '预发',
-      [Env.Rc]: '测试',
       [Env.Press]: '灰度',
+      [Env.Prod]: '生产',
+      [Env.Rc]: '测试',
+      [Env.Stage]: '预发',
     };
     return map[value] || '未知环境';
   };
@@ -256,10 +257,10 @@ export function useTemplatePage() {
       selectedRowKeys.value = [];
       selectedRows.value = [];
       const params: YamlTemplateListReq = {
-        page: currentPage.value,
-        size: pageSize.value,
         cluster_id: clusterId,
+        page: currentPage.value,
         search: searchText.value || undefined,
+        size: pageSize.value,
       };
       const res = await getYamlTemplateList(params);
       if (
@@ -352,15 +353,15 @@ export function useTemplatePage() {
       isDetailModalVisible.value = true;
       currentTemplateDetail.value = null;
       const res = await getYamlTemplateDetail({
-        id,
         cluster_id: clusterId,
+        id,
       });
       if (!current()) return;
       currentTemplateDetail.value = res || record;
     } catch (error: any) {
       if (!current()) return;
       if (shouldNotifyPageError(error))
-        message.error('获取模板详情失败：' + (error.message || '未知错误'));
+        message.error(`获取模板详情失败：${error.message || '未知错误'}`);
       currentTemplateDetail.value = record;
     } finally {
       if (current()) detailLoading.value = false;
@@ -394,8 +395,8 @@ export function useTemplatePage() {
     submitLoading.value = false;
     createOwner = operationOwner();
     createFormModel.value = {
-      name: '',
       content: '',
+      name: '',
     };
     isCreateModalVisible.value = true;
   };
@@ -435,9 +436,9 @@ export function useTemplatePage() {
       submitLoading.value = true;
 
       const params: YamlTemplateCreateReq = {
-        name: createFormModel.value.name,
-        content: createFormModel.value.content,
         cluster_id: clusterId,
+        content: createFormModel.value.content,
+        name: createFormModel.value.name,
       };
 
       await createYamlTemplate(params);
@@ -449,7 +450,7 @@ export function useTemplatePage() {
       if (!current()) return;
       if (error.errorFields) return;
       if (shouldNotifyPageError(error))
-        message.error('创建模板失败：' + (error.message || '未知错误'));
+        message.error(`创建模板失败：${error.message || '未知错误'}`);
     } finally {
       if (submitRevision === submission) submitLoading.value = false;
     }
@@ -464,8 +465,8 @@ export function useTemplatePage() {
     editRevision++;
     currentOperationTemplate.value = record;
     editFormModel.value = {
-      name: record.name,
       content: record.content,
+      name: record.name,
     };
     isEditModalVisible.value = true;
   };
@@ -512,10 +513,10 @@ export function useTemplatePage() {
       submitLoading.value = true;
 
       const params: YamlTemplateUpdateReq = {
+        cluster_id: clusterId,
+        content: editFormModel.value.content,
         id,
         name: editFormModel.value.name,
-        content: editFormModel.value.content,
-        cluster_id: clusterId,
       };
 
       await updateYamlTemplate(params);
@@ -527,7 +528,7 @@ export function useTemplatePage() {
       if (!current()) return;
       if (error.errorFields) return;
       if (shouldNotifyPageError(error))
-        message.error('更新模板失败：' + (error.message || '未知错误'));
+        message.error(`更新模板失败：${error.message || '未知错误'}`);
     } finally {
       if (submitRevision === submission) submitLoading.value = false;
     }
@@ -546,12 +547,12 @@ export function useTemplatePage() {
     try {
       checkLoading.value = true;
       const params: YamlTemplateCheckReq = {
+        cluster_id: clusterId,
+        content,
         name:
           createFormModel.value.name ||
           editFormModel.value.name ||
           'temp-check',
-        content,
-        cluster_id: clusterId,
       };
 
       await checkYamlTemplate(params);
@@ -559,7 +560,7 @@ export function useTemplatePage() {
       return true;
     } catch (error: any) {
       if (shouldNotifyPageError(error))
-        message.error('YAML 格式检查失败：' + (error.message || '未知错误'));
+        message.error(`YAML 格式检查失败：${error.message || '未知错误'}`);
       return false;
     } finally {
       checkLoading.value = false;
@@ -579,18 +580,17 @@ export function useTemplatePage() {
       operationOwner() === owner;
 
     Modal.confirm({
-      title: '删除模板',
+      cancelText: '取消',
+      centered: true,
       content: `确定要删除模板 "${record.name}" 吗？此操作不可逆！`,
       okText: '确认删除',
       okType: 'danger',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         if (!current()) return;
         try {
           const params: YamlTemplateDeleteReq = {
-            id,
             cluster_id: clusterId,
+            id,
           };
           await deleteYamlTemplate(params);
           if (!current()) return;
@@ -599,9 +599,10 @@ export function useTemplatePage() {
         } catch (error: any) {
           if (!current()) return;
           if (shouldNotifyPageError(error))
-            message.error('删除模板失败：' + (error.message || '未知错误'));
+            message.error(`删除模板失败：${error.message || '未知错误'}`);
         }
       },
+      title: '删除模板',
     });
   };
 
@@ -632,12 +633,11 @@ export function useTemplatePage() {
       selection.every((record, index) => record.id === ids[index]);
 
     Modal.confirm({
-      title: `批量${operation}`,
+      cancelText: '取消',
+      centered: true,
       content: `确定要对选中的 ${selectedRows.value.length} 个模板执行${operation}操作吗？`,
       okText: '确认执行',
       okType: operation === '删除' ? 'danger' : 'primary',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         if (!current()) return;
         try {
@@ -645,8 +645,8 @@ export function useTemplatePage() {
             if (!current()) return;
             if (operation === '删除') {
               const params: YamlTemplateDeleteReq = {
-                id,
                 cluster_id: clusterId,
+                id,
               };
               await deleteYamlTemplate(params);
             }
@@ -660,10 +660,11 @@ export function useTemplatePage() {
           if (!current()) return;
           if (shouldNotifyPageError(error))
             message.error(
-              `批量${operation}失败：` + (error.message || '未知错误'),
+              `批量${operation}失败：${error.message || '未知错误'}`,
             );
         }
       },
+      title: `批量${operation}`,
     });
   };
 
@@ -725,7 +726,7 @@ export function useTemplatePage() {
       createFormModel.value.content = formatted;
       message.success('YAML 格式化成功');
     } catch (error: any) {
-      message.error('YAML 格式化失败：' + (error.message || '格式不正确'));
+      message.error(`YAML 格式化失败：${error.message || '格式不正确'}`);
     }
   };
 
@@ -770,7 +771,7 @@ export function useTemplatePage() {
 
       message.success('YAML 格式检查通过');
     } catch (error: any) {
-      message.error('YAML 格式检查失败：' + (error.message || '未知错误'));
+      message.error(`YAML 格式检查失败：${error.message || '未知错误'}`);
     }
   };
 
@@ -813,7 +814,7 @@ export function useTemplatePage() {
       editFormModel.value.content = formatted;
       message.success('YAML 格式化成功');
     } catch (error: any) {
-      message.error('YAML 格式化失败：' + (error.message || '格式不正确'));
+      message.error(`YAML 格式化失败：${error.message || '格式不正确'}`);
     }
   };
 
@@ -858,11 +859,29 @@ export function useTemplatePage() {
 
       message.success('YAML 格式检查通过');
     } catch (error: any) {
-      message.error('YAML 格式检查失败：' + (error.message || '未知错误'));
+      message.error(`YAML 格式检查失败：${error.message || '未知错误'}`);
     }
   };
 
   return {
+    // batch operations
+    batchOperation,
+    // modal state
+    checkLoading,
+    // template operations
+    checkTemplate,
+    // operations
+    clearTemplates,
+    // YAML operations
+    clearYaml,
+    // create operations
+    closeCreateModal,
+    // detail operations
+    closeDetailModal,
+    // edit operations
+    closeEditModal,
+    // YAML operations
+    closeYamlModal,
     // state
     clusters,
     clustersError,
@@ -870,96 +889,78 @@ export function useTemplatePage() {
     clustersPage,
     clustersSize,
     clustersTotal,
-    currentPage,
-    filterClusterId,
-    loadError,
-    loading,
-    pageSize,
-    searchText,
-    selectedRowKeys,
-    selectedRows,
-    templates,
-    total,
-
-    // form refs
-    editFormRef,
-    formRef,
-    yamlFormRef,
-
-    // modal state
-    checkLoading,
-    detailLoading,
-    isCreateModalVisible,
-    isDetailModalVisible,
-    isEditModalVisible,
-    isYamlModalVisible,
-    submitLoading,
-
-    // operation targets
-    currentOperationTemplate,
-    currentTemplateDetail,
-
     // form models
     createFormModel,
-    editFormModel,
-    yamlFormModel,
 
     // form rules
     createFormRules,
+    // operation targets
+    currentOperationTemplate,
+    currentPage,
+
+    currentTemplateDetail,
+    deleteTemplate,
+    detailLoading,
+    editFormModel,
+    // form refs
+    editFormRef,
     editFormRules,
+    fetchClusters,
+
+    fetchTemplates,
+    filterClusterId,
 
     // computed
     filteredTemplates,
-    rowSelection,
-
+    formatEditYaml,
     // helpers
     formatK8sTime,
+
+    formatYaml,
+    formRef,
+
     getClusterName,
     getEnvText,
+
     getUserDisplay,
-    validateClusterId,
-
-    // operations
-    clearTemplates,
-    fetchClusters,
-    fetchTemplates,
-    loadMoreClusters,
-
-    // detail operations
-    closeDetailModal,
-    showTemplateDetail,
-
-    // YAML operations
-    closeYamlModal,
-    showYamlModal,
-
-    // create operations
-    closeCreateModal,
-    openCreateModal,
-    submitCreateForm,
-
-    // edit operations
-    closeEditModal,
-    openEditModal,
-    submitEditForm,
-
-    // template operations
-    checkTemplate,
-    deleteTemplate,
-
-    // batch operations
-    batchOperation,
-
     // pagination operations
     handlePageChange,
-    resetClusters,
-
-    // YAML operations
-    clearYaml,
-    formatEditYaml,
-    formatYaml,
     insertYamlTemplate,
+    isCreateModalVisible,
+    isDetailModalVisible,
+
+    isEditModalVisible,
+    isYamlModalVisible,
+    loadError,
+    loading,
+
+    loadMoreClusters,
+    openCreateModal,
+
+    openEditModal,
+    pageSize,
+
+    resetClusters,
+    rowSelection,
+    searchText,
+
+    selectedRowKeys,
+    selectedRows,
+    showTemplateDetail,
+
+    showYamlModal,
+    submitCreateForm,
+
+    submitEditForm,
+
+    submitLoading,
+    templates,
+
+    total,
+    validateClusterId,
     validateEditYaml,
     validateYaml,
+    yamlFormModel,
+    yamlFormRef,
   };
 }

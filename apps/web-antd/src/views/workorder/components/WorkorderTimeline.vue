@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
 
-import { message } from 'ant-design-vue';
 import {
   CheckCircleOutlined,
   EditOutlined,
@@ -13,6 +12,7 @@ import {
   StopOutlined,
   UserOutlined,
 } from '@ant-design/icons-vue';
+import { message } from 'ant-design-vue';
 
 import {
   listWorkorderInstanceTimeline,
@@ -55,14 +55,14 @@ const showDetails = ref<Record<number, boolean>>({});
 
 // 详情对话框
 const detailDialog = reactive({
-  visible: false,
   item: null as null | WorkorderInstanceTimelineItem,
+  visible: false,
 });
 
 // 时间线对话框
 const timelineDialog = reactive({
-  visible: false,
   instanceId: 0,
+  visible: false,
 });
 
 // 响应式对话框宽度
@@ -81,12 +81,12 @@ const formatFullDateTime = (dateStr: string | undefined) => {
   if (!dateStr) return '';
   const d = new Date(dateStr);
   return d.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: 'long',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    month: 'long',
     second: '2-digit',
+    year: 'numeric',
   });
 };
 
@@ -150,12 +150,12 @@ const getAvatarColor = (name: string | undefined) => {
 // 新增方法
 const isImportantAction = (action: string): boolean => {
   return [
-    TimelineAction.Create as string,
-    TimelineAction.Submit as string,
     TimelineAction.Approve as string,
-    TimelineAction.Reject as string,
-    TimelineAction.Complete as string,
     TimelineAction.Cancel as string,
+    TimelineAction.Complete as string,
+    TimelineAction.Create as string,
+    TimelineAction.Reject as string,
+    TimelineAction.Submit as string,
   ].includes(action);
 };
 
@@ -229,20 +229,20 @@ const getActionCount = (type: string): number => {
 
 const getActionClass = (action: string): string => {
   const classMap: Record<string, string> = {
-    [TimelineAction.Create]: 'action-create',
-    [TimelineAction.Update]: 'action-update',
-    [TimelineAction.Submit]: 'action-submit',
-    [TimelineAction.Assign]: 'action-assign',
     [TimelineAction.Approve]: 'action-approve',
-    [TimelineAction.Reject]: 'action-reject',
-    [TimelineAction.Cancel]: 'action-cancel',
-    [TimelineAction.Complete]: 'action-complete',
-    [TimelineAction.Return]: 'action-return',
-    [TimelineAction.Comment]: 'action-comment',
-    [TimelineAction.View]: 'action-view',
+    [TimelineAction.Assign]: 'action-assign',
     [TimelineAction.Attach]: 'action-attach',
+    [TimelineAction.Cancel]: 'action-cancel',
+    [TimelineAction.Comment]: 'action-comment',
+    [TimelineAction.Complete]: 'action-complete',
+    [TimelineAction.Create]: 'action-create',
     [TimelineAction.Notify]: 'action-notify',
+    [TimelineAction.Reject]: 'action-reject',
     [TimelineAction.Remind]: 'action-remind',
+    [TimelineAction.Return]: 'action-return',
+    [TimelineAction.Submit]: 'action-submit',
+    [TimelineAction.Update]: 'action-update',
+    [TimelineAction.View]: 'action-view',
   };
   return classMap[action] || 'action-default';
 };
@@ -250,11 +250,11 @@ const getActionClass = (action: string): string => {
 const getActionStatusClass = (action: string): string => {
   const statusClassMap: Record<string, string> = {
     [TimelineAction.Approve]: 'status-success',
+    [TimelineAction.Assign]: 'status-processing',
+    [TimelineAction.Cancel]: 'status-error',
     [TimelineAction.Complete]: 'status-success',
     [TimelineAction.Reject]: 'status-error',
-    [TimelineAction.Cancel]: 'status-error',
     [TimelineAction.Submit]: 'status-processing',
-    [TimelineAction.Assign]: 'status-processing',
   };
   return statusClassMap[action] || 'status-default';
 };
@@ -262,11 +262,11 @@ const getActionStatusClass = (action: string): string => {
 const getActionStatusText = (action: string): string => {
   const statusTextMap: Record<string, string> = {
     [TimelineAction.Approve]: '已通过',
+    [TimelineAction.Assign]: '已分配',
+    [TimelineAction.Cancel]: '已取消',
     [TimelineAction.Complete]: '已完成',
     [TimelineAction.Reject]: '已拒绝',
-    [TimelineAction.Cancel]: '已取消',
     [TimelineAction.Submit]: '处理中',
-    [TimelineAction.Assign]: '已分配',
   };
   return statusTextMap[action] || '正常';
 };
@@ -301,9 +301,9 @@ const loadTimeline = async (instanceId: number) => {
 
     while (hasMoreData) {
       const params: ListWorkorderInstanceTimelineReq = {
+        instance_id: instanceId,
         page: currentPage,
         size: pageSize,
-        instance_id: instanceId,
       };
 
       const res = await listWorkorderInstanceTimeline(params);
@@ -348,40 +348,40 @@ const refreshTimeline = async () => {
 
 const getTimelineIcon = (action: string) => {
   const iconMap: Record<string, any> = {
-    [TimelineAction.Create]: PlusOutlined,
-    [TimelineAction.Update]: EditOutlined,
-    [TimelineAction.Submit]: SendOutlined,
-    [TimelineAction.Assign]: UserOutlined,
     [TimelineAction.Approve]: CheckCircleOutlined,
-    [TimelineAction.Reject]: ExclamationCircleOutlined,
-    [TimelineAction.Cancel]: StopOutlined,
-    [TimelineAction.Complete]: CheckCircleOutlined,
-    [TimelineAction.Return]: ExclamationCircleOutlined,
-    [TimelineAction.Comment]: MessageOutlined,
-    [TimelineAction.View]: FileTextOutlined,
+    [TimelineAction.Assign]: UserOutlined,
     [TimelineAction.Attach]: PlusOutlined,
+    [TimelineAction.Cancel]: StopOutlined,
+    [TimelineAction.Comment]: MessageOutlined,
+    [TimelineAction.Complete]: CheckCircleOutlined,
+    [TimelineAction.Create]: PlusOutlined,
     [TimelineAction.Notify]: MessageOutlined,
+    [TimelineAction.Reject]: ExclamationCircleOutlined,
     [TimelineAction.Remind]: ExclamationCircleOutlined,
+    [TimelineAction.Return]: ExclamationCircleOutlined,
+    [TimelineAction.Submit]: SendOutlined,
+    [TimelineAction.Update]: EditOutlined,
+    [TimelineAction.View]: FileTextOutlined,
   };
   return iconMap[action] || EditOutlined;
 };
 
 const getActionText = (action: string): string => {
   const textMap: Record<string, string> = {
-    [TimelineAction.Create]: '创建工单',
-    [TimelineAction.Update]: '更新工单',
-    [TimelineAction.Submit]: '提交工单',
-    [TimelineAction.Assign]: '分配处理人',
     [TimelineAction.Approve]: '审批通过',
-    [TimelineAction.Reject]: '拒绝工单',
-    [TimelineAction.Cancel]: '取消工单',
-    [TimelineAction.Complete]: '完成工单',
-    [TimelineAction.Return]: '退回工单',
-    [TimelineAction.Comment]: '添加评论',
-    [TimelineAction.View]: '查看工单',
+    [TimelineAction.Assign]: '分配处理人',
     [TimelineAction.Attach]: '添加附件',
+    [TimelineAction.Cancel]: '取消工单',
+    [TimelineAction.Comment]: '添加评论',
+    [TimelineAction.Complete]: '完成工单',
+    [TimelineAction.Create]: '创建工单',
     [TimelineAction.Notify]: '发送通知',
+    [TimelineAction.Reject]: '拒绝工单',
     [TimelineAction.Remind]: '催办提醒',
+    [TimelineAction.Return]: '退回工单',
+    [TimelineAction.Submit]: '提交工单',
+    [TimelineAction.Update]: '更新工单',
+    [TimelineAction.View]: '查看工单',
   };
   return textMap[action] || action;
 };
@@ -513,16 +513,16 @@ defineExpose({
               <div
                 v-for="(item, index) in filteredTimelineList"
                 :key="item.id"
-                class="timeline-item-wrapper"
                 :class="{
                   'timeline-item-left': index % 2 === 0,
                   'timeline-item-right': index % 2 === 1,
                   'timeline-item-highlight': isImportantAction(item.action),
                 }"
-                :style="{ '--delay': index * 0.1 + 's' }"
+                :style="{ '--delay': `${index * 0.1}s` }"
+                class="timeline-item-wrapper"
               >
                 <!-- 时间线节点 -->
-                <div class="timeline-node" :class="getActionClass(item.action)">
+                <div :class="getActionClass(item.action)" class="timeline-node">
                   <div class="timeline-node-inner">
                     <component
                       :is="getTimelineIcon(item.action)"
@@ -530,8 +530,8 @@ defineExpose({
                     />
                   </div>
                   <div
-                    class="timeline-node-pulse"
                     v-if="isImportantAction(item.action)"
+                    class="timeline-node-pulse"
                   ></div>
                 </div>
 
@@ -540,8 +540,8 @@ defineExpose({
                   <div class="timeline-card-header">
                     <div class="action-info">
                       <div
-                        class="action-type-badge"
                         :class="getActionClass(item.action)"
+                        class="action-type-badge"
                       >
                         <component
                           :is="getTimelineIcon(item.action)"
@@ -588,8 +588,8 @@ defineExpose({
                         <div class="operator-role">操作人</div>
                       </div>
                       <div
-                        class="action-status"
                         :class="getActionStatusClass(item.action)"
+                        class="action-status"
                       >
                         {{ getActionStatusText(item.action) }}
                       </div>
@@ -684,8 +684,8 @@ defineExpose({
       <div v-if="detailDialog.item" class="timeline-detail-content">
         <div class="detail-header">
           <div
-            class="detail-action-badge"
             :class="getActionClass(detailDialog.item.action)"
+            class="detail-action-badge"
           >
             <component :is="getTimelineIcon(detailDialog.item.action)" />
             {{ getActionText(detailDialog.item.action) }}
@@ -737,7 +737,7 @@ defineExpose({
   }
 }
 
-@keyframes fadeInUp {
+@keyframes fade-in-up {
   from {
     opacity: 0;
     transform: translateY(30px);
@@ -749,7 +749,7 @@ defineExpose({
   }
 }
 
-@keyframes pulseEffect {
+@keyframes pulse-effect {
   0% {
     transform: scale(1);
     opacity: 0.3;
@@ -1057,7 +1057,7 @@ defineExpose({
   align-items: flex-start;
   gap: 24px;
   position: relative;
-  animation: fadeInUp 0.6s ease-out;
+  animation: fade-in-up 0.6s ease-out;
   animation-delay: var(--delay);
   animation-fill-mode: both;
 }
@@ -1112,7 +1112,7 @@ defineExpose({
   border-radius: 50%;
   background: inherit;
   opacity: 0.3;
-  animation: pulseEffect 2s infinite;
+  animation: pulse-effect 2s infinite;
 }
 
 /* 不同操作类型的节点样式 */

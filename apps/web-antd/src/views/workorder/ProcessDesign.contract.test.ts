@@ -16,17 +16,17 @@ function required<T>(value: null | T | undefined): T {
 const client = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 const definition = () => ({
+  connections: [{ from: 's', id: 's-e', to: 'e' }],
   steps: [
     {
+      actions: ['submit'],
       id: 's',
-      type: 'start',
       name: '开始',
       sort_order: 1,
-      actions: ['submit'],
+      type: 'start',
     },
-    { id: 'e', type: 'end', name: '结束', sort_order: 2 },
+    { id: 'e', name: '结束', sort_order: 2, type: 'end' },
   ],
-  connections: [{ id: 's-e', from: 's', to: 'e' }],
 });
 let wrapper: undefined | VueWrapper;
 beforeEach(() => {
@@ -34,8 +34,8 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -46,8 +46,8 @@ beforeEach(() => {
   client.get.mockImplementation((path: string) =>
     Promise.resolve(
       path === '/workorder/form-design/list'
-        ? { items: [{ id: 9, name: '已发布表单', status: 2 }], total: 1 }
-        : { items: [], total: 0 },
+        ? { total: 1, items: [{ id: 9, name: '已发布表单', status: 2 }] }
+        : { total: 0, items: [] },
     ),
   );
   client.post.mockResolvedValue(undefined);
@@ -63,9 +63,9 @@ afterEach(() => {
 });
 async function start() {
   wrapper = mount(ProcessDesign, {
-    props: { modelValue: definition() },
     attachTo: document.body,
     global: { plugins: [Antd] },
+    props: { modelValue: definition() },
   });
   await flushPromises();
 }
@@ -109,11 +109,11 @@ describe('流程设计真实控件合同', () => {
     expect(client.post).toHaveBeenCalledWith(
       '/workorder/process/create',
       expect.objectContaining({
-        name: '隔离流程',
-        form_design_id: 9,
         definition: definition(),
-        status: 1,
+        form_design_id: 9,
         is_default: 2,
+        name: '隔离流程',
+        status: 1,
       }),
     );
     pending.reject(new Error('fixture'));
@@ -199,8 +199,8 @@ describe('流程设计真实控件合同', () => {
         ? ++requests === 1
           ? late.promise
           : Promise.resolve({
-              items: [{ id: 88, username: '当前步骤用户' }],
               total: 1,
+              items: [{ id: 88, username: '当前步骤用户' }],
             })
         : original(path, ...rest),
     );
@@ -214,7 +214,7 @@ describe('流程设计真实控件合同', () => {
       'click',
     );
     await flushPromises();
-    late.resolve({ items: [{ id: 77, username: '迟到旧用户' }], total: 1 });
+    late.resolve({ total: 1, items: [{ id: 77, username: '迟到旧用户' }] });
     await flushPromises();
     await required(wrapper).find('.ant-select').trigger('blur');
     const user = required(

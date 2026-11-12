@@ -194,7 +194,7 @@ describe('incr7 P3-C：data 下值写在下一行 / 编码器不支持的写法 
     ['锚点', `  token: &a "fake-q"`, 'token'],
     ['流式值', `  token: ["fake-q"]`, 'token'],
     ['多行双引号', `  token: "fake-q\n    more"`, 'token'],
-    ['YAML 转义（\\n）', `  token: "fake\\nq"`, 'token'],
+    [String.raw`YAML 转义（\n）`, `  token: "fake\\nq"`, 'token'],
     ['引号后还有内容', `  token: "fake-q" x`, 'token'],
     ['|- 块', `  token: |-\n    fake-q`, 'token'],
     ['> 块', `  token: >\n    fake-q`, 'token'],
@@ -231,44 +231,47 @@ describe('incr7 P3-C：data 下值写在下一行 / 编码器不支持的写法 
 
   it('反例：展示函数的输出本身能通过格式检查（含多行值、引号与反斜杠）', () => {
     const shown = processSecretYaml(
-      `apiVersion: v1\nkind: Secret\ndata:\n  a: ${b64('fake-a')}\n  b: ${b64('fake-l1\nfake-l2')}\n  c: ${b64('fa"ke\\c')}\n  r: ${REDACTED_PLACEHOLDER}\n`,
+      `apiVersion: v1\nkind: Secret\ndata:\n  a: ${b64('fake-a')}\n  b: ${b64('fake-l1\nfake-l2')}\n  c: ${b64(String.raw`fa"ke\c`)}\n  r: ${REDACTED_PLACEHOLDER}\n`,
     );
     expect(sd.getYamlDataFormatError(shown)).toBeNull();
   });
 });
 
-describe('incr7：块标量内容只吞更深缩进的行（原来 (?:\\s{2,}.*\\n?)* 会吞掉同级的键）', () => {
-  it('块后的同级键保留，不被并进块内容', () => {
-    expect(
-      encodeSecretYamlForSubmission(
-        `data:\n  k: |\n    fake-x\n  other: ${b64('fake-o')}\n`,
-      ),
-    ).toBe(`data:\n  k: ${b64('fake-x')}\n  other: ${b64('fake-o')}\n`);
-  });
+describe(
+  String.raw`incr7：块标量内容只吞更深缩进的行（原来 (?:\s{2,}.*\n?)* 会吞掉同级的键）`,
+  () => {
+    it('块后的同级键保留，不被并进块内容', () => {
+      expect(
+        encodeSecretYamlForSubmission(
+          `data:\n  k: |\n    fake-x\n  other: ${b64('fake-o')}\n`,
+        ),
+      ).toBe(`data:\n  k: ${b64('fake-x')}\n  other: ${b64('fake-o')}\n`);
+    });
 
-  it('块后隔两个空行的 stringData 保留', () => {
-    const out = encodeSecretYamlForSubmission(
-      `data:\n  k: |\n    fake-x\n\n\nstringData:\n  s: fake-s\n`,
-    );
-    expect(sentData(out)).toEqual({ k: b64('fake-x') });
-    expect((yaml.load(out) as any).stringData).toEqual({ s: 'fake-s' });
-  });
+    it('块后隔两个空行的 stringData 保留', () => {
+      const out = encodeSecretYamlForSubmission(
+        `data:\n  k: |\n    fake-x\n\n\nstringData:\n  s: fake-s\n`,
+      );
+      expect(sentData(out)).toEqual({ k: b64('fake-x') });
+      expect((yaml.load(out) as any).stringData).toEqual({ s: 'fake-s' });
+    });
 
-  it('块后紧跟顶层键：换行保留，不粘到下一行', () => {
-    const out = encodeSecretYamlForSubmission(
-      `data:\n  k: |\n    fake-x\nkind: Secret\n`,
-    );
-    expect(out).toBe(`data:\n  k: ${b64('fake-x')}\nkind: Secret\n`);
-  });
+    it('块后紧跟顶层键：换行保留，不粘到下一行', () => {
+      const out = encodeSecretYamlForSubmission(
+        `data:\n  k: |\n    fake-x\nkind: Secret\n`,
+      );
+      expect(out).toBe(`data:\n  k: ${b64('fake-x')}\nkind: Secret\n`);
+    });
 
-  it('块内容缩进按首行算（YAML 语义），多缩进几格也不带进值里', () => {
-    expect(
-      encodeSecretYamlForSubmission(
-        `data:\n  k: |\n      fake-x\n        fake-y\n`,
-      ),
-    ).toBe(`data:\n  k: ${b64('fake-x\n  fake-y')}\n`);
-  });
-});
+    it('块内容缩进按首行算（YAML 语义），多缩进几格也不带进值里', () => {
+      expect(
+        encodeSecretYamlForSubmission(
+          `data:\n  k: |\n      fake-x\n        fake-y\n`,
+        ),
+      ).toBe(`data:\n  k: ${b64('fake-x\n  fake-y')}\n`);
+    });
+  },
+);
 
 describe('incr7：「是否在 data 下」按位置判断（原来 indexOf(match) 找的是第一处相同文本）', () => {
   it('编码器：stringData 里有一行与 data 里完全相同的 `k: "…"`，data 的那一行照样编码、stringData 的不动', () => {
@@ -328,9 +331,9 @@ describe('incr7 P3-A：引号正则线性、展示 / 编码转义对称', () => 
   it.each([
     ['反斜杠结尾', 'fake\\'],
     ['双引号', 'fa"ke'],
-    ['反斜杠 + 引号', 'fa\\"ke'],
-    ['两个反斜杠', 'fa\\\\ke'],
-    ['字面 \\n', 'fake\\nx'],
+    ['反斜杠 + 引号', String.raw`fa\"ke`],
+    ['两个反斜杠', String.raw`fa\\ke`],
+    [String.raw`字面 \n`, String.raw`fake\nx`],
   ])(
     '%s：展示 → 编码往返后 base64 与原值相同；展示结果本身是合法 YAML 且值不变',
     (_, value) => {
@@ -341,14 +344,14 @@ describe('incr7 P3-A：引号正则线性、展示 / 编码转义对称', () => 
     },
   );
 
-  it('编码器：\\\\ 还原为一个反斜杠，\\" 还原为引号', () => {
+  it(String.raw`编码器：\\ 还原为一个反斜杠，\" 还原为引号`, () => {
     expect(encodeSecretYamlForSubmission(`data:\n  k: "a\\\\b\\"c"\n`)).toBe(
-      `data:\n  k: ${b64('a\\b"c')}\n`,
+      `data:\n  k: ${b64(String.raw`a\b"c`)}\n`,
     );
   });
 
   it('未闭合引号 + 27 组 `\\a`：< 500ms（原正则约 2.2s，k 每 +1 翻倍）', () => {
-    const input = `data:\n  k: "${'\\a'.repeat(27)}\n`;
+    const input = `data:\n  k: "${String.raw`\a`.repeat(27)}\n`;
     let out = '';
     const ms = elapsed(() => (out = encodeSecretYamlForSubmission(input)));
     expect(ms).toBeLessThan(500);
@@ -356,38 +359,47 @@ describe('incr7 P3-A：引号正则线性、展示 / 编码转义对称', () => 
   });
 });
 
-describe('incr7：大输入线性时间（展示 :622 的 ^(\\s*)、m07、逐条 indexOf）', () => {
-  it('展示：60k 空行后一个非 base64 值 < 500ms（原 ^(\\s*) 约 3.4s）', () => {
-    const input = `data:\n${'\n'.repeat(60_000)}  k: fake-not-b64\n`;
-    expect(elapsed(() => processSecretYaml(input))).toBeLessThan(500);
-  });
-
-  it('m07：编码器 60k 空行后一个未闭合引号 < 500ms（引号正则缩进若退回 ^(\\s*) 为平方级）', () => {
-    const input = `data:\n${'\n'.repeat(60_000)}  k: "fake\n`;
-    expect(elapsed(() => encodeSecretYamlForSubmission(input))).toBeLessThan(
-      500,
+describe(
+  String.raw`incr7：大输入线性时间（展示 :622 的 ^(\s*)、m07、逐条 indexOf）`,
+  () => {
+    it(
+      String.raw`展示：60k 空行后一个非 base64 值 < 500ms（原 ^(\s*) 约 3.4s）`,
+      () => {
+        const input = `data:\n${'\n'.repeat(60_000)}  k: fake-not-b64\n`;
+        expect(elapsed(() => processSecretYaml(input))).toBeLessThan(500);
+      },
     );
-  });
 
-  it('m07 同类：编码器 60k 空行后一个块标量头 < 500ms', () => {
-    const input = `data:\n${'\n'.repeat(60_000)}  k: |x\n`;
-    expect(elapsed(() => encodeSecretYamlForSubmission(input))).toBeLessThan(
-      500,
+    it(
+      String.raw`m07：编码器 60k 空行后一个未闭合引号 < 500ms（引号正则缩进若退回 ^(\s*) 为平方级）`,
+      () => {
+        const input = `data:\n${'\n'.repeat(60_000)}  k: "fake\n`;
+        expect(
+          elapsed(() => encodeSecretYamlForSubmission(input)),
+        ).toBeLessThan(500);
+      },
     );
-  });
 
-  it('展示 / 编码各 20k 条 data < 500ms（原来每条都 indexOf + substring，平方级约 1.7–4s）', () => {
-    const entries = Array.from({ length: 20_000 }, (_, i) => i);
-    const shown = processSecretYaml(
-      `data:\n${entries.map((i) => `  k${i}: ${b64(`fake-${i}`)}`).join('\n')}\n`,
-    );
-    expect(shown).toContain('  k19999: "fake-19999"');
-    let out = '';
-    const ms = elapsed(() => (out = encodeSecretYamlForSubmission(shown)));
-    expect(ms).toBeLessThan(500);
-    expect(out).toContain(`  k19999: ${b64('fake-19999')}`);
-  });
-});
+    it('m07 同类：编码器 60k 空行后一个块标量头 < 500ms', () => {
+      const input = `data:\n${'\n'.repeat(60_000)}  k: |x\n`;
+      expect(elapsed(() => encodeSecretYamlForSubmission(input))).toBeLessThan(
+        500,
+      );
+    });
+
+    it('展示 / 编码各 20k 条 data < 500ms（原来每条都 indexOf + substring，平方级约 1.7–4s）', () => {
+      const entries = Array.from({ length: 20_000 }, (_, i) => i);
+      const shown = processSecretYaml(
+        `data:\n${entries.map((i) => `  k${i}: ${b64(`fake-${i}`)}`).join('\n')}\n`,
+      );
+      expect(shown).toContain('  k19999: "fake-19999"');
+      let out = '';
+      const ms = elapsed(() => (out = encodeSecretYamlForSubmission(shown)));
+      expect(ms).toBeLessThan(500);
+      expect(out).toContain(`  k19999: ${b64('fake-19999')}`);
+    });
+  },
+);
 
 describe('incr7 m09：块标量头只认同一行（`:[ \\t]+\\|`），不跨行', () => {
   it('`token:` 换行后的 `|` 编码器不处理（交给格式检查拦截）', () => {
@@ -407,8 +419,8 @@ describe('incr7：「打开 YAML、不改直接保存」不改动任何 data 值
     const original = `apiVersion: v1\nkind: Secret\ndata:\n  k: ${encoded}\n  z: ${b64('fake-z')}\n`;
     return {
       original,
-      shown: processSecretYaml(original),
       saved: encodeSecretYamlForSubmission(processSecretYaml(original)),
+      shown: processSecretYaml(original),
     };
   }
 
@@ -439,7 +451,7 @@ describe('incr7：「打开 YAML、不改直接保存」不改动任何 data 值
     expect(saved).toBe(original);
   });
 
-  it('含控制字符（如 \\r、\\x1b）的值：保留 base64，往返不变', () => {
+  it(String.raw`含控制字符（如 \r、\x1b）的值：保留 base64，往返不变`, () => {
     for (const text of ['fake\rcr', 'fake\u001Besc']) {
       const value = b64(text);
       const { original, saved, shown } = roundTrip(value);

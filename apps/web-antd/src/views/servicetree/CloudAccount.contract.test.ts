@@ -1,3 +1,5 @@
+import { ref } from 'vue';
+
 import {
   DOMWrapper,
   flushPromises,
@@ -6,7 +8,6 @@ import {
 } from '@vue/test-utils';
 import Antd, { message, Modal } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ref } from 'vue';
 
 import { createDeferred } from '../../../../../internal/test-utils/deferred';
 import CloudAccountManagement from './CloudAccountManagement.vue';
@@ -51,10 +52,10 @@ vi.mock('#/utils/permission', async (importOriginal) => ({
 }));
 
 const client = vi.hoisted(() => ({
+  delete: vi.fn(),
   get: vi.fn(),
   post: vi.fn(),
   put: vi.fn(),
-  delete: vi.fn(),
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 
@@ -69,25 +70,25 @@ const record = () => ({
   id: 7,
   name: '已有账户',
   provider: selectedProvider,
-  status: 1,
   regions: [
     {
+      description: '原描述',
       id: 21,
+      is_default: true,
       region: 'cn-hangzhou',
       region_name: '杭州',
-      is_default: true,
-      description: '原描述',
       status: 1,
     },
     {
+      description: '保留描述',
       id: 22,
+      is_default: false,
       region: 'cn-shanghai',
       region_name: '上海',
-      is_default: false,
-      description: '保留描述',
       status: 2,
     },
   ],
+  status: 1,
 });
 beforeEach(() => {
   vi.resetAllMocks();
@@ -97,8 +98,8 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -108,7 +109,7 @@ beforeEach(() => {
   );
   client.get.mockImplementation((path: string) =>
     Promise.resolve(
-      path.endsWith('/detail') ? record() : { items: [record()], total: 30 },
+      path.endsWith('/detail') ? record() : { total: 30, items: [record()] },
     ),
   );
   client.post.mockResolvedValue(undefined);
@@ -227,21 +228,21 @@ describe('云账户真实表单合同', () => {
     expect(client.post.mock.calls[0]).toEqual([
       '/tree/cloud/account/create',
       expect.objectContaining({
-        status: 1,
         regions: [
           {
-            region: 'cn-hangzhou',
-            region_name: '',
             description: '',
             is_default: true,
+            region: 'cn-hangzhou',
+            region_name: '',
           },
           {
-            region: 'cn-shanghai',
-            region_name: '',
             description: '',
             is_default: false,
+            region: 'cn-shanghai',
+            region_name: '',
           },
         ],
+        status: 1,
       }),
     ]);
     expect(required(client.post.mock.calls[0])[1]).not.toHaveProperty('region');
@@ -307,7 +308,7 @@ describe('云账户真实表单合同', () => {
     client.get.mockImplementation((path: string) =>
       path.endsWith('/detail')
         ? late.promise
-        : Promise.resolve({ items: [record()], total: 30 }),
+        : Promise.resolve({ total: 30, items: [record()] }),
     );
     const icon = required(wrapper).find('[aria-label="edit"]');
     (icon.element.closest('button') as HTMLButtonElement).click();
@@ -479,10 +480,10 @@ it.each([
     expect(client.post).toHaveBeenCalledWith(
       '/tree/cloud/account/create',
       expect.objectContaining({
-        provider,
-        credential_type: 'temporary',
-        session_token: 'temporary-token-canary',
         credential_expires_at: '2099-01-01T00:00:00Z',
+        credential_type: 'temporary',
+        provider,
+        session_token: 'temporary-token-canary',
       }),
     );
     expect(JSON.stringify(client.get.mock.calls)).not.toContain(
@@ -501,10 +502,10 @@ it('临时账户空凭据保留现有配置，部分轮换不提交', async () =
       path.endsWith('/detail')
         ? {
             ...record(),
-            credential_type: 'temporary',
             credential_expires_at: '2099-01-01T00:00:00Z',
+            credential_type: 'temporary',
           }
-        : { items: [record()], total: 1 },
+        : { total: 1, items: [record()] },
     ),
   );
   await start();
@@ -515,11 +516,11 @@ it('临时账户空凭据保留现有配置，部分轮换不提交', async () =
   expect(client.put).toHaveBeenCalledWith(
     '/tree/cloud/account/7/update',
     expect.not.objectContaining({
-      credential_type: expect.anything(),
       access_key: expect.anything(),
+      credential_expires_at: expect.anything(),
+      credential_type: expect.anything(),
       secret_key: expect.anything(),
       session_token: expect.anything(),
-      credential_expires_at: expect.anything(),
     }),
   );
   client.put.mockClear();
@@ -536,10 +537,10 @@ it('临时凭据完整轮换、切换长期凭据与关闭清理', async () => {
       path.endsWith('/detail')
         ? {
             ...record(),
-            credential_type: 'temporary',
             credential_expires_at: '2099-01-01T00:00:00Z',
+            credential_type: 'temporary',
           }
-        : { items: [record()], total: 1 },
+        : { total: 1, items: [record()] },
     ),
   );
   await start();
@@ -552,9 +553,9 @@ it('临时凭据完整轮换、切换长期凭据与关闭清理', async () => {
   expect(client.put).toHaveBeenCalledWith(
     '/tree/cloud/account/7/update',
     expect.objectContaining({
+      credential_expires_at: '2099-02-01T00:00:00Z',
       credential_type: 'temporary',
       session_token: 'new-token-canary',
-      credential_expires_at: '2099-02-01T00:00:00Z',
     }),
   );
   client.put.mockClear();
@@ -566,8 +567,8 @@ it('临时凭据完整轮换、切换长期凭据与关闭清理', async () => {
   expect(client.put).toHaveBeenCalledWith(
     '/tree/cloud/account/7/update',
     expect.objectContaining({
-      credential_type: 'long_term',
       access_key: 'AKIA' + '0000000000000000',
+      credential_type: 'long_term',
       secret_key: 'long-secret-canary',
     }),
   );
@@ -595,10 +596,10 @@ it('临时账户编辑权限撤销时关闭并清除敏感输入', async () => {
       path.endsWith('/detail')
         ? {
             ...record(),
-            credential_type: 'temporary',
             credential_expires_at: '2099-01-01T00:00:00Z',
+            credential_type: 'temporary',
           }
-        : { items: [record()], total: 1 },
+        : { total: 1, items: [record()] },
     ),
   );
   await start();
@@ -687,12 +688,12 @@ it('华为账户每个地域填写项目 ID，新增地域保留其他项目映�
       provider: 4,
       regions: expect.arrayContaining([
         expect.objectContaining({
-          region: 'cn-north-4',
           project_id: 'project_one',
+          region: 'cn-north-4',
         }),
         expect.objectContaining({
-          region: 'cn-east-3',
           project_id: 'project_two',
+          region: 'cn-east-3',
         }),
       ]),
     }),
@@ -706,14 +707,14 @@ it('华为编辑保留旧项目映射，仅变更时提交完整地域集合', a
     regions: [
       {
         ...record().regions[0],
-        region: 'cn-north-4',
         project_id: 'project_one',
+        region: 'cn-north-4',
       },
     ],
   };
   client.get.mockImplementation((path: string) =>
     Promise.resolve(
-      path.endsWith('/detail') ? existing : { items: [existing], total: 1 },
+      path.endsWith('/detail') ? existing : { total: 1, items: [existing] },
     ),
   );
   await start();
@@ -739,12 +740,12 @@ it('华为编辑保留旧项目映射，仅变更时提交完整地域集合', a
     expect.objectContaining({
       regions: expect.arrayContaining([
         expect.objectContaining({
-          region: 'cn-north-4',
           project_id: 'project_one',
+          region: 'cn-north-4',
         }),
         expect.objectContaining({
-          region: 'cn-east-3',
           project_id: 'project_two',
+          region: 'cn-east-3',
         }),
       ]),
     }),
@@ -805,8 +806,8 @@ it('缺少权限隐藏相关操作，禁用账户不验证', async () => {
 
 it('已禁用账户不允许发起真实凭据验证', async () => {
   client.get.mockResolvedValue({
-    items: [{ ...record(), status: 2 }],
     total: 1,
+    items: [{ ...record(), status: 2 }],
   });
   await start();
   const button = required(wrapper)
@@ -860,10 +861,10 @@ it('已保存账户云端地域查询需要确认且GET只携带账户ID', async
     if (url.endsWith('/available-regions'))
       return Promise.resolve({
         regions: [
-          { region: 'us-east-1', region_name: '美国东部', available: true },
+          { available: true, region: 'us-east-1', region_name: '美国东部' },
         ],
       });
-    return Promise.resolve({ items: [record()], total: 1 });
+    return Promise.resolve({ total: 1, items: [record()] });
   });
   await start();
   await edit();
@@ -905,10 +906,10 @@ it('未保存账户的地域参考只传厂商，无权限时隐藏入口', asyn
     url.endsWith('/available-regions')
       ? Promise.resolve({
           regions: [
-            { region: 'us-east-1', region_name: '美国东部', available: true },
+            { available: true, region: 'us-east-1', region_name: '美国东部' },
           ],
         })
-      : Promise.resolve({ items: [record()], total: 1 }),
+      : Promise.resolve({ total: 1, items: [record()] }),
   );
   await start();
   await action('添加账户');
@@ -929,8 +930,8 @@ it('地域API运行时丢弃意外传入的密钥', async () => {
     await import('#/api/core/tree/tree_account_region');
   client.get.mockResolvedValue({ regions: [] });
   await getAvailableRegions({
-    cloud_account_id: 7,
     access_key: 'test-access',
+    cloud_account_id: 7,
     secret_key: 'test-secret',
   } as never);
   expect(client.get).toHaveBeenCalledWith(
@@ -999,7 +1000,7 @@ it('详情读取期间撤销权限不展示迟到数据', async () => {
   client.get.mockImplementation((url: string) =>
     url.endsWith('/detail')
       ? pending.promise
-      : Promise.resolve({ items: [record()], total: 1 }),
+      : Promise.resolve({ total: 1, items: [record()] }),
   );
   await start();
   const icon = required(wrapper).find('[aria-label="edit"]');
@@ -1017,13 +1018,13 @@ it('地域读取期间撤销权限不展示迟到结果', async () => {
   wrapper = mount(AccountRegionsEditor, {
     attachTo: document.body,
     global: { plugins: [Antd] },
-    props: { modelValue: [], provider: 1, canRead: true, accountEnabled: true },
+    props: { accountEnabled: true, canRead: true, modelValue: [], provider: 1 },
   });
   await action('加载地域参考');
   await wrapper.setProps({ canRead: false });
   pending.resolve({
     regions: [
-      { region: 'cn-stale', region_name: '撤权迟到地域', available: true },
+      { available: true, region: 'cn-stale', region_name: '撤权迟到地域' },
     ],
   });
   await flushPromises();
@@ -1044,7 +1045,7 @@ it('禁用账户不可查询云端地域', async () => {
   client.get.mockImplementation((url: string) =>
     url.endsWith('/detail')
       ? Promise.resolve({ ...record(), status: 2 })
-      : Promise.resolve({ items: [record()], total: 1 }),
+      : Promise.resolve({ total: 1, items: [record()] }),
   );
   await start();
   await edit();
@@ -1065,7 +1066,7 @@ it('切换厂商后不采纳旧地域请求的迟到结果', async () => {
   client.get.mockImplementation((url: string) =>
     url.endsWith('/available-regions')
       ? pending.promise
-      : Promise.resolve({ items: [record()], total: 1 }),
+      : Promise.resolve({ total: 1, items: [record()] }),
   );
   await start();
   await action('添加账户');
@@ -1073,7 +1074,7 @@ it('切换厂商后不采纳旧地域请求的迟到结果', async () => {
   await chooseProvider('AWS');
   pending.resolve({
     regions: [
-      { region: 'cn-stale-region', region_name: '过期地域', available: true },
+      { available: true, region: 'cn-stale-region', region_name: '过期地域' },
     ],
   });
   await flushPromises();
@@ -1092,19 +1093,19 @@ it('切换厂商后不采纳旧地域请求的迟到结果', async () => {
 });
 
 const azureCredential = {
-  tenant_id: '11111111-1111-1111-1111-111111111111',
   client_id: '22222222-2222-2222-2222-222222222222',
-  subscription_id: '33333333-3333-3333-3333-333333333333',
   client_secret: 'azure-secret-canary',
+  subscription_id: '33333333-3333-3333-3333-333333333333',
+  tenant_id: '11111111-1111-1111-1111-111111111111',
 };
 const gcpCredentialJSON = JSON.stringify(
   {
-    type: 'service_account',
-    project_id: 'identity-project',
     client_email: 'robot@identity-project.iam.gserviceaccount.com',
     private_key:
       '-----BEGIN PRIVATE KEY-----\nprivate-canary\n-----END PRIVATE KEY-----\n',
+    project_id: 'identity-project',
     token_uri: 'https://oauth2.googleapis.com/token',
+    type: 'service_account',
   },
   null,
   2,
@@ -1155,8 +1156,8 @@ it.each([
       expect(
         JSON.parse(body.provider_credentials.service_account_json),
       ).toMatchObject({
-        type: 'service_account',
         private_key: expect.stringContaining('private-canary'),
+        type: 'service_account',
       });
     }
     expect(JSON.stringify(client.get.mock.calls)).not.toContain('canary');
@@ -1181,7 +1182,7 @@ it.each([
     };
     client.get.mockImplementation((path: string) =>
       Promise.resolve(
-        path.endsWith('/detail') ? existing : { items: [existing], total: 1 },
+        path.endsWith('/detail') ? existing : { total: 1, items: [existing] },
       ),
     );
     await start();

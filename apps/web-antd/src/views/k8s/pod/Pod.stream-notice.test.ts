@@ -42,8 +42,8 @@ const logout = vi.hoisted(() => vi.fn());
 const access = vi.hoisted(() => {
   const store = {
     accessToken: 'old-token' as null | string,
-    refreshToken: 'refresh',
     isAccessChecked: true,
+    refreshToken: 'refresh',
     setAccessToken: (token: null | string) => {
       store.accessToken = token;
     },
@@ -59,12 +59,12 @@ vi.mock('ant-design-vue', () => ({
 vi.mock('xterm', () => ({
   Terminal: class {
     cols = 120;
-    rows = 30;
     dispose = cleanup.terminal;
     loadAddon = vi.fn();
     onData = vi.fn(() => ({ dispose: cleanup.input }));
     onResize = vi.fn(() => ({ dispose: cleanup.resize }));
     open = vi.fn();
+    rows = 30;
     write = vi.fn();
     writeln = vi.fn();
   },
@@ -119,6 +119,7 @@ class FakeWebSocket {
   static CLOSED = 3;
   static instances: FakeWebSocket[] = [];
   static OPEN = 1;
+  readyState = 0;
   close = vi.fn(() => {
     this.readyState = FakeWebSocket.CLOSED;
   });
@@ -126,7 +127,6 @@ class FakeWebSocket {
   onerror: ((event: any) => void) | null = null;
   onmessage: ((event: any) => void) | null = null;
   onopen: ((event: any) => void) | null = null;
-  readyState = 0;
   send = vi.fn();
   constructor(
     public url: string,

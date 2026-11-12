@@ -3,8 +3,8 @@ import { $t } from '@vben/locales';
 import axios, { type AxiosAdapter, AxiosError } from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { BUSINESS_ERROR_MESSAGE_KEY_PREFIX } from '#/utils/permission/business-error';
 import * as sharedMessages from '#/constants/http-error-messages';
+import { BUSINESS_ERROR_MESSAGE_KEY_PREFIX } from '#/utils/permission/business-error';
 import {
   getRequestLayerNoticeKey,
   shouldNotifyPageError,
@@ -37,9 +37,9 @@ import {
  */
 const notices = vi.hoisted(() => ({
   error: vi.fn(),
-  warning: vi.fn(),
-  success: vi.fn(),
   info: vi.fn(),
+  success: vi.fn(),
+  warning: vi.fn(),
 }));
 const refreshTokenApi = vi.hoisted(() => vi.fn());
 /** 可控的 XMLHttpRequest：锁定 axios xhr adapter 对浏览器中止请求的行为（incr3 P3-2） */
@@ -60,8 +60,8 @@ vi.mock('@vben/preferences', () => ({
 const access = vi.hoisted(() => {
   const store = {
     accessToken: 'token' as null | string,
-    refreshToken: 'refresh',
     isAccessChecked: true,
+    refreshToken: 'refresh',
     setAccessToken: (token: null | string) => {
       store.accessToken = token;
     },

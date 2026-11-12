@@ -1,16 +1,4 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-
-import PredictionProvenance from './PredictionProvenance.vue';
-import PredictionBacktest from './PredictionBacktest.vue';
-import { formatProbability } from './prediction-display';
-import { useAiRequestScope } from '../assistant/useAiRequestScope';
-import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
-import {
-  confidenceValues,
-  forecastPoints,
-  formatPredictionTime,
-} from './prediction-series';
 import {
   computed,
   nextTick,
@@ -20,19 +8,7 @@ import {
   ref,
   watch,
 } from 'vue';
-// 按需引入echarts，减少打包体积
-import * as echarts from 'echarts/core';
-import { LineChart } from 'echarts/charts';
-import {
-  DataZoomComponent,
-  GridComponent,
-  LegendComponent,
-  MarkLineComponent,
-  TitleComponent,
-  TooltipComponent,
-} from 'echarts/components';
-import { CanvasRenderer } from 'echarts/renderers';
-import { message } from 'ant-design-vue';
+
 import {
   ApiOutlined,
   BarChartOutlined,
@@ -42,6 +18,32 @@ import {
   HddOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons-vue';
+import { message } from 'ant-design-vue';
+import { LineChart } from 'echarts/charts';
+import {
+  DataZoomComponent,
+  GridComponent,
+  LegendComponent,
+  MarkLineComponent,
+  TitleComponent,
+  TooltipComponent,
+} from 'echarts/components';
+
+import OpsPage from '#/components/ops/OpsPage.vue';
+
+import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
+import { useAiRequestScope } from '../assistant/useAiRequestScope';
+import { formatProbability } from './prediction-display';
+import {
+  confidenceValues,
+  forecastPoints,
+  formatPredictionTime,
+} from './prediction-series';
+import PredictionBacktest from './PredictionBacktest.vue';
+import PredictionProvenance from './PredictionProvenance.vue';
+// 按需引入echarts，减少打包体积
+import * as echarts from 'echarts/core';
+import { CanvasRenderer } from 'echarts/renderers';
 
 import {
   type CpuPredictionRequest,
@@ -90,15 +92,15 @@ let trendChart: echarts.ECharts | null = null;
 let confidenceChart: echarts.ECharts | null = null;
 
 const formData = reactive({
-  predictionType: 'qps',
   currentValue: null as null | number,
-  predictionHours: 24,
-  granularity: PredictionGranularity.HOUR,
-  targetUtilization: 70,
-  sensitivity: 0.5,
-  includeConfidence: true,
-  includeAnomalyDetection: true,
   enableAiInsights: true,
+  granularity: PredictionGranularity.HOUR,
+  includeAnomalyDetection: true,
+  includeConfidence: true,
+  predictionHours: 24,
+  predictionType: 'qps',
+  sensitivity: 0.5,
+  targetUtilization: 70,
 });
 
 const scope = useAiRequestScope(() => {
@@ -140,7 +142,7 @@ const getCurrentValueLabel = () => {
     }
   }
 };
-const formatTimeForChart = (timestamp: string | Date) =>
+const formatTimeForChart = (timestamp: Date | string) =>
   formatPredictionTime(timestamp, true);
 
 const initTrendChart = () => {
@@ -154,51 +156,51 @@ const initTrendChart = () => {
   const predictedData = data.map((point) => point.predicted_value);
 
   const option = {
-    textStyle: { color: chartColors().text },
     backgroundColor: 'transparent',
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'cross' },
+    grid: {
+      bottom: '3%',
+      containLabel: true,
+      left: '3%',
+      right: '4%',
     },
     legend: {
       data: ['预测值', '当前值'],
       textStyle: { color: chartColors().text },
     },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      containLabel: true,
-    },
-    xAxis: {
-      type: 'category',
-      data: xAxisData,
-      axisLine: { lineStyle: { color: chartColors().border } },
-    },
-    yAxis: {
-      type: 'value',
-      name: getCurrentValueLabel(),
-      axisLine: { lineStyle: { color: chartColors().border } },
-      splitLine: { lineStyle: { color: chartColors().border } },
-    },
     series: [
       {
-        name: '预测值',
-        type: 'line',
+        areaStyle: { color: '#1890ff', opacity: 0.1 },
         data: predictedData,
+        lineStyle: { color: '#1890ff', width: 3 },
+        name: '预测值',
         smooth: true,
-        lineStyle: { width: 3, color: '#1890ff' },
-        areaStyle: { opacity: 0.1, color: '#1890ff' },
+        type: 'line',
       },
       {
-        name: '当前值',
-        type: 'line',
         data: Array(xAxisData.length).fill(
           predictionResult.value.current_value,
         ),
-        lineStyle: { type: 'dashed', color: '#ff4d4f' },
+        lineStyle: { color: '#ff4d4f', type: 'dashed' },
+        name: '当前值',
+        type: 'line',
       },
     ],
+    textStyle: { color: chartColors().text },
+    tooltip: {
+      axisPointer: { type: 'cross' },
+      trigger: 'axis',
+    },
+    xAxis: {
+      axisLine: { lineStyle: { color: chartColors().border } },
+      data: xAxisData,
+      type: 'category',
+    },
+    yAxis: {
+      axisLine: { lineStyle: { color: chartColors().border } },
+      name: getCurrentValueLabel(),
+      splitLine: { lineStyle: { color: chartColors().border } },
+      type: 'value',
+    },
   };
 
   trendChart.setOption(option);
@@ -217,10 +219,42 @@ const initConfidenceChart = () => {
   const lowerData = confidenceValues(data, 'confidence_lower');
 
   const option = {
-    textStyle: { color: chartColors().text },
     backgroundColor: 'transparent',
+    grid: {
+      bottom: '3%',
+      containLabel: true,
+      left: '3%',
+      right: '4%',
+    },
+    legend: {
+      data: ['预测值', '置信上限', '置信下限'],
+      textStyle: { color: chartColors().text },
+    },
+    series: [
+      {
+        data: upperData,
+        lineStyle: { color: '#52c41a', type: 'dashed' },
+        name: '置信上限',
+        symbol: 'none',
+        type: 'line',
+      },
+      {
+        areaStyle: { opacity: 0.1 },
+        data: predictedData,
+        lineStyle: { color: '#1890ff', width: 3 },
+        name: '预测值',
+        type: 'line',
+      },
+      {
+        data: lowerData,
+        lineStyle: { color: '#52c41a', type: 'dashed' },
+        name: '置信下限',
+        symbol: 'none',
+        type: 'line',
+      },
+    ],
+    textStyle: { color: chartColors().text },
     tooltip: {
-      trigger: 'axis',
       formatter: (params: any) => {
         const dataIndex = params[0].dataIndex;
         const time = xAxisData[dataIndex];
@@ -229,50 +263,18 @@ const initConfidenceChart = () => {
         const lower = lowerData[dataIndex] ?? '未知';
         return `时间: ${time}<br/>预测值: ${predicted}<br/>置信上限: ${upper}<br/>置信下限: ${lower}`;
       },
-    },
-    legend: {
-      data: ['预测值', '置信上限', '置信下限'],
-      textStyle: { color: chartColors().text },
-    },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      containLabel: true,
+      trigger: 'axis',
     },
     xAxis: {
-      type: 'category',
-      data: xAxisData,
       axisLine: { lineStyle: { color: chartColors().border } },
+      data: xAxisData,
+      type: 'category',
     },
     yAxis: {
-      type: 'value',
       axisLine: { lineStyle: { color: chartColors().border } },
       splitLine: { lineStyle: { color: chartColors().border } },
+      type: 'value',
     },
-    series: [
-      {
-        name: '置信上限',
-        type: 'line',
-        data: upperData,
-        lineStyle: { color: '#52c41a', type: 'dashed' },
-        symbol: 'none',
-      },
-      {
-        name: '预测值',
-        type: 'line',
-        data: predictedData,
-        lineStyle: { color: '#1890ff', width: 3 },
-        areaStyle: { opacity: 0.1 },
-      },
-      {
-        name: '置信下限',
-        type: 'line',
-        data: lowerData,
-        lineStyle: { color: '#52c41a', type: 'dashed' },
-        symbol: 'none',
-      },
-    ],
   };
 
   confidenceChart.setOption(option);
@@ -305,8 +307,8 @@ const timeMarks = {
 const getCurrentValueMax = () => {
   switch (formData.predictionType) {
     case 'cpu':
-    case 'memory':
-    case 'disk': {
+    case 'disk':
+    case 'memory': {
       return 100;
     }
     case 'qps': {
@@ -332,8 +334,8 @@ const isFormValid = computed(() => {
 const getCurrentValueUnit = () => {
   switch (formData.predictionType) {
     case 'cpu':
-    case 'memory':
-    case 'disk': {
+    case 'disk':
+    case 'memory': {
       return '%';
     }
     case 'qps': {
@@ -372,13 +374,13 @@ const startAnalysis = async () => {
     let response: PredictionResponse;
 
     const baseRequest = {
-      prediction_hours: formData.predictionHours,
-      granularity: formData.granularity,
-      include_confidence: formData.includeConfidence,
-      include_anomaly_detection: formData.includeAnomalyDetection,
-      target_utilization: formData.targetUtilization / 100, // 将百分比转换为小数
-      sensitivity: formData.sensitivity,
       enable_ai_insights: formData.enableAiInsights,
+      granularity: formData.granularity,
+      include_anomaly_detection: formData.includeAnomalyDetection,
+      include_confidence: formData.includeConfidence,
+      prediction_hours: formData.predictionHours,
+      sensitivity: formData.sensitivity,
+      target_utilization: formData.targetUtilization / 100, // 将百分比转换为小数
     };
 
     switch (formData.predictionType) {
@@ -538,15 +540,15 @@ const resetForm = () => {
   predictionError.value = '';
   disposeCharts();
   Object.assign(formData, {
-    predictionType: 'qps',
     currentValue: null,
-    predictionHours: 24,
-    granularity: PredictionGranularity.HOUR,
-    targetUtilization: 70,
-    sensitivity: 0.5,
-    includeConfidence: true,
-    includeAnomalyDetection: true,
     enableAiInsights: true,
+    granularity: PredictionGranularity.HOUR,
+    includeAnomalyDetection: true,
+    includeConfidence: true,
+    predictionHours: 24,
+    predictionType: 'qps',
+    sensitivity: 0.5,
+    targetUtilization: 70,
   });
   predictionResult.value = null;
 };
@@ -662,13 +664,13 @@ onUnmounted(() => {
             >
               <a-input-number
                 v-model:value="formData.currentValue"
-                :min="0"
-                :max="getCurrentValueMax()"
-                :precision="2"
-                style="width: 100%"
-                :placeholder="`输入当前${getCurrentValueLabel()}`"
                 :addon-after="getCurrentValueUnit()"
+                :max="getCurrentValueMax()"
+                :min="0"
+                :placeholder="`输入当前${getCurrentValueLabel()}`"
+                :precision="2"
                 :status="formData.currentValue === null ? 'warning' : ''"
+                style="width: 100%"
               />
               <div
                 v-if="!isFormValid && formData.currentValue !== null"
@@ -769,7 +771,10 @@ onUnmounted(() => {
             :ai-requested="formData.enableAiInsights"
             :result="predictionResult"
           />
-          <a-tabs v-model:activeKey="activeChartTab" @change="onChartTabChange">
+          <a-tabs
+            v-model:active-key="activeChartTab"
+            @change="onChartTabChange"
+          >
             <a-tab-pane key="trend" tab="趋势预测">
               <div ref="trendChartRef" class="chart-container"></div>
             </a-tab-pane>

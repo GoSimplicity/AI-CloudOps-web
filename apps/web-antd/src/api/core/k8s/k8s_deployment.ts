@@ -2,10 +2,10 @@ import { requestClient } from '#/api/request';
 
 // K8sDeployment状态枚举
 export enum K8sDeploymentStatus {
+  Error = 4, // 异常
+  Paused = 3, // 暂停
   Running = 1, // 运行中
   Stopped = 2, // 停止
-  Paused = 3, // 暂停
-  Error = 4, // 异常
 }
 
 // Deployment条件
@@ -253,7 +253,7 @@ export async function updateDeploymentApi(
   cluster_id: number,
   namespace: string,
   name: string,
-  data: Omit<UpdateDeploymentReq, 'cluster_id' | 'namespace' | 'name'>,
+  data: Omit<UpdateDeploymentReq, 'cluster_id' | 'name' | 'namespace'>,
 ) {
   return requestClient.put(
     `/k8s/deployment/${cluster_id}/${namespace}/${name}/update`,
@@ -268,7 +268,7 @@ export async function updateDeploymentByYamlApi(
   cluster_id: number,
   namespace: string,
   name: string,
-  data: Omit<UpdateDeploymentByYamlReq, 'cluster_id' | 'namespace' | 'name'>,
+  data: Omit<UpdateDeploymentByYamlReq, 'cluster_id' | 'name' | 'namespace'>,
 ) {
   return requestClient.put(
     `/k8s/deployment/${cluster_id}/${namespace}/${name}/update/yaml`,

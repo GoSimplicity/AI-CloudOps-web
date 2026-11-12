@@ -1,12 +1,13 @@
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { nextTick, reactive } from 'vue';
 
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createAssistantAccountScope } from '#/utils/assistant-account-scope';
+
 import AssistantQuery from './AssistantQuery.vue';
 import AssistantSession from './AssistantSession.vue';
-import { createAssistantAccountScope } from '#/utils/assistant-account-scope';
 
 function required<T>(value: null | T | undefined): T {
   if (value === null || value === undefined) {
@@ -15,15 +16,15 @@ function required<T>(value: null | T | undefined): T {
   return value;
 }
 
-const state = vi.hoisted(() => ({ user: null as any, access: null as any }));
+const state = vi.hoisted(() => ({ access: null as any, user: null as any }));
 const api = vi.hoisted(() => ({
   assistantQuery: vi.fn(),
   createAssistantSession: vi.fn(),
   getSessionInfo: vi.fn(),
 }));
 vi.mock('@vben/stores', () => ({
-  useUserStore: () => state.user,
   useAccessStore: () => state.access,
+  useUserStore: () => state.user,
 }));
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('#/api/core/aiops/assistant', () => api);
@@ -52,8 +53,8 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -124,9 +125,9 @@ describe('独立助手页面账户隔离', () => {
   it('会话管理只恢复本人缓存，切换与退出同步清空当前资料', () => {
     const scope = createAssistantAccountScope(localStorage);
     scope.setOwner('1');
-    scope.write('history', [{ session_id: 'one', message_count: 2 }]);
+    scope.write('history', [{ message_count: 2, session_id: 'one' }]);
     scope.setOwner('2');
-    scope.write('history', [{ session_id: 'two', message_count: 3 }]);
+    scope.write('history', [{ message_count: 3, session_id: 'two' }]);
     mountScreen(AssistantSession);
     expect(setup().sessionHistory[0].session_id).toBe('one');
     setup().currentSession.session_id = 'one';
@@ -160,8 +161,8 @@ describe('独立助手页面账户隔离', () => {
     '会话查询 %s 后丢弃对应本地记录和旧详情',
     async (status) => {
       api.getSessionInfo.mockRejectedValue({
-        response: { status },
         message: 'denied',
+        response: { status },
       });
       const scope = createAssistantAccountScope(localStorage);
       scope.setOwner('1');
@@ -216,7 +217,7 @@ describe('独立助手页面账户隔离', () => {
     '问答页 %s 清理旧 SID，下次按新会话请求',
     async (status) => {
       api.assistantQuery
-        .mockRejectedValueOnce({ response: { status }, message: 'invalid' })
+        .mockRejectedValueOnce({ message: 'invalid', response: { status } })
         .mockImplementationOnce(async (req) => ({
           answer: 'new',
           session_id: req.session_id,
@@ -261,9 +262,9 @@ describe('独立助手页面账户隔离', () => {
     await setup().recoverTurn();
     expect(api.assistantQuery).toHaveBeenCalledTimes(1);
     api.getSessionInfo.mockResolvedValueOnce({
+      last_turn_id: request.turn_id,
       session_id: 'old',
       status: 'idle',
-      last_turn_id: request.turn_id,
     });
     await setup().recoverTurn();
     expect(api.assistantQuery).toHaveBeenCalledTimes(2);
@@ -278,14 +279,14 @@ describe('独立助手页面账户隔离', () => {
     scope.setOwner('1');
     scope.write('query-session', { sessionId: 'owned-session' });
     api.getSessionInfo.mockResolvedValueOnce({
+      active_mode: 1,
+      active_question: '未确认问题',
+      active_turn_id: 'turn-id',
+      conversation_history: [{ a: '之前的回答', mode: 1, q: '之前的问题' }],
+      last_activity: '2026-01-01T00:00:00Z',
+      mode: 1,
       session_id: 'owned-session',
       status: 'unknown',
-      mode: 1,
-      last_activity: '2026-01-01T00:00:00Z',
-      conversation_history: [{ q: '之前的问题', a: '之前的回答', mode: 1 }],
-      active_turn_id: 'turn-id',
-      active_question: '未确认问题',
-      active_mode: 1,
     });
     mountScreen(AssistantQuery);
     await flushPromises();
@@ -306,10 +307,10 @@ describe('独立助手页面账户隔离', () => {
     api.getSessionInfo
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce({
+        conversation_history: [],
+        mode: 1,
         session_id: 'retry-session',
         status: 'idle',
-        mode: 1,
-        conversation_history: [],
       });
     mountScreen(AssistantQuery);
     await flushPromises();

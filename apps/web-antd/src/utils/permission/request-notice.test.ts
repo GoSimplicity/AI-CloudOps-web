@@ -27,7 +27,7 @@ const httpError = (status: number) =>
     AxiosError.ERR_BAD_RESPONSE,
     {} as any,
     {},
-    { status, data: {}, headers: {}, statusText: '', config: {} as any } as any,
+    { config: {} as any, data: {}, headers: {}, status, statusText: '' } as any,
   );
 /** 模拟经过 requestClient 通用错误拦截器（拦截器入口打的经过标记） */
 const viaRequestLayer = <T>(error: T): T => {

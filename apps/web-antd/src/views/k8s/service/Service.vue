@@ -1,17 +1,6 @@
 <script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
 import { onMounted, ref } from 'vue';
 
-import { message, Modal } from 'ant-design-vue';
-
-import { useServicePage } from './Service';
-import {
-  formatDateTime,
-  formatK8sTime,
-  getRelativeTime,
-  namespacedResourceKey,
-} from '../shared/utils';
-import yaml from 'js-yaml';
 import {
   AppstoreOutlined,
   CheckCircleOutlined,
@@ -31,155 +20,166 @@ import {
   SearchOutlined,
   TagsOutlined,
 } from '@ant-design/icons-vue';
+import { message, Modal } from 'ant-design-vue';
+import yaml from 'js-yaml';
 
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { usePermission } from '#/utils/permission';
+
+import {
+  formatDateTime,
+  formatK8sTime,
+  getRelativeTime,
+  namespacedResourceKey,
+} from '../shared/utils';
+import { useServicePage } from './Service';
 
 const { can } = usePermission();
 
 const {
+  // edit form field operations
+  addEditPortField,
+  // filter operations
+  addFilterLabel,
+  addNewEditAnnotation,
+  addNewEditLabel,
+  addNewEditSelector,
+  // form field operations
+  addPortField,
+  // batch operations
+  batchOperation,
+  clearFilterLabels,
+  // operations
+  clearNamespaces,
+  clearServices,
+  // create operations
+  closeCreateModal,
+  closeCreateYamlModal,
+  // detail operations
+  closeDetailModal,
+  // edit operations
+  closeEditModal,
+  // endpoints operations
+  closeEndpointsModal,
+  // YAML operations
+  closeYamlModal,
   // state
   clusters,
   clustersError,
   clustersLoading,
   clustersTotal,
-  currentPage,
-  filterClusterId,
-  filterLabels,
-  filterNamespace,
-  filterStatus,
-  filterType,
-  loadError,
-  loading,
-  namespaces,
-  namespacesError,
-  namespacesLoading,
-  namespacesTotal,
-  pageSize,
-  searchText,
-  selectedRows,
-  total,
-
-  // modal state
-  detailLoading,
-  isCreateModalVisible,
-  isCreateYamlModalVisible,
-  isDetailModalVisible,
-  isEditModalVisible,
-  isEndpointsModalVisible,
-  isYamlModalVisible,
-  submitLoading,
-
-  // operation targets
-  currentOperationService,
-  currentServiceDetail,
-  serviceEndpoints,
 
   // form models
   createFormModel,
-  createYamlFormModel,
-  editFormModel,
-  yamlFormModel,
-
-  // form refs
-  createYamlFormRef,
-  editFormRef,
-  formRef,
-  yamlFormRef,
-
   // form rules
   createFormRules,
+  createYamlFormModel,
+  // form refs
+  createYamlFormRef,
   createYamlFormRules,
-  editFormRules,
-  yamlFormRules,
+  // operation targets
+  currentOperationService,
+  currentPage,
+  currentServiceDetail,
 
+  // service operations
+  deleteService,
+  // modal state
+  detailLoading,
+  editFormModel,
+
+  editFormRef,
+  editFormRules,
+  fetchClusters,
+  fetchNamespaces,
+
+  fetchServices,
+  filterClusterId,
   // computed
   filteredServices,
-  rowSelection,
+  filterLabels,
+
+  filterNamespace,
+  filterStatus,
+  filterType,
+  formRef,
 
   // helpers
   getEnvText,
   getServiceTypeColor,
+
   getServiceTypeText,
   getStatusColor,
   getStatusText,
-
-  // operations
-  clearNamespaces,
-  clearServices,
-  fetchClusters,
-  fetchNamespaces,
-  fetchServices,
-
-  loadMoreNamespaces,
-
-  // detail operations
-  closeDetailModal,
-  showServiceDetail,
-
-  // YAML operations
-  closeYamlModal,
-  showYamlModal,
-  submitYamlForm,
-
-  // create operations
-  closeCreateModal,
-  closeCreateYamlModal,
-  openCreateModal,
-  openCreateYamlModal,
-  submitCreateForm,
-  submitCreateYamlForm,
-
-  // edit operations
-  closeEditModal,
-  openEditModal,
-  submitEditForm,
-
-  // service operations
-  deleteService,
-
-  // endpoints operations
-  closeEndpointsModal,
-  showEndpointsModal,
-
-  // filter operations
-  addFilterLabel,
-  clearFilterLabels,
-  removeFilterLabel,
-
-  // batch operations
-  batchOperation,
-
   // pagination operations
   handleClusterChange,
   handleClusterDropdownScroll,
+
   handleFilterChange,
   handlePageChange,
-  onSearch,
+  isCreateModalVisible,
+  isCreateYamlModalVisible,
+  isDetailModalVisible,
 
-  // form field operations
-  addPortField,
-  removeAnnotationField,
-  removeLabelField,
-  removePortField,
-  removeSelectorField,
+  isEditModalVisible,
 
-  // edit form field operations
-  addEditPortField,
-  addNewEditAnnotation,
-  addNewEditLabel,
-  addNewEditSelector,
-  removeEditAnnotationField,
-  removeEditLabelField,
-  removeEditPortField,
-  removeEditSelectorField,
-
-  // edit form helper variables
-  newEditAnnotationKey,
-  newEditLabelKey,
-  newEditSelectorKey,
+  isEndpointsModalVisible,
+  isYamlModalVisible,
 
   // constants
   K8sSvcStatus,
+  loadError,
+  loading,
+
+  loadMoreNamespaces,
+  namespaces,
+  namespacesError,
+  namespacesLoading,
+  namespacesTotal,
+  // edit form helper variables
+  newEditAnnotationKey,
+
+  newEditLabelKey,
+  newEditSelectorKey,
+  onSearch,
+
+  openCreateModal,
+
+  openCreateYamlModal,
+  openEditModal,
+
+  pageSize,
+  removeAnnotationField,
+  removeEditAnnotationField,
+
+  removeEditLabelField,
+
+  removeEditPortField,
+  removeEditSelectorField,
+  removeFilterLabel,
+  removeLabelField,
+  removePortField,
+
+  removeSelectorField,
+  rowSelection,
+  searchText,
+  selectedRows,
+  serviceEndpoints,
+
+  showEndpointsModal,
+  showServiceDetail,
+  showYamlModal,
+  submitCreateForm,
+  submitCreateYamlForm,
+  submitEditForm,
+  submitLoading,
+  submitYamlForm,
+
+  total,
+  yamlFormModel,
+  yamlFormRef,
+
+  yamlFormRules,
 } = useServicePage();
 
 // 添加新标签/注解/选择器的方法
@@ -267,11 +267,11 @@ const columns = [
 ];
 
 const portColumns = [
-  { title: '名称', dataIndex: 'name', key: 'name' },
-  { title: '协议', dataIndex: 'protocol', key: 'protocol' },
-  { title: '端口', dataIndex: 'port', key: 'port' },
-  { title: '目标端口', dataIndex: 'target_port', key: 'target_port' },
-  { title: '节点端口', dataIndex: 'node_port', key: 'node_port' },
+  { dataIndex: 'name', key: 'name', title: '名称' },
+  { dataIndex: 'protocol', key: 'protocol', title: '协议' },
+  { dataIndex: 'port', key: 'port', title: '端口' },
+  { dataIndex: 'target_port', key: 'target_port', title: '目标端口' },
+  { dataIndex: 'node_port', key: 'node_port', title: '节点端口' },
 ];
 
 // 动态获取可见的端口列（只显示有数据的列）
@@ -434,20 +434,20 @@ const validateYaml = () => {
 
     if (issues.length > 0) {
       Modal.warning({
-        title: 'YAML 格式检查警告',
-        content: '发现以下问题：\n' + issues.join('\n'),
-        width: 500,
         centered: true,
+        content: `发现以下问题：\n${issues.join('\n')}`,
+        title: 'YAML 格式检查警告',
+        width: 500,
       });
     } else {
       message.success('YAML 格式检查通过');
     }
   } catch (error: any) {
     Modal.error({
-      title: 'YAML 格式检查失败',
-      content: `语法错误：${error.message || '未知错误'}`,
-      width: 600,
       centered: true,
+      content: `语法错误：${error.message || '未知错误'}`,
+      title: 'YAML 格式检查失败',
+      width: 600,
     });
   }
 };
@@ -676,7 +676,7 @@ onMounted(async () => {
               class="k8s-search-input"
               placeholder="搜索 Service 名称"
               @input="onSearch"
-              @pressEnter="onSearch"
+              @press-enter="onSearch"
             >
               <template #suffix>
                 <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -689,7 +689,6 @@ onMounted(async () => {
         <div class="k8s-toolbar-actions">
           <div class="k8s-action-buttons">
             <a-button
-              @click="resetFilters"
               :disabled="
                 !filterStatus &&
                 !searchText &&
@@ -700,6 +699,7 @@ onMounted(async () => {
               "
               class="k8s-toolbar-btn"
               title="重置所有筛选条件"
+              @click="resetFilters"
             >
               <template #icon><DeleteOutlined aria-hidden="true" /></template>
               重置筛选
@@ -716,13 +716,13 @@ onMounted(async () => {
             </a-button>
 
             <a-button
-              type="primary"
-              danger
-              @click="() => batchOperation('删除')"
-              :disabled="selectedRows.length === 0"
               v-if="can('k8s.service.batchDelete') && selectedRows.length > 0"
+              :disabled="selectedRows.length === 0"
               class="k8s-toolbar-btn"
+              danger
               title="批量删除选中的 Service"
+              type="primary"
+              @click="() => batchOperation('删除')"
             >
               <template #icon><DeleteOutlined aria-hidden="true" /></template>
               删除 ({{ selectedRows.length }})
@@ -1169,9 +1169,9 @@ onMounted(async () => {
                 @press-enter="addNewSelector"
               />
               <a-button
+                :disabled="!newSelectorKey.trim()"
                 type="primary"
                 @click="addNewSelector"
-                :disabled="!newSelectorKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1226,9 +1226,9 @@ onMounted(async () => {
                 @press-enter="addNewLabel"
               />
               <a-button
+                :disabled="!newLabelKey.trim()"
                 type="primary"
                 @click="addNewLabel"
-                :disabled="!newLabelKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1283,9 +1283,9 @@ onMounted(async () => {
                 @press-enter="addNewAnnotation"
               />
               <a-button
+                :disabled="!newAnnotationKey.trim()"
                 type="primary"
                 @click="addNewAnnotation"
-                :disabled="!newAnnotationKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1460,9 +1460,9 @@ onMounted(async () => {
                 @press-enter="addNewEditSelector"
               />
               <a-button
+                :disabled="!newEditSelectorKey.trim()"
                 type="primary"
                 @click="addNewEditSelector"
-                :disabled="!newEditSelectorKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1517,9 +1517,9 @@ onMounted(async () => {
                 @press-enter="addNewEditLabel"
               />
               <a-button
+                :disabled="!newEditLabelKey.trim()"
                 type="primary"
                 @click="addNewEditLabel"
-                :disabled="!newEditLabelKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1574,9 +1574,9 @@ onMounted(async () => {
                 @press-enter="addNewEditAnnotation"
               />
               <a-button
+                :disabled="!newEditAnnotationKey.trim()"
                 type="primary"
                 @click="addNewEditAnnotation"
-                :disabled="!newEditAnnotationKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1755,11 +1755,11 @@ onMounted(async () => {
                 </div>
                 <!-- 只有当有负载均衡IP时才显示 -->
                 <div
-                  class="k8s-detail-item"
                   v-if="
                     currentServiceDetail.load_balancer_ip &&
                     currentServiceDetail.load_balancer_ip.trim()
                   "
+                  class="k8s-detail-item"
                 >
                   <span class="k8s-detail-label">负载均衡IP:</span>
                   <span class="k8s-detail-value">{{
@@ -1782,11 +1782,11 @@ onMounted(async () => {
             <a-col :xs="24">
               <a-card class="k8s-detail-card" size="small" title="端口配置">
                 <a-table
-                  :data-source="currentServiceDetail.ports"
                   :columns="getVisiblePortColumns(currentServiceDetail.ports)"
+                  :data-source="currentServiceDetail.ports"
                   :pagination="false"
-                  size="small"
                   class="k8s-table"
+                  size="small"
                 >
                   <template #bodyCell="{ column, text }">
                     <template v-if="column.key === 'name'">
@@ -1811,12 +1811,12 @@ onMounted(async () => {
           <a-row :gutter="[24, 16]" style="margin-top: 16px">
             <!-- 只有当有选择器时才显示 -->
             <a-col
-              :xs="24"
-              :lg="12"
               v-if="
                 currentServiceDetail.selector &&
                 Object.keys(currentServiceDetail.selector).length > 0
               "
+              :lg="12"
+              :xs="24"
             >
               <a-card class="k8s-detail-card" size="small" title="Pod 选择器">
                 <div class="k8s-labels-display">
@@ -1836,12 +1836,12 @@ onMounted(async () => {
 
             <!-- 只有当有标签时才显示 -->
             <a-col
-              :xs="24"
-              :lg="12"
               v-if="
                 currentServiceDetail.labels &&
                 Object.keys(currentServiceDetail.labels).length > 0
               "
+              :lg="12"
+              :xs="24"
             >
               <a-card class="k8s-detail-card" size="small" title="标签信息">
                 <div class="k8s-labels-display">
@@ -1871,12 +1871,12 @@ onMounted(async () => {
 
           <!-- 只有当有注解时才显示 -->
           <a-row
-            :gutter="[24, 16]"
-            style="margin-top: 16px"
             v-if="
               currentServiceDetail.annotations &&
               Object.keys(currentServiceDetail.annotations).length > 0
             "
+            :gutter="[24, 16]"
+            style="margin-top: 16px"
           >
             <a-col :xs="24">
               <a-card class="k8s-detail-card" size="small" title="注解信息">
@@ -1993,8 +1993,8 @@ onMounted(async () => {
     >
       <div class="labels-filter-form">
         <div
-          class="current-filters"
           v-if="Object.keys(filterLabels).length > 0"
+          class="current-filters"
         >
           <h4>当前过滤条件：</h4>
           <div class="filter-tags">
@@ -2033,10 +2033,10 @@ onMounted(async () => {
               style="flex: 1"
             />
             <a-button
-              type="primary"
-              @click="addNewFilterLabel"
               :disabled="!newFilterKey.trim()"
               size="small"
+              type="primary"
+              @click="addNewFilterLabel"
             >
               <template #icon><PlusOutlined aria-hidden="true" /></template>
             </a-button>

@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
+import type {
+  ListWorkorderCategoryReq,
+  WorkorderCategoryItem,
+} from '#/api/core/workorder/workorder_category';
+
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 
-import { message, Modal } from 'ant-design-vue';
 import {
   CodeOutlined,
   CopyOutlined,
@@ -17,9 +20,9 @@ import {
   UploadOutlined,
   UpOutlined,
 } from '@ant-design/icons-vue';
+import { message, Modal } from 'ant-design-vue';
 
-import FieldConfig from './components/FieldConfig.vue';
-import DynamicForm from './components/DynamicForm.vue';
+import { listWorkorderCategory } from '#/api/core/workorder/workorder_category';
 import {
   createWorkorderFormDesign,
   type CreateWorkorderFormDesignReq,
@@ -28,16 +31,14 @@ import {
   FormFieldType,
   type FormSchema,
 } from '#/api/core/workorder/workorder_form_design';
-import type {
-  ListWorkorderCategoryReq,
-  WorkorderCategoryItem,
-} from '#/api/core/workorder/workorder_category';
-
-import { listWorkorderCategory } from '#/api/core/workorder/workorder_category';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import {
   shouldNotifyPageError,
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
+
+import DynamicForm from './components/DynamicForm.vue';
+import FieldConfig from './components/FieldConfig.vue';
 
 // 响应式数据
 const showDesigner = ref(true);
@@ -65,10 +66,10 @@ const categoryPagination = reactive({
 
 // 表单元数据
 const formMeta = reactive({
-  name: '',
-  description: '',
-  status: FormDesignStatus.Draft,
   category_id: undefined as number | undefined,
+  description: '',
+  name: '',
+  status: FormDesignStatus.Draft,
   tags: [] as string[],
 });
 
@@ -85,7 +86,7 @@ const formRules = computed(() => {
   formSchema.fields.forEach((field) => {
     if (field.required) {
       rules[field.name] = [
-        { required: true, message: `请输入${field.label}`, trigger: 'blur' },
+        { message: `请输入${field.label}`, required: true, trigger: 'blur' },
       ];
     }
   });
@@ -94,15 +95,15 @@ const formRules = computed(() => {
 
 // 字段类型映射
 const fieldTypeMap: Record<string, string> = {
-  [FormFieldType.Text]: '文本框',
-  [FormFieldType.Number]: '数字',
-  [FormFieldType.Password]: '密码',
-  [FormFieldType.Textarea]: '多行文本',
-  [FormFieldType.Select]: '下拉选项',
-  [FormFieldType.Radio]: '单选框',
   [FormFieldType.Checkbox]: '复选框',
   [FormFieldType.Date]: '日期',
+  [FormFieldType.Number]: '数字',
+  [FormFieldType.Password]: '密码',
+  [FormFieldType.Radio]: '单选框',
+  [FormFieldType.Select]: '下拉选项',
   [FormFieldType.Switch]: '开关',
+  [FormFieldType.Text]: '文本框',
+  [FormFieldType.Textarea]: '多行文本',
 };
 
 /**
@@ -119,8 +120,8 @@ const loadCategories = async (resetPage = false) => {
   try {
     const params: ListWorkorderCategoryReq = {
       page: categoryPagination.page,
-      size: categoryPagination.size,
       search: categorySearch.value,
+      size: categoryPagination.size,
     };
 
     const response = await listWorkorderCategory(params);
@@ -243,9 +244,9 @@ const getDefaultValue = (type: string) => {
 // 判断是否需要选项
 const needsOptions = (type: string) => {
   return [
-    FormFieldType.Select,
-    FormFieldType.Radio,
     FormFieldType.Checkbox,
+    FormFieldType.Radio,
+    FormFieldType.Select,
   ].includes(type as any);
 };
 
@@ -255,13 +256,13 @@ const addFieldType = (type: string) => {
   importRequest++;
   const fieldNumber = formSchema.fields.length + 1;
   const field: FormField = {
-    name: generateFieldName(type),
-    type,
-    label: `${fieldTypeMap[type]}${fieldNumber}`,
-    required: 0,
-    placeholder: `请输入${fieldTypeMap[type]}`,
     default: getDefaultValue(type),
+    label: `${fieldTypeMap[type]}${fieldNumber}`,
+    name: generateFieldName(type),
     options: needsOptions(type) ? ['选项1', '选项2'] : undefined,
+    placeholder: `请输入${fieldTypeMap[type]}`,
+    required: 0,
+    type,
   };
 
   formSchema.fields.push(field);
@@ -425,21 +426,20 @@ const saveFormDesign = async () => {
   saveError.value = null;
   try {
     const data: CreateWorkorderFormDesignReq = {
-      name: formMeta.name.trim(),
+      category_id: formMeta.category_id,
       description: formMeta.description,
+      is_template: isTemplate.value ? 1 : 2,
+      name: formMeta.name.trim(),
       schema: JSON.parse(JSON.stringify(formSchema)),
       status: formMeta.status,
-      category_id: formMeta.category_id,
       tags: [...formMeta.tags],
-      is_template: isTemplate.value ? 1 : 2,
     };
 
     await createWorkorderFormDesign(data);
     if (ticket === saveRequest) message.success('表单设计保存成功');
   } catch (error) {
-    if (ticket === saveRequest)
-      if (shouldRecordPageError(error))
-        saveError.value = '保存失败，请重试，当前设计已保留';
+    if (ticket === saveRequest && shouldRecordPageError(error))
+      saveError.value = '保存失败，请重试，当前设计已保留';
   } finally {
     if (ticket === saveRequest) saving.value = false;
   }
@@ -996,8 +996,8 @@ const importConfig = (file: File) => {
               <div
                 v-for="category in categories"
                 :key="category.id"
-                class="category-item"
                 :class="{ active: formMeta.category_id === category.id }"
+                class="category-item"
                 @click="selectCategory(category)"
               >
                 <div class="category-name">{{ category.name }}</div>
@@ -1014,13 +1014,13 @@ const importConfig = (file: File) => {
           <a-pagination
             v-model:current="categoryPagination.page"
             v-model:page-size="categoryPagination.size"
-            :total="categoryPagination.total"
-            :show-size-changer="true"
             :show-quick-jumper="true"
+            :show-size-changer="true"
             :show-total="
               (total: number, range: [number, number]) =>
                 `第 ${range[0]}-${range[1]} 条，共 ${total} 条`
             "
+            :total="categoryPagination.total"
             @change="onCategoryPageChange"
           />
         </div>

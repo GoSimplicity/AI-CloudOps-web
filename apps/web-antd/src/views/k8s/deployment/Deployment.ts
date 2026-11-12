@@ -6,6 +6,13 @@ import { message, Modal } from 'ant-design-vue';
 import yaml from 'js-yaml';
 
 import {
+  Env,
+  getClustersListApi,
+  type K8sCluster,
+  type KeyValueList,
+  type ListClustersReq,
+} from '#/api/core/k8s/k8s_cluster';
+import {
   createDeploymentApi,
   createDeploymentByYamlApi,
   type CreateDeploymentByYamlReq,
@@ -28,13 +35,6 @@ import {
   type UpdateDeploymentByYamlReq,
   type UpdateDeploymentReq,
 } from '#/api/core/k8s/k8s_deployment';
-import {
-  Env,
-  getClustersListApi,
-  type K8sCluster,
-  type KeyValueList,
-  type ListClustersReq,
-} from '#/api/core/k8s/k8s_cluster';
 import {
   getNamespacesListApi,
   type K8sNamespace,
@@ -142,12 +142,12 @@ export function useDeploymentPage() {
     namespace: string;
     replicas: number;
   }>({
+    annotations: {},
+    images: [''],
+    labels: {},
     name: '',
     namespace: '',
     replicas: 1,
-    images: [''],
-    labels: {},
-    annotations: {},
   });
 
   const editFormModel = ref<{
@@ -158,12 +158,12 @@ export function useDeploymentPage() {
     namespace: string;
     replicas: number;
   }>({
+    annotations: {},
+    images: [''],
+    labels: {},
     name: '',
     namespace: '',
     replicas: 1,
-    images: [''],
-    labels: {},
-    annotations: {},
   });
 
   const scaleFormModel = ref<{
@@ -187,11 +187,11 @@ export function useDeploymentPage() {
   // form validation rules
   const createFormRules: Record<string, Rule[]> = {
     name: [
-      { required: true, message: '请输入 Deployment 名称', trigger: 'blur' },
+      { message: '请输入 Deployment 名称', required: true, trigger: 'blur' },
       {
-        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         message:
           'Deployment 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         trigger: 'blur',
       },
       {
@@ -201,56 +201,56 @@ export function useDeploymentPage() {
       },
     ],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' },
+      { message: '请选择命名空间', required: true, trigger: 'change' },
     ],
     replicas: [
-      { required: true, message: '请输入副本数量', trigger: 'blur' },
+      { message: '请输入副本数量', required: true, trigger: 'blur' },
       {
-        type: 'number',
-        min: 0,
         max: 100,
         message: '副本数量必须在0-100之间',
+        min: 0,
         trigger: 'blur',
+        type: 'number',
       },
     ],
   };
 
   const scaleFormRules: Record<string, Rule[]> = {
     replicas: [
-      { required: true, message: '请输入副本数量', trigger: 'blur' },
+      { message: '请输入副本数量', required: true, trigger: 'blur' },
       {
-        type: 'number',
-        min: 0,
         max: 100,
         message: '副本数量必须在0-100之间',
+        min: 0,
         trigger: 'blur',
+        type: 'number',
       },
     ],
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
   const editFormRules: Record<string, Rule[]> = {
     replicas: [
-      { required: true, message: '请输入副本数量', trigger: 'blur' },
+      { message: '请输入副本数量', required: true, trigger: 'blur' },
       {
-        type: 'number',
-        min: 0,
         max: 100,
         message: '副本数量必须在0-100之间',
+        min: 0,
         trigger: 'blur',
+        type: 'number',
       },
     ],
   };
@@ -261,11 +261,11 @@ export function useDeploymentPage() {
   });
 
   const rowSelection = computed(() => ({
-    selectedRowKeys: selectedRowKeys.value,
     onChange: (keys: string[], rows: K8sDeployment[]) => {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
     },
+    selectedRowKeys: selectedRowKeys.value,
   }));
 
   // helpers
@@ -282,31 +282,31 @@ export function useDeploymentPage() {
     if (env === undefined || env === null) return '未知环境';
     const value = typeof env === 'string' ? Number.parseInt(env) : env;
     const map: Record<number, string> = {
-      [Env.Prod]: '生产',
       [Env.Dev]: '开发',
-      [Env.Stage]: '预发',
-      [Env.Rc]: '测试',
       [Env.Press]: '灰度',
+      [Env.Prod]: '生产',
+      [Env.Rc]: '测试',
+      [Env.Stage]: '预发',
     };
     return map[value] || '未知环境';
   };
 
   const getStatusText = (status?: K8sDeploymentStatus) => {
     const map: Record<K8sDeploymentStatus, string> = {
+      [K8sDeploymentStatus.Error]: '异常',
+      [K8sDeploymentStatus.Paused]: '已暂停',
       [K8sDeploymentStatus.Running]: '运行中',
       [K8sDeploymentStatus.Stopped]: '已停止',
-      [K8sDeploymentStatus.Paused]: '已暂停',
-      [K8sDeploymentStatus.Error]: '异常',
     };
     return status === undefined ? '未知' : map[status] || '未知';
   };
 
   const getStatusColor = (status?: K8sDeploymentStatus) => {
     const map: Record<K8sDeploymentStatus, string> = {
+      [K8sDeploymentStatus.Error]: 'error',
+      [K8sDeploymentStatus.Paused]: 'warning',
       [K8sDeploymentStatus.Running]: 'success',
       [K8sDeploymentStatus.Stopped]: 'default',
-      [K8sDeploymentStatus.Paused]: 'warning',
-      [K8sDeploymentStatus.Error]: 'error',
     };
     return status === undefined ? 'default' : map[status] || 'default';
   };
@@ -434,16 +434,16 @@ export function useDeploymentPage() {
       selectedRowKeys.value = [];
       selectedRows.value = [];
       const params: GetDeploymentListReq = {
-        page: currentPage.value,
-        size: pageSize.value,
-        search: searchText.value || undefined,
         cluster_id: clusterId,
-        namespace: namespace || undefined,
-        status: filterStatus.value || undefined,
         labels:
           Object.keys(filterLabels.value).length > 0
             ? filterLabels.value
             : undefined,
+        namespace: namespace || undefined,
+        page: currentPage.value,
+        search: searchText.value || undefined,
+        size: pageSize.value,
+        status: filterStatus.value || undefined,
       };
       const res = await getDeploymentListApi(clusterId, params);
       if (
@@ -545,19 +545,19 @@ export function useDeploymentPage() {
       const processedDetail = res
         ? {
             ...res,
-            cluster_id: clusterId,
-            labels: res.labels ? recordToKeyValueList(res.labels) : [],
             annotations: res.annotations
               ? recordToKeyValueList(res.annotations)
               : [],
+            cluster_id: clusterId,
+            labels: res.labels ? recordToKeyValueList(res.labels) : [],
           }
         : {
             ...record,
-            cluster_id: clusterId,
-            labels: record.labels ? recordToKeyValueList(record.labels) : [],
             annotations: record.annotations
               ? recordToKeyValueList(record.annotations)
               : [],
+            cluster_id: clusterId,
+            labels: record.labels ? recordToKeyValueList(record.labels) : [],
           };
 
       currentDeploymentDetail.value = processedDetail;
@@ -568,11 +568,11 @@ export function useDeploymentPage() {
       // 错误时也要处理格式转换
       const fallbackDetail = {
         ...record,
-        cluster_id: clusterId,
-        labels: record.labels ? recordToKeyValueList(record.labels) : [],
         annotations: record.annotations
           ? recordToKeyValueList(record.annotations)
           : [],
+        cluster_id: clusterId,
+        labels: record.labels ? recordToKeyValueList(record.labels) : [],
       };
       currentDeploymentDetail.value = fallbackDetail;
     } finally {
@@ -625,7 +625,7 @@ export function useDeploymentPage() {
 
       const params: Omit<
         UpdateDeploymentByYamlReq,
-        'cluster_id' | 'namespace' | 'name'
+        'cluster_id' | 'name' | 'namespace'
       > = {
         yaml: yamlFormModel.value.yaml,
       };
@@ -655,12 +655,12 @@ export function useDeploymentPage() {
   // 创建 Deployment
   const openCreateModal = () => {
     createFormModel.value = {
+      annotations: {},
+      images: [''],
+      labels: {},
       name: '',
       namespace: '',
       replicas: 1,
-      images: [''],
-      labels: {},
-      annotations: {},
     };
     isCreateModalVisible.value = true;
   };
@@ -688,18 +688,18 @@ export function useDeploymentPage() {
       submitLoading.value = true;
 
       const params: Omit<CreateDeploymentReq, 'cluster_id'> = {
-        name: createFormModel.value.name,
-        namespace: createFormModel.value.namespace,
-        replicas: createFormModel.value.replicas,
+        annotations:
+          Object.keys(createFormModel.value.annotations).length > 0
+            ? createFormModel.value.annotations
+            : undefined,
         images: createFormModel.value.images.filter((img) => img.trim()),
         labels:
           Object.keys(createFormModel.value.labels).length > 0
             ? createFormModel.value.labels
             : undefined,
-        annotations:
-          Object.keys(createFormModel.value.annotations).length > 0
-            ? createFormModel.value.annotations
-            : undefined,
+        name: createFormModel.value.name,
+        namespace: createFormModel.value.namespace,
+        replicas: createFormModel.value.replicas,
         spec: {
           replicas: createFormModel.value.replicas,
         },
@@ -756,13 +756,13 @@ export function useDeploymentPage() {
 
     currentOperationDeployment.value = { ...record, cluster_id: clusterId };
     editFormModel.value = {
-      name: record.name,
-      namespace: record.namespace,
-      replicas: record.replicas,
+      annotations: keyValueListToRecord(record.annotations),
       images:
         record.images && record.images.length > 0 ? [...record.images] : [''],
       labels: keyValueListToRecord(record.labels),
-      annotations: keyValueListToRecord(record.annotations),
+      name: record.name,
+      namespace: record.namespace,
+      replicas: record.replicas,
     };
     isEditModalVisible.value = true;
   };
@@ -781,18 +781,18 @@ export function useDeploymentPage() {
 
       const params: Omit<
         UpdateDeploymentReq,
-        'cluster_id' | 'namespace' | 'name'
+        'cluster_id' | 'name' | 'namespace'
       > = {
-        replicas: editFormModel.value.replicas,
+        annotations:
+          Object.keys(editFormModel.value.annotations).length > 0
+            ? editFormModel.value.annotations
+            : undefined,
         images: editFormModel.value.images.filter((img) => img.trim()),
         labels:
           Object.keys(editFormModel.value.labels).length > 0
             ? editFormModel.value.labels
             : undefined,
-        annotations:
-          Object.keys(editFormModel.value.annotations).length > 0
-            ? editFormModel.value.annotations
-            : undefined,
+        replicas: editFormModel.value.replicas,
         spec: {
           replicas: editFormModel.value.replicas,
         },
@@ -825,12 +825,11 @@ export function useDeploymentPage() {
     if (!clusterId) return;
 
     Modal.confirm({
-      title: '删除 Deployment',
+      cancelText: '取消',
+      centered: true,
       content: `确定要删除 Deployment "${record.name}" 吗？此操作不可逆！`,
       okText: '确认删除',
       okType: 'danger',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           await deleteDeploymentApi(clusterId, record.namespace, record.name);
@@ -841,6 +840,7 @@ export function useDeploymentPage() {
             message.error('Deployment 删除失败');
         }
       },
+      title: '删除 Deployment',
     });
   };
 
@@ -850,12 +850,11 @@ export function useDeploymentPage() {
     if (!clusterId) return;
 
     Modal.confirm({
-      title: '重启 Deployment',
+      cancelText: '取消',
+      centered: true,
       content: `确定要重启 Deployment "${record.name}" 吗？这将重启所有 Pod。`,
       okText: '确认重启',
       okType: 'primary',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           await restartDeploymentApi(clusterId, record.namespace, record.name);
@@ -866,6 +865,7 @@ export function useDeploymentPage() {
             message.error('Deployment 重启失败');
         }
       },
+      title: '重启 Deployment',
     });
   };
 
@@ -922,12 +922,11 @@ export function useDeploymentPage() {
     if (!clusterId) return;
 
     Modal.confirm({
-      title: '暂停 Deployment',
+      cancelText: '取消',
+      centered: true,
       content: `确定要暂停 Deployment "${record.name}" 吗？`,
       okText: '确认暂停',
       okType: 'primary',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           await pauseDeploymentApi(clusterId, record.namespace, record.name);
@@ -938,6 +937,7 @@ export function useDeploymentPage() {
             message.error('Deployment 暂停失败');
         }
       },
+      title: '暂停 Deployment',
     });
   };
 
@@ -946,12 +946,11 @@ export function useDeploymentPage() {
     if (!clusterId) return;
 
     Modal.confirm({
-      title: '恢复 Deployment',
+      cancelText: '取消',
+      centered: true,
       content: `确定要恢复 Deployment "${record.name}" 吗？`,
       okText: '确认恢复',
       okType: 'primary',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           await resumeDeploymentApi(clusterId, record.namespace, record.name);
@@ -962,6 +961,7 @@ export function useDeploymentPage() {
             message.error('Deployment 恢复失败');
         }
       },
+      title: '恢复 Deployment',
     });
   };
 
@@ -1034,12 +1034,11 @@ export function useDeploymentPage() {
     if (selectedRows.value.length === 0) return;
 
     Modal.confirm({
-      title: `批量${operation}`,
+      cancelText: '取消',
+      centered: true,
       content: `确定要对选中的 ${selectedRows.value.length} 个 Deployment 执行${operation}操作吗？`,
       okText: '确认执行',
       okType: operation === '删除' ? 'danger' : 'primary',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           for (const deployment of selectedRows.value) {
@@ -1074,6 +1073,7 @@ export function useDeploymentPage() {
             message.error(`批量${operation}失败`);
         }
       },
+      title: `批量${operation}`,
     });
   };
 
@@ -1402,6 +1402,35 @@ export function useDeploymentPage() {
   };
 
   return {
+    // form field operations
+    addAnnotationField,
+    // filter operations
+    addFilterLabel,
+    addImageField,
+    addLabelField,
+    // batch operations
+    batchOperation,
+    // operations
+    clearDeployments,
+    clearFilterLabels,
+    clearNamespaces,
+    // yaml operations
+    clearYaml,
+    // create operations
+    closeCreateModal,
+    closeCreateYamlModal,
+    // detail operations
+    closeDetailModal,
+    // edit operations
+    closeEditModal,
+    // history operations
+    closeHistoryModal,
+    // pod operations
+    closePodModal,
+    // scale operations
+    closeScaleModal,
+    // YAML operations
+    closeYamlModal,
     // state
     clusters,
     clustersError,
@@ -1409,159 +1438,130 @@ export function useDeploymentPage() {
     clustersPage,
     clustersSize,
     clustersTotal,
-    currentPage,
-    deployments,
-    filterClusterId,
-    filterLabels,
-    filterNamespace,
-    filterStatus,
-    loadError,
-    loading,
-    namespaces,
-    namespacesError,
-    namespacesLoading,
-    namespacesPage,
-    namespacesSize,
-    namespacesTotal,
-    pageSize,
-    searchText,
-    selectedRowKeys,
-    selectedRows,
-    total,
+    // form models
+    createFormModel,
+    // form rules
+    createFormRules,
 
+    createYamlFormModel,
     // form refs
     createYamlFormRef,
-    editFormRef,
-    formRef,
-    scaleFormRef,
-    yamlFormRef,
-
-    // modal state
-    detailLoading,
-    isCreateModalVisible,
-    isCreateYamlModalVisible,
-    isDetailModalVisible,
-    isEditModalVisible,
-    isHistoryModalVisible,
-    isPodModalVisible,
-    isScaleModalVisible,
-    isYamlModalVisible,
-    submitLoading,
-
+    createYamlFormRules,
     // operation targets
     currentDeploymentDetail,
     currentOperationDeployment,
+
+    currentPage,
     currentYamlContent,
+    // deployment operations
+    deleteDeployment,
     deploymentHistory,
     deploymentPods,
-
-    // form models
-    createFormModel,
-    createYamlFormModel,
+    deployments,
+    // modal state
+    detailLoading,
     editFormModel,
-    scaleFormModel,
-    yamlFormModel,
-
-    // form rules
-    createFormRules,
-    createYamlFormRules,
+    editFormRef,
     editFormRules,
-    scaleFormRules,
-    yamlFormRules,
 
+    fetchClusters,
+    fetchDeployments,
+    fetchNamespaces,
+    filterClusterId,
     // computed
     filteredDeployments,
-    rowSelection,
 
+    filterLabels,
+    filterNamespace,
+    filterStatus,
+    formatEditYaml,
+    formatYaml,
+
+    formRef,
     // helpers
     getEnvText,
     getStatusColor,
     getStatusText,
-    keyValueListToRecord,
-    recordToKeyValueList,
-    validateClusterId,
+    // pagination operations
+    handlePageChange,
 
-    // operations
-    clearDeployments,
-    clearNamespaces,
-    fetchClusters,
-    fetchDeployments,
-    fetchNamespaces,
+    historyLoading,
+    insertYamlTemplate,
+
+    isCreateModalVisible,
+    isCreateYamlModalVisible,
+    isDetailModalVisible,
+    isEditModalVisible,
+    isHistoryCurrent,
+    isHistoryModalVisible,
+
+    isPodModalVisible,
+    isScaleModalVisible,
+    isYamlModalVisible,
+    // constants
+    K8sDeploymentStatus,
+    keyValueListToRecord,
+    loadError,
+    loading,
+
     loadMoreClusters,
     loadMoreNamespaces,
 
-    // detail operations
-    closeDetailModal,
-    showDeploymentDetail,
+    namespaces,
+    namespacesError,
+    namespacesLoading,
 
-    // YAML operations
-    closeYamlModal,
-    showYamlModal,
-    submitYamlForm,
-
-    // create operations
-    closeCreateModal,
-    closeCreateYamlModal,
+    namespacesPage,
+    namespacesSize,
+    namespacesTotal,
     openCreateModal,
     openCreateYamlModal,
-    submitCreateForm,
-    submitCreateYamlForm,
-
-    // edit operations
-    closeEditModal,
     openEditModal,
-    submitEditForm,
 
-    // deployment operations
-    deleteDeployment,
-    pauseDeployment,
-    restartDeployment,
-    resumeDeployment,
-
-    // scale operations
-    closeScaleModal,
     openScaleModal,
-    submitScaleForm,
+    pageSize,
+    pauseDeployment,
 
-    // pod operations
-    closePodModal,
-    showPodModal,
+    recordToKeyValueList,
+    removeAnnotationField,
+    removeFilterLabel,
+    removeImageField,
 
-    // history operations
-    closeHistoryModal,
-    historyLoading,
-    isHistoryCurrent,
+    removeLabelField,
+    resetClusters,
+    restartDeployment,
+
+    resumeDeployment,
+    rowSelection,
+
+    scaleFormModel,
+    scaleFormRef,
+    scaleFormRules,
+    searchText,
+
+    selectedRowKeys,
+    selectedRows,
+    showDeploymentDetail,
+
     showHistoryModal,
 
-    // filter operations
-    addFilterLabel,
-    clearFilterLabels,
-    removeFilterLabel,
+    showPodModal,
+    showYamlModal,
 
-    // batch operations
-    batchOperation,
+    submitCreateForm,
+    submitCreateYamlForm,
+    submitEditForm,
+    submitLoading,
+    submitScaleForm,
+    submitYamlForm,
 
-    // pagination operations
-    handlePageChange,
-    resetClusters,
-
-    // form field operations
-    addAnnotationField,
-    addImageField,
-    addLabelField,
-    removeAnnotationField,
-    removeImageField,
-    removeLabelField,
-
-    // yaml operations
-    clearYaml,
-    formatEditYaml,
-    formatYaml,
-    insertYamlTemplate,
+    total,
+    validateClusterId,
     validateEditYaml,
     validateYaml,
+    yamlFormModel,
+    yamlFormRef,
 
-    // constants
-    K8sDeploymentStatus,
+    yamlFormRules,
   };
 }

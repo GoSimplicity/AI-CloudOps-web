@@ -17,16 +17,16 @@ function required<T>(value: null | T | undefined): T {
 }
 
 const client = vi.hoisted(() => ({
+  delete: vi.fn(),
   get: vi.fn(),
   post: vi.fn(),
   put: vi.fn(),
-  delete: vi.fn(),
 }));
 const notices = vi.hoisted(() => ({
-  success: vi.fn(),
   error: vi.fn(),
-  warning: vi.fn(),
   info: vi.fn(),
+  success: vi.fn(),
+  warning: vi.fn(),
 }));
 const confirm = vi.hoisted(() => vi.fn());
 vi.mock('#/api/request', () => ({ requestClient: client }));
@@ -34,15 +34,15 @@ vi.mock('ant-design-vue', () => ({ message: notices, Modal: { confirm } }));
 const job = (id: number, name = `job-${id}`) =>
   ({
     id,
-    name,
-    max_retry: 0,
-    status: 1,
     job_type: 2,
+    max_retry: 0,
+    name,
     schedule: '@every 1h',
+    status: 1,
   }) as CronJob;
 beforeEach(() => {
   vi.resetAllMocks();
-  client.get.mockResolvedValue({ items: [], total: 0 });
+  client.get.mockResolvedValue({ total: 0, items: [] });
   client.post.mockResolvedValue(undefined);
   client.put.mockResolvedValue(undefined);
   client.delete.mockResolvedValue(undefined);
@@ -64,7 +64,7 @@ describe('定时任务请求与操作边界', () => {
     ['http://local\thost:9', false],
     [' http://localhost:9', false],
     ['http://localhost/a b', false],
-    ['http:\\localhost:9', false],
+    [String.raw`http:\localhost:9`, false],
     ['http://localhost/%zz', false],
   ])('创建与编辑共用HTTP地址合同 %s', async (url, valid) => {
     const page = useCronJobPage();
@@ -88,9 +88,9 @@ describe('定时任务请求与操作边界', () => {
     client.get.mockReturnValueOnce(old.promise);
     const first = page.fetchCronJobs();
     page.filterStatus.value = 3;
-    client.get.mockResolvedValueOnce({ items: [job(2)], total: 12 });
+    client.get.mockResolvedValueOnce({ total: 12, items: [job(2)] });
     await page.fetchCronJobs();
-    old.resolve({ items: [job(1)], total: 30 });
+    old.resolve({ total: 30, items: [job(1)] });
     await first;
     expect(page.filteredCronJobs.value.map((row) => row.id)).toEqual([2]);
     expect(page.total.value).toBe(12);
@@ -109,7 +109,7 @@ describe('定时任务请求与操作边界', () => {
     expect(page.total.value).toBe(0);
     expect(page.selectedRows.value).toEqual([]);
     expect(page.error.value).toContain('没有权限');
-    client.get.mockResolvedValueOnce({ items: [job(2)], total: 1 });
+    client.get.mockResolvedValueOnce({ total: 1, items: [job(2)] });
     await page.fetchCronJobs();
     expect(page.error.value).toBeNull();
     expect(page.cronJobs.value[0]?.id).toBe(2);
@@ -129,7 +129,7 @@ describe('定时任务请求与操作边界', () => {
     client.get.mockReturnValueOnce(list.promise);
     const query = page.fetchCronJobs();
     page.clearPage();
-    list.resolve({ items: [job(1)], total: 1 });
+    list.resolve({ total: 1, items: [job(1)] });
     await query;
     expect(page.cronJobs.value).toEqual([]);
     expect(page.loading.value).toBe(false);
@@ -247,9 +247,9 @@ describe('sEC-03A 本地执行开关与错误提示', () => {
     await page.fetchCronJobs();
     expect(page.allowLocalExec.value).toBe(true);
     client.get.mockResolvedValueOnce({
-      items: [],
-      total: 0,
       allow_local_exec: false,
+      total: 0,
+      items: [],
     });
     await page.fetchCronJobs();
     expect(page.allowLocalExec.value).toBe(false);
@@ -292,7 +292,7 @@ describe('sEC-03A 本地执行开关与错误提示', () => {
     // incr3 P3-3：只有经过 requestClient 拦截器（带请求层痕迹）的 HTTP 错误才算请求层已提示
     const failure = markRequestLayerTrace(
       Object.assign(new Error('Request failed with status code 400'), {
-        response: { status: 400, data: { code: 1, message: '绑定数据失败' } },
+        response: { data: { code: 1, message: '绑定数据失败' }, status: 400 },
       }),
     );
     client.post.mockRejectedValueOnce(failure);
@@ -311,7 +311,7 @@ describe('编辑任务配置', () => {
     const page = useCronJobPage();
     page.createFormModel.value.schedule = '@every 1h';
     page.editFormModel.value.schedule = '0 9 * * *';
-    client.post.mockResolvedValue({ valid: true, next_run_times: [] });
+    client.post.mockResolvedValue({ next_run_times: [], valid: true });
     await page.validateScheduleExpression('edit');
     await page.validateScheduleExpression('create');
     expect(client.post.mock.calls.map((call) => call[1])).toEqual([
@@ -328,7 +328,7 @@ describe('编辑任务配置', () => {
     client.post.mockReturnValueOnce(pending.promise);
     const request = page.validateScheduleExpression('create');
     page.createFormModel.value.schedule = '@every 2h';
-    pending.resolve({ valid: true, next_run_times: [] });
+    pending.resolve({ next_run_times: [], valid: true });
     await request;
     expect(notices.success).not.toHaveBeenCalled();
     page.closeCreateModal();
@@ -337,9 +337,9 @@ describe('编辑任务配置', () => {
   it('详情返回不再允许的命令类型时不会打开编辑', async () => {
     const page = useCronJobPage();
     client.get.mockResolvedValueOnce({
-      items: [],
-      total: 0,
       allow_local_exec: false,
+      total: 0,
+      items: [],
     });
     await page.fetchCronJobs();
     client.get.mockResolvedValueOnce({ ...job(5), job_type: 2 });
@@ -357,9 +357,9 @@ describe('编辑任务配置', () => {
     } as unknown as FormInstance;
     const request = page.submitEditForm();
     client.get.mockResolvedValueOnce({
-      items: [],
-      total: 0,
       allow_local_exec: false,
+      total: 0,
+      items: [],
     });
     await page.fetchCronJobs();
     validation.resolve({});

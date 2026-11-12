@@ -1,10 +1,10 @@
+import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import process from 'node:process';
 
-import { withFixtureCleanup } from '../../internal/test-utils/fixture-cleanup';
 import { expect, test } from '@playwright/test';
-import { readFileSync } from 'node:fs';
-import { randomUUID } from 'node:crypto';
 
+import { withFixtureCleanup } from '../../internal/test-utils/fixture-cleanup';
 import { requireFixtureValue } from '../../internal/test-utils/required-fixture-value';
 
 function password() {
@@ -20,8 +20,8 @@ const routePath = (path: string) =>
   process.env.CLOUDOPS_ROUTER_HISTORY === 'hash' ? `/#${path}` : path;
 
 test('cloud account local CRUD preserves regions and never auto-verifies', async ({
-  page,
   baseURL,
+  page,
 }) => {
   test.setTimeout(180_000);
   page.setDefaultTimeout(15_000);
@@ -79,9 +79,9 @@ test('cloud account local CRUD preserves regions and never auto-verifies', async
     if (/\/verify$|\/sync$|available-regions/.test(path))
       throw new Error('Cloud SDK request forbidden in this fixture');
     const response = await page.request.fetch(`/api${path}`, {
-      method,
       data,
       headers: { Authorization: `Bearer ${token}` },
+      method,
       timeout: 10_000,
     });
     const result = await response.json();
@@ -123,22 +123,22 @@ test('cloud account local CRUD preserves regions and never auto-verifies', async
 
       for (const fixture of [
         {
-          provider: 1,
           label: '阿里云',
+          provider: 1,
           regions: ['cn-hangzhou', 'cn-shanghai'],
         },
-        { provider: 3, label: 'AWS', regions: ['us-east-1', 'us-west-2'] },
+        { label: 'AWS', provider: 3, regions: ['us-east-1', 'us-west-2'] },
         {
-          provider: 2,
           label: '腾讯云',
+          provider: 2,
           regions: ['ap-guangzhou', 'ap-shanghai'],
         },
       ]) {
         const name = `${prefix}-${fixture.provider}`;
         const item = {
           id: 0,
-          provider: fixture.provider,
           name,
+          provider: fixture.provider,
           updated: `${name}-updated`,
         };
         owned.push(item); // Discover the same unique name even after a lost create response.

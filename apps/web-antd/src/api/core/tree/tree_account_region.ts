@@ -2,18 +2,18 @@ import { requestClient } from '#/api/request';
 
 // 云账号区域状态
 export enum CloudAccountRegionStatus {
-  ENABLED = 1, // 启用
   DISABLED = 2, // 禁用
+  ENABLED = 1, // 启用
 }
 
 // 云厂商类型
 export enum CloudProvider {
   ALIYUN = 1, // 阿里云
-  TENCENT = 2, // 腾讯云
   AWS = 3, // AWS
-  HUAWEI = 4, // 华为云
   AZURE = 5, // Azure
   GCP = 6, // Google Cloud
+  HUAWEI = 4, // 华为云
+  TENCENT = 2, // 腾讯云
 }
 
 // 云账号区域关联
@@ -87,8 +87,8 @@ export interface CreateCloudAccountRegionItem {
 
 // 获取可用区域列表请求参数
 export type GetAvailableRegionsReq =
-  | { cloud_account_id?: never; provider: number }
-  | { cloud_account_id: number; provider?: never };
+  | { cloud_account_id: number; provider?: never }
+  | { cloud_account_id?: never; provider: number };
 
 // 可用区域信息
 export interface AvailableRegion {

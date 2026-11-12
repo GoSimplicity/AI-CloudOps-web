@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
-import { message } from 'ant-design-vue';
 import {
   CalendarOutlined,
   CheckCircleOutlined,
@@ -12,6 +10,7 @@ import {
   ReloadOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons-vue';
+import { message } from 'ant-design-vue';
 
 import {
   clearAssistantCache,
@@ -21,14 +20,15 @@ import {
   type ServiceConfigResponse,
   type ServiceInfoResponse,
 } from '#/api/core/aiops/assistant';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { getOwnLookupValue } from '#/utils/own-lookup';
 import { usePermission } from '#/utils/permission';
-
-import { useAiRequestScope } from './useAiRequestScope';
 import {
   shouldNotifyPageError,
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
+
+import { useAiRequestScope } from './useAiRequestScope';
 
 const { can } = usePermission();
 const clearingCache = ref(false);
@@ -79,21 +79,21 @@ const activeConfigKeys = ref<string[]>([]);
 
 // 服务信息
 const serviceInfo = ref<Partial<ServiceInfoResponse>>({
-  service: '',
-  version: '',
-  description: '',
   capabilities: [],
-  endpoints: {},
   constraints: {},
+  description: '',
+  endpoints: {},
+  service: '',
   status: '',
+  version: '',
 });
 
 // 配置信息
 const configInfo = ref<Partial<ServiceConfigResponse>>({
-  service: '',
   config: {},
-  version: '',
+  service: '',
   timestamp: '',
+  version: '',
 });
 
 // 获取状态文本
@@ -200,8 +200,8 @@ onMounted(() => {
     <template #actions>
       <a-button
         v-if="can('aiops.assistant.clearCache')"
-        :loading="clearingCache"
         :disabled="clearingCache"
+        :loading="clearingCache"
         title="清除服务查询缓存，保留知识文档与会话记录"
         @click="clearServiceCache"
       >
@@ -238,8 +238,8 @@ onMounted(() => {
         <a-card class="status-card">
           <div class="status-item">
             <div
-              class="status-icon"
               :class="{ online: serviceInfo.status === 'initialized' }"
+              class="status-icon"
             >
               <CheckCircleOutlined
                 v-if="serviceInfo.status === 'initialized'"
@@ -248,7 +248,7 @@ onMounted(() => {
             </div>
             <div class="status-content">
               <div class="status-title">初始化状态</div>
-              <div class="status-value" :class="serviceInfo.status">
+              <div :class="serviceInfo.status" class="status-value">
                 {{ getStatusText(serviceInfo.status || '') }}
               </div>
             </div>
@@ -340,7 +340,7 @@ onMounted(() => {
         <div
           v-if="configInfo.config && Object.keys(configInfo.config).length > 0"
         >
-          <a-collapse v-model:activeKey="activeConfigKeys" ghost>
+          <a-collapse v-model:active-key="activeConfigKeys" ghost>
             <a-collapse-panel
               v-for="(value, key) in configInfo.config"
               :key="key"

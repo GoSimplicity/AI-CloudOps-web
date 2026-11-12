@@ -1,15 +1,6 @@
 <script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
 import { onMounted } from 'vue';
 
-import { useClusterPage } from './Cluster';
-import {
-  formatDateTime,
-  formatK8sTime,
-  getRelativeTime,
-} from '../shared/utils';
-
-import './Cluster.css';
 import {
   DeleteOutlined,
   DeploymentUnitOutlined,
@@ -22,14 +13,31 @@ import {
   TagOutlined,
 } from '@ant-design/icons-vue';
 
+import OpsPage from '#/components/ops/OpsPage.vue';
+
+import {
+  formatDateTime,
+  formatK8sTime,
+  getRelativeTime,
+} from '../shared/utils';
+import { useClusterPage } from './Cluster';
+
+import './Cluster.css';
+
 const {
   addTag,
   batchDelete,
+  // detail modal
+  closeDetailModal,
   closeModal,
   ClusterStatus,
   confirmDelete,
+  currentClusterDetail,
   currentPage,
+  detailLoading,
   editDetailLoading,
+  // kubeconfig 状态
+  editHasKubeConfig,
   Env,
   fetchClusters,
   filteredClusters,
@@ -41,34 +49,28 @@ const {
   getEnvColor,
   getEnvText,
   getStatusText,
+  // pagination
+  handlePageChange,
+  isDetailModalVisible,
   isEdit,
   isModalVisible,
   loadError,
+
   loading,
+  // filters
+  onSearch,
+  onSearchInput,
   openCreate,
   openEdit,
   pageSize,
   removeTag,
+  resetFilters,
   rowSelection,
-
   searchText,
   selectedRows,
+  showClusterDetail,
   submitForm,
   submitLoading,
-  // detail modal
-  closeDetailModal,
-  currentClusterDetail,
-  detailLoading,
-  isDetailModalVisible,
-  showClusterDetail,
-  // kubeconfig 状态
-  editHasKubeConfig,
-  // pagination
-  handlePageChange,
-  // filters
-  onSearch,
-  onSearchInput,
-  resetFilters,
   total,
 } = useClusterPage();
 
@@ -225,7 +227,7 @@ onMounted(async () => {
             class="k8s-search-input"
             placeholder="搜索集群名称、API地址等"
             @input="onSearchInput"
-            @pressEnter="onSearch"
+            @press-enter="onSearch"
           >
             <template #suffix>
               <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
