@@ -510,13 +510,10 @@ const quoteComment = async (comment: WorkorderInstanceCommentItem) => {
   const quotedContent = formatQuotedContent(comment);
 
   // 设置引用内容到快速评论框
-  if (quickCommentText.value.trim()) {
-    // 如果已经有内容，追加引用
-    quickCommentText.value = `${quickCommentText.value}\n\n${quotedContent}`;
-  } else {
-    // 如果没有内容，直接设置引用
-    quickCommentText.value = quotedContent;
-  }
+  // 已有内容时追加引用，否则直接写入
+  quickCommentText.value = quickCommentText.value.trim()
+    ? `${quickCommentText.value}\n\n${quotedContent}`
+    : quotedContent;
 
   // 设置当前引用的评论
   quotedComment.value = comment;

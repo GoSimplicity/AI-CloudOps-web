@@ -415,44 +415,6 @@ const UNSAFE_DISPLAY_CHAR_PATTERN =
 const escapeDisplayQuoted = (value: string) =>
   value.replaceAll('\\', '\\\\').replaceAll('"', String.raw`\"`);
 
-// 处理 Secret YAML 中的 base64 编码数据（展示用：data 下的值解成明文）
-export const processSecretYaml = (yamlContent: string): string => {
-  if (!yamlContent) return yamlContent;
-
-  try {
-    const inData = createDataSectionLocator(yamlContent);
-    // incr7：缩进只认 [ \t]*（原来 ^(\s*) 跨行吞空行，60k 空行约 3.4s，平方级）；冒号后至少一个空格（与编码器同口径）
-    return yamlContent.replaceAll(
-      /^([\t ]*)([\w.-]+):[\t ]+([\d+/a-z]+=*)[\t ]*$/gim,
-      (match, indent: string, key: string, value: string, offset: number) => {
-        if (!inData(offset)) return match;
-        const decodedValue = decodeBase64ToUtf8(value);
-        // 二进制 / 含不可见控制字符：保留 base64 不解码（原来非 fatal 解码会换成 U+FFFD，保存即改坏原值）
-        if (
-          decodedValue === undefined ||
-          UNSAFE_DISPLAY_CHAR_PATTERN.test(decodedValue)
-        ) {
-          return match;
-        }
-        const shown = decodedValue.includes('\n')
-          ? `${indent}${key}: |\n${decodedValue
-              .split('\n')
-              .map((line) => `${indent}  ${line}`)
-              .join('\n')}`
-          : `${indent}${key}: "${escapeDisplayQuoted(decodedValue)}"`;
-        // incr7：展示结果必须能被编码器原样还原成同一个 base64；还原不了（如末尾换行、首行以空白开头、
-        // 非规范 base64）就保留 base64 不解码——「打开 YAML、不改直接保存」不会改动任何值
-        const roundTrip = encodeSecretYamlForSubmission(`data:\n${shown}\n`);
-        return roundTrip === `data:\n${indent}${key}: ${value}\n`
-          ? shown
-          : match;
-      },
-    );
-  } catch {
-    return yamlContent; // 如果处理失败，返回原始内容
-  }
-};
-
 /**
  * 块标量头：`key: |`（冒号后至少一个空格，按 YAML `key:|` 不是块标量，原样不动交给格式检查）。
  * 内容只收更深缩进的行（`\1[ \t]+\S`）与空行；原来的 `(?:\s{2,}.*\n?)*` 会把块后同级的键（`  other: …`）
@@ -543,6 +505,44 @@ export const encodeSecretYamlForSubmission = (yamlContent: string): string => {
   }
 };
 
+// 处理 Secret YAML 中的 base64 编码数据（展示用：data 下的值解成明文）
+export const processSecretYaml = (yamlContent: string): string => {
+  if (!yamlContent) return yamlContent;
+
+  try {
+    const inData = createDataSectionLocator(yamlContent);
+    // incr7：缩进只认 [ \t]*（原来 ^(\s*) 跨行吞空行，60k 空行约 3.4s，平方级）；冒号后至少一个空格（与编码器同口径）
+    return yamlContent.replaceAll(
+      /^([\t ]*)([\w.-]+):[\t ]+([\d+/a-z]+=*)[\t ]*$/gim,
+      (match, indent: string, key: string, value: string, offset: number) => {
+        if (!inData(offset)) return match;
+        const decodedValue = decodeBase64ToUtf8(value);
+        // 二进制 / 含不可见控制字符：保留 base64 不解码（原来非 fatal 解码会换成 U+FFFD，保存即改坏原值）
+        if (
+          decodedValue === undefined ||
+          UNSAFE_DISPLAY_CHAR_PATTERN.test(decodedValue)
+        ) {
+          return match;
+        }
+        const shown = decodedValue.includes('\n')
+          ? `${indent}${key}: |\n${decodedValue
+              .split('\n')
+              .map((line) => `${indent}  ${line}`)
+              .join('\n')}`
+          : `${indent}${key}: "${escapeDisplayQuoted(decodedValue)}"`;
+        // incr7：展示结果必须能被编码器原样还原成同一个 base64；还原不了（如末尾换行、首行以空白开头、
+        // 非规范 base64）就保留 base64 不解码——「打开 YAML、不改直接保存」不会改动任何值
+        const roundTrip = encodeSecretYamlForSubmission(`data:\n${shown}\n`);
+        return roundTrip === `data:\n${indent}${key}: ${value}\n`
+          ? shown
+          : match;
+      },
+    );
+  } catch {
+    return yamlContent; // 如果处理失败，返回原始内容
+  }
+};
+
 // ---- incr7：YAML 更新前的 data 格式检查（P2-A / P3-C）与编码后、发请求前的兜底（P2-A backstop） ----
 
 function dataLocationLabel(where: string) {
@@ -608,7 +608,7 @@ function isNonCanonicalSecretFieldKey(key: string) {
  * 改为裸键必须以非空白、非冒号结尾，冒号前的空白只归 `[ \t]*`，线性时间。
  */
 const TOP_LEVEL_KEY_PATTERN =
-  /^(?:"([^"\\]*)"|'([^']*)'|([^\s"#':?[{\-](?:[^:]*[^\t :])?))[\t ]*:(?:[\t ]|$)/;
+  /^(?:"([^"\\]*)"|'([^']*)'|([^\s"#':?[{-](?:[^:]*[^\t :])?))[\t ]*:(?:[\t ]|$)/;
 
 /** incr8 P3-2：js-yaml 当作普通字符、Go（YAML 1.1）当作换行的字符；U+FEFF 只允许出现在开头（BOM） */
 const YAML_LINE_BREAK_CHAR_PATTERN = /[\u0085\u2028\u2029]/;

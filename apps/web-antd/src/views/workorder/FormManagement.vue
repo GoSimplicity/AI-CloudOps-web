@@ -62,10 +62,6 @@ const previewDialogWidth = computed(() => {
   return '80%';
 });
 
-const totalPages = computed(() => {
-  return Math.ceil(categoryPagination.total / categoryPagination.pageSize);
-});
-
 // 列定义
 const columns = [
   {
@@ -138,6 +134,10 @@ const categoryPagination = reactive({
   hasMore: false,
   pageSize: 20,
   total: 0,
+});
+
+const totalPages = computed(() => {
+  return Math.ceil(categoryPagination.total / categoryPagination.pageSize);
 });
 
 // JSON相关状态
@@ -785,7 +785,7 @@ const loadCategoryForEdit = async (
 
     if (
       formData.category_id &&
-      !formDialogCategories.value.find(
+      !formDialogCategories.value.some(
         (cat) => cat.id === formData.category_id,
       ) &&
       formData.category &&
@@ -1428,12 +1428,7 @@ onMounted(() => {
       @cancel="closeFormDialog"
       @ok="saveForm"
     >
-      <a-form
-        ref="formRef"
-        :model="formDialog.form"
-        :rules="formRules"
-        layout="vertical"
-      >
+      <a-form :model="formDialog.form" :rules="formRules" layout="vertical">
         <a-form-item label="表单名称" name="name">
           <a-input
             v-model:value="formDialog.form.name"

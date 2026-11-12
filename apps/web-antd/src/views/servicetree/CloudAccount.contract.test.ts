@@ -324,9 +324,9 @@ describe('云账户真实表单合同', () => {
     await required(wrapper).find('.ant-pagination-item-2 a').trigger('click');
     await flushPromises();
     const params = required(
-      client.get.mock.calls
-        .filter((call) => call[0] === '/tree/cloud/account/list')
-        .at(-1),
+      client.get.mock.calls.findLast(
+        (call) => call[0] === '/tree/cloud/account/list',
+      ),
     )[1].params;
     expect(params).toEqual(expect.objectContaining({ page: 2, size: 10 }));
     expect(params).not.toHaveProperty('page_size');

@@ -335,7 +335,7 @@ export function scanErrorStateWrites(
         const lhs = node.left.getText(source).replaceAll(/\s+/g, '');
         const value = node.right.getText(source);
         if (
-          /^(?:state\.|\w+\.)?\w*(?:[Ee]rror|Err)\w*(?:\.value)?$/.test(lhs) &&
+          /^(?:\w+\.)?\w*(?:[Ee]rror|Err)\w*(?:\.value)?$/.test(lhs) &&
           lhs !== body.param &&
           !LOCAL_MESSAGE_VARS.has(lhs) &&
           !EMPTY_VALUE.test(value)

@@ -42,7 +42,9 @@ for (const file of routeFiles.filter((file) => file.endsWith('.ts'))) {
   );
   function visit(node) {
     if (ts.isObjectLiteralExpression(node)) {
-      const properties = node.properties.filter(ts.isPropertyAssignment);
+      const properties = node.properties.filter((node) =>
+        ts.isPropertyAssignment(node),
+      );
       const path = properties.find(
         (property) => property.name.getText(source) === 'path',
       );

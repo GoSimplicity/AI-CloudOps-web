@@ -817,7 +817,7 @@ const loadCategoryForEdit = async (
 
     if (
       templateData.category_id &&
-      !dialogCategories.value.find((cat) => cat.id === templateData.category_id)
+      !dialogCategories.value.some((cat) => cat.id === templateData.category_id)
     ) {
       const categoryInfo: WorkorderCategoryItem = {
         created_at: '',
@@ -846,7 +846,7 @@ const loadProcessForEdit = async (
 
     if (
       templateData.process_id &&
-      !dialogProcesses.value.find(
+      !dialogProcesses.value.some(
         (process) => process.id === templateData.process_id,
       )
     ) {
@@ -879,7 +879,7 @@ const loadFormForEdit = async (
 
     if (
       templateData.form_design_id &&
-      !dialogForms.value.find((form) => form.id === templateData.form_design_id)
+      !dialogForms.value.some((form) => form.id === templateData.form_design_id)
     ) {
       const formInfo: WorkorderFormDesignItem = {
         category_id: 0,
@@ -1329,12 +1329,7 @@ onMounted(async () => {
       "
       @ok="saveTemplate"
     >
-      <a-form
-        ref="formRef"
-        :model="templateDialog.form"
-        :rules="formRules"
-        layout="vertical"
-      >
+      <a-form :model="templateDialog.form" :rules="formRules" layout="vertical">
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item label="模板名称" name="name">

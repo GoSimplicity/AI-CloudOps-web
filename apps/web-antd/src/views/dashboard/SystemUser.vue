@@ -307,8 +307,8 @@ const formChangPwdRules = computed(() => {
 // 计算属性
 const availableRoles = computed(() => {
   if (!currentUser.value || !rolesLoaded.value) return [];
-  const assignedIds = assignedRoles.value.map((role) => role.id);
-  return roleList.value.filter((role) => !assignedIds.includes(role.id));
+  const assignedIds = new Set(assignedRoles.value.map((role) => role.id));
+  return roleList.value.filter((role) => !assignedIds.has(role.id));
 });
 
 // 头像相关函数

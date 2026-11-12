@@ -602,14 +602,22 @@ const fetchDutyGroups = async (): Promise<void> => {
       const status = error.response.status;
       const responseData = error.response.data;
 
-      if (status === 404) {
-        errorMessage = '值班组不存在或已被删除';
-      } else if (status === 403) {
-        errorMessage = '无权限访问该值班组';
-      } else if (status === 500) {
-        errorMessage = '服务器内部错误';
-      } else {
-        errorMessage = `请求失败 (${status}): ${responseData?.message || error.message}`;
+      switch (status) {
+        case 403: {
+          errorMessage = '无权限访问该值班组';
+          break;
+        }
+        case 404: {
+          errorMessage = '值班组不存在或已被删除';
+          break;
+        }
+        case 500: {
+          errorMessage = '服务器内部错误';
+          break;
+        }
+        default: {
+          errorMessage = `请求失败 (${status}): ${responseData?.message || error.message}`;
+        }
       }
     } else if (error.request) {
       errorMessage = '网络连接失败，请检查网络连接';

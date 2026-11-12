@@ -74,6 +74,11 @@ const formData = reactive({
 });
 
 const scope = useAiRequestScope(() => {
+  resetAnalysisForOwner();
+});
+const analysisLane = scope.createLane();
+const metricsLane = scope.createLane();
+function resetAnalysisForOwner() {
   analysisLane.invalidate();
   metricsLane.invalidate();
   analyzing.value = false;
@@ -85,9 +90,7 @@ const scope = useAiRequestScope(() => {
   formData.namespace = 'default';
   formData.metrics = [];
   disposeCharts();
-});
-const analysisLane = scope.createLane();
-const metricsLane = scope.createLane();
+}
 function disposeCharts() {
   eventsChart?.dispose();
   clustersChart?.dispose();
@@ -164,11 +167,11 @@ const hasAnomalies = computed(() => {
 });
 
 // 工具函数
-const truncateText = (text: string, maxLength: number) => {
+function truncateText(text: string, maxLength: number) {
   if (!text) return '';
   if (text.length <= maxLength) return text;
   return `${text.slice(0, Math.max(0, maxLength))}...`;
-};
+}
 
 // 加载可用指标
 const loadAvailableMetrics = async () => {
@@ -200,7 +203,7 @@ const filterMetrics = (input: string, option: any) => {
 };
 
 // 时间格式化
-const formatShortTime = (timestamp?: string) => {
+function formatShortTime(timestamp?: string) {
   if (!timestamp) return '-';
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return timestamp;
@@ -211,7 +214,7 @@ const formatShortTime = (timestamp?: string) => {
     minute: '2-digit',
     month: '2-digit',
   });
-};
+}
 
 // 初始化事件图表
 const initEventsChart = () => {
@@ -383,13 +386,13 @@ const initErrorLogsChart = () => {
 };
 
 // 初始化图表
-const initCharts = () => {
+function initCharts() {
   nextTick(() => {
     initEventsChart();
     initClustersChart();
     initErrorLogsChart();
   });
-};
+}
 
 // 开始分析
 const startAnalysis = async () => {
@@ -432,13 +435,23 @@ const startAnalysis = async () => {
       initCharts();
     }
 
-    if (response.status === 'completed')
-      message.success('根因分析已完成，请按实际证据评估结果');
-    else if (response.status === 'degraded')
-      message.warning('根因分析已降级，请检查采集状态');
-    else if (response.status === 'failed')
-      message.error('根因分析失败，请检查采集状态');
-    else message.warning('根因分析状态未知，请检查采集状态');
+    switch (response.status) {
+      case 'completed': {
+        message.success('根因分析已完成，请按实际证据评估结果');
+        break;
+      }
+      case 'degraded': {
+        message.warning('根因分析已降级，请检查采集状态');
+        break;
+      }
+      case 'failed': {
+        message.error('根因分析失败，请检查采集状态');
+        break;
+      }
+      default: {
+        message.warning('根因分析状态未知，请检查采集状态');
+      }
+    }
 
     // 如果有根因结果，显示摘要
     if (

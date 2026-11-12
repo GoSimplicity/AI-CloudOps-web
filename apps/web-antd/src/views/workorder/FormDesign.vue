@@ -513,26 +513,26 @@ const importConfig = (file: File) => {
     return false;
   }
   const ticket = ++importRequest;
-  const reader = new FileReader();
-  reader.addEventListener('load', (e) => {
-    if (ticket !== importRequest) return;
-    try {
-      const config = JSON.parse(e.target?.result as string);
-      if (isValidSchema(config)) {
-        formSchema.fields = config.fields;
-        formData.value = {};
-        message.success('表单设计导入成功');
-      } else {
-        message.error('文件格式不正确');
+  file
+    .text()
+    .then((text) => {
+      if (ticket !== importRequest) return;
+      try {
+        const config = JSON.parse(text);
+        if (isValidSchema(config)) {
+          formSchema.fields = config.fields;
+          formData.value = {};
+          message.success('表单设计导入成功');
+        } else {
+          message.error('文件格式不正确');
+        }
+      } catch {
+        message.error('文件解析失败');
       }
-    } catch {
-      message.error('文件解析失败');
-    }
-  });
-  reader.addEventListener('error', () => {
-    if (ticket === importRequest) message.error('读取配置文件失败');
-  });
-  reader.readAsText(file);
+    })
+    .catch(() => {
+      if (ticket === importRequest) message.error('读取配置文件失败');
+    });
   return false;
 };
 </script>

@@ -437,23 +437,21 @@ const getNotifyMethods = (record: MonitorSendGroup): string[] => {
 
   try {
     if (Array.isArray(record.notify_methods)) {
-      return record.notify_methods
-        .map((method) => {
-          // 处理字符串类型的方法
-          if (typeof method === 'string') {
-            // 尝试解析可能是JSON字符串的方法
-            if (method.startsWith('[') && method.endsWith(']')) {
-              try {
-                return JSON.parse(method);
-              } catch {
-                return method;
-              }
+      return record.notify_methods.flatMap((method) => {
+        // 处理字符串类型的方法
+        if (typeof method === 'string') {
+          // 尝试解析可能是JSON字符串的方法
+          if (method.startsWith('[') && method.endsWith(']')) {
+            try {
+              return JSON.parse(method);
+            } catch {
+              return method;
             }
-            return method;
           }
           return method;
-        })
-        .flat();
+        }
+        return method;
+      });
     }
 
     // 如果是字符串，尝试解析为JSON

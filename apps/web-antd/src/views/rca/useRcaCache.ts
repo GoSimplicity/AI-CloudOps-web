@@ -32,6 +32,11 @@ export function useRcaCache() {
     }>
   >([]);
   const scope = useAiRequestScope(() => {
+    resetCacheForOwner();
+  });
+  const statsLane = scope.createLane();
+  const writeLane = scope.createLane();
+  function resetCacheForOwner() {
     statsLane.invalidate();
     writeLane.invalidate();
     loadingStats.value = false;
@@ -43,9 +48,7 @@ export function useRcaCache() {
     operationHistory.value = [];
     clearNamespaceForm.namespace = '';
     clearOperationForm.operation = '';
-  });
-  const statsLane = scope.createLane();
-  const writeLane = scope.createLane();
+  }
   async function refreshCacheStats() {
     if (!scope.owner.value) return;
     const ticket = statsLane.begin();

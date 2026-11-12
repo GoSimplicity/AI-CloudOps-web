@@ -153,7 +153,10 @@ test('authenticated navigation renders every standalone business route', async (
     );
     const visit = (node: ts.Node) => {
       if (ts.isObjectLiteralExpression(node)) {
-        const properties = node.properties.filter(ts.isPropertyAssignment);
+        const properties = node.properties.filter(
+          (node): node is ts.PropertyAssignment =>
+            ts.isPropertyAssignment(node),
+        );
         const path = properties.find(
           (property) => property.name.getText(source) === 'path',
         );
@@ -1523,10 +1526,10 @@ test('YAML templates and tasks complete a real isolated dry-run without creating
     expect(response.status()).toBe(200);
     const data = await response.json();
     expect(data.code).toBe(0);
-    const matches = data.data.items.filter(
+    const match = data.data.items.find(
       (item: { name: string }) => item.name === name,
     );
-    return matches[0]?.id || 0;
+    return match?.id || 0;
   };
   try {
     await page.setViewportSize({ height: 1000, width: 1440 });
