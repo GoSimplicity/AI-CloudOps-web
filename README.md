@@ -124,7 +124,7 @@ pnpm test:unit --run
 pnpm build:antd
 ```
 
-产物位于 `apps/web-antd/dist/`，CI 使用这些命令及生产包登录页浏览器验收
+产物位于 `apps/web-antd/dist/`，CI（`.github/workflows/verify.yml`）使用这些命令及生产包登录页浏览器验收。同一工作流里，`pnpm audit --prod --audit-level=high` 会拦住生产依赖的 high/critical；`pnpm audit --audit-level=critical` 覆盖全部依赖但只报警。生产门禁暂时放不过时的豁免写法见 [SECURITY.md](SECURITY.md)。
 
 ```bash
 CLOUDOPS_PREVIEW=true CLOUDOPS_ROUTER_HISTORY=hash pnpm test:e2e --grep "login is usable"
