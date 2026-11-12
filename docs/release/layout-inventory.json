@@ -1,412 +1,412 @@
 {
-  "routes": 58,
-  "migratedShells": 58,
   "entries": [
     {
+      "inlineStyles": 0,
       "route": "/assistant/info",
-      "view": "assistant/AssistantInfo.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 0,
-      "scopedStyle": true
+      "view": "assistant/AssistantInfo.vue"
     },
     {
+      "inlineStyles": 1,
       "route": "/assistant/knowledge",
-      "view": "assistant/AssistantKnowledge.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 1,
-      "scopedStyle": true
+      "view": "assistant/AssistantKnowledge.vue"
     },
     {
+      "inlineStyles": 5,
       "route": "/assistant/query",
-      "view": "assistant/AssistantQuery.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 5,
-      "scopedStyle": true
+      "view": "assistant/AssistantQuery.vue"
     },
     {
+      "inlineStyles": 2,
       "route": "/assistant/session",
-      "view": "assistant/AssistantSession.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 2,
-      "scopedStyle": true
+      "view": "assistant/AssistantSession.vue"
     },
     {
+      "inlineStyles": 0,
       "route": "/autofix/workflow",
-      "view": "autofix/AutoFixWorkflow.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 0,
-      "scopedStyle": true
+      "view": "autofix/AutoFixWorkflow.vue"
     },
     {
+      "inlineStyles": 1,
       "route": "/category",
-      "view": "workorder/Category.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 1,
-      "scopedStyle": true
+      "view": "workorder/Category.vue"
     },
     {
+      "inlineStyles": 7,
       "route": "/cloud_account_management",
-      "view": "servicetree/CloudAccountManagement.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 7,
-      "scopedStyle": true
+      "view": "servicetree/CloudAccountManagement.vue"
     },
     {
-      "route": "/cloud_resource_management",
-      "view": "servicetree/CloudResourceManager.vue",
-      "sharedPage": true,
       "inlineStyles": 24,
-      "scopedStyle": true
+      "route": "/cloud_resource_management",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "servicetree/CloudResourceManager.vue"
     },
     {
-      "route": "/cron/management",
-      "view": "cron/management/Management.vue",
-      "sharedPage": true,
       "inlineStyles": 12,
-      "scopedStyle": true
+      "route": "/cron/management",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "cron/management/Management.vue"
     },
     {
+      "inlineStyles": 1,
       "route": "/form_design",
-      "view": "workorder/FormDesign.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 1,
-      "scopedStyle": true
+      "view": "workorder/FormDesign.vue"
     },
     {
-      "route": "/form_management",
-      "view": "workorder/FormManagement.vue",
-      "sharedPage": true,
       "inlineStyles": 13,
-      "scopedStyle": true
+      "route": "/form_management",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "workorder/FormManagement.vue"
     },
     {
-      "route": "/instance",
-      "view": "workorder/Instance.vue",
-      "sharedPage": true,
       "inlineStyles": 27,
-      "scopedStyle": true
+      "route": "/instance",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "workorder/Instance.vue"
     },
     {
-      "route": "/k8s_cluster",
-      "view": "k8s/cluster/Cluster.vue",
-      "sharedPage": true,
       "inlineStyles": 25,
-      "scopedStyle": true
+      "route": "/k8s_cluster",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "k8s/cluster/Cluster.vue"
     },
     {
-      "route": "/k8s_clusterrolebinding",
-      "view": "k8s/clusterrolebinding/ClusterRoleBinding.vue",
-      "sharedPage": true,
       "inlineStyles": 37,
-      "scopedStyle": true
+      "route": "/k8s_clusterrolebinding",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "k8s/clusterrolebinding/ClusterRoleBinding.vue"
     },
     {
+      "inlineStyles": 48,
       "route": "/k8s_configmap",
-      "view": "k8s/configmap/ConfigMap.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 48,
-      "scopedStyle": true
+      "view": "k8s/configmap/ConfigMap.vue"
     },
     {
+      "inlineStyles": 38,
       "route": "/k8s_daemonset",
-      "view": "k8s/daemonset/DaemonSet.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 38,
-      "scopedStyle": true
+      "view": "k8s/daemonset/DaemonSet.vue"
     },
     {
-      "route": "/k8s_deployment",
-      "view": "k8s/deployment/Deployment.vue",
-      "sharedPage": true,
       "inlineStyles": 44,
-      "scopedStyle": true
+      "route": "/k8s_deployment",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "k8s/deployment/Deployment.vue"
     },
     {
-      "route": "/k8s_ingress",
-      "view": "k8s/ingress/Ingress.vue",
-      "sharedPage": true,
       "inlineStyles": 58,
-      "scopedStyle": true
+      "route": "/k8s_ingress",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "k8s/ingress/Ingress.vue"
     },
     {
-      "route": "/k8s_namespace",
-      "view": "k8s/namespace/Namespace.vue",
-      "sharedPage": true,
       "inlineStyles": 35,
-      "scopedStyle": true
+      "route": "/k8s_namespace",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "k8s/namespace/Namespace.vue"
     },
     {
-      "route": "/k8s_node",
-      "view": "k8s/node/Node.vue",
-      "sharedPage": true,
       "inlineStyles": 36,
-      "scopedStyle": true
+      "route": "/k8s_node",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "k8s/node/Node.vue"
     },
     {
-      "route": "/k8s_pod",
-      "view": "k8s/pod/Pod.vue",
-      "sharedPage": true,
       "inlineStyles": 72,
-      "scopedStyle": true
+      "route": "/k8s_pod",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "k8s/pod/Pod.vue"
     },
     {
-      "route": "/k8s_pv",
-      "view": "k8s/pv/PV.vue",
-      "sharedPage": true,
       "inlineStyles": 30,
-      "scopedStyle": true
+      "route": "/k8s_pv",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "k8s/pv/PV.vue"
     },
     {
-      "route": "/k8s_pvc",
-      "view": "k8s/pvc/PVC.vue",
-      "sharedPage": true,
       "inlineStyles": 56,
-      "scopedStyle": true
+      "route": "/k8s_pvc",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "k8s/pvc/PVC.vue"
     },
     {
-      "route": "/k8s_role",
-      "view": "k8s/role/Role.vue",
-      "sharedPage": true,
       "inlineStyles": 42,
-      "scopedStyle": true
+      "route": "/k8s_role",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "k8s/role/Role.vue"
     },
     {
-      "route": "/k8s_rolebinding",
-      "view": "k8s/rolebinding/RoleBinding.vue",
-      "sharedPage": true,
       "inlineStyles": 38,
-      "scopedStyle": true
+      "route": "/k8s_rolebinding",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "k8s/rolebinding/RoleBinding.vue"
     },
     {
-      "route": "/k8s_secret",
-      "view": "k8s/secret/Secret.vue",
-      "sharedPage": true,
       "inlineStyles": 48,
-      "scopedStyle": true
+      "route": "/k8s_secret",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "k8s/secret/Secret.vue"
     },
     {
-      "route": "/k8s_service",
-      "view": "k8s/service/Service.vue",
-      "sharedPage": true,
       "inlineStyles": 53,
-      "scopedStyle": true
+      "route": "/k8s_service",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "k8s/service/Service.vue"
     },
     {
-      "route": "/k8s_statefulset",
-      "view": "k8s/statefulset/StatefulSet.vue",
-      "sharedPage": true,
       "inlineStyles": 45,
-      "scopedStyle": true
+      "route": "/k8s_statefulset",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "k8s/statefulset/StatefulSet.vue"
     },
     {
-      "route": "/k8s_yaml_task",
-      "view": "k8s/task/Task.vue",
-      "sharedPage": true,
       "inlineStyles": 23,
-      "scopedStyle": true
+      "route": "/k8s_yaml_task",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "k8s/task/Task.vue"
     },
     {
+      "inlineStyles": 11,
       "route": "/k8s_yaml_template",
-      "view": "k8s/template/Template.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 11,
-      "scopedStyle": true
+      "view": "k8s/template/Template.vue"
     },
     {
+      "inlineStyles": 7,
       "route": "/local_resource_management",
-      "view": "servicetree/LocalResourceManagement.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 7,
-      "scopedStyle": true
+      "view": "servicetree/LocalResourceManagement.vue"
     },
     {
+      "inlineStyles": 1,
       "route": "/monitor_alert_event",
-      "view": "prometheus/MonitorAlertEvent.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 1,
-      "scopedStyle": true
+      "view": "prometheus/MonitorAlertEvent.vue"
     },
     {
+      "inlineStyles": 5,
       "route": "/monitor_alert_pool",
-      "view": "prometheus/MonitorAlertPool.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 5,
-      "scopedStyle": true
+      "view": "prometheus/MonitorAlertPool.vue"
     },
     {
+      "inlineStyles": 1,
       "route": "/monitor_alert_record",
-      "view": "prometheus/MonitorAlertRecord.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 1,
-      "scopedStyle": true
+      "view": "prometheus/MonitorAlertRecord.vue"
     },
     {
+      "inlineStyles": 1,
       "route": "/monitor_alert_rule",
-      "view": "prometheus/MonitorAlertRule.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 1,
-      "scopedStyle": true
+      "view": "prometheus/MonitorAlertRule.vue"
     },
     {
+      "inlineStyles": 0,
       "route": "/monitor_config",
-      "view": "prometheus/MonitorConfig.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 0,
-      "scopedStyle": true
+      "view": "prometheus/MonitorConfig.vue"
     },
     {
+      "inlineStyles": 3,
       "route": "/monitor_job",
-      "view": "prometheus/MonitorScrapeJob.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 3,
-      "scopedStyle": true
+      "view": "prometheus/MonitorScrapeJob.vue"
     },
     {
-      "route": "/monitor_onduty_group",
-      "view": "prometheus/MonitorOnDutyGroup.vue",
-      "sharedPage": true,
       "inlineStyles": 17,
-      "scopedStyle": true
+      "route": "/monitor_onduty_group",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "prometheus/MonitorOnDutyGroup.vue"
     },
     {
+      "inlineStyles": 7,
       "route": "/monitor_onduty_group_table",
-      "view": "prometheus/MonitorOnDutyGroupTable.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 7,
-      "scopedStyle": true
+      "view": "prometheus/MonitorOnDutyGroupTable.vue"
     },
     {
+      "inlineStyles": 2,
       "route": "/monitor_pool",
-      "view": "prometheus/MonitorScrapePool.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 2,
-      "scopedStyle": true
+      "view": "prometheus/MonitorScrapePool.vue"
     },
     {
+      "inlineStyles": 1,
       "route": "/monitor_send",
-      "view": "prometheus/MonitorSend.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 1,
-      "scopedStyle": true
+      "view": "prometheus/MonitorSend.vue"
     },
     {
-      "route": "/notification",
-      "view": "workorder/Notification.vue",
-      "sharedPage": true,
       "inlineStyles": 28,
-      "scopedStyle": true
+      "route": "/notification",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "workorder/Notification.vue"
     },
     {
-      "route": "/predict/analysis",
-      "view": "predict/PredictAnalysis.vue",
-      "sharedPage": true,
       "inlineStyles": 6,
-      "scopedStyle": true
+      "route": "/predict/analysis",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "predict/PredictAnalysis.vue"
     },
     {
-      "route": "/predict/dashboard",
-      "view": "predict/PredictDashboard.vue",
-      "sharedPage": true,
       "inlineStyles": 7,
-      "scopedStyle": true
+      "route": "/predict/dashboard",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "predict/PredictDashboard.vue"
     },
     {
+      "inlineStyles": 1,
       "route": "/process",
-      "view": "workorder/Process.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 1,
-      "scopedStyle": true
+      "view": "workorder/Process.vue"
     },
     {
-      "route": "/process_design",
-      "view": "workorder/ProcessDesign.vue",
-      "sharedPage": true,
       "inlineStyles": 5,
-      "scopedStyle": true
+      "route": "/process_design",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "workorder/ProcessDesign.vue"
     },
     {
+      "inlineStyles": 4,
       "route": "/rca/analysis",
-      "view": "rca/RCAAnalysis.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 4,
-      "scopedStyle": true
+      "view": "rca/RCAAnalysis.vue"
     },
     {
-      "route": "/rca/cache",
-      "view": "rca/RCACache.vue",
-      "sharedPage": true,
       "inlineStyles": 3,
-      "scopedStyle": true
+      "route": "/rca/cache",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "rca/RCACache.vue"
     },
     {
+      "inlineStyles": 2,
       "route": "/rca/diagnosis",
-      "view": "rca/RCADiagnosis.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 2,
-      "scopedStyle": true
+      "view": "rca/RCADiagnosis.vue"
     },
     {
+      "inlineStyles": 1,
       "route": "/system_api",
-      "view": "dashboard/SystemApi.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 1,
-      "scopedStyle": true
+      "view": "dashboard/SystemApi.vue"
     },
     {
-      "route": "/system_audit",
-      "view": "dashboard/SystemAudit.vue",
-      "sharedPage": true,
       "inlineStyles": 4,
-      "scopedStyle": true
+      "route": "/system_audit",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "dashboard/SystemAudit.vue"
     },
     {
+      "inlineStyles": 1,
       "route": "/system_role",
-      "view": "dashboard/SystemRole.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 1,
-      "scopedStyle": true
+      "view": "dashboard/SystemRole.vue"
     },
     {
+      "inlineStyles": 1,
       "route": "/system_user",
-      "view": "dashboard/SystemUser.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 1,
-      "scopedStyle": true
+      "view": "dashboard/SystemUser.vue"
     },
     {
+      "inlineStyles": 0,
       "route": "/system_welcome",
-      "view": "dashboard/SystemWelcome.vue",
+      "scopedStyle": true,
       "sharedPage": true,
-      "inlineStyles": 0,
-      "scopedStyle": true
+      "view": "dashboard/SystemWelcome.vue"
     },
     {
-      "route": "/template",
-      "view": "workorder/Template.vue",
-      "sharedPage": true,
       "inlineStyles": 11,
-      "scopedStyle": true
+      "route": "/template",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "workorder/Template.vue"
     },
     {
+      "inlineStyles": 0,
       "route": "/terminal_connect",
-      "view": "servicetree/TerminalConnect.vue",
+      "scopedStyle": false,
       "sharedPage": true,
-      "inlineStyles": 0,
-      "scopedStyle": false
+      "view": "servicetree/TerminalConnect.vue"
     },
     {
-      "route": "/tree_node_manager",
-      "view": "servicetree/TreeNodeManager.vue",
-      "sharedPage": true,
       "inlineStyles": 2,
-      "scopedStyle": true
+      "route": "/tree_node_manager",
+      "scopedStyle": true,
+      "sharedPage": true,
+      "view": "servicetree/TreeNodeManager.vue"
     },
     {
-      "route": "/web-terminal/:id",
-      "view": "servicetree/WebTerminal.vue",
-      "sharedPage": true,
       "inlineStyles": 0,
-      "scopedStyle": false
+      "route": "/web-terminal/:id",
+      "scopedStyle": false,
+      "sharedPage": true,
+      "view": "servicetree/WebTerminal.vue"
     }
-  ]
+  ],
+  "migratedShells": 58,
+  "routes": 58
 }
