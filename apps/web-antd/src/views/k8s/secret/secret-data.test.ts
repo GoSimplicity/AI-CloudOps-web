@@ -41,11 +41,11 @@ describe('getSecretDataKeys', () => {
   it('优先用 data_keys，没有时退回 data 的键', () => {
     expect(
       getSecretDataKeys({
+        data: { x: '' },
         data_keys: [
           { key: 'b', size: 3 },
           { key: 'a', size: 1 },
         ],
-        data: { x: '' },
       } as any),
     ).toEqual(['b', 'a']);
     expect(getSecretDataKeys({ data: { a: '', b: '' } } as any)).toEqual([
@@ -384,8 +384,8 @@ describe('incr6 P3-2：块标量头匹配不再随行长平方增长', () => {
 describe('readRevealedValue', () => {
   const res = {
     data: { a: FAKE_B64, bin: btoa(String.fromCharCode(255, 254)) },
-    string_data: { s: FAKE },
     keys: ['a', 's', 'bin'],
+    string_data: { s: FAKE },
   };
   it('data 解 base64 为 UTF-8；string_data 原样；没有返回的键为 undefined', () => {
     expect(readRevealedValue(res, 'a')).toBe(FAKE);

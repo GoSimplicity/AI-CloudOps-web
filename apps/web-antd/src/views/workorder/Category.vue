@@ -1,11 +1,8 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 
 import { useUserStore } from '@vben/stores';
 
-import { type FormInstance, message, Modal } from 'ant-design-vue';
 import {
   CheckCircleOutlined,
   DeleteOutlined,
@@ -14,6 +11,7 @@ import {
   PlusOutlined,
   StopOutlined,
 } from '@ant-design/icons-vue';
+import { type FormInstance, message, Modal } from 'ant-design-vue';
 
 import {
   CategoryStatus,
@@ -29,6 +27,7 @@ import {
   type UpdateWorkorderCategoryReq,
   type WorkorderCategoryItem,
 } from '#/api/core/workorder/workorder_category';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { useAuthStore } from '#/store/auth';
 import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
@@ -145,9 +144,9 @@ const categoryList = ref<WorkorderCategoryItem[]>([]);
 
 // 统计数据
 const statistics = reactive({
-  total: 0,
-  enabled: 0,
   disabled: 0,
+  enabled: 0,
+  total: 0,
 });
 
 // 表单引用
@@ -168,29 +167,29 @@ const dialogWidth = computed(() => {
 const paginationConfig = computed(() => ({
   current: currentPage.value,
   pageSize: pageSize.value,
-  total: total.value,
-  showSizeChanger: true,
-  showQuickJumper: true,
-  showTotal: (total: number) => `共 ${total} 条记录`,
   pageSizeOptions: ['10', '20', '50', '100'],
+  showQuickJumper: true,
+  showSizeChanger: true,
+  showTotal: (total: number) => `共 ${total} 条记录`,
+  total: total.value,
 }));
 
 /**
  * 对话框状态管理
  */
 const formDialog = reactive({
-  visible: false,
-  isEdit: false,
   data: {
-    name: '',
     description: '',
+    name: '',
     status: CategoryStatus.Enabled,
-  } as CreateWorkorderCategoryReq & { id?: number },
+  } as { id?: number } & CreateWorkorderCategoryReq,
+  isEdit: false,
+  visible: false,
 });
 
 const detailDialog = reactive({
-  visible: false,
   data: null as null | WorkorderCategoryItem,
+  visible: false,
 });
 
 watch(
@@ -349,8 +348,8 @@ const handleCreate = (): void => {
   detailDialog.data = null;
   formDialog.isEdit = false;
   formDialog.data = {
-    name: '',
     description: '',
+    name: '',
     status: CategoryStatus.Enabled,
   };
   formReady.value = true;
@@ -475,11 +474,10 @@ const handleDelete = (record: WorkorderCategoryItem): void => {
   const name = record.name;
   let confirmed = false;
   deleteDialog = Modal.confirm({
-    title: '确认删除',
+    cancelText: '取消',
     content: `确定要删除分类 "${name}" 吗？删除后不可恢复。`,
     okText: '删除',
     okType: 'danger',
-    cancelText: '取消',
     onCancel() {
       if (isCurrent()) invalidateInteraction();
     },
@@ -503,6 +501,7 @@ const handleDelete = (record: WorkorderCategoryItem): void => {
         if (shouldNotifyPageError(error)) message.error('删除分类失败');
       }
     },
+    title: '确认删除',
   });
 };
 
@@ -776,10 +775,10 @@ onMounted(() => {
             <template v-if="column.key === 'operator'">
               <div class="operator-info">
                 <a-avatar
-                  size="small"
                   :style="{
                     backgroundColor: getAvatarColor(record.operator_name),
                   }"
+                  size="small"
                 >
                   {{ getInitials(record.operator_name) }}
                 </a-avatar>

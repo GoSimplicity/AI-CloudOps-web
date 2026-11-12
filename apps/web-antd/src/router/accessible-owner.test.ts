@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
-
 import { createMemoryHistory, createRouter } from 'vue-router';
+
+import { describe, expect, it } from 'vitest';
 
 import { createDeferred } from '../../../../internal/test-utils/deferred';
 import { generateAccessible } from '../../../../packages/effects/access/src/accessible';
@@ -11,21 +11,21 @@ describe('异步权限路由账户归属', () => {
     const pending = createDeferred<any[]>();
     let current = true;
     const task = generateAccessible('backend', {
-      router,
-      routes: [],
-      fetchMenuListAsync: () => pending.promise,
       assertCurrent: () => {
         if (!current) throw new Error('stale-owner');
       },
+      fetchMenuListAsync: () => pending.promise,
+      router,
+      routes: [],
     } as any);
     const result = task.catch((error) => error);
     current = false;
     pending.resolve([
       {
-        name: 'OldPrivateRoute',
-        path: '/old-private',
         component: '',
         meta: { title: 'Old private menu' },
+        name: 'OldPrivateRoute',
+        path: '/old-private',
       },
     ]);
     expect(await result).toBeInstanceOf(Error);

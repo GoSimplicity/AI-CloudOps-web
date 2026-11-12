@@ -1,38 +1,37 @@
-import { shallowMount } from '@vue/test-utils';
-
 import { reactive } from 'vue';
 
+import { shallowMount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 
 import RCADiagnosis from './RCADiagnosis.vue';
 
 vi.mock('@vben/stores', () => ({
-  useUserStore: () => reactive({ userInfo: { userId: '1' } }),
   useAccessStore: () => reactive({ accessToken: 'offline' }),
+  useUserStore: () => reactive({ userInfo: { userId: '1' } }),
 }));
 const api = vi.hoisted(() => ({
-  quickDiagnosis: vi.fn(),
-  getEventPatterns: vi.fn(),
-  getErrorSummary: vi.fn(),
   analyzeRootCause: vi.fn(),
+  getErrorSummary: vi.fn(),
+  getEventPatterns: vi.fn(),
+  quickDiagnosis: vi.fn(),
 }));
 const messages = vi.hoisted(() => ({
-  success: vi.fn(),
-  warning: vi.fn(),
   error: vi.fn(),
   loading: vi.fn(),
+  success: vi.fn(),
+  warning: vi.fn(),
 }));
 vi.mock('#/api/core/aiops/rca', () => api);
 vi.mock('ant-design-vue', () => ({ message: messages }));
 vi.mock('echarts/core', () => ({
-  use: vi.fn(),
   init: () => ({
-    setOption: vi.fn(),
     clear: vi.fn(),
-    resize: vi.fn(),
     dispose: vi.fn(),
     isDisposed: () => false,
+    resize: vi.fn(),
+    setOption: vi.fn(),
   }),
+  use: vi.fn(),
 }));
 
 describe('rCA unavailable service', () => {
@@ -46,8 +45,8 @@ describe('rCA unavailable service', () => {
     const state = (wrapper.vm as any).$.setupState;
     state.inputData.namespace = 'default';
     state.quickDiagnosisResult = {
-      status: 'healthy',
       critical_issues: [],
+      status: 'healthy',
       warnings: [],
     };
     await state.refreshAllDiagnosis();

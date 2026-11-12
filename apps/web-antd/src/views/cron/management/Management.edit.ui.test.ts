@@ -12,10 +12,10 @@ function required<T>(value: null | T | undefined): T {
 }
 
 const client = vi.hoisted(() => ({
+  delete: vi.fn(),
   get: vi.fn(),
   post: vi.fn(),
   put: vi.fn(),
-  delete: vi.fn(),
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 vi.mock('@vben/stores', () => ({
@@ -28,23 +28,23 @@ vi.mock('#/utils/permission', async (original) => ({
 
 let wrapper: VueWrapper;
 const fixture = {
-  id: 3,
-  name: 'http-job',
+  args: [],
   description: '',
-  job_type: 3,
-  status: 1,
-  is_built_in: 2,
-  schedule: '@every 1h',
-  timeout: 60,
-  max_retry: 0,
+  environment: [],
+  http_body: 'old-body',
+  http_headers: [{ key: 'Authorization', value: 'fixture-secret' }],
   http_method: 'POST',
   http_url: 'https://old.invalid',
-  http_headers: [{ key: 'Authorization', value: 'fixture-secret' }],
-  http_body: 'old-body',
-  args: [],
-  environment: [],
-  ssh_environment: [],
+  id: 3,
+  is_built_in: 2,
+  job_type: 3,
   last_run_status: 0,
+  max_retry: 0,
+  name: 'http-job',
+  schedule: '@every 1h',
+  ssh_environment: [],
+  status: 1,
+  timeout: 60,
 };
 
 beforeEach(() => {
@@ -52,20 +52,20 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
       addEventListener: vi.fn(),
+      addListener: vi.fn(),
+      matches: false,
       removeEventListener: vi.fn(),
+      removeListener: vi.fn(),
     })),
   );
   client.get.mockImplementation((path: string) =>
     path.includes('/detail')
       ? Promise.resolve(structuredClone(fixture))
-      : Promise.resolve({ items: [fixture], total: 1, allow_local_exec: true }),
+      : Promise.resolve({ allow_local_exec: true, total: 1, items: [fixture] }),
   );
   client.put.mockResolvedValue(undefined);
-  client.post.mockResolvedValue({ valid: true, next_run_times: [] });
+  client.post.mockResolvedValue({ next_run_times: [], valid: true });
 });
 afterEach(() => {
   wrapper?.unmount();
@@ -137,9 +137,9 @@ describe('定时任务编辑完整交互', () => {
     expect(client.post).toHaveBeenCalledWith(
       '/cron/job/create',
       expect.objectContaining({
-        status: 2,
-        job_type: 3,
         http_url: 'http://127.0.0.1:9/fixture',
+        job_type: 3,
+        status: 2,
       }),
     );
     expect(
@@ -189,12 +189,12 @@ describe('定时任务编辑完整交互', () => {
     expect(client.put).toHaveBeenCalledWith(
       '/cron/job/3/update',
       expect.objectContaining({
-        schedule: '0 9 * * *',
-        http_url: 'https://new.invalid',
-        http_method: 'POST',
         http_body: 'old-body',
         http_headers: [{ key: 'Authorization', value: 'fixture-secret' }],
+        http_method: 'POST',
+        http_url: 'https://new.invalid',
         max_retry: 0,
+        schedule: '0 9 * * *',
       }),
     );
   });

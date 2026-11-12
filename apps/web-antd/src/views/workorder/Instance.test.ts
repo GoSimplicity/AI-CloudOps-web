@@ -1,7 +1,7 @@
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
-import Antd, { Modal, Select } from 'ant-design-vue';
 import { useAccessStore } from '@vben/stores';
 
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+import Antd, { Modal, Select } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createDeferred } from '../../../../../internal/test-utils/deferred';
@@ -45,10 +45,10 @@ vi.mock('#/utils/permission', async (importOriginal) => ({
   }),
 }));
 const client = vi.hoisted(() => ({
+  delete: vi.fn(),
   get: vi.fn(),
   post: vi.fn(),
   put: vi.fn(),
-  delete: vi.fn(),
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 
@@ -58,18 +58,18 @@ vi.mock('#/api/request', () => ({ requestClient: client }));
 // 在加压下仍能于 1s 内等到节点，因此只放宽本文件的 testTimeout，不改断言。
 vi.setConfig({ testTimeout: 20_000 });
 const row = {
-  id: 7,
-  title: '待处理变更',
-  serial_number: 'WO-7',
+  created_at: '2026-10-23T10:00:00Z',
   description: '',
-  status: 2,
-  priority: 2,
-  process_id: 1,
+  form_data: {},
+  id: 7,
   operator_id: 1,
   operator_name: '验收用户',
+  priority: 2,
+  process_id: 1,
+  serial_number: 'WO-7',
+  status: 2,
   tags: [],
-  form_data: {},
-  created_at: '2026-10-23T10:00:00Z',
+  title: '待处理变更',
   updated_at: '2026-10-23T10:00:00Z',
 };
 const isMain = (url: string, options: any) =>
@@ -78,16 +78,16 @@ const response = (url: string, options: any) => {
   if (url === '/workorder/instance/list')
     return Promise.resolve(
       isMain(url, options)
-        ? { items: [{ ...row }], total: 91 }
+        ? { total: 91, items: [{ ...row }] }
         : {
-            items: [],
             total:
               ({ 2: 20, 3: 30, 4: 40 } as Record<number, number>)[
                 options.params.status
               ] ?? 91,
+            items: [],
           },
     );
-  return Promise.resolve({ items: [], total: 0 });
+  return Promise.resolve({ total: 0, items: [] });
 };
 let wrapper: VueWrapper;
 const query = async (keyword = '') => {
@@ -103,8 +103,8 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -158,14 +158,14 @@ describe('工单实例真实控件', () => {
         ? options.params.search === 'old'
           ? pending.promise
           : Promise.resolve({
-              items: [{ ...row, title: '当前查询' }],
               total: 1,
+              items: [{ ...row, title: '当前查询' }],
             })
         : response(url, options),
     );
     await query('old');
     await query('new');
-    pending.resolve({ items: [{ ...row, title: '旧查询' }], total: 91 });
+    pending.resolve({ total: 91, items: [{ ...row, title: '旧查询' }] });
     await flushPromises();
     expect(wrapper.get('.title-text').text()).toBe('当前查询');
   });
@@ -177,8 +177,8 @@ describe('工单实例真实控件', () => {
         ? options.params.search === 'old'
           ? pending.promise
           : Promise.resolve({
-              items: [{ ...row, title: '当前查询' }],
               total: 1,
+              items: [{ ...row, title: '当前查询' }],
             })
         : response(url, options),
     );
@@ -197,8 +197,8 @@ describe('工单实例真实控件', () => {
       client.get.mockImplementation((url, options) => {
         if (isMain(url, options))
           return Promise.resolve({
-            items: [{ ...row }, { ...row, id: 8, title: '第二条工单' }],
             total: 2,
+            items: [{ ...row }, { ...row, id: 8, title: '第二条工单' }],
           });
         if (url === '/workorder/instance/detail/7') return pending.promise;
         if (url === '/workorder/instance/detail/8')
@@ -227,18 +227,18 @@ describe('工单实例真实控件', () => {
     client.get.mockImplementation((url, options) =>
       url === '/workorder/notification/logs'
         ? Promise.resolve({
+            total: 1,
             items: [
               {
-                id: 10,
                 channel: 'email',
-                recipient_addr: 'safe@example.test',
-                status: 3,
                 event_type: 'instance_created',
+                id: 10,
+                recipient_addr: 'safe@example.test',
                 send_at: '2026-10-23T10:00:00Z',
+                status: 3,
                 subject: '<img data-private-probe="x">literal',
               },
             ],
-            total: 1,
           })
         : response(url, options),
     );
@@ -284,7 +284,7 @@ describe('工单实例真实控件', () => {
     const pending = createDeferred<any>();
     client.get.mockImplementation((url, options) => {
       if (isMain(url, options))
-        return Promise.resolve({ items: [{ ...row, status: 1 }], total: 1 });
+        return Promise.resolve({ total: 1, items: [{ ...row, status: 1 }] });
       if (url === '/workorder/instance/detail/7') return pending.promise;
       if (url === '/workorder/instance/actions/7')
         return Promise.resolve(['edit']);
@@ -305,7 +305,7 @@ describe('工单实例真实控件', () => {
         .find((button) => button.text().replace(/\s/g, '') === '创建工单'),
     ).trigger('click');
     await flushPromises();
-    pending.resolve({ ...row, title: '旧编辑内容', status: 1 });
+    pending.resolve({ ...row, status: 1, title: '旧编辑内容' });
     await flushPromises();
     expect(document.querySelector('.ant-modal-title')?.textContent).toBe(
       '创建工单',
@@ -325,12 +325,12 @@ describe('工单实例真实控件', () => {
       client.get.mockImplementation((url, options) =>
         url === endpoint
           ? Promise.resolve({
+              total: 40,
               items: Array.from({ length: 20 }, (_, index) => ({
                 id: index + (options.params.page - 1) * 20 + 1,
                 name: `选项${index}`,
                 username: `user${index}`,
               })),
-              total: 40,
             })
           : response(url, options),
       );
@@ -348,7 +348,7 @@ describe('工单实例真实控件', () => {
       select.vm.$emit('dropdownVisibleChange', true);
       await flushPromises();
       select.vm.$emit('popupScroll', {
-        target: { scrollTop: 90, scrollHeight: 100, clientHeight: 30 },
+        target: { clientHeight: 30, scrollHeight: 100, scrollTop: 90 },
       });
       await flushPromises();
       expect(
@@ -367,8 +367,8 @@ describe('工单实例真实控件', () => {
     client.get.mockImplementation((url, options) =>
       url === '/workorder/template/list'
         ? Promise.resolve({
-            items: [{ id: 5, name: '真实可用模板', status: 1 }],
             total: 1,
+            items: [{ id: 5, name: '真实可用模板', status: 1 }],
           })
         : response(url, options),
     );
@@ -399,11 +399,11 @@ describe('工单实例真实控件', () => {
     client.get.mockImplementation((url, options) => {
       if (isMain(url, options))
         return Promise.resolve({
-          items: [{ ...row, status: 1, assignee_id: 1 }],
           total: 1,
+          items: [{ ...row, assignee_id: 1, status: 1 }],
         });
       if (url === '/workorder/instance/detail/7')
-        return Promise.resolve({ ...row, status: 1, assignee_id: 1 });
+        return Promise.resolve({ ...row, assignee_id: 1, status: 1 });
       if (url === '/workorder/instance/actions/7')
         return Promise.resolve(['edit']);
       return response(url, options);

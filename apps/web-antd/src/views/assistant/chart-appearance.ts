@@ -11,12 +11,12 @@ export function chartColors() {
     return getComputedStyle(probe).color || fallback;
   };
   const colors = {
-    text: read('--ops-ink', '#202020'),
-    muted: read('--ops-muted', '#767676'),
-    border: read('--ops-border', '#dddddd'),
-    surface: read('--ops-surface', '#ffffff'),
-    ground: read('--ops-ground', '#f6f6f6'),
     accent: read('--ops-accent', '#1677ff'),
+    border: read('--ops-border', '#dddddd'),
+    ground: read('--ops-ground', '#f6f6f6'),
+    muted: read('--ops-muted', '#767676'),
+    surface: read('--ops-surface', '#ffffff'),
+    text: read('--ops-ink', '#202020'),
   };
   probe.remove();
   return colors;
@@ -30,8 +30,8 @@ export function useChartAppearance(refresh: () => void) {
       if (!disposed) refresh();
     });
     observer.observe(document.documentElement, {
-      attributes: true,
       attributeFilter: ['class', 'style'],
+      attributes: true,
     });
   });
   onBeforeUnmount(() => {

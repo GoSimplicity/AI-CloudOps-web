@@ -11,8 +11,8 @@ function required<T>(value: null | T | undefined): T {
 
 const client = vi.hoisted(() => ({
   get: vi.fn(),
-  put: vi.fn(),
   post: vi.fn(),
+  put: vi.fn(),
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 vi.mock('ant-design-vue', () => ({
@@ -36,7 +36,7 @@ describe('集群列表恢复与编辑保护', () => {
     expect(page.selectedRowKeys.value).toEqual([]);
     expect(page.total.value).toBe(0);
     expect(page.loadError.value).not.toBe('');
-    client.get.mockResolvedValueOnce({ items: [], total: 0 });
+    client.get.mockResolvedValueOnce({ total: 0, items: [] });
     await page.fetchClusters();
     expect(page.loadError.value).toBe('');
   });
@@ -61,23 +61,23 @@ describe('kubeconfig 不在前端回显（P1 安全）', () => {
   it('列表即使收到旧后端的原文，也只保留 has_kube_config', async () => {
     const page = useClusterPage();
     client.get.mockResolvedValueOnce({
+      total: 2,
       items: [
         {
           id: 1,
+          kube_config_content: SECRET,
           name: 'legacy',
           restrict_namespace: [],
           status: 1,
-          kube_config_content: SECRET,
         },
         {
+          has_kube_config: true,
           id: 2,
           name: 'new',
           restrict_namespace: [],
           status: 1,
-          has_kube_config: true,
         },
       ],
-      total: 2,
     });
     await page.fetchClusters();
     expect(JSON.stringify(page.clusters.value)).not.toContain(SECRET);
@@ -91,10 +91,10 @@ describe('kubeconfig 不在前端回显（P1 安全）', () => {
     const page = useClusterPage();
     client.get.mockResolvedValueOnce({
       id: 1,
+      kube_config_content: SECRET,
       name: 'legacy',
       restrict_namespace: [],
       status: 1,
-      kube_config_content: SECRET,
     });
     await page.showClusterDetail({
       id: 1,
@@ -112,11 +112,11 @@ describe('kubeconfig 不在前端回显（P1 安全）', () => {
     const page = useClusterPage();
     client.get.mockResolvedValueOnce(detail);
     await page.openEdit({
+      has_kube_config: true,
       id: 1,
       name: 'example',
       restrict_namespace: [],
       status: 1,
-      has_kube_config: true,
     });
     // 跳过表单校验与危险操作确认，只测提交载荷
     page.formRef.value = { validate: vi.fn().mockResolvedValue(true) } as never;
@@ -126,11 +126,11 @@ describe('kubeconfig 不在前端回显（P1 安全）', () => {
 
   it('编辑时表单不回填原文，留空提交不带 kube_config_content', async () => {
     const detail = {
+      has_kube_config: true,
       id: 1,
       name: 'example',
       restrict_namespace: [],
       status: 1,
-      has_kube_config: true,
     };
     const page = await openEditWithDetail(detail);
     expect(page.isModalVisible.value).toBe(true);
@@ -142,7 +142,7 @@ describe('kubeconfig 不在前端回显（P1 安全）', () => {
 
     client.put.mockResolvedValueOnce({});
     client.get.mockResolvedValueOnce(detail); // 危险操作对比
-    client.get.mockResolvedValueOnce({ items: [], total: 0 }); // 刷新列表
+    client.get.mockResolvedValueOnce({ total: 0, items: [] }); // 刷新列表
     await page.submitForm();
     expect(client.put).toHaveBeenCalledTimes(1);
     const [url, body] = required(client.put.mock.calls[0]);
@@ -152,11 +152,11 @@ describe('kubeconfig 不在前端回显（P1 安全）', () => {
 
   it('填写替换内容时整段提交新 kubeconfig', async () => {
     const detail = {
+      has_kube_config: true,
       id: 1,
       name: 'example',
       restrict_namespace: [],
       status: 1,
-      has_kube_config: true,
     };
     const page = await openEditWithDetail(detail);
     const replacement = `apiVersion: v1\nkind: Config\n${'x'.repeat(120)}`;

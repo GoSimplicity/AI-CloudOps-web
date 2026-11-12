@@ -1,12 +1,11 @@
+import { reactive } from 'vue';
+
 import {
   DOMWrapper,
   flushPromises,
   mount,
   type VueWrapper,
 } from '@vue/test-utils';
-
-import { reactive } from 'vue';
-
 import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
@@ -19,31 +18,31 @@ function required<T>(value: null | T | undefined): T {
   return value;
 }
 
-const account = vi.hoisted(() => ({ user: null as any, access: null as any }));
+const account = vi.hoisted(() => ({ access: null as any, user: null as any }));
 const api = vi.hoisted(() => ({
+  cancelNotificationEvent: vi.fn(),
   getCurrentPermissions: vi.fn(),
-  listNotificationEvents: vi.fn(),
   getNotificationDeliveries: vi.fn(),
   getNotificationResolutions: vi.fn(),
-  cancelNotificationEvent: vi.fn(),
-  retryNotificationEvent: vi.fn(),
+  listNotificationEvents: vi.fn(),
   resolveNotificationDelivery: vi.fn(),
+  retryNotificationEvent: vi.fn(),
 }));
 const http = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock('#/api/request', () => ({ requestClient: http }));
 vi.mock('@vben/stores', () => ({
-  useUserStore: () => account.user,
   useAccessStore: () => account.access,
+  useUserStore: () => account.user,
 }));
 vi.mock('#/api/core/workorder/notification-events', () => ({
   ...api,
   notificationEventPermissions: {
-    list: 'GET /api/workorder/notification/events',
+    cancel: 'POST /api/workorder/notification/events/:id/cancel',
     deliveries: 'GET /api/workorder/notification/events/:id/deliveries',
     resolutions: 'GET /api/workorder/notification/events/:id/resolutions',
-    cancel: 'POST /api/workorder/notification/events/:id/cancel',
-    retry: 'POST /api/workorder/notification/events/:id/retry',
     resolve: 'POST /api/workorder/notification/events/:id/resolve',
+    retry: 'POST /api/workorder/notification/events/:id/retry',
+    list: 'GET /api/workorder/notification/events',
   },
 }));
 let wrapper: undefined | VueWrapper;
@@ -56,30 +55,30 @@ const allCodes = [
   'POST /api/workorder/notification/events/:id/resolve',
 ];
 const event = (status = 'pending') => ({
-  id: 10,
-  parent_event_id: 5,
-  instance_id: 8,
-  event_type: 'instance_created',
-  status,
   attempts: 1,
+  event_type: 'instance_created',
+  id: 10,
+  instance_id: 8,
   next_attempt_at: '2026-10-29T12:00:00Z',
+  parent_event_id: 5,
   secret: 'raw-secret-marker',
+  status,
 });
 const delivery = () => ({
-  id: 30,
-  event_id: 10,
-  notification_id: 4,
-  channel: 'email',
-  recipient_masked: 'a***@e***',
-  recipient_hash: 'a'.repeat(64),
-  status: 'uncertain',
   attempts: 1,
+  channel: 'email',
   content: 'raw-body-marker',
+  event_id: 10,
+  id: 30,
+  notification_id: 4,
+  recipient_hash: 'a'.repeat(64),
+  recipient_masked: 'a***@e***',
+  status: 'uncertain',
 });
 const permission = (permissions = allCodes, super_admin = false) => ({
-  version: 2,
-  super_admin,
   permissions,
+  super_admin,
+  version: 2,
 });
 const deferred = () => {
   let resolve!: (value: any) => void;
@@ -115,14 +114,14 @@ beforeEach(() => {
   account.user = reactive({ userInfo: { userId: '1' } });
   account.access = reactive({ accessToken: 'fixture-token' });
   api.getCurrentPermissions.mockResolvedValue(permission());
-  api.listNotificationEvents.mockResolvedValue({ items: [event()], total: 1 });
+  api.listNotificationEvents.mockResolvedValue({ total: 1, items: [event()] });
   api.getNotificationDeliveries.mockResolvedValue([delivery()]);
   api.getNotificationResolutions.mockResolvedValue([
     {
-      id: 2,
       action: 'retry',
-      operator_id: 7,
       created_at: '2026-10-29T12:00:00Z',
+      id: 2,
+      operator_id: 7,
       reason: 'sensitive-audit-reason',
     },
   ]);
@@ -132,8 +131,8 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -171,9 +170,9 @@ it('加载事件和脱敏详情，不展示消息、原始字段或审计原因'
 it('分页按后端 page/size 查询，迟到的前一页结果不覆盖当前页', async () => {
   const stale = deferred();
   api.listNotificationEvents
-    .mockResolvedValueOnce({ items: [event()], total: 40 })
+    .mockResolvedValueOnce({ total: 40, items: [event()] })
     .mockReturnValueOnce(stale.promise)
-    .mockResolvedValueOnce({ items: [{ ...event(), id: 22 }], total: 40 });
+    .mockResolvedValueOnce({ total: 40, items: [{ ...event(), id: 22 }] });
   await start();
   await click('刷新');
   const pageTwo = document.querySelector<HTMLLIElement>(
@@ -186,7 +185,7 @@ it('分页按后端 page/size 查询，迟到的前一页结果不覆盖当前�
     page: 2,
     size: 20,
   });
-  stale.resolve({ items: [{ ...event(), id: 11 }], total: 40 });
+  stale.resolve({ total: 40, items: [{ ...event(), id: 11 }] });
   await flushPromises();
   expect(required(wrapper).text()).toContain('22');
   expect(required(wrapper).text()).not.toContain('11');
@@ -259,8 +258,8 @@ it('写操作出错不暴露后端异常原文，且提示先核对', async () =
 
 it('确认权限失败时清空已展示的详情与列表', async () => {
   api.listNotificationEvents.mockResolvedValue({
-    items: [event('failed')],
     total: 1,
+    items: [event('failed')],
   });
   api.getCurrentPermissions
     .mockResolvedValueOnce(permission())
@@ -277,8 +276,8 @@ it('确认权限失败时清空已展示的详情与列表', async () => {
 
 it('不确定结果逐接收人确认，重投需显式操作和原因', async () => {
   api.listNotificationEvents.mockResolvedValue({
-    items: [event('uncertain')],
     total: 1,
+    items: [event('uncertain')],
   });
   await start();
   await click('详情');
@@ -296,8 +295,8 @@ it('不确定结果逐接收人确认，重投需显式操作和原因', async (
 
 it('确认送达采用 delivered 合同并识别短飞书脱敏标识', async () => {
   api.listNotificationEvents.mockResolvedValue({
-    items: [event('uncertain')],
     total: 1,
+    items: [event('uncertain')],
   });
   api.getNotificationDeliveries.mockResolvedValue([
     { ...delivery(), channel: 'feishu', recipient_masked: 'ou_***' },
@@ -318,8 +317,8 @@ it('确认送达采用 delivered 合同并识别短飞书脱敏标识', async ()
 
 it('投递详情显示站内渠道及安全脱敏用户标识', async () => {
   api.listNotificationEvents.mockResolvedValue({
-    items: [event('failed')],
     total: 1,
+    items: [event('failed')],
   });
   api.getNotificationDeliveries.mockResolvedValue([
     {
@@ -338,14 +337,14 @@ it('投递详情显示站内渠道及安全脱敏用户标识', async () => {
 
 it('拒绝不安全的脱敏标识，并对事件失败提供重试', async () => {
   api.listNotificationEvents.mockResolvedValue({
-    items: [event('failed')],
     total: 1,
+    items: [event('failed')],
   });
   api.getNotificationDeliveries.mockResolvedValue([
     {
       ...delivery(),
-      recipient_masked: 'alice@example.test SECRET*',
       attempts: 'private-attempt-field',
+      recipient_masked: 'alice@example.test SECRET*',
     },
   ]);
   await start();
@@ -423,9 +422,9 @@ it('同一账户轮换令牌不会解除在途操作锁或重复提交', async (
 
 it('权限接口格式错误时关闭数据和操作', async () => {
   api.getCurrentPermissions.mockResolvedValue({
-    version: 1,
-    super_admin: true,
     permissions: ['*'],
+    super_admin: true,
+    version: 1,
   });
   await start();
   expect(api.listNotificationEvents).not.toHaveBeenCalled();

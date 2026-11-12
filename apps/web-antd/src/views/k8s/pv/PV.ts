@@ -6,6 +6,12 @@ import { message, Modal } from 'ant-design-vue';
 import yaml from 'js-yaml';
 
 import {
+  Env,
+  getClustersListApi,
+  type K8sCluster,
+  type ListClustersReq,
+} from '#/api/core/k8s/k8s_cluster';
+import {
   createK8sPV,
   createK8sPVByYaml,
   type CreatePVByYamlReq,
@@ -27,12 +33,6 @@ import {
   type UpdatePVByYamlReq,
   type UpdatePVReq,
 } from '#/api/core/k8s/k8s_pv';
-import {
-  Env,
-  getClustersListApi,
-  type K8sCluster,
-  type ListClustersReq,
-} from '#/api/core/k8s/k8s_cluster';
 import { getOwnLookupValue } from '#/utils/own-lookup';
 import {
   shouldNotifyPageError,
@@ -111,17 +111,17 @@ export function usePVPage() {
     volume_source: Record<string, any>;
     volume_type: string; // 卷类型
   }>({
-    name: '',
-    capacity: '',
     access_modes: ['ReadWriteOnce'],
+    annotations: {},
+    capacity: '',
+    labels: {},
+    name: '',
+    node_affinity: {},
     reclaim_policy: 'Retain',
     storage_class: '',
     volume_mode: 'Filesystem',
-    volume_type: 'hostPath', // 默认使用 hostPath
     volume_source: {},
-    node_affinity: {},
-    labels: {},
-    annotations: {},
+    volume_type: 'hostPath', // 默认使用 hostPath
   });
 
   const editFormModel = ref<{
@@ -136,16 +136,16 @@ export function usePVPage() {
     volume_mode: string;
     volume_source: Record<string, any>;
   }>({
-    name: '',
-    capacity: '',
     access_modes: [],
+    annotations: {},
+    capacity: '',
+    labels: {},
+    name: '',
+    node_affinity: {},
     reclaim_policy: '',
     storage_class: '',
     volume_mode: '',
     volume_source: {},
-    node_affinity: {},
-    labels: {},
-    annotations: {},
   });
 
   const yamlFormModel = ref<{
@@ -162,40 +162,40 @@ export function usePVPage() {
 
   // form validation rules
   const createFormRules: Record<string, Rule[]> = {
-    name: [
-      { required: true, message: '请输入 PV 名称', trigger: 'blur' },
+    access_modes: [
+      { message: '请选择访问模式', required: true, trigger: 'change' },
+    ],
+    capacity: [
+      { message: '请输入存储容量', required: true, trigger: 'blur' },
       {
-        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
+        message: '请输入有效的存储容量，如: 1Gi, 100Mi',
+        pattern: /^\d+[EGKMPT]i?$/,
+        trigger: 'blur',
+      },
+    ],
+    name: [
+      { message: '请输入 PV 名称', required: true, trigger: 'blur' },
+      {
         message:
           'PV 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         trigger: 'blur',
       },
       { max: 253, message: 'PV 名称长度不能超过253个字符', trigger: 'blur' },
-    ],
-    capacity: [
-      { required: true, message: '请输入存储容量', trigger: 'blur' },
-      {
-        pattern: /^\d+[EGKMPT]i?$/,
-        message: '请输入有效的存储容量，如: 1Gi, 100Mi',
-        trigger: 'blur',
-      },
-    ],
-    access_modes: [
-      { required: true, message: '请选择访问模式', trigger: 'change' },
     ],
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
@@ -205,11 +205,11 @@ export function usePVPage() {
   });
 
   const rowSelection = computed(() => ({
-    selectedRowKeys: selectedRowKeys.value,
     onChange: (keys: string[], rows: K8sPV[]) => {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
     },
+    selectedRowKeys: selectedRowKeys.value,
   }));
 
   // helpers
@@ -226,11 +226,11 @@ export function usePVPage() {
     if (env === undefined || env === null) return '未知环境';
     const value = typeof env === 'string' ? Number.parseInt(env) : env;
     const map: Record<number, string> = {
-      [Env.Prod]: '生产',
       [Env.Dev]: '开发',
-      [Env.Stage]: '预发',
-      [Env.Rc]: '测试',
       [Env.Press]: '灰度',
+      [Env.Prod]: '生产',
+      [Env.Rc]: '测试',
+      [Env.Stage]: '预发',
     };
     return map[value] || '未知环境';
   };
@@ -240,8 +240,8 @@ export function usePVPage() {
     const statusMap: Record<K8sPVStatus, string> = {
       [K8sPVStatus.Available]: '可用',
       [K8sPVStatus.Bound]: '已绑定',
-      [K8sPVStatus.Released]: '已释放',
       [K8sPVStatus.Failed]: '失败',
+      [K8sPVStatus.Released]: '已释放',
       [K8sPVStatus.Unknown]: '未知',
     };
     return statusMap[status] || '未知';
@@ -252,8 +252,8 @@ export function usePVPage() {
     const colorMap: Record<K8sPVStatus, string> = {
       [K8sPVStatus.Available]: 'success',
       [K8sPVStatus.Bound]: 'processing',
-      [K8sPVStatus.Released]: 'warning',
       [K8sPVStatus.Failed]: 'error',
+      [K8sPVStatus.Released]: 'warning',
       [K8sPVStatus.Unknown]: 'default',
     };
     return colorMap[status] || 'default';
@@ -299,12 +299,12 @@ export function usePVPage() {
       selectedRowKeys.value = [];
       selectedRows.value = [];
       const params: GetPVListReq = {
+        access_mode: filterAccessMode.value || undefined,
         cluster_id: clusterId,
         page: currentPage.value,
-        size: pageSize.value,
         search: searchText.value || undefined,
+        size: pageSize.value,
         status: filterStatus.value ? String(filterStatus.value) : undefined,
-        access_mode: filterAccessMode.value || undefined,
         volume_type: filterVolumeType.value || undefined,
       };
 
@@ -436,17 +436,17 @@ export function usePVPage() {
   // form helpers
   const resetCreateForm = () => {
     createFormModel.value = {
-      name: '',
-      capacity: '',
       access_modes: ['ReadWriteOnce'],
+      annotations: {},
+      capacity: '',
+      labels: {},
+      name: '',
+      node_affinity: {},
       reclaim_policy: 'Retain',
       storage_class: '',
       volume_mode: 'Filesystem',
-      volume_type: 'hostPath',
       volume_source: { path: '', type: '' }, // 默认 hostPath 的必需字段
-      node_affinity: {},
-      labels: {},
-      annotations: {},
+      volume_type: 'hostPath',
     };
     formRef.value?.resetFields();
   };
@@ -476,13 +476,13 @@ export function usePVPage() {
 
       // 验证必需字段是否已填写
       const requiredFields: Record<string, string[]> = {
-        hostPath: ['path'],
-        nfs: ['server', 'path'],
-        csi: ['driver', 'volumeHandle'],
-        local: ['path'],
         cephfs: ['monitors'],
-        iscsi: ['targetPortal', 'iqn'],
+        csi: ['driver', 'volumeHandle'],
         glusterfs: ['endpoints', 'path'],
+        hostPath: ['path'],
+        iscsi: ['targetPortal', 'iqn'],
+        local: ['path'],
+        nfs: ['server', 'path'],
         rbd: ['monitors', 'image'],
       };
 
@@ -526,17 +526,17 @@ export function usePVPage() {
       };
 
       const params: CreatePVReq = {
-        cluster_id: filterClusterId.value,
-        name: createFormModel.value.name,
-        capacity: createFormModel.value.capacity,
         access_modes: createFormModel.value.access_modes,
+        annotations: createFormModel.value.annotations || {},
+        capacity: createFormModel.value.capacity,
+        cluster_id: filterClusterId.value,
+        labels: createFormModel.value.labels || {},
+        name: createFormModel.value.name,
+        node_affinity: createFormModel.value.node_affinity || {},
         reclaim_policy: createFormModel.value.reclaim_policy,
         storage_class: createFormModel.value.storage_class || '',
         volume_mode: createFormModel.value.volume_mode || 'Filesystem',
         volume_source: volumeSource, // 使用正确结构的 volume_source
-        node_affinity: createFormModel.value.node_affinity || {},
-        labels: createFormModel.value.labels || {},
-        annotations: createFormModel.value.annotations || {},
       };
 
       await createK8sPV(params);
@@ -589,16 +589,16 @@ export function usePVPage() {
 
   const resetEditForm = () => {
     editFormModel.value = {
-      name: '',
-      capacity: '',
       access_modes: [],
+      annotations: {},
+      capacity: '',
+      labels: {},
+      name: '',
+      node_affinity: {},
       reclaim_policy: '',
       storage_class: '',
       volume_mode: '',
       volume_source: {},
-      node_affinity: {},
-      labels: {},
-      annotations: {},
     };
     formRef.value?.resetFields();
   };
@@ -614,12 +614,24 @@ export function usePVPage() {
       submitLoading.value = true;
 
       const params: UpdatePVReq = {
-        cluster_id: clusterId,
-        name: currentOperationPV.value.name,
-        capacity: editFormModel.value.capacity || undefined,
         access_modes:
           editFormModel.value.access_modes.length > 0
             ? editFormModel.value.access_modes
+            : undefined,
+        annotations:
+          Object.keys(editFormModel.value.annotations).length > 0
+            ? editFormModel.value.annotations
+            : undefined,
+        capacity: editFormModel.value.capacity || undefined,
+        cluster_id: clusterId,
+        labels:
+          Object.keys(editFormModel.value.labels).length > 0
+            ? editFormModel.value.labels
+            : undefined,
+        name: currentOperationPV.value.name,
+        node_affinity:
+          Object.keys(editFormModel.value.node_affinity).length > 0
+            ? editFormModel.value.node_affinity
             : undefined,
         reclaim_policy: editFormModel.value.reclaim_policy || undefined,
         storage_class: editFormModel.value.storage_class || undefined,
@@ -627,18 +639,6 @@ export function usePVPage() {
         volume_source:
           Object.keys(editFormModel.value.volume_source).length > 0
             ? editFormModel.value.volume_source
-            : undefined,
-        node_affinity:
-          Object.keys(editFormModel.value.node_affinity).length > 0
-            ? editFormModel.value.node_affinity
-            : undefined,
-        labels:
-          Object.keys(editFormModel.value.labels).length > 0
-            ? editFormModel.value.labels
-            : undefined,
-        annotations:
-          Object.keys(editFormModel.value.annotations).length > 0
-            ? editFormModel.value.annotations
             : undefined,
       };
 
@@ -696,19 +696,18 @@ export function usePVPage() {
     if (!clusterId) return;
 
     Modal.confirm({
-      title: `确认删除PV "${record.name}"?`,
+      cancelText: '取消',
       content: force
         ? '这将强制删除PV，此操作不可恢复！'
         : '此操作不可恢复，请确认！',
       okText: '确认删除',
-      cancelText: '取消',
       okType: 'danger',
       onOk: async () => {
         try {
           const params: DeletePVReq = {
             cluster_id: clusterId,
-            name: record.name,
             force,
+            name: record.name,
           };
 
           await deleteK8sPV(params);
@@ -729,6 +728,7 @@ export function usePVPage() {
             message.error(error?.message || '删除PV失败');
         }
       },
+      title: `确认删除PV "${record.name}"?`,
     });
   };
 
@@ -737,10 +737,9 @@ export function usePVPage() {
     if (!clusterId) return;
 
     Modal.confirm({
-      title: `确认回收PV "${record.name}"?`,
+      cancelText: '取消',
       content: '回收后PV将变为可用状态，请确认！',
       okText: '确认回收',
-      cancelText: '取消',
       onOk: async () => {
         try {
           const params: ReclaimPVReq = {
@@ -758,6 +757,7 @@ export function usePVPage() {
             message.error(error?.message || '回收PV失败');
         }
       },
+      title: `确认回收PV "${record.name}"?`,
     });
   };
 
@@ -770,10 +770,9 @@ export function usePVPage() {
     const deleteCount = selectedRows.value.length;
 
     Modal.confirm({
-      title: `确认删除选中的 ${deleteCount} 个PV?`,
+      cancelText: '取消',
       content: '此操作不可恢复，请确认！',
       okText: '确认删除',
-      cancelText: '取消',
       okType: 'danger',
       onOk: async () => {
         try {
@@ -810,6 +809,7 @@ export function usePVPage() {
           await fetchPVs();
         }
       },
+      title: `确认删除选中的 ${deleteCount} 个PV?`,
     });
   };
 
@@ -837,16 +837,16 @@ export function usePVPage() {
     resetEditForm();
     // 填充编辑表单
     editFormModel.value = {
-      name: record.name,
-      capacity: record.capacity,
       access_modes: record.access_modes || [],
+      annotations: record.annotations || {},
+      capacity: record.capacity,
+      labels: record.labels || {},
+      name: record.name,
+      node_affinity: record.node_affinity || {},
       reclaim_policy: record.reclaim_policy,
       storage_class: record.storage_class,
       volume_mode: record.volume_mode,
       volume_source: record.volume_source || {},
-      node_affinity: record.node_affinity || {},
-      labels: record.labels || {},
-      annotations: record.annotations || {},
     };
     isEditModalVisible.value = true;
   };
@@ -868,13 +868,13 @@ export function usePVPage() {
   // 判断某个字段是否为必需字段
   const isRequiredField = (volumeType: string, fieldKey: string): boolean => {
     const requiredFields: Record<string, string[]> = {
-      hostPath: ['path'],
-      nfs: ['server', 'path'],
-      csi: ['driver', 'volumeHandle'],
-      local: ['path'],
       cephfs: ['monitors'],
-      iscsi: ['targetPortal', 'iqn'],
+      csi: ['driver', 'volumeHandle'],
       glusterfs: ['endpoints', 'path'],
+      hostPath: ['path'],
+      iscsi: ['targetPortal', 'iqn'],
+      local: ['path'],
+      nfs: ['server', 'path'],
       rbd: ['monitors', 'image'],
     };
 
@@ -887,14 +887,14 @@ export function usePVPage() {
 
     // 根据卷类型自动填充必需字段（带空值，用户需要填写）
     const defaultConfigs: Record<string, Record<string, string>> = {
-      hostPath: { path: '', type: '' },
-      nfs: { server: '', path: '' },
-      csi: { driver: '', volumeHandle: '' },
-      local: { path: '' },
       cephfs: { monitors: '', path: '', user: '' },
-      iscsi: { targetPortal: '', iqn: '', lun: '' },
+      csi: { driver: '', volumeHandle: '' },
       glusterfs: { endpoints: '', path: '' },
-      rbd: { monitors: '', image: '', pool: '' },
+      hostPath: { path: '', type: '' },
+      iscsi: { iqn: '', lun: '', targetPortal: '' },
+      local: { path: '' },
+      nfs: { path: '', server: '' },
+      rbd: { image: '', monitors: '', pool: '' },
     };
 
     // 自动填充该类型的必需配置字段
@@ -933,14 +933,13 @@ export function usePVPage() {
 
   const handleClusterDropdownScroll = (e: Event) => {
     const target = e.target as HTMLElement;
-    if (target.scrollTop + target.offsetHeight === target.scrollHeight) {
-      if (
-        clusters.value.length < clustersTotal.value &&
-        !clustersLoading.value
-      ) {
-        clustersPage.value += 1;
-        fetchClusters(false);
-      }
+    if (
+      target.scrollTop + target.offsetHeight === target.scrollHeight &&
+      clusters.value.length < clustersTotal.value &&
+      !clustersLoading.value
+    ) {
+      clustersPage.value += 1;
+      fetchClusters(false);
     }
   };
 
@@ -1331,142 +1330,142 @@ export function usePVPage() {
   };
 
   return {
+    // label/annotation helpers
+    addNewAnnotation,
+    addNewEditAnnotation,
+    addNewEditLabel,
+    // volume source helpers
+    addNewEditVolumeSource,
+    addNewLabel,
+    addNewVolumeSource,
+    // operations
+    clearPVs,
+    // yaml operations
+    clearYaml,
     // state
     clusters,
     clustersError,
     clustersLoading,
     clustersPage,
     clustersSize,
-    currentPage,
-    filterAccessMode,
-    filterClusterId,
-    filterStatus,
-    filterVolumeType,
-    loadError,
-    loading,
-    pageSize,
-    pvs,
-    searchText,
-    selectedRowKeys,
-    selectedRows,
-    total,
+    // additional required properties
+    clustersTotal,
+    // form models
+    createFormModel,
+    // form rules
+    createFormRules,
+    // crud operations
+    createPV,
+    createPVByYaml,
 
+    createYamlFormModel,
     // form refs
     createYamlFormRef,
-    formRef,
-    yamlFormRef,
-
-    // modal state
-    detailLoading,
-    isCreateModalVisible,
-    isCreateYamlModalVisible,
-    isDetailModalVisible,
-    isEditModalVisible,
-    isYamlModalVisible,
-    submitLoading,
+    createYamlFormRules,
 
     // current operation
     currentOperationPV,
+    currentPage,
     currentPVDetail,
     currentYamlContent,
+    deleteBatchPVs,
+    deletePV,
+    // modal state
+    detailLoading,
 
-    // form models
-    createFormModel,
-    createYamlFormModel,
     editFormModel,
-    yamlFormModel,
+    fetchClusters,
+    fetchPVDetails,
 
-    // form rules
-    createFormRules,
-    createYamlFormRules,
-    yamlFormRules,
+    fetchPVs,
+    fetchPVYaml,
+    filterAccessMode,
+    filterClusterId,
 
     // computed
     filteredPVs,
-    rowSelection,
+    filterStatus,
+    filterVolumeType,
 
+    formatEditYaml,
+    formatYaml,
+
+    formRef,
     // helpers
     getAccessModeText,
     getEnvText,
     getPVStatusColor,
+
     getPVStatusText,
-
-    // operations
-    clearPVs,
-    fetchClusters,
-    fetchPVDetails,
-    fetchPVs,
-    fetchPVYaml,
-    loadMoreClusters,
-    resetClusters,
-
-    // crud operations
-    createPV,
-    createPVByYaml,
-    deleteBatchPVs,
-    deletePV,
-    reclaimPV,
-    updatePV,
-    updatePVByYaml,
-
-    // modal handlers
-    openCreateModal,
-    openCreateYamlModal,
-    openDetailModal,
-    openEditModal,
-    openYamlModal,
-
-    // form helpers
-    handleVolumeTypeChange,
-    isRequiredField,
-    resetCreateForm,
-    resetCreateYamlForm,
-    resetEditForm,
-    resetYamlForm,
-
     // filter handlers
     handleClusterChange,
     handleClusterDropdownScroll,
     handleFilterChange,
     handlePageChange,
     handleSearch,
+    // form helpers
+    handleVolumeTypeChange,
 
-    // label/annotation helpers
-    addNewAnnotation,
-    addNewEditAnnotation,
-    addNewEditLabel,
-    addNewLabel,
-    newAnnotationKey,
-    newEditAnnotationKey,
-    newEditLabelKey,
-    newLabelKey,
-    removeAnnotationField,
-    removeEditAnnotationField,
-    removeEditLabelField,
-    removeLabelField,
-
-    // volume source helpers
-    addNewEditVolumeSource,
-    addNewVolumeSource,
-    newEditVolumeSourceKey,
-    newEditVolumeSourceValue,
-    newVolumeSourceKey,
-    newVolumeSourceValue,
-    removeEditVolumeSourceField,
-    removeVolumeSourceField,
-
-    // yaml operations
-    clearYaml,
-    formatEditYaml,
-    formatYaml,
     insertYamlTemplate,
-    validateEditYaml,
-    validateYaml,
+    isCreateModalVisible,
+    isCreateYamlModalVisible,
+    isDetailModalVisible,
+    isEditModalVisible,
+    isRequiredField,
+    isYamlModalVisible,
 
     // constants
     K8sPVStatus,
+    loadError,
+    loading,
+    loadMoreClusters,
+    newAnnotationKey,
 
-    // additional required properties
-    clustersTotal,
+    newEditAnnotationKey,
+    newEditLabelKey,
+    newEditVolumeSourceKey,
+    newEditVolumeSourceValue,
+    newLabelKey,
+    newVolumeSourceKey,
+
+    newVolumeSourceValue,
+    // modal handlers
+    openCreateModal,
+    openCreateYamlModal,
+    openDetailModal,
+    openEditModal,
+
+    openYamlModal,
+    pageSize,
+    pvs,
+    reclaimPV,
+    removeAnnotationField,
+    removeEditAnnotationField,
+    removeEditLabelField,
+    removeEditVolumeSourceField,
+    removeLabelField,
+    removeVolumeSourceField,
+    resetClusters,
+    resetCreateForm,
+
+    resetCreateYamlForm,
+    resetEditForm,
+    resetYamlForm,
+    rowSelection,
+    searchText,
+    selectedRowKeys,
+    selectedRows,
+    submitLoading,
+
+    total,
+    updatePV,
+    updatePVByYaml,
+    validateEditYaml,
+    validateYaml,
+    yamlFormModel,
+
+    yamlFormRef,
+
+    yamlFormRules,
   };
 }

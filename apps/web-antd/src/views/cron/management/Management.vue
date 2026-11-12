@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted, watch } from 'vue';
+
+import { useAccessStore } from '@vben/stores';
+
 import {
   DeleteOutlined,
   EditOutlined,
@@ -11,123 +15,118 @@ import {
   ReloadOutlined,
   SearchOutlined,
 } from '@ant-design/icons-vue';
-
-import { onMounted, onUnmounted, watch } from 'vue';
-
-import OpsPage from '#/components/ops/OpsPage.vue';
 import { message } from 'ant-design-vue';
 
-import { useCronJobPage } from './Management';
-import CronEditFields from './CronEditFields.vue';
-
-import { useAccessStore } from '@vben/stores';
-
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { usePermission } from '#/utils/permission';
+
+import CronEditFields from './CronEditFields.vue';
+import { useCronJobPage } from './Management';
 
 const { can } = usePermission();
 
 // 使用组合式函数
 const {
-  // 响应式状态
-  createFormModel,
-  currentJobDetail,
-  currentPage,
-  detailLoading,
-  editFormModel,
-  error,
-  filterJobType,
-  filterStatus,
-  isCreateModalVisible,
-  isDetailModalVisible,
-  isEditModalVisible,
-  loading,
-  pageSize,
-  searchText,
-  selectedRows,
-  sshResourcesLoading,
-  submitLoading,
-  total,
-
-  // 表单引用
-  clearPage,
-  formRef,
-
-  // 计算属性
-  filteredCronJobs,
-  rowSelection,
-
-  // 表单验证规则
-  createFormRules,
-  editFormRules,
-
-  // 工具函数
-  formatDateTime,
-  formatDuration,
-  getJobTypeColor,
-  getJobTypeText,
-  getLastRunStatusColor,
-  getLastRunStatusText,
-  getStatusColor,
-  getStatusText,
-
-  // HTTP头部管理
-  addHttpHeader,
-  removeHttpHeader,
-
-  // SSH环境变量管理
-  addSshEnvironment,
-  removeSshEnvironment,
-
-  // SSH资源搜索
-  filteredSshResources,
-  searchSshResources,
-
   // 命令参数管理
   addArg,
-  removeArg,
-
   // 环境变量管理
   addEnvironment,
-  removeEnvironment,
-
-  // 数据操作
-  fetchCronJobs,
-  fetchSshResources,
-
-  // 任务详情操作
-  closeDetailModal,
-  showJobDetail,
-
-  // 创建操作
-  closeCreateModal,
-  openCreateModal,
-  submitCreateForm,
-
-  // 编辑操作
-  closeEditModal,
-  openEditModal,
-  submitEditForm,
-
-  // 任务操作
-  deleteJob,
-  disableJob,
-  enableJob,
-  triggerJob,
-
-  // 批量操作
-  batchOperation,
-
-  // 表单操作
-  handleJobTypeChange,
-  validateScheduleExpression,
-
+  // HTTP头部管理
+  addHttpHeader,
+  // SSH环境变量管理
+  addSshEnvironment,
   // 本地执行开关
   allowLocalExec,
-  isLocalExecLocked,
-
+  // 批量操作
+  batchOperation,
+  // 表单引用
+  clearPage,
+  // 创建操作
+  closeCreateModal,
+  // 任务详情操作
+  closeDetailModal,
+  // 编辑操作
+  closeEditModal,
+  // 响应式状态
+  createFormModel,
+  // 表单验证规则
+  createFormRules,
   // 常量
   CronJobStatus,
   CronJobType,
+  currentJobDetail,
+  currentPage,
+  // 任务操作
+  deleteJob,
+  detailLoading,
+
+  disableJob,
+  editFormModel,
+
+  editFormRules,
+  enableJob,
+
+  error,
+  // 数据操作
+  fetchCronJobs,
+
+  fetchSshResources,
+  // 计算属性
+  filteredCronJobs,
+  // SSH资源搜索
+  filteredSshResources,
+  filterJobType,
+  filterStatus,
+  // 工具函数
+  formatDateTime,
+  formatDuration,
+  formRef,
+
+  getJobTypeColor,
+  getJobTypeText,
+
+  getLastRunStatusColor,
+  getLastRunStatusText,
+
+  getStatusColor,
+  getStatusText,
+
+  // 表单操作
+  handleJobTypeChange,
+  isCreateModalVisible,
+
+  isDetailModalVisible,
+  isEditModalVisible,
+
+  isLocalExecLocked,
+  loading,
+
+  openCreateModal,
+  openEditModal,
+
+  pageSize,
+  removeArg,
+  removeEnvironment,
+
+  removeHttpHeader,
+  removeSshEnvironment,
+  rowSelection,
+
+  searchSshResources,
+  searchText,
+  selectedRows,
+  showJobDetail,
+
+  sshResourcesLoading,
+
+  submitCreateForm,
+  submitEditForm,
+
+  submitLoading,
+  total,
+
+  triggerJob,
+  validateScheduleExpression,
 } = useCronJobPage();
 
 // 获取访问控制store
@@ -358,13 +357,13 @@ onUnmounted(clearPage);
         </a-button>
 
         <a-button
-          type="primary"
-          danger
-          @click="batchOperation('删除')"
-          :disabled="selectedRows.length === 0"
           v-if="can('cron.job.batchDelete') && selectedRows.length > 0"
+          :disabled="selectedRows.length === 0"
           class="k8s-toolbar-btn"
+          danger
           title="批量删除选中的任务"
+          type="primary"
+          @click="batchOperation('删除')"
         >
           <template #icon><DeleteOutlined /></template>
           删除 ({{ selectedRows.length }})
@@ -486,10 +485,10 @@ onUnmounted(clearPage);
                 "
               >
                 <a-button
-                  type="text"
-                  size="small"
-                  @click="openEditModal(record)"
                   :disabled="isLocalExecLocked(record)"
+                  size="small"
+                  type="text"
+                  @click="openEditModal(record)"
                 >
                   <template #icon><EditOutlined /></template>
                 </a-button>
@@ -529,13 +528,13 @@ onUnmounted(clearPage);
                 "
               >
                 <a-button
-                  type="text"
-                  size="small"
-                  @click="triggerJob(record)"
                   :disabled="
                     record.status === CronJobStatus.DISABLED ||
                     isLocalExecLocked(record)
                   "
+                  size="small"
+                  type="text"
+                  @click="triggerJob(record)"
                 >
                   <template #icon><PlaySquareOutlined /></template>
                 </a-button>
@@ -1133,11 +1132,11 @@ onUnmounted(clearPage);
             </a-descriptions-item>
             <a-descriptions-item label="上次状态">
               <a-badge
+                v-if="currentJobDetail.last_run_time"
                 :status="
                   getLastRunStatusColor(currentJobDetail.last_run_status)
                 "
                 :text="getLastRunStatusText(currentJobDetail.last_run_status)"
-                v-if="currentJobDetail.last_run_time"
               />
               <span v-else class="k8s-no-data">暂无</span>
             </a-descriptions-item>

@@ -96,8 +96,8 @@ export async function getClusterRoleBindingListApi(
     `/k8s/clusterrolebinding/${params.cluster_id}/list`,
     {
       params: {
-        search: params.search,
         page: params.page,
+        search: params.search,
         size: params.size,
       },
     },

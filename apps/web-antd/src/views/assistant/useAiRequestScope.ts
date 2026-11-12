@@ -29,7 +29,7 @@ export function useAiRequestScope(resetForOwner: () => void) {
     let version = 0;
     return {
       begin() {
-        return { owner: owner.value, generation, version: ++version };
+        return { generation, owner: owner.value, version: ++version };
       },
       current(ticket: { generation: number; owner: string; version: number }) {
         return (
@@ -45,5 +45,5 @@ export function useAiRequestScope(resetForOwner: () => void) {
       },
     };
   }
-  return { owner, createLane };
+  return { createLane, owner };
 }

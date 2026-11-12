@@ -90,11 +90,11 @@ export function useRcaCache() {
       if (!response.success)
         throw new Error(response.message || '缓存清理未完成');
       operationHistory.value.unshift({
+        cleared_count: response.cleared_count,
+        message: response.message || '清理完成',
         operation,
         success: true,
-        message: response.message || '清理完成',
         timestamp: new Date().toISOString(),
-        cleared_count: response.cleared_count,
       });
       operationHistory.value = operationHistory.value.slice(0, 50);
       onSuccess();
@@ -107,9 +107,9 @@ export function useRcaCache() {
           ? error.message
           : '缓存清理失败，请核对实际状态后重试';
       operationHistory.value.unshift({
+        message: operationError.value,
         operation,
         success: false,
-        message: operationError.value,
         timestamp: new Date().toISOString(),
       });
       operationHistory.value = operationHistory.value.slice(0, 50);

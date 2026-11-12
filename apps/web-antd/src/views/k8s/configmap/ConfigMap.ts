@@ -6,6 +6,13 @@ import { message, Modal } from 'ant-design-vue';
 import yaml from 'js-yaml';
 
 import {
+  Env,
+  getClustersListApi,
+  type K8sCluster,
+  type KeyValueList,
+  type ListClustersReq,
+} from '#/api/core/k8s/k8s_cluster';
+import {
   createConfigMapApi,
   createConfigMapByYamlApi,
   type CreateConfigMapByYamlReq,
@@ -24,13 +31,6 @@ import {
   type UpdateConfigMapByYamlReq,
   type UpdateConfigMapReq,
 } from '#/api/core/k8s/k8s_configmap';
-import {
-  Env,
-  getClustersListApi,
-  type K8sCluster,
-  type KeyValueList,
-  type ListClustersReq,
-} from '#/api/core/k8s/k8s_cluster';
 import {
   getNamespacesListApi,
   type K8sNamespace,
@@ -118,13 +118,13 @@ export function useConfigMapPage() {
     name: string;
     namespace: string;
   }>({
+    annotations: {},
+    binary_data: {},
+    data: {},
+    immutable: false,
+    labels: {},
     name: '',
     namespace: '',
-    data: {},
-    binary_data: {},
-    labels: {},
-    annotations: {},
-    immutable: false,
   });
 
   const editFormModel = ref<{
@@ -136,13 +136,13 @@ export function useConfigMapPage() {
     name: string;
     namespace: string;
   }>({
+    annotations: {},
+    binary_data: {},
+    data: {},
+    immutable: false,
+    labels: {},
     name: '',
     namespace: '',
-    data: {},
-    binary_data: {},
-    labels: {},
-    annotations: {},
-    immutable: false,
   });
 
   const yamlFormModel = ref<{
@@ -160,11 +160,11 @@ export function useConfigMapPage() {
   // form validation rules
   const createFormRules: Record<string, Rule[]> = {
     name: [
-      { required: true, message: '请输入 ConfigMap 名称', trigger: 'blur' },
+      { message: '请输入 ConfigMap 名称', required: true, trigger: 'blur' },
       {
-        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         message:
           'ConfigMap 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         trigger: 'blur',
       },
       {
@@ -174,21 +174,21 @@ export function useConfigMapPage() {
       },
     ],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' },
+      { message: '请选择命名空间', required: true, trigger: 'change' },
     ],
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
@@ -198,11 +198,11 @@ export function useConfigMapPage() {
   });
 
   const rowSelection = computed(() => ({
-    selectedRowKeys: selectedRowKeys.value,
     onChange: (keys: string[], rows: K8sConfigMap[]) => {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
     },
+    selectedRowKeys: selectedRowKeys.value,
   }));
 
   // helpers
@@ -219,11 +219,11 @@ export function useConfigMapPage() {
     if (env === undefined || env === null) return '未知环境';
     const value = typeof env === 'string' ? Number.parseInt(env) : env;
     const map: Record<number, string> = {
-      [Env.Prod]: '生产',
       [Env.Dev]: '开发',
-      [Env.Stage]: '预发',
-      [Env.Rc]: '测试',
       [Env.Press]: '灰度',
+      [Env.Prod]: '生产',
+      [Env.Rc]: '测试',
+      [Env.Stage]: '预发',
     };
     return map[value] || '未知环境';
   };
@@ -362,15 +362,15 @@ export function useConfigMapPage() {
       selectedRows.value = [];
       const params: GetConfigMapListReq = {
         cluster_id: clusterId,
-        namespace: namespace || undefined,
-        search: searchText.value || undefined,
         data_key: filterDataKey.value || undefined,
-        page: currentPage.value,
-        size: pageSize.value,
         labels:
           Object.keys(filterLabels.value).length > 0
             ? filterLabels.value
             : undefined,
+        namespace: namespace || undefined,
+        page: currentPage.value,
+        search: searchText.value || undefined,
+        size: pageSize.value,
       };
       const res = await getConfigMapListApi(params);
       if (
@@ -383,11 +383,11 @@ export function useConfigMapPage() {
       const configMapsWithClusterId = (res?.items || []).map(
         (configMap: K8sConfigMap) => ({
           ...configMap,
+          annotations: parseJsonField(configMap.annotations, {}),
+          binary_data: parseJsonField(configMap.binary_data, {}),
           cluster_id: configMap.cluster_id || clusterId,
           data: parseJsonField(configMap.data, {}),
-          binary_data: parseJsonField(configMap.binary_data, {}),
           labels: parseJsonField(configMap.labels, {}),
-          annotations: parseJsonField(configMap.annotations, {}),
         }),
       );
 
@@ -460,7 +460,7 @@ export function useConfigMapPage() {
   };
 
   const convertBinaryDataToForm = (
-    binaryData: Record<string, string> | any,
+    binaryData: any | Record<string, string>,
   ): Record<string, string> => {
     if (!binaryData || typeof binaryData !== 'object') return {};
 
@@ -470,11 +470,10 @@ export function useConfigMapPage() {
         key &&
         typeof key === 'string' &&
         value !== undefined &&
-        value !== null
+        value !== null &&
+        typeof value === 'string'
       ) {
-        if (typeof value === 'string') {
-          result[key] = value;
-        }
+        result[key] = value;
       }
     }
     return result;
@@ -490,35 +489,35 @@ export function useConfigMapPage() {
       isDetailModalVisible.value = true;
       const params: GetConfigMapDetailsReq = {
         cluster_id: clusterId,
-        namespace: record.namespace,
         name: record.name,
+        namespace: record.namespace,
       };
       const res = await getConfigMapDetailsApi(params);
 
       const processedDetail = res
         ? {
             ...res,
-            cluster_id: clusterId,
-            labels: recordToKeyValueList(parseJsonField(res.labels, {})),
             annotations: recordToKeyValueList(
               parseJsonField(res.annotations, {}),
             ),
-            data: parseJsonField(res.data, {}),
             binary_data: convertBinaryDataToForm(
               parseJsonField(res.binary_data, {}),
             ),
+            cluster_id: clusterId,
+            data: parseJsonField(res.data, {}),
+            labels: recordToKeyValueList(parseJsonField(res.labels, {})),
           }
         : {
             ...record,
-            cluster_id: clusterId,
-            labels: recordToKeyValueList(parseJsonField(record.labels, {})),
             annotations: recordToKeyValueList(
               parseJsonField(record.annotations, {}),
             ),
-            data: parseJsonField(record.data, {}),
             binary_data: convertBinaryDataToForm(
               parseJsonField(record.binary_data, {}),
             ),
+            cluster_id: clusterId,
+            data: parseJsonField(record.data, {}),
+            labels: recordToKeyValueList(parseJsonField(record.labels, {})),
           };
 
       currentConfigMapDetail.value = processedDetail;
@@ -529,25 +528,25 @@ export function useConfigMapPage() {
       try {
         const fallbackDetail = {
           ...record,
-          cluster_id: clusterId,
-          labels: recordToKeyValueList(parseJsonField(record.labels, {})),
           annotations: recordToKeyValueList(
             parseJsonField(record.annotations, {}),
           ),
-          data: parseJsonField(record.data, {}),
           binary_data: convertBinaryDataToForm(
             parseJsonField(record.binary_data, {}),
           ),
+          cluster_id: clusterId,
+          data: parseJsonField(record.data, {}),
+          labels: recordToKeyValueList(parseJsonField(record.labels, {})),
         };
         currentConfigMapDetail.value = fallbackDetail;
       } catch {
         currentConfigMapDetail.value = {
           ...record,
-          cluster_id: clusterId,
-          labels: [],
           annotations: [],
-          data: {},
           binary_data: {},
+          cluster_id: clusterId,
+          data: {},
+          labels: [],
         };
       }
     } finally {
@@ -570,8 +569,8 @@ export function useConfigMapPage() {
       currentOperationConfigMap.value = { ...record, cluster_id: clusterId };
       const params: GetConfigMapYamlReq = {
         cluster_id: clusterId,
-        namespace: record.namespace,
         name: record.name,
+        namespace: record.namespace,
       };
 
       const res = await getConfigMapYamlApi(params);
@@ -601,8 +600,8 @@ export function useConfigMapPage() {
 
       const params: UpdateConfigMapByYamlReq = {
         cluster_id: currentOperationConfigMap.value.cluster_id,
-        namespace: currentOperationConfigMap.value.namespace,
         name: currentOperationConfigMap.value.name,
+        namespace: currentOperationConfigMap.value.namespace,
         yaml: yamlFormModel.value.yaml,
       };
 
@@ -626,13 +625,13 @@ export function useConfigMapPage() {
   // 创建 ConfigMap
   const openCreateModal = () => {
     createFormModel.value = {
+      annotations: {},
+      binary_data: {},
+      data: {},
+      immutable: false,
+      labels: {},
       name: '',
       namespace: '',
-      data: {},
-      binary_data: {},
-      labels: {},
-      annotations: {},
-      immutable: false,
     };
     isCreateModalVisible.value = true;
   };
@@ -670,25 +669,24 @@ export function useConfigMapPage() {
         key &&
         typeof key === 'string' &&
         value !== undefined &&
-        value !== null
+        value !== null &&
+        typeof value === 'string'
       ) {
-        if (typeof value === 'string') {
-          const trimmedValue = value.trim();
-          if (trimmedValue === '') {
-            result[key] = '';
-          } else {
-            const cleanValue = trimmedValue.replaceAll(/\s/g, '');
-            if (/^[\d+/A-Za-z]*={0,2}$/.test(cleanValue)) {
-              if (cleanValue.length % 4 === 0) {
-                result[key] = cleanValue;
-              } else {
-                const paddingNeeded = (4 - (cleanValue.length % 4)) % 4;
-                const paddedValue = cleanValue + '='.repeat(paddingNeeded);
-                result[key] = paddedValue;
-              }
+        const trimmedValue = value.trim();
+        if (trimmedValue === '') {
+          result[key] = '';
+        } else {
+          const cleanValue = trimmedValue.replaceAll(/\s/g, '');
+          if (/^[\d+/A-Za-z]*={0,2}$/.test(cleanValue)) {
+            if (cleanValue.length % 4 === 0) {
+              result[key] = cleanValue;
             } else {
-              invalidKeys.push(key);
+              const paddingNeeded = (4 - (cleanValue.length % 4)) % 4;
+              const paddedValue = cleanValue + '='.repeat(paddingNeeded);
+              result[key] = paddedValue;
             }
+          } else {
+            invalidKeys.push(key);
           }
         }
       }
@@ -715,23 +713,23 @@ export function useConfigMapPage() {
       );
 
       const params: CreateConfigMapReq = {
-        cluster_id: filterClusterId.value,
-        namespace: createFormModel.value.namespace,
-        name: createFormModel.value.name,
-        data:
-          Object.keys(createFormModel.value.data).length > 0
-            ? createFormModel.value.data
-            : undefined,
-        binary_data: convertedBinaryData,
-        labels:
-          Object.keys(createFormModel.value.labels).length > 0
-            ? createFormModel.value.labels
-            : undefined,
         annotations:
           Object.keys(createFormModel.value.annotations).length > 0
             ? createFormModel.value.annotations
             : undefined,
+        binary_data: convertedBinaryData,
+        cluster_id: filterClusterId.value,
+        data:
+          Object.keys(createFormModel.value.data).length > 0
+            ? createFormModel.value.data
+            : undefined,
         immutable: createFormModel.value.immutable,
+        labels:
+          Object.keys(createFormModel.value.labels).length > 0
+            ? createFormModel.value.labels
+            : undefined,
+        name: createFormModel.value.name,
+        namespace: createFormModel.value.namespace,
       };
 
       await createConfigMapApi(params);
@@ -783,15 +781,15 @@ export function useConfigMapPage() {
   const openEditModal = (record: K8sConfigMap) => {
     currentOperationConfigMap.value = record;
     editFormModel.value = {
-      name: record.name,
-      namespace: record.namespace,
-      data: parseJsonField(record.data, {}),
+      annotations: parseJsonField(record.annotations, {}),
       binary_data: convertBinaryDataToForm(
         parseJsonField(record.binary_data, {}),
       ),
-      labels: parseJsonField(record.labels, {}),
-      annotations: parseJsonField(record.annotations, {}),
+      data: parseJsonField(record.data, {}),
       immutable: false,
+      labels: parseJsonField(record.labels, {}),
+      name: record.name,
+      namespace: record.namespace,
     };
     isEditModalVisible.value = true;
   };
@@ -813,22 +811,22 @@ export function useConfigMapPage() {
       );
 
       const params: UpdateConfigMapReq = {
-        cluster_id: currentOperationConfigMap.value.cluster_id,
-        namespace: currentOperationConfigMap.value.namespace,
-        name: currentOperationConfigMap.value.name,
-        data:
-          Object.keys(editFormModel.value.data).length > 0
-            ? editFormModel.value.data
-            : undefined,
-        binary_data: convertedBinaryData,
-        labels:
-          Object.keys(editFormModel.value.labels).length > 0
-            ? editFormModel.value.labels
-            : undefined,
         annotations:
           Object.keys(editFormModel.value.annotations).length > 0
             ? editFormModel.value.annotations
             : undefined,
+        binary_data: convertedBinaryData,
+        cluster_id: currentOperationConfigMap.value.cluster_id,
+        data:
+          Object.keys(editFormModel.value.data).length > 0
+            ? editFormModel.value.data
+            : undefined,
+        labels:
+          Object.keys(editFormModel.value.labels).length > 0
+            ? editFormModel.value.labels
+            : undefined,
+        name: currentOperationConfigMap.value.name,
+        namespace: currentOperationConfigMap.value.namespace,
       };
 
       await updateConfigMapApi(params);
@@ -853,18 +851,17 @@ export function useConfigMapPage() {
     if (!clusterId) return;
 
     Modal.confirm({
-      title: '删除 ConfigMap',
+      cancelText: '取消',
+      centered: true,
       content: `确定要删除 ConfigMap "${record.name}" 吗？此操作不可逆！`,
       okText: '确认删除',
       okType: 'danger',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           const params: DeleteConfigMapReq = {
             cluster_id: clusterId,
-            namespace: record.namespace,
             name: record.name,
+            namespace: record.namespace,
           };
           await deleteConfigMapApi(params);
           message.success('ConfigMap 删除成功');
@@ -873,6 +870,7 @@ export function useConfigMapPage() {
           if (shouldNotifyPageError(error)) message.error('ConfigMap 删除失败');
         }
       },
+      title: '删除 ConfigMap',
     });
   };
 
@@ -902,12 +900,11 @@ export function useConfigMapPage() {
     if (selectedRows.value.length === 0) return;
 
     Modal.confirm({
-      title: `批量${operation}`,
+      cancelText: '取消',
+      centered: true,
       content: `确定要对选中的 ${selectedRows.value.length} 个 ConfigMap 执行${operation}操作吗？`,
       okText: '确认执行',
       okType: operation === '删除' ? 'danger' : 'primary',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           if (operation === '删除') {
@@ -922,8 +919,8 @@ export function useConfigMapPage() {
 
               const params: DeleteConfigMapReq = {
                 cluster_id: clusterId,
-                namespace: configMap.namespace,
                 name: configMap.name,
+                namespace: configMap.namespace,
               };
               await deleteConfigMapApi(params);
             }
@@ -938,6 +935,7 @@ export function useConfigMapPage() {
             message.error(`批量${operation}失败`);
         }
       },
+      title: `批量${operation}`,
     });
   };
 
@@ -1252,6 +1250,25 @@ export function useConfigMapPage() {
   };
 
   return {
+    // filter operations
+    addFilterLabel,
+    // batch operations
+    batchOperation,
+    // operations
+    clearConfigMaps,
+    clearFilterLabels,
+    clearNamespaces,
+    // yaml operations
+    clearYaml,
+    // create operations
+    closeCreateModal,
+    closeCreateYamlModal,
+    // detail operations
+    closeDetailModal,
+    // edit operations
+    closeEditModal,
+    // YAML operations
+    closeYamlModal,
     // state
     clusters,
     clustersError,
@@ -1260,127 +1277,108 @@ export function useConfigMapPage() {
     clustersSize,
     clustersTotal,
     configMaps,
+    // form models
+    createFormModel,
+    // form rules
+    createFormRules,
+    createYamlFormModel,
+    // form refs
+    createYamlFormRef,
+    createYamlFormRules,
+    // operation targets
+    currentConfigMapDetail,
+    currentOperationConfigMap,
+
     currentPage,
+    // configmap operations
+    deleteConfigMap,
+    // modal state
+    detailLoading,
+
+    editFormModel,
+    fetchClusters,
+    fetchConfigMaps,
+    fetchNamespaces,
     filterClusterId,
     filterDataKey,
+    // computed
+    filteredConfigMaps,
+
     filterLabels,
     filterNamespace,
+
+    formatEditYaml,
+    formatYaml,
+    formRef,
+    // helpers
+    getEnvText,
+
+    // pagination operations
+    handlePageChange,
+    insertYamlTemplate,
+    isCreateModalVisible,
+
+    isCreateYamlModalVisible,
+    isDetailModalVisible,
+
+    isEditModalVisible,
+    isYamlModalVisible,
+    keyValueListToRecord,
     loadError,
     loading,
+
+    loadMoreClusters,
+    loadMoreNamespaces,
     namespaces,
     namespacesError,
     namespacesLoading,
     namespacesPage,
     namespacesSize,
+
     namespacesTotal,
+    openCreateModal,
+
+    openCreateYamlModal,
+    openEditModal,
     pageSize,
-    searchText,
-    selectedRowKeys,
-    selectedRows,
-    total,
 
-    // form refs
-    createYamlFormRef,
-    formRef,
-    yamlFormRef,
-
-    // modal state
-    detailLoading,
-    isCreateModalVisible,
-    isCreateYamlModalVisible,
-    isDetailModalVisible,
-    isEditModalVisible,
-    isYamlModalVisible,
-    submitLoading,
-
-    // operation targets
-    currentConfigMapDetail,
-    currentOperationConfigMap,
-
-    // form models
-    createFormModel,
-    createYamlFormModel,
-    editFormModel,
-    yamlFormModel,
-
-    // form rules
-    createFormRules,
-    createYamlFormRules,
-    yamlFormRules,
-
-    // computed
-    filteredConfigMaps,
-    rowSelection,
-
-    // helpers
-    getEnvText,
-    keyValueListToRecord,
     parseJsonField,
     recordToKeyValueList,
-    validateClusterId,
-
-    // operations
-    clearConfigMaps,
-    clearNamespaces,
-    fetchClusters,
-    fetchConfigMaps,
-    fetchNamespaces,
-    loadMoreClusters,
-    loadMoreNamespaces,
-
-    // detail operations
-    closeDetailModal,
-    showConfigMapDetail,
-
-    // YAML operations
-    closeYamlModal,
-    showYamlModal,
-    submitYamlForm,
-
-    // create operations
-    closeCreateModal,
-    closeCreateYamlModal,
-    openCreateModal,
-    openCreateYamlModal,
-    submitCreateForm,
-    submitCreateYamlForm,
-
-    // edit operations
-    closeEditModal,
-    openEditModal,
-    submitEditForm,
-
-    // configmap operations
-    deleteConfigMap,
-
-    // filter operations
-    addFilterLabel,
-    clearFilterLabels,
-    removeFilterLabel,
-
-    // batch operations
-    batchOperation,
-
-    // pagination operations
-    handlePageChange,
-    resetClusters,
-
     // form field operations
     removeAnnotationField,
     removeBinaryDataField,
     removeDataField,
     removeEditAnnotationField,
+
     removeEditBinaryDataField,
     removeEditDataField,
     removeEditLabelField,
-    removeLabelField,
 
-    // yaml operations
-    clearYaml,
-    formatEditYaml,
-    formatYaml,
-    insertYamlTemplate,
+    removeFilterLabel,
+
+    removeLabelField,
+    resetClusters,
+    rowSelection,
+
+    searchText,
+
+    selectedRowKeys,
+    selectedRows,
+
+    showConfigMapDetail,
+    showYamlModal,
+    submitCreateForm,
+    submitCreateYamlForm,
+    submitEditForm,
+    submitLoading,
+    submitYamlForm,
+    total,
+
+    validateClusterId,
     validateEditYaml,
     validateYaml,
+    yamlFormModel,
+    yamlFormRef,
+    yamlFormRules,
   };
 }

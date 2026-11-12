@@ -1,7 +1,7 @@
 import { onBeforeUnmount, onMounted, ref, type Ref, watch } from 'vue';
 
-import { useAccessStore } from '@vben/stores';
 import { useAppConfig } from '@vben/hooks';
+import { useAccessStore } from '@vben/stores';
 
 import { type IDisposable, Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
@@ -9,11 +9,11 @@ import { FitAddon } from 'xterm-addon-fit';
 import { websocketProtocols, websocketUrl } from '#/utils/websocket-url';
 
 export type SshConnectionState =
-  | 'idle'
-  | 'connecting'
   | 'connected'
+  | 'connecting'
   | 'disconnected'
-  | 'error';
+  | 'error'
+  | 'idle';
 const MAX_FRAME_BYTES = 64 * 1024;
 const MAX_PASTE_BYTES = 1024 * 1024;
 
@@ -72,7 +72,7 @@ export function useSshTerminal(
       return;
     const { cols, rows } = dimensions();
     socket.send(
-      JSON.stringify({ op: 'resize', col_size: cols, row_size: rows }),
+      JSON.stringify({ col_size: cols, op: 'resize', row_size: rows }),
     );
   }
   function fit() {
@@ -108,16 +108,16 @@ export function useSshTerminal(
     if (!viewport.value) return false;
     try {
       terminal = new Terminal({
-        cursorBlink: true,
-        fontSize: 14,
         convertEol: false,
-        screenReaderMode: true,
+        cursorBlink: true,
         fontFamily: 'SFMono-Regular, Consolas, monospace',
+        fontSize: 14,
+        screenReaderMode: true,
         scrollback: 3000,
         theme: {
           background: '#0d1117',
-          foreground: '#e6edf3',
           cursor: '#e6edf3',
+          foreground: '#e6edf3',
           selectionBackground: '#385d7a',
         },
       });
@@ -271,5 +271,5 @@ export function useSshTerminal(
     terminal = undefined;
     fitAddon = undefined;
   });
-  return { state, error, connect, disconnect };
+  return { connect, disconnect, error, state };
 }

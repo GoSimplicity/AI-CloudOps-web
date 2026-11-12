@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import type { FormInstance } from 'ant-design-vue';
 
-import OpsPage from '#/components/ops/OpsPage.vue';
-
-import { useListRequest } from './useListRequest';
 import {
   computed,
   onBeforeUnmount,
@@ -15,9 +12,9 @@ import {
 
 import { useUserStore } from '@vben/stores';
 
-import { message, Modal } from 'ant-design-vue';
 import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
+import { message, Modal } from 'ant-design-vue';
 
 import {
   createMonitorRecordRuleApi,
@@ -27,12 +24,15 @@ import {
   type MonitorRecordRule,
   updateMonitorRecordRuleApi,
 } from '#/api/core/prometheus/prometheus_alert_record';
-import { getMonitorScrapePoolListApi } from '#/api/core/prometheus/prometheus_scrape_pool';
 import { promqlExprCheckApi } from '#/api/core/prometheus/prometheus_alert_rule';
+import { getMonitorScrapePoolListApi } from '#/api/core/prometheus/prometheus_scrape_pool';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { useAuthStore } from '#/store';
 import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
+import { useListRequest } from './useListRequest';
 
 const { can, hasPerm } = usePermission();
 
@@ -146,27 +146,27 @@ onBeforeUnmount(() => {
 const paginationConfig = reactive({
   current: 1,
   pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
   showQuickJumper: true,
+  showSizeChanger: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
   size: 'default' as const,
+  total: 0,
 });
 
 // Prometheus实例池分页配置
 const poolPagination = reactive({
   current: 1,
   pageSize: 10,
-  total: 0,
   search: '',
+  total: 0,
 });
 
 // 统计数据
 const stats = reactive({
-  total: 0,
-  enabled: 0,
   disabled: 0,
+  enabled: 0,
   pools: 0,
+  total: 0,
 });
 
 // 对话框状态
@@ -180,23 +180,23 @@ const editFormRef = ref<FormInstance>();
 
 // 新增表单
 const addForm = reactive({
-  name: '',
-  pool_id: 0,
-  ip_address: '',
   enable: 2 as 1 | 2,
   expr: '',
+  ip_address: '',
   labels: [] as string[],
+  name: '',
+  pool_id: 0,
 });
 
 // 编辑表单
 const editForm = reactive({
-  id: 0,
-  name: '',
-  pool_id: 0,
-  ip_address: '',
   enable: 1 as 1 | 2,
   expr: '',
+  id: 0,
+  ip_address: '',
   labels: [] as string[],
+  name: '',
+  pool_id: 0,
 });
 
 // 详情对话框数据
@@ -247,10 +247,6 @@ const captureFormScope = (mode: RecordFormMode) => {
   )
     return;
   return {
-    model,
-    mode,
-    owner,
-    revision,
     isCurrent: () =>
       !disposed &&
       visible() &&
@@ -258,27 +254,19 @@ const captureFormScope = (mode: RecordFormMode) => {
       formOwner === owner &&
       operationOwner() === owner &&
       formPermission(mode),
+    mode,
+    model,
+    owner,
+    revision,
   };
 };
 
 // 表单验证规则
 const formRules = {
-  name: [
-    { message: '请输入记录名称', required: true, trigger: 'blur' },
-    { max: 50, message: '长度应为1到50个字符', min: 1, trigger: 'blur' },
-  ],
-  pool_id: [
-    {
-      required: true,
-      validator: (_rule: unknown, value: unknown) =>
-        validRecordId(value)
-          ? Promise.resolve()
-          : Promise.reject(new Error('请选择有效的实例池')),
-      trigger: 'change',
-    },
-  ],
+  expr: [{ message: '请输入表达式', required: true, trigger: 'blur' }],
   ip_address: [
     {
+      trigger: 'blur',
       validator: (_rule: any, value: string) => {
         if (!value) {
           return Promise.resolve();
@@ -303,10 +291,22 @@ const formRules = {
         }
         return Promise.resolve();
       },
-      trigger: 'blur',
     },
   ],
-  expr: [{ message: '请输入表达式', required: true, trigger: 'blur' }],
+  name: [
+    { message: '请输入记录名称', required: true, trigger: 'blur' },
+    { max: 50, message: '长度应为1到50个字符', min: 1, trigger: 'blur' },
+  ],
+  pool_id: [
+    {
+      required: true,
+      trigger: 'change',
+      validator: (_rule: unknown, value: unknown) =>
+        validRecordId(value)
+          ? Promise.resolve()
+          : Promise.reject(new Error('请选择有效的实例池')),
+    },
+  ],
 };
 
 const getRecordStatusClass = (record: MonitorRecordRule): string => {
@@ -339,7 +339,7 @@ const formatFullDateTime = (timestamp: string): string => {
 
 const truncateText = (text: string, maxLength: number): string => {
   if (!text) return '';
-  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+  return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
 };
 
 // 更新统计数据
@@ -361,10 +361,10 @@ const fetchRecordRulesForScope = async (
     request.isCurrent() && owner === operationOwner() && stillCurrent();
   try {
     const response = await getMonitorRecordRuleListApi({
-      page: paginationConfig.current,
-      size: paginationConfig.pageSize,
-      search: searchText.value || undefined,
       enable: enabledFilter.value,
+      page: paginationConfig.current,
+      search: searchText.value || undefined,
+      size: paginationConfig.pageSize,
     });
     if (!isCurrent()) return;
     data.value = response.items || [];
@@ -430,8 +430,8 @@ const loadPools = async () => {
   try {
     const response = await getMonitorScrapePoolListApi({
       page: poolPagination.current,
-      size: poolPagination.pageSize,
       search: poolPagination.search,
+      size: poolPagination.pageSize,
     });
     if (!isCurrent()) return;
     setPoolOptions(
@@ -567,13 +567,13 @@ const setRecordEnabled = async (
   const name = record.name;
   try {
     const payload = {
-      id,
-      name,
-      pool_id: record.pool_id,
-      ip_address: record.ip_address,
       enable,
       expr: record.expr,
+      id,
+      ip_address: record.ip_address,
       labels: record.labels,
+      name,
+      pool_id: record.pool_id,
     };
     await updateMonitorRecordRuleApi(payload);
     if (!isCurrent()) return;
@@ -619,11 +619,10 @@ const handleDelete = (record: MonitorRecordRule): void => {
     !disposed && record.id === id && operationOwner() === owner;
   let confirmationConsumed = false;
   Modal.confirm({
-    title: '警告',
+    cancelText: '取消',
     content: `确定要删除记录规则 "${record.name}" 吗？`,
     okText: '删除',
     okType: 'danger',
-    cancelText: '取消',
     onOk: async () => {
       if (confirmationConsumed || !inScope()) return;
       confirmationConsumed = true;
@@ -649,6 +648,7 @@ const handleDelete = (record: MonitorRecordRule): void => {
         }
       }
     },
+    title: '警告',
   });
 };
 
@@ -712,13 +712,13 @@ const showEditModal = (record: MonitorRecordRule): void => {
   formOwner = owner;
   detailRevision += 1;
   Object.assign(editForm, {
-    id: record.id,
-    name: record.name,
-    pool_id: record.pool_id,
-    ip_address: record.ip_address,
     enable: record.enable,
     expr: record.expr,
+    id: record.id,
+    ip_address: record.ip_address,
     labels: Array.isArray(record.labels) ? [...record.labels] : [],
+    name: record.name,
+    pool_id: record.pool_id,
   });
   isEditModalVisible.value = true;
   detailDialogVisible.value = false;
@@ -759,12 +759,12 @@ const submitRecordForm = async (mode: RecordFormMode): Promise<void> => {
   }
   const fingerprint = JSON.stringify(model);
   const payload = {
-    name: model.name,
-    pool_id: model.pool_id,
-    ip_address: model.ip_address,
     enable: model.enable,
     expr: model.expr,
+    ip_address: model.ip_address,
     labels: [...model.labels],
+    name: model.name,
+    pool_id: model.pool_id,
   };
   const ticket = ++submissionRevision;
   const isCurrent = () =>
@@ -983,8 +983,8 @@ onMounted(() => {
             <template v-if="column.key === 'name'">
               <div class="pool-name-cell">
                 <div
-                  class="pool-badge"
                   :class="getRecordStatusClass(record)"
+                  class="pool-badge"
                 ></div>
                 <span class="pool-name-text">{{ record.name }}</span>
               </div>
@@ -1020,12 +1020,12 @@ onMounted(() => {
             <template v-if="column.key === 'creator'">
               <div class="creator-info">
                 <a-avatar
-                  size="small"
                   :style="{
                     backgroundColor: getAvatarColor(
                       record.create_user_name || '',
                     ),
                   }"
+                  size="small"
                 >
                   {{ getInitials(record.create_user_name) }}
                 </a-avatar>
@@ -1143,8 +1143,8 @@ onMounted(() => {
                     v-model:current="poolPagination.current"
                     v-model:page-size="poolPagination.pageSize"
                     :total="poolPagination.total"
-                    size="small"
                     simple
+                    size="small"
                     @change="loadPools"
                   />
                 </div>
@@ -1265,8 +1265,8 @@ onMounted(() => {
                     v-model:current="poolPagination.current"
                     v-model:page-size="poolPagination.pageSize"
                     :total="poolPagination.total"
-                    size="small"
                     simple
+                    size="small"
                     @change="loadPools"
                   />
                 </div>
@@ -1351,7 +1351,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <a-descriptions :column="1" :labelStyle="{ width: '150px' }" bordered>
+        <a-descriptions :column="1" :label-style="{ width: '150px' }" bordered>
           <a-descriptions-item label="ID">
             {{ detailDialog.form.id }}
           </a-descriptions-item>

@@ -4,30 +4,30 @@ export function analysisStatus(status?: string) {
   switch (status) {
     case 'completed': {
       return {
+        description: '请结合采集范围和证据评估结果。',
         label: '分析完成',
         type: 'success' as const,
-        description: '请结合采集范围和证据评估结果。',
       };
     }
     case 'degraded': {
       return {
+        description: '部分数据采集失败或不完整，结果仅供参考。',
         label: '分析降级',
         type: 'warning' as const,
-        description: '部分数据采集失败或不完整，结果仅供参考。',
       };
     }
     case 'failed': {
       return {
+        description: '没有足够的有效采集数据，无法生成可靠分析。',
         label: '分析失败',
         type: 'error' as const,
-        description: '没有足够的有效采集数据，无法生成可靠分析。',
       };
     }
     default: {
       return {
+        description: '服务未提供可识别的分析状态，请核对服务结果。',
         label: '状态未知',
         type: 'warning' as const,
-        description: '服务未提供可识别的分析状态，请核对服务结果。',
       };
     }
   }

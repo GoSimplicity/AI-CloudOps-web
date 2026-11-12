@@ -6,6 +6,13 @@ import { message, Modal } from 'ant-design-vue';
 import yaml from 'js-yaml';
 
 import {
+  Env,
+  getClustersListApi,
+  type K8sCluster,
+  type KeyValueList,
+  type ListClustersReq,
+} from '#/api/core/k8s/k8s_cluster';
+import {
   createDaemonSetApi,
   createDaemonSetByYamlApi,
   type CreateDaemonSetByYamlReq,
@@ -29,13 +36,6 @@ import {
   type UpdateDaemonSetByYamlReq,
   type UpdateDaemonSetReq,
 } from '#/api/core/k8s/k8s_daemonset';
-import {
-  Env,
-  getClustersListApi,
-  type K8sCluster,
-  type KeyValueList,
-  type ListClustersReq,
-} from '#/api/core/k8s/k8s_cluster';
 import {
   getNamespacesListApi,
   type K8sNamespace,
@@ -141,11 +141,11 @@ export function useDaemonSetPage() {
     name: string;
     namespace: string;
   }>({
-    name: '',
-    namespace: '',
+    annotations: {},
     images: [''],
     labels: {},
-    annotations: {},
+    name: '',
+    namespace: '',
   });
 
   const editFormModel = ref<{
@@ -155,11 +155,11 @@ export function useDaemonSetPage() {
     name: string;
     namespace: string;
   }>({
-    name: '',
-    namespace: '',
+    annotations: {},
     image: '',
     labels: {},
-    annotations: {},
+    name: '',
+    namespace: '',
   });
 
   const rollbackFormModel = ref<{
@@ -183,11 +183,11 @@ export function useDaemonSetPage() {
   // form validation rules
   const createFormRules: Record<string, Rule[]> = {
     name: [
-      { required: true, message: '请输入 DaemonSet 名称', trigger: 'blur' },
+      { message: '请输入 DaemonSet 名称', required: true, trigger: 'blur' },
       {
-        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         message:
           'DaemonSet 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         trigger: 'blur',
       },
       {
@@ -197,28 +197,28 @@ export function useDaemonSetPage() {
       },
     ],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' },
+      { message: '请选择命名空间', required: true, trigger: 'change' },
     ],
   };
 
   const rollbackFormRules: Record<string, Rule[]> = {
     revision: [
-      { required: true, message: '请输入回滚版本', trigger: 'blur' },
-      { type: 'number', min: 1, message: '版本号必须大于0', trigger: 'blur' },
+      { message: '请输入回滚版本', required: true, trigger: 'blur' },
+      { message: '版本号必须大于0', min: 1, trigger: 'blur', type: 'number' },
     ],
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
@@ -228,11 +228,11 @@ export function useDaemonSetPage() {
   });
 
   const rowSelection = computed(() => ({
-    selectedRowKeys: selectedRowKeys.value,
     onChange: (keys: string[], rows: K8sDaemonSet[]) => {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
     },
+    selectedRowKeys: selectedRowKeys.value,
   }));
 
   // helpers
@@ -249,19 +249,19 @@ export function useDaemonSetPage() {
     if (env === undefined || env === null) return '未知环境';
     const value = typeof env === 'string' ? Number.parseInt(env) : env;
     const map: Record<number, string> = {
-      [Env.Prod]: '生产',
       [Env.Dev]: '开发',
-      [Env.Stage]: '预发',
-      [Env.Rc]: '测试',
       [Env.Press]: '灰度',
+      [Env.Prod]: '生产',
+      [Env.Rc]: '测试',
+      [Env.Stage]: '预发',
     };
     return map[value] || '未知环境';
   };
 
   const getStatusText = (status?: K8sDaemonSetStatus) => {
     const map: Record<K8sDaemonSetStatus, string> = {
-      [K8sDaemonSetStatus.Running]: '运行中',
       [K8sDaemonSetStatus.Error]: '异常',
+      [K8sDaemonSetStatus.Running]: '运行中',
       [K8sDaemonSetStatus.Updating]: '更新中',
     };
     return status === undefined ? '未知' : map[status] || '未知';
@@ -269,8 +269,8 @@ export function useDaemonSetPage() {
 
   const getStatusColor = (status?: K8sDaemonSetStatus) => {
     const map: Record<K8sDaemonSetStatus, string> = {
-      [K8sDaemonSetStatus.Running]: 'success',
       [K8sDaemonSetStatus.Error]: 'error',
+      [K8sDaemonSetStatus.Running]: 'success',
       [K8sDaemonSetStatus.Updating]: 'processing',
     };
     return status === undefined ? 'default' : map[status] || 'default';
@@ -388,16 +388,16 @@ export function useDaemonSetPage() {
       selectedRowKeys.value = [];
       selectedRows.value = [];
       const params: GetDaemonSetListReq = {
-        page: currentPage.value,
-        size: pageSize.value,
-        search: searchText.value || undefined,
         cluster_id: clusterId,
-        namespace: namespace || undefined,
-        status: filterStatus.value?.toString() || undefined,
         labels:
           Object.keys(filterLabels.value).length > 0
             ? filterLabels.value
             : undefined,
+        namespace: namespace || undefined,
+        page: currentPage.value,
+        search: searchText.value || undefined,
+        size: pageSize.value,
+        status: filterStatus.value?.toString() || undefined,
       };
       const res = await getDaemonSetListApi(clusterId, params);
       if (
@@ -567,8 +567,8 @@ export function useDaemonSetPage() {
 
       const params: UpdateDaemonSetByYamlReq = {
         cluster_id: currentOperationDaemonSet.value.cluster_id,
-        namespace: currentOperationDaemonSet.value.namespace,
         name: currentOperationDaemonSet.value.name,
+        namespace: currentOperationDaemonSet.value.namespace,
         yaml: yamlFormModel.value.yaml,
       };
 
@@ -597,11 +597,11 @@ export function useDaemonSetPage() {
   // 创建 DaemonSet
   const openCreateModal = () => {
     createFormModel.value = {
-      name: '',
-      namespace: '',
+      annotations: {},
       images: [''],
       labels: {},
-      annotations: {},
+      name: '',
+      namespace: '',
     };
     isCreateModalVisible.value = true;
   };
@@ -629,18 +629,18 @@ export function useDaemonSetPage() {
       submitLoading.value = true;
 
       const params: CreateDaemonSetReq = {
+        annotations:
+          Object.keys(createFormModel.value.annotations).length > 0
+            ? createFormModel.value.annotations
+            : undefined,
         cluster_id: filterClusterId.value,
-        name: createFormModel.value.name,
-        namespace: createFormModel.value.namespace,
         images: createFormModel.value.images.filter((img) => img.trim()),
         labels:
           Object.keys(createFormModel.value.labels).length > 0
             ? createFormModel.value.labels
             : undefined,
-        annotations:
-          Object.keys(createFormModel.value.annotations).length > 0
-            ? createFormModel.value.annotations
-            : undefined,
+        name: createFormModel.value.name,
+        namespace: createFormModel.value.namespace,
       };
 
       await createDaemonSetApi(filterClusterId.value, params);
@@ -694,12 +694,11 @@ export function useDaemonSetPage() {
     if (!clusterId) return;
 
     Modal.confirm({
-      title: '删除 DaemonSet',
+      cancelText: '取消',
+      centered: true,
       content: `确定要删除 DaemonSet "${record.name}" 吗？此操作不可逆！`,
       okText: '确认删除',
       okType: 'danger',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           await deleteDaemonSetApi(clusterId, record.namespace, record.name);
@@ -709,6 +708,7 @@ export function useDaemonSetPage() {
           if (shouldNotifyPageError(error)) message.error('DaemonSet 删除失败');
         }
       },
+      title: '删除 DaemonSet',
     });
   };
 
@@ -718,18 +718,17 @@ export function useDaemonSetPage() {
     if (!clusterId) return;
 
     Modal.confirm({
-      title: '重启 DaemonSet',
+      cancelText: '取消',
+      centered: true,
       content: `确定要重启 DaemonSet "${record.name}" 吗？这将重启所有 Pod。`,
       okText: '确认重启',
       okType: 'primary',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           const params: RestartDaemonSetReq = {
             cluster_id: clusterId,
-            namespace: record.namespace,
             name: record.name,
+            namespace: record.namespace,
           };
           await restartDaemonSetApi(
             clusterId,
@@ -743,6 +742,7 @@ export function useDaemonSetPage() {
           if (shouldNotifyPageError(error)) message.error('DaemonSet 重启失败');
         }
       },
+      title: '重启 DaemonSet',
     });
   };
 
@@ -753,11 +753,11 @@ export function useDaemonSetPage() {
 
     currentOperationDaemonSet.value = { ...record, cluster_id: clusterId };
     editFormModel.value = {
-      name: record.name,
-      namespace: record.namespace,
+      annotations: keyValueListToRecord(record.annotations),
       image: record.images?.[0] || '',
       labels: keyValueListToRecord(record.labels),
-      annotations: keyValueListToRecord(record.annotations),
+      name: record.name,
+      namespace: record.namespace,
     };
     isEditModalVisible.value = true;
   };
@@ -775,6 +775,10 @@ export function useDaemonSetPage() {
       submitLoading.value = true;
 
       const params: UpdateDaemonSetReq = {
+        annotations:
+          Object.keys(editFormModel.value.annotations).length > 0
+            ? editFormModel.value.annotations
+            : undefined,
         cluster_id: currentOperationDaemonSet.value.cluster_id,
         images: editFormModel.value.image
           ? [editFormModel.value.image]
@@ -782,10 +786,6 @@ export function useDaemonSetPage() {
         labels:
           Object.keys(editFormModel.value.labels).length > 0
             ? editFormModel.value.labels
-            : undefined,
-        annotations:
-          Object.keys(editFormModel.value.annotations).length > 0
-            ? editFormModel.value.annotations
             : undefined,
       };
 
@@ -834,8 +834,8 @@ export function useDaemonSetPage() {
 
       const params: RollbackDaemonSetReq = {
         cluster_id: currentOperationDaemonSet.value.cluster_id,
-        namespace: currentOperationDaemonSet.value.namespace,
         name: currentOperationDaemonSet.value.name,
+        namespace: currentOperationDaemonSet.value.namespace,
         revision: rollbackFormModel.value.revision,
       };
 
@@ -929,12 +929,11 @@ export function useDaemonSetPage() {
     if (selectedRows.value.length === 0) return;
 
     Modal.confirm({
-      title: `批量${operation}`,
+      cancelText: '取消',
+      centered: true,
       content: `确定要对选中的 ${selectedRows.value.length} 个 DaemonSet 执行${operation}操作吗？`,
       okText: '确认执行',
       okType: operation === '删除' ? 'danger' : 'primary',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           for (const daemonSet of selectedRows.value) {
@@ -955,8 +954,8 @@ export function useDaemonSetPage() {
             } else if (operation === '重启') {
               const params: RestartDaemonSetReq = {
                 cluster_id: clusterId,
-                namespace: daemonSet.namespace,
                 name: daemonSet.name,
+                namespace: daemonSet.namespace,
               };
               await restartDaemonSetApi(
                 clusterId,
@@ -975,6 +974,7 @@ export function useDaemonSetPage() {
             message.error(`批量${operation}失败`);
         }
       },
+      title: `批量${operation}`,
     });
   };
 
@@ -1298,6 +1298,32 @@ export function useDaemonSetPage() {
   };
 
   return {
+    // filter operations
+    addFilterLabel,
+    // form field operations
+    addImageField,
+    // batch operations
+    batchOperation,
+    // operations
+    clearDaemonSets,
+    clearFilterLabels,
+    clearNamespaces,
+    // yaml operations
+    clearYaml,
+    // create operations
+    closeCreateModal,
+    closeCreateYamlModal,
+    // detail operations
+    closeDetailModal,
+    // rollback operations
+    closeEditModal,
+    // history operations
+    closeHistoryModal,
+    // pod operations
+    closePodModal,
+    closeRollbackModal,
+    // YAML operations
+    closeYamlModal,
     // state
     clusters,
     clustersError,
@@ -1305,153 +1331,127 @@ export function useDaemonSetPage() {
     clustersPage,
     clustersSize,
     clustersTotal,
-    currentPage,
-    daemonSets,
-    filterClusterId,
-    filterLabels,
-    filterNamespace,
-    filterStatus,
-    loadError,
-    loading,
-    namespaces,
-    namespacesError,
-    namespacesLoading,
-    namespacesPage,
-    namespacesSize,
-    namespacesTotal,
-    pageSize,
-    searchText,
-    selectedRowKeys,
-    selectedRows,
-    total,
-
+    // form models
+    createFormModel,
+    // form rules
+    createFormRules,
+    createYamlFormModel,
     // form refs
     createYamlFormRef,
-    editFormRef,
-    formRef,
-    rollbackFormRef,
-    yamlFormRef,
 
-    // modal state
-    detailLoading,
-    isCreateModalVisible,
-    isCreateYamlModalVisible,
-    isDetailModalVisible,
-    isEditModalVisible,
-    isHistoryModalVisible,
-    isPodModalVisible,
-    isRollbackModalVisible,
-    isYamlModalVisible,
-    submitLoading,
-
+    createYamlFormRules,
     // operation targets
     currentDaemonSetDetail,
     currentOperationDaemonSet,
+    currentPage,
     currentYamlContent,
+
     daemonSetHistory,
     daemonSetPods,
-
-    // form models
-    createFormModel,
-    createYamlFormModel,
+    daemonSets,
+    // daemonSet operations
+    deleteDaemonSet,
+    // modal state
+    detailLoading,
     editFormModel,
-    rollbackFormModel,
-    yamlFormModel,
-
-    // form rules
-    createFormRules,
-    createYamlFormRules,
-    rollbackFormRules,
-    yamlFormRules,
-
-    // computed
-    filteredDaemonSets,
-    rowSelection,
-
-    // helpers
-    getEnvText,
-    getStatusColor,
-    getStatusText,
-    keyValueListToRecord,
-    validateClusterId,
-
-    // operations
-    clearDaemonSets,
-    clearNamespaces,
+    editFormRef,
     fetchClusters,
     fetchDaemonSets,
     fetchNamespaces,
-    loadMoreClusters,
-    loadMoreNamespaces,
 
-    // detail operations
-    closeDetailModal,
-    showDaemonSetDetail,
+    filterClusterId,
+    // computed
+    filteredDaemonSets,
+    filterLabels,
+    filterNamespace,
+    filterStatus,
 
-    // YAML operations
-    closeYamlModal,
-    showYamlModal,
-    submitYamlForm,
-
-    // create operations
-    closeCreateModal,
-    closeCreateYamlModal,
-    openCreateModal,
-    openCreateYamlModal,
-    submitCreateForm,
-    submitCreateYamlForm,
-
-    // daemonSet operations
-    deleteDaemonSet,
-    restartDaemonSet,
-
-    // rollback operations
-    closeEditModal,
-    closeRollbackModal,
-    openEditModal,
-    openRollbackModal,
-    submitEditForm,
-    submitRollbackForm,
-
-    // pod operations
-    closePodModal,
-    showPodModal,
-
-    // history operations
-    closeHistoryModal,
-    historyLoading,
-    isHistoryCurrent,
-    showHistoryModal,
-
-    // filter operations
-    addFilterLabel,
-    clearFilterLabels,
-    removeFilterLabel,
-
-    // batch operations
-    batchOperation,
-
-    // pagination operations
-    handlePageChange,
-    resetClusters,
-
-    // form field operations
-    addImageField,
-    removeAnnotationField,
-    removeEditAnnotationField,
-    removeEditLabelField,
-    removeImageField,
-    removeLabelField,
-
-    // yaml operations
-    clearYaml,
     formatEditYaml,
     formatYaml,
-    insertYamlTemplate,
-    validateEditYaml,
-    validateYaml,
+    formRef,
+    // helpers
+    getEnvText,
+    getStatusColor,
 
+    getStatusText,
+    // pagination operations
+    handlePageChange,
+    historyLoading,
+    insertYamlTemplate,
+
+    isCreateModalVisible,
+    isCreateYamlModalVisible,
+
+    isDetailModalVisible,
+    isEditModalVisible,
+    isHistoryCurrent,
+    isHistoryModalVisible,
+    isPodModalVisible,
+
+    isRollbackModalVisible,
+    isYamlModalVisible,
     // constants
     K8sDaemonSetStatus,
+    keyValueListToRecord,
+    loadError,
+    loading,
+    loadMoreClusters,
+
+    loadMoreNamespaces,
+    namespaces,
+
+    namespacesError,
+    namespacesLoading,
+    namespacesPage,
+
+    namespacesSize,
+    namespacesTotal,
+    openCreateModal,
+    openCreateYamlModal,
+    openEditModal,
+    openRollbackModal,
+
+    pageSize,
+    removeAnnotationField,
+
+    removeEditAnnotationField,
+    removeEditLabelField,
+    removeFilterLabel,
+    removeImageField,
+    removeLabelField,
+    resetClusters,
+
+    restartDaemonSet,
+    rollbackFormModel,
+
+    rollbackFormRef,
+    rollbackFormRules,
+    rowSelection,
+    searchText,
+
+    selectedRowKeys,
+    selectedRows,
+    showDaemonSetDetail,
+
+    showHistoryModal,
+
+    showPodModal,
+    showYamlModal,
+
+    submitCreateForm,
+    submitCreateYamlForm,
+    submitEditForm,
+    submitLoading,
+    submitRollbackForm,
+    submitYamlForm,
+
+    total,
+    validateClusterId,
+    validateEditYaml,
+    validateYaml,
+    yamlFormModel,
+    yamlFormRef,
+
+    yamlFormRules,
   };
 }

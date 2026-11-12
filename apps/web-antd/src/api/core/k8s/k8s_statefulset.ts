@@ -4,10 +4,10 @@ import { requestClient } from '#/api/request';
 
 // StatefulSet状态枚举
 export enum K8sStatefulSetStatus {
+  Error = 4, // 异常
   Running = 1, // 运行中
   Stopped = 2, // 停止
   Updating = 3, // 更新中
-  Error = 4, // 异常
 }
 
 // StatefulSet条件

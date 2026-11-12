@@ -5,26 +5,26 @@ import type {
   SessionInfoResponse,
 } from '#/api/core/aiops/assistant';
 
-import OpsPage from '#/components/ops/OpsPage.vue';
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
-import { message } from 'ant-design-vue';
-import { Icon } from '@iconify/vue';
-import { marked } from 'marked';
-import DOMPurify from 'dompurify';
-
 import { useAccessStore, useUserStore } from '@vben/stores';
 
-import {
-  assistantOwner,
-  createAssistantAccountScope,
-} from '#/utils/assistant-account-scope';
+import { Icon } from '@iconify/vue';
+import { message } from 'ant-design-vue';
+import DOMPurify from 'dompurify';
+import { marked } from 'marked';
+
 import {
   assistantQuery,
   createAssistantSession,
   getSessionInfo,
 } from '#/api/core/aiops/assistant';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import {
+  assistantOwner,
+  createAssistantAccountScope,
+} from '#/utils/assistant-account-scope';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 // 路由
@@ -76,12 +76,12 @@ const quickQuestions = ref([
 // 未确认的请求只能查询状态，已完成后才用同一 turn_id 读取结果。
 const appendAnswer = (data: AssistantResponse) => {
   chatHistory.value.push({
-    role: 'assistant',
     content: data.answer,
-    timestamp: new Date().toISOString(),
-    sourceDocuments: data.source_documents,
     followUpQuestions: data.follow_up_questions,
     relevanceScore: data.relevance_score,
+    role: 'assistant',
+    sourceDocuments: data.source_documents,
+    timestamp: new Date().toISOString(),
   });
   pendingTurn.value = null;
 };
@@ -123,19 +123,19 @@ const sendMessage = async () => {
       accountScope.write('query-session', { sessionId: session.session_id });
     }
     const sessionId = currentSessionId.value;
-    pendingTurn.value = { question, mode, turnId, sessionId };
+    pendingTurn.value = { mode, question, sessionId, turnId };
     questionInput.value = '';
     chatHistory.value.push({
-      role: 'user',
       content: question,
+      role: 'user',
       timestamp: new Date().toISOString(),
     });
     await nextTick();
     if (!accountScope.current(ticket)) return;
     scrollToBottom();
     const request: AssistantRequest = {
-      question,
       mode,
+      question,
       session_id: sessionId,
       turn_id: turnId,
     };
@@ -199,8 +199,8 @@ const recoverTurn = async () => {
     }
     const data = (await assistantQuery(
       {
-        question: pending.question,
         mode: pending.mode,
+        question: pending.question,
         session_id: pending.sessionId,
         turn_id: pending.turnId,
       },
@@ -267,10 +267,10 @@ const exportSession = () => {
   }
 
   const sessionData = {
+    messages: chatHistory.value,
+    mode: assistantMode.value,
     session_id: currentSessionId.value,
     timestamp: new Date().toISOString(),
-    mode: assistantMode.value,
-    messages: chatHistory.value,
   };
 
   const blob = new Blob([JSON.stringify(sessionData, null, 2)], {
@@ -346,13 +346,13 @@ const restoreSession = async () => {
     sessionNotice.value = '';
     chatHistory.value = (info.conversation_history ?? []).flatMap((entry) => [
       {
-        role: 'user' as const,
         content: entry.q,
+        role: 'user' as const,
         timestamp: info.last_activity,
       },
       {
-        role: 'assistant' as const,
         content: entry.a,
+        role: 'assistant' as const,
         timestamp: info.last_activity,
       },
     ]);
@@ -363,10 +363,10 @@ const restoreSession = async () => {
         (info.active_mode === 1 || info.active_mode === 2)
       ) {
         pendingTurn.value = {
-          question: info.active_question,
           mode: info.active_mode,
-          turnId: info.active_turn_id,
+          question: info.active_question,
           sessionId: info.session_id,
+          turnId: info.active_turn_id,
         };
       } else {
         sessionNotice.value = '会话有未确认的请求，请清空会话后继续';
@@ -405,7 +405,7 @@ watch(
     documentModalVisible.value = false;
     if (owner) void restoreSession();
   },
-  { immediate: true, flush: 'sync' },
+  { flush: 'sync', immediate: true },
 );
 onBeforeUnmount(() => {
   accountScope.invalidate();
@@ -527,8 +527,8 @@ onBeforeUnmount(() => {
                               doc, idx
                             ) in chatMessage.sourceDocuments.slice(0, 3)"
                             :key="idx"
-                            color="blue"
                             class="source-tag"
+                            color="blue"
                             @click="showDocumentDetail(doc)"
                           >
                             {{ doc.title || `文档${idx + 1}` }}
@@ -559,10 +559,10 @@ onBeforeUnmount(() => {
                               question, idx
                             ) in chatMessage.followUpQuestions.slice(0, 3)"
                             :key="idx"
-                            type="link"
-                            size="small"
-                            @click="askFollowUpQuestion(question)"
                             class="follow-up-btn"
+                            size="small"
+                            type="link"
+                            @click="askFollowUpQuestion(question)"
                           >
                             {{ question }}
                           </a-button>
@@ -944,9 +944,6 @@ onBeforeUnmount(() => {
           .source-tag {
             cursor: pointer;
             transition: border-color var(--ops-duration) ease-out;
-
-            &:hover {
-            }
           }
         }
 

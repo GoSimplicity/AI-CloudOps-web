@@ -1,9 +1,6 @@
 <script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
 import { onMounted } from 'vue';
 
-import { useTaskPage } from './Task';
-import { formatDateTime, getRelativeTime } from '../shared/utils';
 import {
   DatabaseOutlined,
   DeleteOutlined,
@@ -17,113 +14,117 @@ import {
   SearchOutlined,
 } from '@ant-design/icons-vue';
 
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { usePermission } from '#/utils/permission';
+
+import { formatDateTime, getRelativeTime } from '../shared/utils';
+import { useTaskPage } from './Task';
 
 const { can } = usePermission();
 
 const {
   // state
 
+  // form field operations
+  addEditVariableField,
+  addVariableField,
+  // batch operations
+  batchOperation,
+  // operations
+  clearTasks,
+  clearTemplates,
+  // create operations
+  closeCreateModal,
+  // detail operations
+  closeDetailModal,
+  // edit operations
+  closeEditModal,
+  // execute operations
+  closeExecuteModal,
   clusters,
   clustersError,
   clustersLoading,
   clustersTotal,
+  // form models
+  createFormModel,
+  // form rules
+  createFormRules,
+  // operation targets
+  currentOperationTask,
   currentPage,
+  currentTaskDetail,
+
+  // task operations
+  deleteTask,
+  editFormModel,
+  // form refs
+  editFormRef,
+  editFormRules,
+  executeFormModel,
+  // modal state
+  executeLoading,
+
+  fetchClusters,
+  fetchTasks,
+
+  fetchTemplates,
   filterClusterId,
+  // computed
+  filteredTasks,
+
   filterStatus,
   filterTemplateId,
+
+  // helpers
+  formatK8sTime,
+  formRef,
+
+  getEnvText,
+  getStatusColor,
+
+  getStatusText,
+  getTemplateName,
+  // pagination operations
+  handlePageChange,
+  isCreateModalVisible,
+  isDetailModalVisible,
+
+  isEditModalVisible,
+  isExecuteModalVisible,
   loadError,
   loading,
+  loadMoreClusters,
+  loadMoreTemplates,
+  openCreateModal,
+
+  openEditModal,
+  openExecuteModal,
+
   pageSize,
+  removeEditVariableField,
+  removeVariableField,
+
+  rowSelection,
   searchText,
   selectedRows,
+
+  showTaskDetail,
+  submitCreateForm,
+  submitEditForm,
+
+  submitExecuteForm,
+
+  submitLoading,
+
+  // constants
+  TaskStatus,
+
   templates,
   templatesError,
   templatesLoading,
   templatesTotal,
+
   total,
-
-  // modal state
-  executeLoading,
-  isCreateModalVisible,
-  isDetailModalVisible,
-  isEditModalVisible,
-  isExecuteModalVisible,
-  submitLoading,
-
-  // operation targets
-  currentOperationTask,
-  currentTaskDetail,
-
-  // form models
-  createFormModel,
-  editFormModel,
-  executeFormModel,
-
-  // form refs
-  editFormRef,
-  formRef,
-
-  // form rules
-  createFormRules,
-  editFormRules,
-
-  // computed
-  filteredTasks,
-  rowSelection,
-
-  // helpers
-  formatK8sTime,
-  getEnvText,
-  getStatusColor,
-  getStatusText,
-  getTemplateName,
-
-  // operations
-  clearTasks,
-  clearTemplates,
-  fetchClusters,
-  fetchTasks,
-  fetchTemplates,
-  loadMoreClusters,
-  loadMoreTemplates,
-
-  // detail operations
-  closeDetailModal,
-  showTaskDetail,
-
-  // create operations
-  closeCreateModal,
-  openCreateModal,
-  submitCreateForm,
-
-  // edit operations
-  closeEditModal,
-  openEditModal,
-  submitEditForm,
-
-  // execute operations
-  closeExecuteModal,
-  openExecuteModal,
-  submitExecuteForm,
-
-  // task operations
-  deleteTask,
-
-  // batch operations
-  batchOperation,
-
-  // pagination operations
-  handlePageChange,
-
-  // form field operations
-  addEditVariableField,
-  addVariableField,
-  removeEditVariableField,
-  removeVariableField,
-
-  // constants
-  TaskStatus,
 } = useTaskPage();
 
 const onSearch = () => {
@@ -202,7 +203,7 @@ const getResultPreview = (result: string) => {
   if (!result) return '暂无结果';
   const lines = result.split('\n');
   if (lines.length <= 2) return result;
-  return lines.slice(0, 2).join('\n') + '\n...';
+  return `${lines.slice(0, 2).join('\n')}\n...`;
 };
 
 const columns = [
@@ -406,7 +407,7 @@ onMounted(async () => {
               class="k8s-search-input"
               placeholder="🔍 搜索任务名称"
               @input="onSearch"
-              @pressEnter="onSearch"
+              @press-enter="onSearch"
             >
               <template #suffix>
                 <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -434,15 +435,15 @@ onMounted(async () => {
             </a-button>
 
             <a-button
-              type="primary"
-              @click="() => batchOperation('执行')"
+              v-if="can('k8s.task.batchApply') && selectedRows.length > 0"
               :disabled="
                 selectedRows.length === 0 ||
                 selectedRows.some((row) => row.status === TaskStatus.RUNNING)
               "
-              v-if="can('k8s.task.batchApply') && selectedRows.length > 0"
               class="k8s-toolbar-btn"
               title="批量执行选中的任务"
+              type="primary"
+              @click="() => batchOperation('执行')"
             >
               <template #icon>
                 <PlayCircleOutlined aria-hidden="true" />
@@ -451,13 +452,13 @@ onMounted(async () => {
             </a-button>
 
             <a-button
-              type="primary"
-              danger
-              @click="() => batchOperation('删除')"
-              :disabled="selectedRows.length === 0"
               v-if="can('k8s.task.batchDelete') && selectedRows.length > 0"
+              :disabled="selectedRows.length === 0"
               class="k8s-toolbar-btn"
+              danger
               title="批量删除选中的任务"
+              type="primary"
+              @click="() => batchOperation('删除')"
             >
               <template #icon><DeleteOutlined aria-hidden="true" /></template>
               删除 ({{ selectedRows.length }})
@@ -534,8 +535,8 @@ onMounted(async () => {
               <a-tag
                 v-for="(variable, index) in (text || []).slice(0, 3)"
                 :key="index"
-                color="cyan"
                 class="variable-tag"
+                color="cyan"
               >
                 {{ variable }}
               </a-tag>

@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
 import { computed, h, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
-import { Spin as ASpin, Empty, message, Modal } from 'ant-design-vue';
 import {
   ArrowDownOutlined,
   CheckCircleOutlined,
@@ -19,19 +17,13 @@ import {
   StopOutlined,
   SyncOutlined,
 } from '@ant-design/icons-vue';
+import { Spin as ASpin, Empty, message, Modal } from 'ant-design-vue';
 import { debounce } from 'lodash-es';
+
+import OpsPage from '#/components/ops/OpsPage.vue';
 
 // API导入
 import { getUserList, type GetUserListReq } from '#/api/core/system/user';
-import {
-  Action,
-  AssigneeType,
-  createWorkorderProcess,
-  type CreateWorkorderProcessReq,
-  type ProcessConnection,
-  ProcessStatus,
-  ProcessStepType,
-} from '#/api/core/workorder/workorder_process';
 import {
   listWorkorderCategory,
   type WorkorderCategoryItem,
@@ -41,6 +33,15 @@ import {
   listWorkorderFormDesign,
   type WorkorderFormDesignItem,
 } from '#/api/core/workorder/workorder_form_design';
+import {
+  Action,
+  AssigneeType,
+  createWorkorderProcess,
+  type CreateWorkorderProcessReq,
+  type ProcessConnection,
+  ProcessStatus,
+  ProcessStepType,
+} from '#/api/core/workorder/workorder_process';
 import { getOwnLookupValue } from '#/utils/own-lookup';
 import {
   shouldNotifyPageError,
@@ -75,7 +76,7 @@ interface Props {
   modelValue: ProcessDefinition;
 }
 const props = withDefaults(defineProps<Props>(), {
-  modelValue: () => ({ steps: [], connections: [] }),
+  modelValue: () => ({ connections: [], steps: [] }),
 });
 const emit = defineEmits<Emits>();
 interface Emits {
@@ -91,13 +92,13 @@ const definitionJsonString = ref('{"steps":[],"connections":[]}');
 
 // 流程基本信息
 const processBasicInfo = ref({
-  name: '',
+  category_id: undefined as number | undefined,
   description: '',
   form_design_id: undefined as number | undefined,
-  category_id: undefined as number | undefined,
+  is_default: 2 as 1 | 2,
+  name: '',
   status: ProcessStatus.Draft,
   tags: [] as string[],
-  is_default: 2 as 1 | 2,
 });
 
 // 数据列表
@@ -165,8 +166,8 @@ const selectedStepConnections = computed({
       (c) => c.from !== currentStepId,
     );
     const newConns = newTargetIds.map((targetId) => ({
-      id: `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       from: currentStepId,
+      id: `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       to: targetId,
     }));
     connections.value = [...otherConnections, ...newConns];
@@ -207,8 +208,8 @@ watch(
     if (!newValue) return;
 
     const internalDef = JSON.stringify({
-      steps: processSteps.value,
       connections: connections.value,
+      steps: processSteps.value,
     });
     if (internalDef === JSON.stringify(newValue)) return;
 
@@ -224,15 +225,15 @@ watch(
 
     definitionJsonString.value = JSON.stringify(newValue, null, 2);
   },
-  { immediate: true, deep: true },
+  { deep: true, immediate: true },
 );
 
 watch(
   [processSteps, connections],
   () => {
     const definition: ProcessDefinition = {
-      steps: processSteps.value,
       connections: connections.value,
+      steps: processSteps.value,
     };
     if (JSON.stringify(definition) !== JSON.stringify(props.modelValue)) {
       emit('update:modelValue', JSON.parse(JSON.stringify(definition)));
@@ -261,8 +262,8 @@ const fetchUserList = async (loadMore = false) => {
   try {
     const params: GetUserListReq = {
       page: currentPage,
-      size: userPagination.value.pageSize,
       search: keyword,
+      size: userPagination.value.pageSize,
     };
     const res = await getUserList(params);
     if (
@@ -313,10 +314,11 @@ const handleUserSearch = (keyword: string) => {
 // === 下拉列表滚动到底部处理器 ===
 const handleUserScroll = (e: Event) => {
   const target = e.target as HTMLElement;
-  if (target.scrollTop + target.clientHeight >= target.scrollHeight - 10) {
-    if (userList.value.length < userPagination.value.total) {
-      fetchUserList(true);
-    }
+  if (
+    target.scrollTop + target.clientHeight >= target.scrollHeight - 10 &&
+    userList.value.length < userPagination.value.total
+  ) {
+    fetchUserList(true);
   }
 };
 
@@ -334,16 +336,16 @@ const addProcessStep = (): void => {
   } while (processSteps.value.some((step) => step.id === tempId));
   const isFirstStep = processSteps.value.length === 0;
   const newStep: ProcessStep = {
-    id: tempId,
-    type: isFirstStep ? ProcessStepType.Start : ProcessStepType.Approval,
-    name: `新步骤 ${processSteps.value.length + 1}`,
-    assignee_type: AssigneeType.User,
-    assignee_ids: [], // 初始化为空的 number 数组
     actions: isFirstStep ? [Action.Submit] : [Action.Approve, Action.Reject],
+    assignee_ids: [], // 初始化为空的 number 数组
+    assignee_type: AssigneeType.User,
+    id: tempId,
+    name: `新步骤 ${processSteps.value.length + 1}`,
     sort_order:
       (processSteps.value.length > 0
         ? Math.max(...processSteps.value.map((s) => s.sort_order))
         : 0) + 1,
+    type: isFirstStep ? ProcessStepType.Start : ProcessStepType.Approval,
   };
   processSteps.value.push(newStep);
   selectStepById(tempId);
@@ -440,13 +442,13 @@ function definitionErrors(value: unknown): string[] {
 }
 const validateFlow = (): void => {
   const errors = definitionErrors({
-    steps: processSteps.value,
     connections: connections.value,
+    steps: processSteps.value,
   });
   if (errors.length > 0)
     validationDialog = Modal.error({
-      title: '流程验证失败',
       content: h('pre', errors.join('\n')),
+      title: '流程验证失败',
     });
   else message.success('流程验证通过');
 };
@@ -455,8 +457,8 @@ const hasUnappliedJson = computed(() => {
     return (
       JSON.stringify(JSON.parse(definitionJsonString.value)) !==
       JSON.stringify({
-        steps: processSteps.value,
         connections: connections.value,
+        steps: processSteps.value,
       })
     );
   } catch {
@@ -510,10 +512,10 @@ const getStepNameById = (stepId: string) =>
 const getStepTypeClass = (type: string): string => `step-${type.toLowerCase()}`;
 const getStepIcon = (type: string) => {
   const icons: { [key: string]: any } = {
-    start: PlayCircleOutlined,
     approval: CheckCircleOutlined,
-    task: EditOutlined,
     end: StopOutlined,
+    start: PlayCircleOutlined,
+    task: EditOutlined,
   };
   // 【修改点 4】: 直接使用小写的 type 进行查找，不再错误地转为大写
   return icons[type] || EditOutlined;
@@ -551,8 +553,8 @@ const loadCategories = async (): Promise<void> => {
     while (hasMoreData) {
       const params = {
         page: currentPage,
-        size: pageSize,
         search: undefined,
+        size: pageSize,
       };
 
       const res = (await listWorkorderCategory(params)) as any;
@@ -601,8 +603,8 @@ const loadFormDesigns = async (): Promise<void> => {
     while (hasMoreData) {
       const params = {
         page: currentPage,
-        size: pageSize,
         search: undefined,
+        size: pageSize,
         status: FormDesignStatus.Published, // 只获取已发布的表单
       };
 
@@ -644,8 +646,8 @@ const saveProcess = async (): Promise<void> => {
     return;
   }
   const errors = definitionErrors({
-    steps: processSteps.value,
     connections: connections.value,
+    steps: processSteps.value,
   });
   if (errors.length > 0) {
     message.error(errors[0]);
@@ -687,17 +689,17 @@ const saveProcess = async (): Promise<void> => {
     saveError.value = null;
 
     const createData: CreateWorkorderProcessReq = {
-      name: processBasicInfo.value.name.trim(),
+      category_id: processBasicInfo.value.category_id,
+      definition: {
+        connections: JSON.parse(JSON.stringify(connections.value)),
+        steps: JSON.parse(JSON.stringify(processSteps.value)),
+      },
       description: processBasicInfo.value.description || '',
       form_design_id: processBasicInfo.value.form_design_id,
-      definition: {
-        steps: JSON.parse(JSON.stringify(processSteps.value)),
-        connections: JSON.parse(JSON.stringify(connections.value)),
-      },
-      category_id: processBasicInfo.value.category_id,
+      is_default: processBasicInfo.value.is_default,
+      name: processBasicInfo.value.name.trim(),
       status: processBasicInfo.value.status,
       tags: [...processBasicInfo.value.tags],
-      is_default: processBasicInfo.value.is_default,
     };
 
     await createWorkorderProcess(createData);
@@ -706,21 +708,20 @@ const saveProcess = async (): Promise<void> => {
 
     // 重置表单
     processBasicInfo.value = {
-      name: '',
+      category_id: undefined,
       description: '',
       form_design_id: undefined,
-      category_id: undefined,
+      is_default: 2,
+      name: '',
       status: ProcessStatus.Draft,
       tags: [],
-      is_default: 2,
     };
     processSteps.value = [];
     connections.value = [];
     selectedStepIndex.value = null;
   } catch (error) {
-    if (ticket === saveRequest)
-      if (shouldRecordPageError(error))
-        saveError.value = '保存失败，请重试，当前流程设计已保留';
+    if (ticket === saveRequest && shouldRecordPageError(error))
+      saveError.value = '保存失败，请重试，当前流程设计已保留';
   } finally {
     if (ticket === saveRequest) saving.value = false;
   }
@@ -732,8 +733,8 @@ const copyProcessJson = async (): Promise<void> => {
     const processData = {
       basicInfo: processBasicInfo.value,
       definition: {
-        steps: processSteps.value,
         connections: connections.value,
+        steps: processSteps.value,
       },
     };
 
@@ -746,8 +747,8 @@ const copyProcessJson = async (): Promise<void> => {
     const processData = {
       basicInfo: processBasicInfo.value,
       definition: {
-        steps: processSteps.value,
         connections: connections.value,
+        steps: processSteps.value,
       },
     };
     textArea.value = JSON.stringify(processData, null, 2);
@@ -818,7 +819,7 @@ onBeforeUnmount(() => {
       </template>
     </a-alert>
     <div :inert="saving || undefined" class="edit-mode-tabs">
-      <a-tabs v-model:activeKey="editMode" type="card">
+      <a-tabs v-model:active-key="editMode" type="card">
         <a-tab-pane key="basic" tab="基本信息">
           <div class="basic-info-form">
             <a-form :model="processBasicInfo" layout="vertical">
@@ -952,18 +953,18 @@ onBeforeUnmount(() => {
                   class="step-container"
                 >
                   <div
-                    class="process-step"
                     :class="{ active: selectedStep?.id === step.id }"
+                    class="process-step"
                     role="button"
                     tabindex="0"
+                    @click="selectStepById(step.id)"
                     @keydown.enter="selectStepById(step.id)"
                     @keydown.space.prevent="selectStepById(step.id)"
-                    @click="selectStepById(step.id)"
                   >
                     <div class="step-header">
                       <div
-                        class="step-icon"
                         :class="getStepTypeClass(step.type)"
+                        class="step-icon"
                       >
                         <component :is="getStepIcon(step.type)" />
                       </div>
@@ -1147,7 +1148,7 @@ onBeforeUnmount(() => {
                       placeholder="搜索并选择受理人"
                       show-search
                       style="width: 100%"
-                      @popupScroll="handleUserScroll"
+                      @popup-scroll="handleUserScroll"
                       @search="handleUserSearch"
                     >
                       <template v-if="userLoading" #notFoundContent>
@@ -1231,8 +1232,8 @@ onBeforeUnmount(() => {
           >
             <div class="preview-step">
               <div
-                class="preview-step-icon"
                 :class="getStepTypeClass(step.type)"
+                class="preview-step-icon"
               >
                 <component :is="getStepIcon(step.type)" />
               </div>
@@ -1490,12 +1491,6 @@ onBeforeUnmount(() => {
   padding-top: 20px;
 }
 
-.field-hint {
-  font-size: 12px;
-  color: var(--ops-muted);
-  margin-top: 4px;
-}
-
 .json-editor {
   min-height: 500px;
 }
@@ -1508,7 +1503,7 @@ onBeforeUnmount(() => {
 }
 
 .json-textarea {
-  font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
+  font-family: SFMono-Regular, Consolas, monospace;
   font-size: 13px;
   line-height: 1.4;
 }
@@ -1619,12 +1614,12 @@ onBeforeUnmount(() => {
   padding: var(--ops-space-lg);
 }
 
-.basic-info-form {
+:is(.basic-info-form) {
   background: var(--ops-surface);
   padding: var(--ops-space-sm);
 }
 
-.process-step {
+:is(.process-step) {
   text-align: left;
 }
 
@@ -1632,9 +1627,5 @@ onBeforeUnmount(() => {
 .preview-step-info {
   min-width: 0;
   overflow-wrap: anywhere;
-}
-
-.json-textarea {
-  font-family: SFMono-Regular, Consolas, monospace;
 }
 </style>

@@ -26,19 +26,19 @@ import {
   resolveManagedHistory,
   syncManagedResources,
 } from '#/api/core/tree/tree_cloud';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
-import CloudManagedOperationsList from './CloudManagedOperationsList.vue';
 import CloudManagedOperationRecovery from './CloudManagedOperationRecovery.vue';
+import CloudManagedOperationsList from './CloudManagedOperationsList.vue';
 import {
   type ManagedOperationMarker,
   parseManagedMarker,
   removeManagedMarker,
   saveManagedMarker,
 } from './managed-operation-marker';
-import {
-  shouldNotifyPageError,
-  shouldRecordPageError,
-} from '#/utils/permission/request-notice';
 
 const access = useAccessStore();
 const user = useUserStore();
@@ -161,15 +161,15 @@ const dateText = (value: unknown) => {
   return Number.isNaN(d.valueOf()) ? '—' : d.toLocaleString('zh-CN');
 };
 const kindName: Record<ManagedCloudKind, string> = {
-  rds: 'RDS 数据库',
-  clb: '传统型负载均衡 CLB',
   cache: 'Tair / Redis / Memcache',
+  clb: '传统型负载均衡 CLB',
+  rds: 'RDS 数据库',
 };
 const stateName: Record<string, string> = {
+  cancelled: '已取消',
+  failed: '失败',
   running: '处理中',
   success: '成功',
-  failed: '失败',
-  cancelled: '已取消',
   unknown: '结果未知',
 };
 
@@ -250,8 +250,8 @@ async function loadAccounts() {
     for (let p = 1; p <= 10; p++) {
       const data = await getCloudAccountListApi({
         page: p,
-        size: 100,
         provider: 1,
+        size: 100,
       });
       if (!current(epoch) || !can(codes.accountList)) return;
       if (
@@ -640,9 +640,9 @@ async function sync() {
       return;
     }
     const marker: ManagedOperationMarker = {
-      version: 2,
       operation_id: globalThis.crypto.randomUUID(),
       resource_ids: ids,
+      version: 2,
     };
     if (!saveManagedMarker(localStorage, keyFor(target, userId), marker)) {
       localBlocked.value = true;
@@ -652,8 +652,8 @@ async function sync() {
     localBlocked.value = readLocal(target);
     const response = await syncManagedResources({
       ...target,
-      resource_ids: ids,
       operation_id: marker.operation_id,
+      resource_ids: ids,
     });
     if (!current(epoch, selectionAtStart)) return;
     if (
@@ -788,8 +788,8 @@ async function submitReview() {
       return;
     await resolveManagedHistory(entry.id, {
       ...target,
-      resources_verified: true,
       reason,
+      resources_verified: true,
     });
     if (!current(epoch, selectedScope)) return;
     if (!(await loadHistory()) || !current(epoch, selectedScope)) {
@@ -863,7 +863,7 @@ watch(
         if (ok && current(epoch)) void loadAccounts();
       });
   },
-  { immediate: true, flush: 'sync' },
+  { flush: 'sync', immediate: true },
 );
 onBeforeUnmount(() => {
   alive = false;
@@ -888,15 +888,13 @@ onBeforeUnmount(() => {
     <a-alert v-if="error" :message="error" show-icon type="error" />
     <a-alert
       v-if="!can(codes.accountList) || !can(codes.accountDetail)"
-      type="warning"
       message="当前用户缺少账户或地域读取权限"
       show-icon
+      type="warning"
     />
     <div class="managed-filters">
       <a-select
         v-model:value="accountId"
-        aria-label="托管资源账户"
-        placeholder="选择阿里云账户（停用可核对）"
         :disabled="
           syncing ||
           reviewing ||
@@ -910,12 +908,12 @@ onBeforeUnmount(() => {
             label: a.status === 2 ? `${a.name}（已停用）` : a.name,
           }))
         "
+        aria-label="托管资源账户"
+        placeholder="选择阿里云账户（停用可核对）"
         @change="chooseAccount"
       />
       <a-select
         v-model:value="regionId"
-        aria-label="托管资源地域"
-        placeholder="选择地域（停用可核对）"
         :disabled="
           syncing || reviewing || operationBusy || regionLoading || !accountId
         "
@@ -926,6 +924,8 @@ onBeforeUnmount(() => {
             label: `${r.region_name || r.region}${r.status === 2 ? '（已停用）' : ''}`,
           }))
         "
+        aria-label="托管资源地域"
+        placeholder="选择地域（停用可核对）"
         @change="chooseRegion"
       />
       <a-select
@@ -952,9 +952,9 @@ onBeforeUnmount(() => {
           !selectedAccountEnabled ||
           !regions.some((r) => r.id === regionId && r.status === 1)
         "
-        type="info"
         message="该范围已停用，可查询和记录核对，不能发起同步"
         show-icon
+        type="info"
       />
       <div class="managed-sync">
         <label for="managed-resource-ids"
@@ -978,51 +978,51 @@ onBeforeUnmount(() => {
         </a-button>
       </div>
       <CloudManagedOperationsList
-        :scope="scope"
-        :viewer="String(owner.id)"
-        :super-admin="permissions?.super_admin === true"
+        :authorize="
+          async () =>
+            (await refreshPermissions(session)) &&
+            can(codes.operationRead) &&
+            can(codes.operationReview)
+        "
         :can-list="can(codes.operationList)"
         :can-read="can(codes.operationRead)"
         :can-review="can(codes.operationReview)"
         :refresh-token="operationRefresh"
-        :authorize="
-          async () =>
-            (await refreshPermissions(session)) &&
-            can(codes.operationRead) &&
-            can(codes.operationReview)
-        "
+        :scope="scope"
+        :super-admin="permissions?.super_admin === true"
+        :viewer="String(owner.id)"
+        @acknowledged="acknowledgeOperation"
         @blocked="scopeOperationsBlocked = $event"
         @busy="operationListBusy = $event"
-        @acknowledged="acknowledgeOperation"
       />
       <CloudManagedOperationRecovery
         v-if="pendingOperation"
         :key="`${owner.id}:${pendingOperation.operation_id}`"
-        :marker="pendingOperation"
-        :scope="scope"
-        :owner="String(owner.id)"
-        :can-read="can(codes.operationRead)"
-        :can-review="can(codes.operationReview)"
         :authorize="
           async () =>
             (await refreshPermissions(session)) &&
             can(codes.operationRead) &&
             can(codes.operationReview)
         "
+        :can-read="can(codes.operationRead)"
+        :can-review="can(codes.operationReview)"
+        :marker="pendingOperation"
+        :owner="String(owner.id)"
+        :scope="scope"
         @acknowledged="acknowledgeOperation"
         @busy="operationPointerBusy = $event"
       />
       <a-alert
         v-if="!can(codes.operationRead)"
-        type="warning"
         message="缺少操作查询权限，无法安全发起同步"
         show-icon
+        type="warning"
       />
       <a-alert
         v-if="!can(codes.history)"
-        type="warning"
         message="缺少同步历史权限，无法安全发起同步"
         show-icon
+        type="warning"
       />
       <a-alert
         v-else-if="historyError"
@@ -1067,9 +1067,9 @@ onBeforeUnmount(() => {
       </div>
       <a-alert
         v-if="!can(codes.list)"
-        type="info"
         message="当前用户无托管资源列表权限"
         show-icon
+        type="info"
       />
       <a-table
         v-else
@@ -1118,8 +1118,8 @@ onBeforeUnmount(() => {
           <template #default="{ record }">
             <a-button
               v-if="can(codes.detail)"
-              type="link"
               :disabled="!safeId(record.id)"
+              type="link"
               @click="showDetail(record)"
             >
               详情
@@ -1176,8 +1176,8 @@ onBeforeUnmount(() => {
                   entry.operation_id !== pendingOperation?.operation_id) &&
                 ['unknown', 'running', 'success'].includes(entry.status)
               "
-              type="link"
               :disabled="syncing || reviewing || operationBusy"
+              type="link"
               @click="openReview(entry)"
             >
               记录人工核对
@@ -1187,18 +1187,18 @@ onBeforeUnmount(() => {
       </a-spin>
     </template>
     <a-modal
-      :open="!!reviewEntry"
-      title="记录人工核对"
-      ok-text="保存核对记录"
-      :confirm-loading="reviewing"
-      :closable="!reviewing"
-      :mask-closable="false"
       :cancel-button-props="{ disabled: reviewing }"
+      :closable="!reviewing"
+      :confirm-loading="reviewing"
+      :mask-closable="false"
       :ok-button-props="{
         disabled: !reviewVerified || reviewUncertain || !can(codes.resolve),
       }"
-      @ok="submitReview"
+      :open="!!reviewEntry"
+      ok-text="保存核对记录"
+      title="记录人工核对"
       @cancel="reviewEntry = null"
+      @ok="submitReview"
     >
       <template v-if="reviewEntry">
         <p>

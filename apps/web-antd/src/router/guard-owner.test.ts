@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { createMemoryHistory, createRouter } from 'vue-router';
+
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createDeferred } from '../../../../internal/test-utils/deferred';
 import { createRouterGuard } from './guard';
@@ -14,8 +14,8 @@ function required<T>(value: null | T | undefined): T {
 
 const state = vi.hoisted(() => ({
   access: null as any,
-  user: null as any,
   generation: 0,
+  user: null as any,
 }));
 const access = vi.hoisted(() => ({ generateAccess: vi.fn() }));
 vi.mock('./access', () => access);
@@ -32,15 +32,15 @@ vi.mock('#/store', () => ({
 }));
 vi.mock('@vben/preferences', () => ({
   preferences: {
-    transition: { progress: false },
     app: { dynamicTitle: false },
+    transition: { progress: false },
   },
 }));
 vi.mock('#/locales', () => ({ $t: (value: string) => value }));
 beforeEach(() => {
   vi.clearAllMocks();
   state.generation = 0;
-  state.user = { userInfo: { userId: '1', roles: ['old-role'] } };
+  state.user = { userInfo: { roles: ['old-role'], userId: '1' } };
   state.access = {
     accessToken: 'old-token',
     isAccessChecked: false,
@@ -65,7 +65,7 @@ describe('路由守卫账户归属', () => {
       const task = Promise.resolve(
         guard.call(
           undefined,
-          { name: 'Private', fullPath: '/private', meta: {} } as any,
+          { fullPath: '/private', meta: {}, name: 'Private' } as any,
           { query: {} } as any,
           vi.fn(),
         ),

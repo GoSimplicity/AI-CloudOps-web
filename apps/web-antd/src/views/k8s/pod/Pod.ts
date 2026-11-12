@@ -1,6 +1,5 @@
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
 
-import { utf8Chunks } from '#/utils/terminal-input';
 import {
   computed,
   getCurrentScope,
@@ -10,21 +9,27 @@ import {
   ref,
 } from 'vue';
 
+import { useAppConfig } from '@vben/hooks';
+import { useAccessStore } from '@vben/stores';
+
 import { message, Modal } from 'ant-design-vue';
 import yaml from 'js-yaml';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 
-import 'xterm/css/xterm.css';
-import { useAccessStore } from '@vben/stores';
-import { useAppConfig } from '@vben/hooks';
-
-import { websocketProtocols, websocketUrl } from '#/utils/websocket-url';
 import {
-  notifyStreamLoginExpired,
-  refreshAccessTokenForStream,
-} from '#/api/request';
+  Env,
+  getClustersListApi,
+  type K8sCluster,
+  type KeyValueList,
+  type ListClustersReq,
+} from '#/api/core/k8s/k8s_cluster';
+import {
+  getNamespacesListApi,
+  type K8sNamespace,
+  type K8sNamespaceListReq,
+} from '#/api/core/k8s/k8s_namespace';
 import {
   createK8sPod,
   createK8sPodByYaml,
@@ -63,21 +68,17 @@ import {
   uploadK8sPodFile,
 } from '#/api/core/k8s/k8s_pod';
 import {
-  Env,
-  getClustersListApi,
-  type K8sCluster,
-  type KeyValueList,
-  type ListClustersReq,
-} from '#/api/core/k8s/k8s_cluster';
-import {
-  getNamespacesListApi,
-  type K8sNamespace,
-  type K8sNamespaceListReq,
-} from '#/api/core/k8s/k8s_namespace';
+  notifyStreamLoginExpired,
+  refreshAccessTokenForStream,
+} from '#/api/request';
 import {
   shouldNotifyPageError,
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
+import { utf8Chunks } from '#/utils/terminal-input';
+import { websocketProtocols, websocketUrl } from '#/utils/websocket-url';
+
+import 'xterm/css/xterm.css';
 
 // YAML 模板常量
 const POD_YAML_TEMPLATE = `apiVersion: v1
@@ -227,36 +228,36 @@ export function usePodPage() {
     tolerations: any[];
     volumes: any[];
   }>({
-    name: '',
-    namespace: '',
-    labels: {},
+    affinity: undefined,
     annotations: {},
     containers: [
       {
-        name: '',
-        image: '',
-        command: [],
         args: [],
+        command: [],
         envs: [],
+        image: '',
+        image_pull_policy: 'IfNotPresent',
+        name: '',
         ports: [],
         resources: {
-          requests: { cpu: '', memory: '' },
           limits: { cpu: '', memory: '' },
+          requests: { cpu: '', memory: '' },
         },
         volume_mounts: [],
-        image_pull_policy: 'IfNotPresent',
       },
     ],
-    init_containers: [],
-    restart_policy: 'Always',
-    node_selector: {},
-    tolerations: [],
-    affinity: undefined,
-    volumes: [],
+    dns_policy: 'ClusterFirst',
     host_network: false,
     host_pid: false,
-    dns_policy: 'ClusterFirst',
+    init_containers: [],
+    labels: {},
+    name: '',
+    namespace: '',
+    node_selector: {},
+    restart_policy: 'Always',
     service_account: '',
+    tolerations: [],
+    volumes: [],
   });
 
   const editFormModel = ref<{
@@ -265,10 +266,10 @@ export function usePodPage() {
     name: string;
     namespace: string;
   }>({
+    annotations: {},
+    labels: {},
     name: '',
     namespace: '',
-    labels: {},
-    annotations: {},
   });
 
   const yamlFormModel = ref<{
@@ -295,12 +296,12 @@ export function usePodPage() {
   }>({
     container: '',
     follow: false,
+    limit_bytes: 0,
     previous: false,
     since_seconds: 0,
     since_time: '',
-    timestamps: true,
     tail_lines: 100,
-    limit_bytes: 0,
+    timestamps: true,
   });
 
   const execFormModel = ref<{
@@ -320,36 +321,36 @@ export function usePodPage() {
   // form validation rules
   const createFormRules: Record<string, Rule[]> = {
     name: [
-      { required: true, message: '请输入 Pod 名称', trigger: 'blur' },
+      { message: '请输入 Pod 名称', required: true, trigger: 'blur' },
       {
-        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         message:
           'Pod 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         trigger: 'blur',
       },
       { max: 63, message: 'Pod 名称长度不能超过63个字符', trigger: 'blur' },
     ],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' },
+      { message: '请选择命名空间', required: true, trigger: 'change' },
     ],
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
   const execFormRules: Record<string, Rule[]> = {
-    container: [{ required: true, message: '请选择容器', trigger: 'change' }],
+    container: [{ message: '请选择容器', required: true, trigger: 'change' }],
   };
 
   // computed
@@ -358,11 +359,11 @@ export function usePodPage() {
   });
 
   const rowSelection = computed(() => ({
-    selectedRowKeys: selectedRowKeys.value,
     onChange: (keys: string[], rows: K8sPod[]) => {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
     },
+    selectedRowKeys: selectedRowKeys.value,
   }));
 
   // helpers
@@ -379,21 +380,21 @@ export function usePodPage() {
     if (env === undefined || env === null) return '未知环境';
     const value = typeof env === 'string' ? Number.parseInt(env) : env;
     const map: Record<number, string> = {
-      [Env.Prod]: '生产',
       [Env.Dev]: '开发',
-      [Env.Stage]: '预发',
-      [Env.Rc]: '测试',
       [Env.Press]: '灰度',
+      [Env.Prod]: '生产',
+      [Env.Rc]: '测试',
+      [Env.Stage]: '预发',
     };
     return map[value] || '未知环境';
   };
 
   const getStatusText = (status?: K8sPodStatus) => {
     const map: Record<K8sPodStatus, string> = {
+      [K8sPodStatus.Failed]: '失败',
       [K8sPodStatus.Pending]: '等待中',
       [K8sPodStatus.Running]: '运行中',
       [K8sPodStatus.Succeeded]: '已完成',
-      [K8sPodStatus.Failed]: '失败',
       [K8sPodStatus.Unknown]: '未知',
     };
     return status === undefined ? '未知' : map[status] || '未知';
@@ -401,10 +402,10 @@ export function usePodPage() {
 
   const getStatusColor = (status?: K8sPodStatus) => {
     const map: Record<K8sPodStatus, string> = {
+      [K8sPodStatus.Failed]: 'error',
       [K8sPodStatus.Pending]: 'warning',
       [K8sPodStatus.Running]: 'success',
       [K8sPodStatus.Succeeded]: 'success',
-      [K8sPodStatus.Failed]: 'error',
       [K8sPodStatus.Unknown]: 'default',
     };
     return status === undefined ? 'default' : map[status] || 'default';
@@ -412,10 +413,10 @@ export function usePodPage() {
 
   const getPhaseText = (phase?: K8sPodPhase) => {
     const map: Record<K8sPodPhase, string> = {
+      [K8sPodPhase.Failed]: '失败',
       [K8sPodPhase.Pending]: '等待中',
       [K8sPodPhase.Running]: '运行中',
       [K8sPodPhase.Succeeded]: '已完成',
-      [K8sPodPhase.Failed]: '失败',
       [K8sPodPhase.Unknown]: '未知',
     };
     return phase === undefined ? '未知' : map[phase] || '未知';
@@ -558,15 +559,15 @@ export function usePodPage() {
       selectedRows.value = [];
       const params: GetPodListReq = {
         cluster_id: clusterId,
-        page: currentPage.value,
-        page_size: pageSize.value,
-        search: searchText.value || undefined,
-        namespace: namespace || undefined,
-        status: filterStatus.value || undefined,
         labels:
           Object.keys(filterLabels.value).length > 0
             ? filterLabels.value
             : undefined,
+        namespace: namespace || undefined,
+        page: currentPage.value,
+        page_size: pageSize.value,
+        search: searchText.value || undefined,
+        status: filterStatus.value || undefined,
       };
       const res = await getK8sPodList(params);
       if (
@@ -578,16 +579,16 @@ export function usePodPage() {
       // 确保每个pod对象都有正确的cluster_id
       const podsWithClusterId = (res?.items || []).map((pod: K8sPod) => ({
         ...pod,
-        cluster_id: pod.cluster_id || clusterId,
-        // 解析JSON字段
-        labels: parseJsonField(pod.labels, {}),
         annotations: parseJsonField(pod.annotations, {}),
+        cluster_id: pod.cluster_id || clusterId,
         conditions: parseJsonField(pod.conditions, []),
         containers: parseJsonField(pod.containers, []),
         init_containers: parseJsonField(pod.init_containers, []),
-        volumes: parseJsonField(pod.volumes, []),
+        // 解析JSON字段
+        labels: parseJsonField(pod.labels, {}),
         owner_references: parseJsonField(pod.owner_references, []),
         spec: parseJsonField(pod.spec, {}),
+        volumes: parseJsonField(pod.volumes, []),
       }));
       pods.value = podsWithClusterId;
       total.value = res?.total || 0;
@@ -667,8 +668,8 @@ export function usePodPage() {
       isDetailModalVisible.value = true;
       const params: GetPodDetailsReq = {
         cluster_id: clusterId,
-        namespace: record.namespace,
         name: record.name,
+        namespace: record.namespace,
       };
       const res = await getK8sPodDetails(params);
 
@@ -676,25 +677,25 @@ export function usePodPage() {
       const processedDetail = res
         ? {
             ...res,
-            cluster_id: clusterId,
-            labels: recordToKeyValueList(parseJsonField(res.labels, {})),
             annotations: recordToKeyValueList(
               parseJsonField(res.annotations, {}),
             ),
+            cluster_id: clusterId,
             conditions: parseJsonField(res.conditions, []),
             containers: parseJsonField(res.containers, []),
             init_containers: parseJsonField(res.init_containers, []),
-            volumes: parseJsonField(res.volumes, []),
+            labels: recordToKeyValueList(parseJsonField(res.labels, {})),
             owner_references: parseJsonField(res.owner_references, []),
             spec: parseJsonField(res.spec, {}),
+            volumes: parseJsonField(res.volumes, []),
           }
         : {
             ...record,
-            cluster_id: clusterId,
-            labels: recordToKeyValueList(parseJsonField(record.labels, {})),
             annotations: recordToKeyValueList(
               parseJsonField(record.annotations, {}),
             ),
+            cluster_id: clusterId,
+            labels: recordToKeyValueList(parseJsonField(record.labels, {})),
           };
 
       currentPodDetail.value = processedDetail;
@@ -708,18 +709,18 @@ export function usePodPage() {
 
         const fallbackDetail = {
           ...record,
+          annotations: recordToKeyValueList(parsedAnnotations),
           cluster_id: clusterId,
           labels: recordToKeyValueList(parsedLabels),
-          annotations: recordToKeyValueList(parsedAnnotations),
         };
         currentPodDetail.value = fallbackDetail;
       } catch {
         // 最终的安全fallback
         currentPodDetail.value = {
           ...record,
+          annotations: [],
           cluster_id: clusterId,
           labels: [],
-          annotations: [],
         };
       }
     } finally {
@@ -742,8 +743,8 @@ export function usePodPage() {
       currentOperationPod.value = { ...record, cluster_id: clusterId };
       const params: GetPodYamlReq = {
         cluster_id: clusterId,
-        namespace: record.namespace,
         name: record.name,
+        namespace: record.namespace,
       };
       const res = await getK8sPodYaml(params);
       currentYamlContent.value = res?.yaml || '';
@@ -772,8 +773,8 @@ export function usePodPage() {
 
       const params: UpdatePodByYamlReq = {
         cluster_id: currentOperationPod.value.cluster_id,
-        namespace: currentOperationPod.value.namespace,
         name: currentOperationPod.value.name,
+        namespace: currentOperationPod.value.namespace,
         yaml: yamlFormModel.value.yaml,
       };
 
@@ -796,36 +797,36 @@ export function usePodPage() {
   // 创建 Pod
   const openCreateModal = () => {
     createFormModel.value = {
-      name: '',
-      namespace: '',
-      labels: {},
+      affinity: undefined,
       annotations: {},
       containers: [
         {
-          name: '',
-          image: '',
-          command: [],
           args: [],
+          command: [],
           envs: [],
+          image: '',
+          image_pull_policy: 'IfNotPresent',
+          name: '',
           ports: [],
           resources: {
-            requests: { cpu: '', memory: '' },
             limits: { cpu: '', memory: '' },
+            requests: { cpu: '', memory: '' },
           },
           volume_mounts: [],
-          image_pull_policy: 'IfNotPresent',
         },
       ],
-      init_containers: [],
-      restart_policy: 'Always',
-      node_selector: {},
-      tolerations: [],
-      affinity: undefined,
-      volumes: [],
+      dns_policy: 'ClusterFirst',
       host_network: false,
       host_pid: false,
-      dns_policy: 'ClusterFirst',
+      init_containers: [],
+      labels: {},
+      name: '',
+      namespace: '',
+      node_selector: {},
+      restart_policy: 'Always',
       service_account: '',
+      tolerations: [],
+      volumes: [],
     };
     isCreateModalVisible.value = true;
   };
@@ -853,40 +854,40 @@ export function usePodPage() {
       submitLoading.value = true;
 
       const params: CreatePodReq = {
-        cluster_id: filterClusterId.value,
-        name: createFormModel.value.name,
-        namespace: createFormModel.value.namespace,
-        labels:
-          Object.keys(createFormModel.value.labels).length > 0
-            ? createFormModel.value.labels
-            : undefined,
+        affinity: createFormModel.value.affinity,
         annotations:
           Object.keys(createFormModel.value.annotations).length > 0
             ? createFormModel.value.annotations
             : undefined,
+        cluster_id: filterClusterId.value,
         containers: createFormModel.value.containers,
+        dns_policy: createFormModel.value.dns_policy,
+        host_network: createFormModel.value.host_network,
+        host_pid: createFormModel.value.host_pid,
         init_containers:
           createFormModel.value.init_containers.length > 0
             ? createFormModel.value.init_containers
             : undefined,
-        restart_policy: createFormModel.value.restart_policy,
+        labels:
+          Object.keys(createFormModel.value.labels).length > 0
+            ? createFormModel.value.labels
+            : undefined,
+        name: createFormModel.value.name,
+        namespace: createFormModel.value.namespace,
         node_selector:
           Object.keys(createFormModel.value.node_selector).length > 0
             ? createFormModel.value.node_selector
             : undefined,
+        restart_policy: createFormModel.value.restart_policy,
+        service_account: createFormModel.value.service_account,
         tolerations:
           createFormModel.value.tolerations.length > 0
             ? createFormModel.value.tolerations
             : undefined,
-        affinity: createFormModel.value.affinity,
         volumes:
           createFormModel.value.volumes.length > 0
             ? createFormModel.value.volumes
             : undefined,
-        host_network: createFormModel.value.host_network,
-        host_pid: createFormModel.value.host_pid,
-        dns_policy: createFormModel.value.dns_policy,
-        service_account: createFormModel.value.service_account,
       };
 
       await createK8sPod(params);
@@ -1212,10 +1213,10 @@ export function usePodPage() {
   const openEditModal = (record: K8sPod) => {
     currentOperationPod.value = record;
     editFormModel.value = {
+      annotations: parseJsonField(record.annotations, {}),
+      labels: parseJsonField(record.labels, {}),
       name: record.name,
       namespace: record.namespace,
-      labels: parseJsonField(record.labels, {}),
-      annotations: parseJsonField(record.annotations, {}),
     };
     isEditModalVisible.value = true;
   };
@@ -1233,17 +1234,17 @@ export function usePodPage() {
       submitLoading.value = true;
 
       const params: UpdatePodReq = {
-        cluster_id: currentOperationPod.value.cluster_id,
-        name: currentOperationPod.value.name,
-        namespace: currentOperationPod.value.namespace,
-        labels:
-          Object.keys(editFormModel.value.labels).length > 0
-            ? editFormModel.value.labels
-            : undefined,
         annotations:
           Object.keys(editFormModel.value.annotations).length > 0
             ? editFormModel.value.annotations
             : undefined,
+        cluster_id: currentOperationPod.value.cluster_id,
+        labels:
+          Object.keys(editFormModel.value.labels).length > 0
+            ? editFormModel.value.labels
+            : undefined,
+        name: currentOperationPod.value.name,
+        namespace: currentOperationPod.value.namespace,
       };
 
       await updateK8sPod(params);
@@ -1268,18 +1269,17 @@ export function usePodPage() {
     if (!clusterId) return;
 
     Modal.confirm({
-      title: '删除 Pod',
+      cancelText: '取消',
+      centered: true,
       content: `确定要删除 Pod "${record.name}" 吗？此操作不可逆！`,
       okText: '确认删除',
       okType: 'danger',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           const params: DeletePodReq = {
             cluster_id: clusterId,
-            namespace: record.namespace,
             name: record.name,
+            namespace: record.namespace,
           };
           await deleteK8sPod(params);
           message.success('Pod 删除成功');
@@ -1288,6 +1288,7 @@ export function usePodPage() {
           if (shouldNotifyPageError(error)) message.error('Pod 删除失败');
         }
       },
+      title: '删除 Pod',
     });
   };
 
@@ -1348,12 +1349,12 @@ export function usePodPage() {
     logsFormModel.value = {
       container: '',
       follow: false,
+      limit_bytes: 0,
       previous: false,
       since_seconds: 0,
       since_time: '',
-      timestamps: true,
       tail_lines: 100,
-      limit_bytes: 0,
+      timestamps: true,
     };
   };
 
@@ -1396,8 +1397,8 @@ export function usePodPage() {
     } catch {
       onError?.(new Event('error'));
       return {
-        eventSource: null as any,
         close: () => {},
+        eventSource: null as any,
       };
     }
 
@@ -1475,8 +1476,8 @@ export function usePodPage() {
         }
 
         const response = await fetch(url, {
-          method: 'GET',
           headers,
+          method: 'GET',
           signal: abortController.signal,
         });
 
@@ -1548,10 +1549,12 @@ export function usePodPage() {
                 return;
               }
 
-              if (currentEvent === 'message' || currentEvent === '') {
-                if (data && data.length > 0) {
-                  onMessage(data);
-                }
+              if (
+                (currentEvent === 'message' || currentEvent === '') &&
+                data &&
+                data.length > 0
+              ) {
+                onMessage(data);
               }
             }
 
@@ -1586,7 +1589,6 @@ export function usePodPage() {
 
     // 创建兼容EventSource接口的对象
     const eventSource = {
-      readyState: 1, // OPEN
       close: async () => {
         isManualClose = true;
 
@@ -1612,15 +1614,16 @@ export function usePodPage() {
           onClose?.();
         } catch {}
       },
+      readyState: 1, // OPEN
     } as unknown as EventSource;
 
     return {
-      eventSource: eventSource as unknown as EventSource,
       close: () => {
         Promise.resolve(eventSource.close()).catch((_error) => {
           // Ignore close errors
         });
       },
+      eventSource: eventSource as unknown as EventSource,
     };
   };
 
@@ -1637,16 +1640,16 @@ export function usePodPage() {
 
       const params: GetPodLogsReq = {
         cluster_id: currentOperationPod.value.cluster_id,
-        namespace: currentOperationPod.value.namespace,
-        pod_name: currentOperationPod.value.name,
         container: logsFormModel.value.container,
         follow: true, // SSE模式下强制为true
+        limit_bytes: logsFormModel.value.limit_bytes || undefined,
+        namespace: currentOperationPod.value.namespace,
+        pod_name: currentOperationPod.value.name,
         previous: logsFormModel.value.previous,
         since_seconds: logsFormModel.value.since_seconds || undefined,
         since_time: logsFormModel.value.since_time || undefined,
-        timestamps: logsFormModel.value.timestamps,
         tail_lines: logsFormModel.value.tail_lines || undefined,
-        limit_bytes: logsFormModel.value.limit_bytes || undefined,
+        timestamps: logsFormModel.value.timestamps,
       };
 
       logsStreamConnection.value = streamK8sPodLogs(
@@ -1655,7 +1658,7 @@ export function usePodPage() {
         (data: string) => {
           if (data && data.trim()) {
             // 确保每行日志都有换行符
-            const logLine = data.endsWith('\n') ? data : data + '\n';
+            const logLine = data.endsWith('\n') ? data : `${data}\n`;
             podLogs.value += logLine;
 
             // 自动滚动到底部
@@ -1815,34 +1818,34 @@ export function usePodPage() {
 
       // 创建新的终端实例
       terminal.value = new Terminal({
-        cursorBlink: true,
-        fontSize: 14,
-        fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
-        theme: {
-          background: '#1e1e1e',
-          foreground: '#d4d4d4',
-          cursor: '#d4d4d4',
-          black: '#000000',
-          red: '#cd3131',
-          green: '#0dbc79',
-          yellow: '#e5e510',
-          blue: '#2472c8',
-          magenta: '#bc3fbc',
-          cyan: '#11a8cd',
-          white: '#e5e5e5',
-          brightBlack: '#666666',
-          brightRed: '#f14c4c',
-          brightGreen: '#23d18b',
-          brightYellow: '#f5f543',
-          brightBlue: '#3b8eea',
-          brightMagenta: '#d670d6',
-          brightCyan: '#29b8db',
-          brightWhite: '#e5e5e5',
-        },
         cols: 120,
+        convertEol: true,
+        cursorBlink: true,
+        fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
+        fontSize: 14,
         rows: 30,
         scrollback: 1000,
-        convertEol: true,
+        theme: {
+          background: '#1e1e1e',
+          black: '#000000',
+          blue: '#2472c8',
+          brightBlack: '#666666',
+          brightBlue: '#3b8eea',
+          brightCyan: '#29b8db',
+          brightGreen: '#23d18b',
+          brightMagenta: '#d670d6',
+          brightRed: '#f14c4c',
+          brightWhite: '#e5e5e5',
+          brightYellow: '#f5f543',
+          cursor: '#d4d4d4',
+          cyan: '#11a8cd',
+          foreground: '#d4d4d4',
+          green: '#0dbc79',
+          magenta: '#bc3fbc',
+          red: '#cd3131',
+          white: '#e5e5e5',
+          yellow: '#e5e510',
+        },
       });
 
       // 添加插件
@@ -1897,14 +1900,14 @@ export function usePodPage() {
     if (!token) {
       onError?.(new Event('auth_error'));
       return {
-        sendCommand: () => {
-          // WebSocket未连接，无法发送命令
-        },
         close: () => {
           // 空操作，因为没有连接可关闭
         },
         get readyState() {
           return WebSocket.CLOSED;
+        },
+        sendCommand: () => {
+          // WebSocket未连接，无法发送命令
         },
       };
     }
@@ -2082,8 +2085,8 @@ export function usePodPage() {
             ) {
               ownedSocket.send(
                 JSON.stringify({
-                  op: 'resize',
                   col_size: cols,
+                  op: 'resize',
                   row_size: rows,
                 }),
               );
@@ -2163,7 +2166,7 @@ export function usePodPage() {
     const sendCommand = (command: string) => {
       if (socket && socket.readyState === WebSocket.OPEN) {
         for (const chunk of utf8Chunks(command)) {
-          socket.send(JSON.stringify({ op: 'stdin', data: chunk }));
+          socket.send(JSON.stringify({ data: chunk, op: 'stdin' }));
         }
       }
     };
@@ -2192,11 +2195,11 @@ export function usePodPage() {
     connect();
 
     return {
-      sendCommand,
       close,
       get readyState() {
         return socket?.readyState;
       },
+      sendCommand,
     };
   };
 
@@ -2217,9 +2220,9 @@ export function usePodPage() {
 
       const params: PodExecReq = {
         cluster_id: currentOperationPod.value.cluster_id,
+        container: execFormModel.value.container,
         namespace: currentOperationPod.value.namespace,
         pod_name: currentOperationPod.value.name,
-        container: execFormModel.value.container,
         shell: execFormModel.value.shell,
       };
 
@@ -2309,9 +2312,9 @@ export function usePodPage() {
 
       const params: PodExecReq = {
         cluster_id: currentOperationPod.value.cluster_id,
+        container: execFormModel.value.container,
         namespace: currentOperationPod.value.namespace,
         pod_name: currentOperationPod.value.name,
-        container: execFormModel.value.container,
         shell: execFormModel.value.shell,
       };
       await execK8sPod(params);
@@ -2408,10 +2411,10 @@ export function usePodPage() {
     try {
       const params: PodFileUploadReq = {
         cluster_id: currentOperationPod.value.cluster_id,
-        namespace: currentOperationPod.value.namespace,
-        pod_name: currentOperationPod.value.name,
         container,
         file_path: filePath,
+        namespace: currentOperationPod.value.namespace,
+        pod_name: currentOperationPod.value.name,
       };
       await uploadK8sPodFile(params, file);
       message.success('文件上传成功');
@@ -2430,10 +2433,10 @@ export function usePodPage() {
     try {
       const params: PodFileDownloadReq = {
         cluster_id: currentOperationPod.value.cluster_id,
-        namespace: currentOperationPod.value.namespace,
-        pod_name: currentOperationPod.value.name,
         container,
         file_path: filePath,
+        namespace: currentOperationPod.value.namespace,
+        pod_name: currentOperationPod.value.name,
       };
 
       // 调用API下载文件
@@ -2485,13 +2488,13 @@ export function usePodPage() {
       message.success(`文件 "${fileName}" 下载成功`);
     } catch (error: any) {
       console.error('文件下载错误详情:', {
+        config: error?.config,
+        data: error?.response?.data,
         message: error?.message,
         response: error?.response,
+        stack: error?.stack,
         status: error?.response?.status,
         statusText: error?.response?.statusText,
-        data: error?.response?.data,
-        config: error?.config,
-        stack: error?.stack,
       });
 
       // 更详细的错误处理
@@ -2564,12 +2567,11 @@ export function usePodPage() {
     if (selectedRows.value.length === 0) return;
 
     Modal.confirm({
-      title: `批量${operation}`,
+      cancelText: '取消',
+      centered: true,
       content: `确定要对选中的 ${selectedRows.value.length} 个 Pod 执行${operation}操作吗？`,
       okText: '确认执行',
       okType: operation === '删除' ? 'danger' : 'primary',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           if (operation === '删除') {
@@ -2582,8 +2584,8 @@ export function usePodPage() {
 
               const params: DeletePodReq = {
                 cluster_id: clusterId,
-                namespace: pod.namespace,
                 name: pod.name,
+                namespace: pod.namespace,
               };
               await deleteK8sPod(params);
             }
@@ -2598,6 +2600,7 @@ export function usePodPage() {
             message.error(`批量${operation}失败`);
         }
       },
+      title: `批量${operation}`,
     });
   };
 
@@ -2630,18 +2633,18 @@ export function usePodPage() {
   // 表单字段操作
   const addContainerField = () => {
     createFormModel.value.containers.push({
-      name: '',
-      image: '',
-      command: [],
       args: [],
+      command: [],
       envs: [],
+      image: '',
+      image_pull_policy: 'IfNotPresent',
+      name: '',
       ports: [],
       resources: {
-        requests: { cpu: '', memory: '' },
         limits: { cpu: '', memory: '' },
+        requests: { cpu: '', memory: '' },
       },
       volume_mounts: [],
-      image_pull_policy: 'IfNotPresent',
     });
   };
 
@@ -2653,18 +2656,18 @@ export function usePodPage() {
 
   const addInitContainerField = () => {
     createFormModel.value.init_containers.push({
-      name: '',
-      image: '',
-      command: [],
       args: [],
+      command: [],
       envs: [],
+      image: '',
+      image_pull_policy: 'IfNotPresent',
+      name: '',
       ports: [],
       resources: {
-        requests: { cpu: '', memory: '' },
         limits: { cpu: '', memory: '' },
+        requests: { cpu: '', memory: '' },
       },
       volume_mounts: [],
-      image_pull_policy: 'IfNotPresent',
     });
   };
 
@@ -2700,8 +2703,8 @@ export function usePodPage() {
     if (containers[containerIndex]) {
       containers[containerIndex].ports = containers[containerIndex].ports || [];
       containers[containerIndex].ports?.push({
-        name: '',
         container_port: 0,
+        name: '',
         protocol: 'TCP',
       });
     }
@@ -2726,8 +2729,8 @@ export function usePodPage() {
       containers[containerIndex].volume_mounts =
         containers[containerIndex].volume_mounts || [];
       containers[containerIndex].volume_mounts?.push({
-        name: '',
         mount_path: '',
+        name: '',
         read_only: false,
         sub_path: '',
       });
@@ -2789,9 +2792,43 @@ export function usePodPage() {
   }
 
   return {
-    // 日志 SSE / 终端 WS 连接（供令牌刷新重连测试使用）
-    execK8sPodWebSocket,
-    streamK8sPodLogs,
+    // form field operations
+    addAnnotationField,
+    addContainerField,
+    addEnvField,
+    // filter operations
+    addFilterLabel,
+    addInitContainerField,
+    addLabelField,
+    addNodeSelectorField,
+    addPortField,
+    addPortForwardField,
+    addVolumeMountField,
+    // batch operations
+    batchOperation,
+    clearFilterLabels,
+    // operations
+    clearNamespaces,
+    clearPods,
+    // YAML toolbar operations
+    clearYaml,
+    // create operations
+    closeCreateModal,
+    closeCreateYamlModal,
+    // detail operations
+    closeDetailModal,
+    // edit operations
+    closeEditModal,
+    // exec operations
+    closeExecModal,
+    // file operations
+    closeFileManagerModal,
+    // logs operations
+    closeLogsModal,
+    // port forward operations
+    closePortForwardModal,
+    // YAML operations
+    closeYamlModal,
     // state
     clusters,
     clustersError,
@@ -2799,37 +2836,68 @@ export function usePodPage() {
     clustersPage,
     clustersSize,
     clustersTotal,
-    currentPage,
-    filterClusterId,
-    filterLabels,
-    filterNamespace,
-    filterNodeName,
-    filterPhase,
-    filterStatus,
-    loadError,
-    loading,
-    namespaces,
-    namespacesError,
-    namespacesLoading,
-    namespacesPage,
-    namespacesSize,
-    namespacesTotal,
-    nodes,
-    pageSize,
-    pods,
-    searchText,
-    selectedRowKeys,
-    selectedRows,
-    total,
+
+    connectToTerminal,
+    // form models
+    createFormModel,
+    // form rules
+    createFormRules,
+    createYamlFormModel,
 
     // form refs
     createYamlFormRef,
-    execFormRef,
-    formRef,
-    yamlFormRef,
-
+    createYamlFormRules,
+    // operation targets
+    currentOperationPod,
+    currentPage,
+    currentPodDetail,
+    currentYamlContent,
+    // pod operations
+    deletePod,
     // modal state
     detailLoading,
+    disconnectTerminal,
+    downloadFile,
+    editFormModel,
+    execFormModel,
+    execFormRef,
+    execFormRules,
+    // 日志 SSE / 终端 WS 连接（供令牌刷新重连测试使用）
+    execK8sPodWebSocket,
+
+    executePodCommand,
+    fetchClusters,
+    fetchNamespaces,
+    fetchPodLogs,
+    fetchPods,
+
+    fetchPodsByNode,
+    filterClusterId,
+    // computed
+    filteredPods,
+    filterLabels,
+    filterNamespace,
+    filterNodeName,
+
+    filterPhase,
+    filterStatus,
+    // 终端状态
+    fitAddon,
+    formatEditYaml,
+    formatYaml,
+    formRef,
+    // helpers
+    getEnvText,
+
+    getPhaseText,
+    getStatusColor,
+    getStatusText,
+    // pagination operations
+    handlePageChange,
+
+    initializeTerminal,
+    insertYamlTemplate,
+
     isContainersModalVisible,
     isCreateModalVisible,
     isCreateYamlModalVisible,
@@ -2838,160 +2906,95 @@ export function usePodPage() {
     isExecModalVisible,
     isFileManagerModalVisible,
     isLogsModalVisible,
+
     isLogsStreaming,
     isPortForwardModalVisible,
-    isYamlModalVisible,
-    logsLoading,
-    logsStreamConnection,
-    submitLoading,
-
-    // 终端状态
-    fitAddon,
     isTerminalConnected,
-    terminal,
-    terminalConnection,
-    terminalLoading,
-
-    // operation targets
-    currentOperationPod,
-    currentPodDetail,
-    currentYamlContent,
-    podContainers,
-    podLogs,
-    selectedContainer,
-
-    // form models
-    createFormModel,
-    createYamlFormModel,
-    editFormModel,
-    execFormModel,
-    logsFormModel,
-    portForwardFormModel,
-    yamlFormModel,
-
-    // form rules
-    createFormRules,
-    createYamlFormRules,
-    execFormRules,
-    yamlFormRules,
-
-    // computed
-    filteredPods,
-    rowSelection,
-
-    // helpers
-    getEnvText,
-    getPhaseText,
-    getStatusColor,
-    getStatusText,
+    isYamlModalVisible,
+    // constants
+    K8sPodPhase,
+    K8sPodStatus,
     keyValueListToRecord,
-    parseJsonField,
-    recordToKeyValueList,
-    validateClusterId,
+    loadError,
 
-    // operations
-    clearNamespaces,
-    clearPods,
-    fetchClusters,
-    fetchNamespaces,
-    fetchPods,
-    fetchPodsByNode,
+    loading,
     loadMoreClusters,
+
     loadMoreNamespaces,
+    logsFormModel,
+    logsLoading,
 
-    // detail operations
-    closeDetailModal,
-    showPodDetail,
+    logsStreamConnection,
+    namespaces,
+    namespacesError,
+    namespacesLoading,
+    namespacesPage,
+    namespacesSize,
 
-    // YAML operations
-    closeYamlModal,
-    showYamlModal,
-    submitYamlForm,
-
-    // YAML toolbar operations
-    clearYaml,
-    formatEditYaml,
-    formatYaml,
-    insertYamlTemplate,
-    validateEditYaml,
-    validateYaml,
-
-    // create operations
-    closeCreateModal,
-    closeCreateYamlModal,
+    namespacesTotal,
+    nodes,
     openCreateModal,
     openCreateYamlModal,
-    submitCreateForm,
-    submitCreateYamlForm,
-
-    // edit operations
-    closeEditModal,
     openEditModal,
-    submitEditForm,
+    pageSize,
 
-    // pod operations
-    deletePod,
+    parseJsonField,
+    podContainers,
+    podLogs,
 
-    // logs operations
-    closeLogsModal,
-    fetchPodLogs,
-    showLogsModal,
-    startLogsStream,
-    stopLogsStream,
+    pods,
 
-    // exec operations
-    closeExecModal,
-    connectToTerminal,
-    disconnectTerminal,
-    executePodCommand,
-    initializeTerminal,
-    showExecModal,
-
-    // port forward operations
-    closePortForwardModal,
-    showPortForwardModal,
-    submitPortForward,
-
-    // file operations
-    closeFileManagerModal,
-    downloadFile,
-    showFileManagerModal,
-    uploadFile,
-
-    // filter operations
-    addFilterLabel,
-    clearFilterLabels,
-    removeFilterLabel,
-
-    // batch operations
-    batchOperation,
-
-    // pagination operations
-    handlePageChange,
-    resetClusters,
-
-    // form field operations
-    addAnnotationField,
-    addContainerField,
-    addEnvField,
-    addInitContainerField,
-    addLabelField,
-    addNodeSelectorField,
-    addPortField,
-    addPortForwardField,
-    addVolumeMountField,
+    portForwardFormModel,
+    recordToKeyValueList,
     removeAnnotationField,
     removeContainerField,
     removeEnvField,
+
+    removeFilterLabel,
     removeInitContainerField,
     removeLabelField,
     removeNodeSelectorField,
     removePortField,
     removePortForwardField,
-    removeVolumeMountField,
 
-    // constants
-    K8sPodPhase,
-    K8sPodStatus,
+    removeVolumeMountField,
+    resetClusters,
+    rowSelection,
+
+    searchText,
+    selectedContainer,
+    selectedRowKeys,
+    selectedRows,
+
+    showExecModal,
+    showFileManagerModal,
+    showLogsModal,
+
+    showPodDetail,
+
+    showPortForwardModal,
+    showYamlModal,
+
+    startLogsStream,
+    stopLogsStream,
+    streamK8sPodLogs,
+    submitCreateForm,
+    submitCreateYamlForm,
+    submitEditForm,
+    submitLoading,
+    submitPortForward,
+    submitYamlForm,
+    terminal,
+    terminalConnection,
+    terminalLoading,
+    total,
+    uploadFile,
+    validateClusterId,
+    validateEditYaml,
+    validateYaml,
+    yamlFormModel,
+
+    yamlFormRef,
+    yamlFormRules,
   };
 }

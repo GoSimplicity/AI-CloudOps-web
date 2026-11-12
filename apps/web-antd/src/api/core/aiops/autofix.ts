@@ -157,13 +157,13 @@ export interface AutoFixOperation {
   operation_id?: null | string;
   state:
     | 'building'
-    | 'pending'
-    | 'executing'
     | 'completed'
-    | 'uncertain'
+    | 'executing'
     | 'invalidated'
+    | 'pending'
+    | 'uncertain'
     | string;
-  approval_state: 'pending' | 'consumed' | 'voided';
+  approval_state: 'consumed' | 'pending' | 'voided';
   created_at?: string;
   updated_at?: string;
   expires_at?: string;

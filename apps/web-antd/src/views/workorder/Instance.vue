@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import { downloadCsv } from '#/utils/export-csv';
-import { getOwnLookupValue } from '#/utils/own-lookup';
-
 import {
   computed,
   h,
@@ -15,10 +12,6 @@ import {
 
 import { useAccessStore } from '@vben/stores';
 
-import { useWindowSize } from '@vueuse/core';
-
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { message, Modal } from 'ant-design-vue';
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -38,7 +31,17 @@ import {
   RightOutlined,
   UserOutlined,
 } from '@ant-design/icons-vue';
+import { useWindowSize } from '@vueuse/core';
+import { message, Modal } from 'ant-design-vue';
 
+import { getUserList, type GetUserListReq } from '#/api/core/system/user';
+import {
+  detailWorkorderFormDesign,
+  type DetailWorkorderFormDesignReq,
+  type FormField,
+  FormFieldType,
+  type WorkorderFormDesignItem,
+} from '#/api/core/workorder/workorder_form_design';
 import {
   approveWorkorderInstance,
   type ApproveWorkorderInstanceReq,
@@ -70,14 +73,6 @@ import {
   type UpdateWorkorderInstanceReq,
   type WorkorderInstanceItem,
 } from '#/api/core/workorder/workorder_instance';
-
-// 导入新的组件
-import WorkorderComments from './components/WorkorderComments.vue';
-import WorkorderTimeline from './components/WorkorderTimeline.vue';
-import WorkorderFlow from './components/WorkorderFlow.vue';
-
-import { getUserList, type GetUserListReq } from '#/api/core/system/user';
-
 import {
   detailWorkorderProcess,
   type DetailWorkorderProcessReq,
@@ -88,17 +83,18 @@ import {
   type WorkorderProcessItem,
 } from '#/api/core/workorder/workorder_process';
 import {
-  detailWorkorderFormDesign,
-  type DetailWorkorderFormDesignReq,
-  type FormField,
-  FormFieldType,
-  type WorkorderFormDesignItem,
-} from '#/api/core/workorder/workorder_form_design';
-import {
   detailWorkorderTemplate,
   listWorkorderTemplate,
   type WorkorderTemplateItem,
 } from '#/api/core/workorder/workorder_template';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { downloadCsv } from '#/utils/export-csv';
+import { getOwnLookupValue } from '#/utils/own-lookup';
+
+// 导入新的组件
+import WorkorderComments from './components/WorkorderComments.vue';
+import WorkorderFlow from './components/WorkorderFlow.vue';
+import WorkorderTimeline from './components/WorkorderTimeline.vue';
 
 // 导入通知相关API
 import {
@@ -180,19 +176,19 @@ const detailLoading = ref(false);
 const detailError = ref('');
 const detailMetadataErrors = reactive({
   actions: '',
-  step: '',
   navigation: '',
+  step: '',
 });
 const detailTarget = ref<null | WorkorderInstanceItem>(null);
 const loadError = ref('');
 let listRequest = 0;
 // 只保留当前展开行的动作；关闭、换行、换账号及列表刷新均作废旧请求
 const rowActions = reactive({
-  instanceId: 0,
-  loading: false,
-  loaded: false,
-  error: '',
   actions: [] as string[],
+  error: '',
+  instanceId: 0,
+  loaded: false,
+  loading: false,
 });
 let rowActionsRequest = 0;
 let actionRequest = 0;
@@ -300,9 +296,9 @@ const templateSearchKeyword = ref('');
 const users = ref<UserListItem[]>([]);
 const usersPagination = reactive({
   current: 1,
+  hasMore: false,
   pageSize: 20,
   total: 0,
-  hasMore: false,
 });
 const usersLoading = ref(false);
 const usersSearchKeyword = ref('');
@@ -312,8 +308,8 @@ const notificationLogs = ref<NotificationLog[]>([]);
 const notificationLogsLoading = ref(false);
 const notificationLogsError = ref('');
 const notificationLogsDialog = reactive({
-  visible: false,
   instanceId: 0,
+  visible: false,
 });
 const notificationLogsPagination = reactive({
   current: 1,
@@ -323,84 +319,84 @@ const notificationLogsPagination = reactive({
 
 // 统计数据
 const stats = reactive({
-  total: 0,
+  completed: 0,
   pending: 0,
   processing: 0,
-  completed: 0,
+  total: 0,
 });
 
 // 分页配置
 const paginationConfig = computed(() => ({
   current: currentPage.value,
   pageSize: pageSize.value,
-  total: total.value,
-  showSizeChanger: true,
-  showQuickJumper: true,
-  showTotal: (total: number) => `共 ${total} 条`,
   pageSizeOptions: ['10', '20', '50', '100'],
+  showQuickJumper: true,
+  showSizeChanger: true,
+  showTotal: (total: number) => `共 ${total} 条`,
+  total: total.value,
 }));
 
 // 工单对话框
 const instanceDialog = reactive({
-  visible: false,
-  isEdit: false,
   form: {
-    id: undefined,
-    title: '',
+    assignee_id: undefined,
     description: '',
+    due_date: undefined as any,
+    form_data: {},
+    form_data_json: '',
+    id: undefined,
     priority: Priority.Normal,
     process_id: 0,
-    assignee_id: undefined,
-    form_data_json: '',
     status: InstanceStatus.Draft,
-    form_data: {},
     tags: [] as string[],
-    due_date: undefined as any,
-  } as CreateWorkorderInstanceReq & {
+    title: '',
+  } as {
     due_date?: any;
     form_data_json?: string;
     id?: number;
     tags?: string[];
-  },
+  } & CreateWorkorderInstanceReq,
+  isEdit: false,
+  visible: false,
 });
 
 // 表单验证规则
 const formRules = {
-  title: [
-    { message: '请输入工单标题', required: true, trigger: 'blur' },
-    { max: 200, message: '长度应为1到200个字符', min: 1, trigger: 'blur' },
-  ],
   priority: [{ message: '请选择优先级', required: true, trigger: 'change' }],
   process_id: [
     { message: '请选择关联流程', required: true, trigger: 'change' },
+  ],
+  title: [
+    { message: '请输入工单标题', required: true, trigger: 'blur' },
+    { max: 200, message: '长度应为1到200个字符', min: 1, trigger: 'blur' },
   ],
 };
 
 // 从模板创建对话框
 const templateDialog = reactive({
-  visible: false,
   form: {
-    template_id: undefined as number | undefined,
-    title: '',
     description: '',
+    due_date: undefined as any,
     priority: Priority.Normal,
     tags: [] as string[],
-    due_date: undefined as any,
+    template_id: undefined as number | undefined,
+    title: '',
   },
+  visible: false,
 });
 
 // 详情对话框
 const detailDialog = reactive({
-  visible: false,
-  instance: null as null | WorkorderInstanceItem,
+  actionsLoading: false,
+  allSteps: [] as ProcessStep[],
   availableActions: [] as string[],
   currentStep: null as any,
-  actionsLoading: false,
-  stepLoading: false,
-  previousStep: null as null | ProcessStep,
+  instance: null as null | WorkorderInstanceItem,
   nextStep: null as null | ProcessStep,
-  allSteps: [] as ProcessStep[],
+  previousStep: null as null | ProcessStep,
   processDefinition: null as null | ProcessDefinition,
+  stepLoading: false,
+  visible: false,
 });
 
 const isDetailCurrent = (id: number, request: number) =>
@@ -567,31 +563,31 @@ const retryInstanceDetail = () => {
 
 // 分配处理人对话框
 const assignDialog = reactive({
-  visible: false,
-  instanceId: 0,
   form: {
     assignee_id: undefined as number | undefined,
   },
+  instanceId: 0,
+  visible: false,
 });
 
 // 审批对话框
 const approvalDialog = reactive({
-  visible: false,
-  instanceId: 0,
-  type: 'approve' as 'approve' | 'reject',
   form: {
     comment: '',
   },
+  instanceId: 0,
+  type: 'approve' as 'approve' | 'reject',
+  visible: false,
 });
 
 // 操作确认对话框（取消、完成、退回）
 const actionDialog = reactive({
-  visible: false,
-  instanceId: 0,
-  type: 'cancel' as 'cancel' | 'complete' | 'return',
   form: {
     comment: '',
   },
+  instanceId: 0,
+  type: 'cancel' as 'cancel' | 'complete' | 'return',
+  visible: false,
 });
 
 // JSON验证错误
@@ -625,9 +621,9 @@ let processSearchTimeout: null | ReturnType<typeof setTimeout> = null;
 
 const processPagination = reactive({
   current: 1,
+  hasMore: false,
   pageSize: 20,
   total: 0,
-  hasMore: false,
 });
 
 // 用户选择器相关
@@ -638,9 +634,9 @@ let userSearchTimeout: null | ReturnType<typeof setTimeout> = null;
 
 const userPagination = reactive({
   current: 1,
+  hasMore: false,
   pageSize: 20,
   total: 0,
-  hasMore: false,
 });
 
 // 身份变化时移除旧主体的动作和未完成对话框
@@ -730,9 +726,6 @@ const userTotalPages = computed(() => {
 // 获取字段的列宽
 const getFieldColSpan = (fieldType: string): number => {
   switch (fieldType) {
-    case FormFieldType.Textarea: {
-      return 24;
-    } // 全宽
     case FormFieldType.Checkbox:
     case FormFieldType.Radio: {
       return 24;
@@ -742,6 +735,9 @@ const getFieldColSpan = (fieldType: string): number => {
     case FormFieldType.Switch: {
       return 12;
     } // 半宽
+    case FormFieldType.Textarea: {
+      return 24;
+    } // 全宽
     default: {
       return 12;
     } // 默认半宽
@@ -750,51 +746,51 @@ const getFieldColSpan = (fieldType: string): number => {
 
 const getStatusColor = (status: number): string => {
   const colorMap = {
+    [InstanceStatus.Cancelled]: 'default',
+    [InstanceStatus.Completed]: 'green',
     [InstanceStatus.Draft]: 'default',
     [InstanceStatus.Pending]: 'orange',
     [InstanceStatus.Processing]: 'blue',
-    [InstanceStatus.Completed]: 'green',
     [InstanceStatus.Rejected]: 'red',
-    [InstanceStatus.Cancelled]: 'default',
   };
   return colorMap[status as keyof typeof colorMap] || 'default';
 };
 
 const getStatusText = (status: number): string => {
   const textMap = {
+    [InstanceStatus.Cancelled]: '已取消',
+    [InstanceStatus.Completed]: '已完成',
     [InstanceStatus.Draft]: '草稿',
     [InstanceStatus.Pending]: '待处理',
     [InstanceStatus.Processing]: '处理中',
-    [InstanceStatus.Completed]: '已完成',
     [InstanceStatus.Rejected]: '已拒绝',
-    [InstanceStatus.Cancelled]: '已取消',
   };
   return textMap[status as keyof typeof textMap] || '未知';
 };
 
 const getPriorityColor = (priority: number): string => {
   const colorMap = {
+    [Priority.High]: 'red',
     [Priority.Low]: 'green',
     [Priority.Normal]: 'blue',
-    [Priority.High]: 'red',
   };
   return colorMap[priority as keyof typeof colorMap] || 'blue';
 };
 
 const getPriorityText = (priority: number): string => {
   const textMap = {
+    [Priority.High]: '高',
     [Priority.Low]: '低',
     [Priority.Normal]: '普通',
-    [Priority.High]: '高',
   };
   return textMap[priority as keyof typeof textMap] || '普通';
 };
 
 const getPriorityClass = (priority: number): string => {
   const classMap = {
+    [Priority.High]: 'priority-high',
     [Priority.Low]: 'priority-low',
     [Priority.Normal]: 'priority-normal',
-    [Priority.High]: 'priority-high',
   };
   return classMap[priority as keyof typeof classMap] || 'priority-normal';
 };
@@ -813,8 +809,8 @@ const loadUsers = async (
   try {
     const params: GetUserListReq = {
       page: reset ? 1 : usersPagination.current + 1,
-      size: usersPagination.pageSize,
       search: search || usersSearchKeyword.value || '',
+      size: usersPagination.pageSize,
     };
 
     const res = await getUserList(params);
@@ -895,9 +891,9 @@ const formatDate = (dateStr: string | undefined) => {
   if (!dateStr) return '';
   const d = new Date(dateStr);
   return d.toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
     day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
   });
 };
 
@@ -911,11 +907,11 @@ const formatFullDateTime = (dateStr: string | undefined) => {
   if (!dateStr) return '';
   const d = new Date(dateStr);
   return d.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: 'long',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    month: 'long',
+    year: 'numeric',
   });
 };
 
@@ -923,12 +919,12 @@ const formatDateTime = (dateStr: string | undefined) => {
   if (!dateStr) return '';
   const d = new Date(dateStr);
   return d.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    month: '2-digit',
     second: '2-digit',
+    year: 'numeric',
   });
 };
 
@@ -982,28 +978,28 @@ const initializeVisualFormData = (): void => {
       if (field.default === undefined) {
         // 根据字段类型设置默认值
         switch (field.type) {
-          case FormFieldType.Text:
-          case FormFieldType.Password:
-          case FormFieldType.Textarea:
-          case FormFieldType.Select:
-          case FormFieldType.Radio: {
-            newData[field.name] = '';
+          case FormFieldType.Checkbox: {
+            newData[field.name] = [];
+            break;
+          }
+          case FormFieldType.Date: {
+            newData[field.name] = undefined;
             break;
           }
           case FormFieldType.Number: {
             newData[field.name] = undefined;
             break;
           }
-          case FormFieldType.Checkbox: {
-            newData[field.name] = [];
+          case FormFieldType.Password:
+          case FormFieldType.Radio:
+          case FormFieldType.Select:
+          case FormFieldType.Text:
+          case FormFieldType.Textarea: {
+            newData[field.name] = '';
             break;
           }
           case FormFieldType.Switch: {
             newData[field.name] = false;
-            break;
-          }
-          case FormFieldType.Date: {
-            newData[field.name] = undefined;
             break;
           }
           default: {
@@ -1164,8 +1160,8 @@ const loadDialogProcesses = async (
   try {
     const params: ListWorkorderProcessReq = {
       page: reset ? 1 : processPagination.current + 1,
-      size: processPagination.pageSize,
       search: search || processSearchKeyword.value || '',
+      size: processPagination.pageSize,
       status: 2,
     };
 
@@ -1219,8 +1215,8 @@ const loadProcesses = async (search?: string): Promise<void> => {
     while (hasMoreData) {
       const params: ListWorkorderProcessReq = {
         page: currentPage,
-        size: pageSize,
         search: search || '',
+        size: pageSize,
       };
 
       const res = await listWorkorderProcess(params);
@@ -1258,10 +1254,8 @@ const handleProcessSearch = (value: string): void => {
 };
 
 const handleProcessDropdownChange = (open: boolean): void => {
-  if (open) {
-    if (dialogProcesses.value.length === 0) {
-      loadDialogProcesses(true);
-    }
+  if (open && dialogProcesses.value.length === 0) {
+    loadDialogProcesses(true);
   }
 };
 
@@ -1272,7 +1266,7 @@ const handleProcessScroll = (e: Event): void => {
   if (!target) return;
 
   const element = target as HTMLElement;
-  const { scrollTop, scrollHeight, clientHeight } = element;
+  const { clientHeight, scrollHeight, scrollTop } = element;
 
   if (
     scrollTop + clientHeight >= scrollHeight - 10 &&
@@ -1315,8 +1309,8 @@ const loadDialogUsers = async (
   try {
     const params: GetUserListReq = {
       page: reset ? 1 : userPagination.current + 1,
-      size: userPagination.pageSize,
       search: search || userSearchKeyword.value || '',
+      size: userPagination.pageSize,
     };
 
     const res = await getUserList(params);
@@ -1368,10 +1362,8 @@ const handleUserSearch = (value: string): void => {
 };
 
 const handleUserDropdownChange = (open: boolean): void => {
-  if (open) {
-    if (dialogUsers.value.length === 0) {
-      loadDialogUsers(true);
-    }
+  if (open && dialogUsers.value.length === 0) {
+    loadDialogUsers(true);
   }
 };
 
@@ -1382,7 +1374,7 @@ const handleUserScroll = (e: Event): void => {
   if (!target) return;
 
   const element = target as HTMLElement;
-  const { scrollTop, scrollHeight, clientHeight } = element;
+  const { clientHeight, scrollHeight, scrollTop } = element;
 
   if (
     scrollTop + clientHeight >= scrollHeight - 10 &&
@@ -1422,11 +1414,11 @@ const loadInstances = async () => {
   try {
     const params: ListWorkorderInstanceReq = {
       page: currentPage.value,
-      size: Math.max(10, pageSize.value),
-      search: searchQuery.value || undefined,
-      status: statusFilter.value || undefined,
       priority: priorityFilter.value || undefined,
       process_id: processFilter.value || undefined,
+      search: searchQuery.value || undefined,
+      size: Math.max(10, pageSize.value),
+      status: statusFilter.value || undefined,
     };
     const res = await listWorkorderInstance(params);
     if (request !== listRequest) return;
@@ -1504,7 +1496,7 @@ const resetSelectors = (): void => {
   ++processOptionsRequest;
   ++userOptionsRequest;
   // 重置流程选择器
-  Object.assign(processPagination, { current: 1, total: 0, hasMore: false });
+  Object.assign(processPagination, { current: 1, hasMore: false, total: 0 });
   dialogProcesses.value = [];
   processSearchKeyword.value = '';
   processSelectorLoading.value = false;
@@ -1514,7 +1506,7 @@ const resetSelectors = (): void => {
   }
 
   // 重置用户选择器
-  Object.assign(userPagination, { current: 1, total: 0, hasMore: false });
+  Object.assign(userPagination, { current: 1, hasMore: false, total: 0 });
   dialogUsers.value = [];
   userSearchKeyword.value = '';
   userSelectorLoading.value = false;
@@ -1531,16 +1523,16 @@ const handleCreateInstance = () => {
   formDesignLoading.value = false;
   instanceDialog.isEdit = false;
   instanceDialog.form = {
-    title: '',
+    assignee_id: undefined,
     description: '',
+    due_date: undefined,
+    form_data: {},
+    form_data_json: '',
     priority: Priority.Normal,
     process_id: 0,
-    assignee_id: undefined,
-    form_data_json: '',
-    form_data: {},
     status: InstanceStatus.Draft,
     tags: [],
-    due_date: undefined,
+    title: '',
   };
 
   // 重置表单编辑状态
@@ -1561,9 +1553,9 @@ const loadTemplates = async (search?: string) => {
   try {
     const res = await listWorkorderTemplate({
       page: 1,
+      search: search || templateSearchKeyword.value || '',
       size: 50,
       status: 1,
-      search: search || templateSearchKeyword.value || '',
     });
     if (
       request !== templateOptionsRequest ||
@@ -1593,12 +1585,12 @@ const handleCreateFromTemplate = () => {
   templateSearchKeyword.value = '';
   dialogTemplates.value = [];
   templateDialog.form = {
-    template_id: undefined,
-    title: '',
     description: '',
+    due_date: undefined,
     priority: Priority.Normal,
     tags: [],
-    due_date: undefined,
+    template_id: undefined,
+    title: '',
   };
   templateDialog.visible = true;
   loadTemplates();
@@ -1642,21 +1634,21 @@ const handleTemplateSubmit = async () => {
     // 填充工单表单并打开
     instanceDialog.isEdit = false;
     instanceDialog.form = {
-      title: templateDialog.form.title || templateDetail.name,
+      assignee_id: undefined,
       description:
         templateDialog.form.description || templateDetail.description,
-      priority: templateDialog.form.priority,
-      process_id: templateDetail.process_id,
-      assignee_id: undefined,
+      due_date: templateDialog.form.due_date,
+      form_data: templateDetail.default_values || {},
       form_data_json: JSON.stringify(
         templateDetail.default_values || {},
         null,
         2,
       ),
-      form_data: templateDetail.default_values || {},
+      priority: templateDialog.form.priority,
+      process_id: templateDetail.process_id,
       status: InstanceStatus.Draft,
       tags: templateDialog.form.tags || [],
-      due_date: templateDialog.form.due_date,
+      title: templateDialog.form.title || templateDetail.name,
     };
 
     // 重置表单编辑状态
@@ -1740,17 +1732,17 @@ const handleEditInstance = async (row: WorkorderInstanceItem) => {
     if (request !== formRequest) return;
     if (res) {
       instanceDialog.form = {
-        id: res.id,
-        title: res.title,
+        assignee_id: res.assignee_id == null ? undefined : res.assignee_id,
         description: res.description,
+        due_date: res.due_date ? new Date(res.due_date) : undefined,
+        form_data: res.form_data,
+        form_data_json: JSON.stringify(res.form_data || {}, null, 2),
+        id: res.id,
         priority: res.priority,
         process_id: res.process_id,
-        assignee_id: res.assignee_id == null ? undefined : res.assignee_id,
-        form_data_json: JSON.stringify(res.form_data || {}, null, 2),
-        form_data: res.form_data,
         status: res.status,
         tags: res.tags || [],
-        due_date: res.due_date ? new Date(res.due_date) : undefined,
+        title: res.title,
       };
 
       // 重置表单编辑相关状态
@@ -1875,7 +1867,7 @@ const handleViewNotificationLogs = (instance: WorkorderInstanceItem) => {
 const handleActionWithPermission = async (
   instance: WorkorderInstanceItem,
   action: string,
-  callback: (instance: WorkorderInstanceItem) => void | Promise<void>,
+  callback: (instance: WorkorderInstanceItem) => Promise<void> | void,
 ) => {
   const listGeneration = listRequest;
   const ticket = ++actionRequest;
@@ -1926,10 +1918,9 @@ const handleActionEdit = (instance: WorkorderInstanceItem) =>
 
 const handleSubmitInstance = async (instance: WorkorderInstanceItem) => {
   Modal.confirm({
-    title: '提交确认',
+    cancelText: '取消',
     content: `确定要提交工单 "${instance.title}" 吗？提交后将无法撤回。`,
     okText: '提交',
-    cancelText: '取消',
     async onOk() {
       try {
         loading.value = true;
@@ -1948,6 +1939,7 @@ const handleSubmitInstance = async (instance: WorkorderInstanceItem) => {
         loading.value = false;
       }
     },
+    title: '提交确认',
   });
 };
 
@@ -2010,11 +2002,10 @@ const handleActionReturn = (instance: WorkorderInstanceItem) =>
 
 const confirmDelete = (instance: WorkorderInstanceItem) => {
   Modal.confirm({
-    title: '警告',
+    cancelText: '取消',
     content: `确定要删除工单 "${instance.title}" 吗？这个操作不可恢复！`,
     okText: '删除',
     okType: 'danger',
-    cancelText: '取消',
     async onOk() {
       try {
         loading.value = true;
@@ -2037,6 +2028,7 @@ const confirmDelete = (instance: WorkorderInstanceItem) => {
         loading.value = false;
       }
     },
+    title: '警告',
   });
 };
 
@@ -2130,8 +2122,6 @@ const viewNotificationDetail = (log: NotificationLog) => {
     ['错误信息', log.error_message],
   ];
   Modal.info({
-    title: '通知详情',
-    width: 600,
     content: h(
       'div',
       {
@@ -2148,6 +2138,8 @@ const viewNotificationDetail = (log: NotificationLog) => {
           h('p', [h('strong', `${label}：`), h('span', String(value))]),
         ),
     ),
+    title: '通知详情',
+    width: 600,
   });
 };
 
@@ -2161,8 +2153,8 @@ const saveAssign = async () => {
 
     loading.value = true;
     const params: AssignWorkorderInstanceReq = {
-      id: assignDialog.instanceId,
       assignee_id: Number(assignDialog.form.assignee_id),
+      id: assignDialog.instanceId,
     };
 
     await assignWorkorderInstance(params);
@@ -2331,8 +2323,8 @@ const saveActionComment = async () => {
     switch (actionDialog.type) {
       case 'cancel': {
         await cancelWorkorderInstance({
-          id: actionDialog.instanceId,
           comment: actionDialog.form.comment,
+          id: actionDialog.instanceId,
         } as CancelWorkorderInstanceReq);
         message.success('工单已取消');
 
@@ -2341,8 +2333,8 @@ const saveActionComment = async () => {
 
       case 'complete': {
         await completeWorkorderInstance({
-          id: actionDialog.instanceId,
           comment: actionDialog.form.comment,
+          id: actionDialog.instanceId,
         } as CompleteWorkorderInstanceReq);
         message.success('工单已完成');
 
@@ -2351,8 +2343,8 @@ const saveActionComment = async () => {
 
       case 'return': {
         await returnWorkorderInstance({
-          id: actionDialog.instanceId,
           comment: actionDialog.form.comment,
+          id: actionDialog.instanceId,
         } as ReturnWorkorderInstanceReq);
         message.success('工单已退回');
         break;
@@ -2398,8 +2390,8 @@ const saveApproval = async () => {
           onOk: async () => {
             try {
               const params: ApproveWorkorderInstanceReq = {
-                id: approvalDialog.instanceId,
                 comment: approvalDialog.form.comment,
+                id: approvalDialog.instanceId,
               };
               await approveWorkorderInstance(params);
               message.success('审批通过，工单已完成');
@@ -2419,16 +2411,16 @@ const saveApproval = async () => {
       } else {
         // 普通审批步骤，正常流转
         const params: ApproveWorkorderInstanceReq = {
-          id: approvalDialog.instanceId,
           comment: approvalDialog.form.comment,
+          id: approvalDialog.instanceId,
         };
         await approveWorkorderInstance(params);
         message.success('审批通过，工单已流转到下一步');
       }
     } else {
       const params: RejectWorkorderInstanceReq = {
-        id: approvalDialog.instanceId,
         comment: approvalDialog.form.comment,
+        id: approvalDialog.instanceId,
       };
       await rejectWorkorderInstance(params);
       message.success('拒绝工单成功');
@@ -2490,34 +2482,34 @@ const saveInstance = async () => {
 
     if (instanceDialog.isEdit && instanceDialog.form.id) {
       const updateData: UpdateWorkorderInstanceReq = {
-        id: instanceDialog.form.id,
-        title: instanceDialog.form.title,
         description: instanceDialog.form.description || '',
-        priority: instanceDialog.form.priority,
-        form_data: formData,
-        tags: instanceDialog.form.tags,
         due_date: instanceDialog.form.due_date
           ? new Date(instanceDialog.form.due_date).toISOString()
           : undefined,
+        form_data: formData,
+        id: instanceDialog.form.id,
+        priority: instanceDialog.form.priority,
+        tags: instanceDialog.form.tags,
+        title: instanceDialog.form.title,
       };
 
       await updateWorkorderInstance(updateData);
       message.success(`工单 "${instanceDialog.form.title}" 已更新`);
     } else {
       const createData: CreateWorkorderInstanceReq = {
-        title: instanceDialog.form.title,
-        process_id: instanceDialog.form.process_id,
         form_data: formData,
-        status: InstanceStatus.Draft,
         priority: instanceDialog.form.priority,
+        process_id: instanceDialog.form.process_id,
+        status: InstanceStatus.Draft,
+        title: instanceDialog.form.title,
         ...(instanceDialog.form.assignee_id == null
           ? {}
           : { assignee_id: Number(instanceDialog.form.assignee_id) }),
         description: instanceDialog.form.description,
-        tags: instanceDialog.form.tags,
         due_date: instanceDialog.form.due_date
           ? new Date(instanceDialog.form.due_date).toISOString()
           : undefined,
+        tags: instanceDialog.form.tags,
       };
 
       await createWorkorderInstance(createData);
@@ -2731,8 +2723,8 @@ onMounted(() => {
             <template v-if="column.key === 'title'">
               <div class="instance-title-cell">
                 <div
-                  class="priority-badge"
                   :class="getPriorityClass(record.priority)"
+                  class="priority-badge"
                 ></div>
                 <div class="title-content">
                   <div class="title-text">{{ record.title }}</div>
@@ -2756,10 +2748,10 @@ onMounted(() => {
             <template v-if="column.key === 'operator'">
               <div class="operator-info">
                 <a-avatar
-                  size="small"
                   :style="{
                     backgroundColor: getAvatarColor(record.operator_name || ''),
                   }"
+                  size="small"
                 >
                   {{ getInitials(record.operator_name) }}
                 </a-avatar>
@@ -2770,12 +2762,12 @@ onMounted(() => {
             <template v-if="column.key === 'assignee'">
               <div v-if="record.assignee_id" class="assignee-info">
                 <a-avatar
-                  size="small"
                   :style="{
                     backgroundColor: getAvatarColor(
                       getAssigneeName(record.assignee_id),
                     ),
                   }"
+                  size="small"
                 >
                   {{ getInitials(getAssigneeName(record.assignee_id)) }}
                 </a-avatar>
@@ -2928,12 +2920,12 @@ onMounted(() => {
                       <a-menu-divider />
 
                       <a-menu-item
-                        key="delete"
-                        danger
                         v-if="
                           can('workorder.instance.delete') &&
                           canDeleteInstance(record)
                         "
+                        key="delete"
+                        danger
                       >
                         删除
                       </a-menu-item>
@@ -3040,9 +3032,9 @@ onMounted(() => {
 
                 <a-select-option
                   v-if="processPagination.hasMore"
-                  value="__load_more_process__"
                   class="load-more-option"
                   disabled
+                  value="__load_more_process__"
                 >
                   <div
                     class="load-more-content"
@@ -3107,10 +3099,10 @@ onMounted(() => {
                 >
                   <div class="user-option">
                     <a-avatar
-                      size="small"
                       :style="{
                         backgroundColor: getAvatarColor(user.username),
                       }"
+                      size="small"
                     >
                       {{ getInitials(user.username) }}
                     </a-avatar>
@@ -3123,9 +3115,9 @@ onMounted(() => {
 
                 <a-select-option
                   v-if="userPagination.hasMore"
-                  value="__load_more_user__"
                   class="load-more-option"
                   disabled
+                  value="__load_more_user__"
                 >
                   <div class="load-more-content" @click.stop="loadMoreUsers">
                     <a-button
@@ -3442,10 +3434,10 @@ onMounted(() => {
             <div v-else class="json-form-editor">
               <a-textarea
                 v-model:value="instanceDialog.form.form_data_json"
-                placeholder="请输入表单数据JSON..."
+                :class="{ 'json-error': formDataValidationError }"
                 :rows="8"
                 class="json-editor"
-                :class="{ 'json-error': formDataValidationError }"
+                placeholder="请输入表单数据JSON..."
               />
 
               <div v-if="formDataValidationError" class="json-error-message">
@@ -3489,11 +3481,11 @@ onMounted(() => {
       </a-alert>
       <a-alert
         v-if="Object.values(detailMetadataErrors).some(Boolean)"
-        type="warning"
         :message="
           Object.values(detailMetadataErrors).filter(Boolean).join('；')
         "
         show-icon
+        type="warning"
       >
         <template #action>
           <a-button @click="retryInstanceDetail">刷新详情</a-button>
@@ -3605,24 +3597,24 @@ onMounted(() => {
                     class="step-detail-item"
                   >
                     <div
-                      class="detail-icon"
                       :class="{
                         urgent: isDeadlineUrgent(
                           detailDialog.currentStep.deadline,
                         ),
                       }"
+                      class="detail-icon"
                     >
                       <ClockCircleOutlined />
                     </div>
                     <div class="detail-content">
                       <div class="detail-label">截止时间</div>
                       <div
-                        class="detail-value"
                         :class="{
                           'urgent-text': isDeadlineUrgent(
                             detailDialog.currentStep.deadline,
                           ),
                         }"
+                        class="detail-value"
                       >
                         {{
                           formatFullDateTime(detailDialog.currentStep.deadline)
@@ -3738,7 +3730,6 @@ onMounted(() => {
               >
                 <div class="progress-bar">
                   <div
-                    class="progress-item"
                     v-for="(step, index) in detailDialog.allSteps"
                     :key="step.id"
                     :class="{
@@ -3746,6 +3737,7 @@ onMounted(() => {
                       current: step.id === detailDialog.currentStep?.id,
                       pending: isStepPending(step, index),
                     }"
+                    class="progress-item"
                   >
                     <div class="progress-dot"></div>
                     <div class="progress-label">{{ step.name }}</div>
@@ -3756,7 +3748,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <a-descriptions :column="2" :labelStyle="{ width: '120px' }" bordered>
+        <a-descriptions :column="2" :label-style="{ width: '120px' }" bordered>
           <a-descriptions-item label="工单ID">
             {{ detailDialog.instance.id }}
           </a-descriptions-item>
@@ -3845,75 +3837,75 @@ onMounted(() => {
             <div class="actions-buttons">
               <!-- 提交工单 -->
               <a-button
+                v-if="detailDialog.availableActions.includes('submit')"
                 type="primary"
                 @click="handleActionSubmit(detailDialog.instance)"
-                v-if="detailDialog.availableActions.includes('submit')"
               >
                 提交工单
               </a-button>
 
               <!-- 分配处理人 -->
               <a-button
+                v-if="detailDialog.availableActions.includes('assign')"
                 type="default"
                 @click="handleActionAssign(detailDialog.instance)"
-                v-if="detailDialog.availableActions.includes('assign')"
               >
                 分配处理人
               </a-button>
 
               <!-- 审批通过 -->
               <a-button
+                v-if="detailDialog.availableActions.includes('approve')"
                 type="primary"
                 @click="handleActionApprove(detailDialog.instance)"
-                v-if="detailDialog.availableActions.includes('approve')"
               >
                 审批通过
               </a-button>
 
               <!-- 拒绝 -->
               <a-button
+                v-if="detailDialog.availableActions.includes('reject')"
                 danger
                 @click="handleActionReject(detailDialog.instance)"
-                v-if="detailDialog.availableActions.includes('reject')"
               >
                 拒绝
               </a-button>
 
               <!-- 编辑 -->
               <a-button
-                type="default"
-                @click="handleActionEdit(detailDialog.instance)"
                 v-if="
                   detailDialog.availableActions.includes('edit') &&
                   canEditInstance()
                 "
+                type="default"
+                @click="handleActionEdit(detailDialog.instance)"
               >
                 编辑
               </a-button>
 
               <!-- 取消 -->
               <a-button
+                v-if="detailDialog.availableActions.includes('cancel')"
                 danger
                 @click="handleActionCancel(detailDialog.instance)"
-                v-if="detailDialog.availableActions.includes('cancel')"
               >
                 取消工单
               </a-button>
 
               <!-- 完成工单 -->
               <a-button
+                v-if="detailDialog.availableActions.includes('complete')"
                 type="primary"
                 @click="handleActionComplete(detailDialog.instance)"
-                v-if="detailDialog.availableActions.includes('complete')"
               >
                 完成工单
               </a-button>
 
               <!-- 退回工单 -->
               <a-button
+                v-if="detailDialog.availableActions.includes('return')"
                 type="default"
                 @click="handleActionReturn(detailDialog.instance)"
-                v-if="detailDialog.availableActions.includes('return')"
               >
                 退回工单
               </a-button>
@@ -4054,11 +4046,11 @@ onMounted(() => {
             <a-pagination
               v-model:current="notificationLogsPagination.current"
               v-model:page-size="notificationLogsPagination.pageSize"
-              :total="notificationLogsPagination.total"
-              :show-size-changer="true"
-              :show-quick-jumper="true"
-              :show-total="(total: number) => `共 ${total} 条`"
               :page-size-options="['10', '20', '50']"
+              :show-quick-jumper="true"
+              :show-size-changer="true"
+              :show-total="(total: number) => `共 ${total} 条`"
+              :total="notificationLogsPagination.total"
               @change="handleNotificationLogsPageChange"
               @show-size-change="handleNotificationLogsPageChange"
             />
@@ -4126,8 +4118,8 @@ onMounted(() => {
             >
               <div class="user-option">
                 <a-avatar
-                  size="small"
                   :style="{ backgroundColor: getAvatarColor(user.username) }"
+                  size="small"
                 >
                   {{ getInitials(user.username) }}
                 </a-avatar>
@@ -4285,25 +4277,25 @@ onMounted(() => {
 
     <!-- 审批/拒绝对话框 -->
     <a-modal
+      :confirm-loading="loading"
+      :destroy-on-close="true"
+      :mask-closable="!loading"
       :open="approvalDialog.visible"
       :title="getApprovalDialogTitle()"
       :width="dialogWidth"
-      :confirm-loading="loading"
-      :mask-closable="!loading"
-      @ok="saveApproval"
+      class="responsive-modal"
       @cancel="
         () => {
           approvalDialog.visible = false;
         }
       "
-      :destroy-on-close="true"
-      class="responsive-modal"
+      @ok="saveApproval"
     >
       <!-- 步骤信息提示 -->
       <div v-if="detailDialog.currentStep" class="approval-step-info">
         <a-alert
-          :type="detailDialog.currentStep.type === 'end' ? 'warning' : 'info'"
           :message="getStepMessage()"
+          :type="detailDialog.currentStep.type === 'end' ? 'warning' : 'info'"
           show-icon
           style="margin-bottom: 16px"
         />
@@ -4334,31 +4326,31 @@ onMounted(() => {
 
     <!-- 操作确认对话框（取消、完成、退回） -->
     <a-modal
+      :confirm-loading="loading"
+      :destroy-on-close="true"
       :open="actionDialog.visible"
       :title="getActionDialogTitle()"
       :width="dialogWidth"
-      @ok="saveActionComment"
+      class="responsive-modal"
       @cancel="
         () => {
           actionDialog.visible = false;
         }
       "
-      :destroy-on-close="true"
-      class="responsive-modal"
-      :confirm-loading="loading"
+      @ok="saveActionComment"
     >
       <a-form :model="actionDialog.form" layout="vertical">
         <a-form-item
           :label="getActionCommentLabel()"
-          name="comment"
           :rules="[
             { required: true, message: `请输入${getActionCommentLabel()}` },
           ]"
+          name="comment"
         >
           <a-textarea
             v-model:value="actionDialog.form.comment"
-            :rows="4"
             :placeholder="`请输入${getActionCommentLabel()}`"
+            :rows="4"
           />
         </a-form-item>
       </a-form>
@@ -4372,6 +4364,7 @@ onMounted(() => {
   .header-actions {
     flex-direction: column;
     align-items: stretch;
+    justify-content: center;
   }
 
   .search-filters {
@@ -4415,10 +4408,6 @@ onMounted(() => {
   .section-header {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .header-actions {
-    justify-content: center;
   }
 
   .json-editor {
@@ -4937,7 +4926,7 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
-.serial-number {
+:is(.serial-number) {
   font-size: 14px;
   color: var(--ops-muted);
   background: var(--ops-ground);
@@ -4975,14 +4964,6 @@ onMounted(() => {
   word-break: break-all;
 }
 
-.detail-footer {
-  margin-top: 24px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
 /* 响应式对话框 */
 .responsive-modal :deep(.ant-modal) {
   max-width: calc(100vw - 16px);
@@ -4995,7 +4976,7 @@ onMounted(() => {
 }
 
 /* 表格滚动优化 */
-.table-container :deep(.ant-table-wrapper) {
+.table-container :deep(:is(.ant-table-wrapper)) {
   overflow: auto;
 }
 

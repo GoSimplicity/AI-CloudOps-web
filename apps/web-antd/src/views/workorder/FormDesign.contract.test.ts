@@ -26,8 +26,8 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -36,8 +36,8 @@ beforeEach(() => {
     style(element),
   );
   client.get.mockResolvedValue({
-    items: [{ id: 1, name: '本地分类' }],
     total: 1,
+    items: [{ id: 1, name: '本地分类' }],
   });
   client.post.mockResolvedValue(undefined);
 });
@@ -84,18 +84,18 @@ describe('表单设计真实控件合同', () => {
     expect(client.post).toHaveBeenCalledWith(
       '/workorder/form-design/create',
       expect.objectContaining({
-        name: '隔离表单',
-        status: 1,
         is_template: 2,
+        name: '隔离表单',
         schema: {
           fields: [
             expect.objectContaining({
               name: 'text_field_1',
-              type: 'text',
               required: 0,
+              type: 'text',
             }),
           ],
         },
+        status: 1,
       }),
     );
     pending.reject(new Error('fixture'));
@@ -193,7 +193,7 @@ describe('表单设计真实控件合同', () => {
       (_path: string, { params }: { params: { search: string } }) =>
         params.search === 'old'
           ? old.promise
-          : Promise.resolve({ items: [{ id: 3, name: '新分类' }], total: 1 }),
+          : Promise.resolve({ total: 1, items: [{ id: 3, name: '新分类' }] }),
     );
     const search = new DOMWrapper(
       required(
@@ -210,7 +210,7 @@ describe('表单设计真实控件合同', () => {
       document.querySelector<HTMLButtonElement>('.category-search button'),
     ).click();
     await flushPromises();
-    old.resolve({ items: [{ id: 2, name: '旧分类' }], total: 1 });
+    old.resolve({ total: 1, items: [{ id: 2, name: '旧分类' }] });
     await flushPromises();
     expect(document.querySelector('.category-modal')?.textContent).toContain(
       '新分类',

@@ -24,20 +24,20 @@ export function computeProviderName(provider: number): string {
     case CloudProvider.AliCloud: {
       return '阿里云';
     }
-    case CloudProvider.TencentCloud: {
-      return '腾讯云';
-    }
     case CloudProvider.AWS: {
       return 'AWS';
-    }
-    case CloudProvider.HuaweiCloud: {
-      return '华为云';
     }
     case CloudProvider.Azure: {
       return 'Azure';
     }
     case CloudProvider.GCP: {
       return 'GCP';
+    }
+    case CloudProvider.HuaweiCloud: {
+      return '华为云';
+    }
+    case CloudProvider.TencentCloud: {
+      return '腾讯云';
     }
     default: {
       return '不支持的云厂商';
@@ -48,9 +48,9 @@ export function computeProviderName(provider: number): string {
 /** 云账户页面直接检查实际API授权，保持既有权限清单与测试账户集合不变 */
 export const CLOUD_ACCOUNT_PERMISSIONS = {
   create: '/api/tree/cloud/account/create',
-  edit: '/api/tree/cloud/account/:id/update',
-  status: '/api/tree/cloud/account/:id/status',
   detail: '/api/tree/cloud/account/:id/detail',
-  verify: '/api/tree/cloud/account/:id/verify',
+  edit: '/api/tree/cloud/account/:id/update',
   regions: '/api/tree/cloud/account/region/available-regions',
+  status: '/api/tree/cloud/account/:id/status',
+  verify: '/api/tree/cloud/account/:id/verify',
 } as const;

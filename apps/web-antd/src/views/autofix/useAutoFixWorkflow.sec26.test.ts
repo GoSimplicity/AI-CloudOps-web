@@ -1,7 +1,7 @@
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
-import { message } from 'ant-design-vue';
 import { defineComponent, h, reactive } from 'vue';
 
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+import { message } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useAutoFixWorkflow } from './useAutoFixWorkflow';
@@ -13,16 +13,16 @@ import { useAutoFixWorkflow } from './useAutoFixWorkflow';
  * - M3d：请求未返回前连调两次只发一个请求
  * 全部为假值。
  */
-const account = vi.hoisted(() => ({ user: null as any, access: null as any }));
+const account = vi.hoisted(() => ({ access: null as any, user: null as any }));
 const api = vi.hoisted(() => ({
+  confirmAutoFixWorkflow: vi.fn(),
+  executeAutoFixWorkflow: vi.fn(),
   getAutoFixInfo: vi.fn(),
   getAutoFixReady: vi.fn(),
-  executeAutoFixWorkflow: vi.fn(),
-  confirmAutoFixWorkflow: vi.fn(),
 }));
 vi.mock('@vben/stores', () => ({
-  useUserStore: () => account.user,
   useAccessStore: () => account.access,
+  useUserStore: () => account.user,
 }));
 vi.mock('#/api/core/aiops/autofix', () => api);
 vi.mock('#/utils/permission', () => ({
@@ -32,16 +32,16 @@ vi.mock('#/utils/permission', () => ({
 const action = (id: string) => ({
   action_id: id,
   action_type: 'restart_deployment',
-  executable: true,
   description: `原计划动作 ${id}`,
+  executable: true,
   risk_assessment: {
     allowed: false,
-    requires_human_confirmation: true,
-    permission_allowed: true,
     namespace_allowed: true,
+    permission_allowed: true,
+    reasons: [],
+    requires_human_confirmation: true,
     resource_exists: true,
     risk_level: 'high',
-    reasons: [],
   },
 });
 function pending(
@@ -50,26 +50,26 @@ function pending(
 ): Record<string, any> {
   const items = blocked.map((id) => action(id));
   const approval: Record<string, unknown> = {
-    state: 'pending',
+    confirmation_required: true,
     expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
     retry_safe: false,
-    confirmation_required: true,
+    state: 'pending',
   };
   if (pendingIds) approval.pending_action_ids = pendingIds;
   return {
-    status: 'needs_human_confirmation',
-    next_action: 'human_confirm',
-    plan: { plan_id: 'fake-plan-id', blocked_actions: items },
-    candidate_actions: items,
-    blocked_actions: items,
-    review: {},
     agents_used: [],
-    diagnosis: {},
-    execution: {},
-    executed_actions: [],
-    messages: [],
-    timestamp: new Date().toISOString(),
     approval,
+    blocked_actions: items,
+    candidate_actions: items,
+    diagnosis: {},
+    executed_actions: [],
+    execution: {},
+    messages: [],
+    next_action: 'human_confirm',
+    plan: { blocked_actions: items, plan_id: 'fake-plan-id' },
+    review: {},
+    status: 'needs_human_confirmation',
+    timestamp: new Date().toISOString(),
   };
 }
 
@@ -77,10 +77,10 @@ let wrapper: undefined | VueWrapper<any>;
 async function setup(result: Record<string, any>) {
   api.executeAutoFixWorkflow.mockResolvedValueOnce(result);
   const Harness = defineComponent({
+    render: () => h('div'),
     setup() {
       return useAutoFixWorkflow();
     },
-    render: () => h('div'),
   });
   wrapper = mount(Harness);
   const vm = wrapper.vm as any;
@@ -103,22 +103,22 @@ beforeEach(() => {
   vi.spyOn(message, 'error').mockImplementation((() => {}) as any);
   vi.spyOn(message, 'info').mockImplementation((() => {}) as any);
   api.getAutoFixInfo.mockResolvedValue({
-    service: 's',
-    status: 'ok',
     capabilities: [],
     endpoints: {},
+    service: 's',
+    status: 'ok',
   });
   api.getAutoFixReady.mockResolvedValue({ ready: true });
   api.confirmAutoFixWorkflow.mockResolvedValue({
     ...pending([], []),
-    status: 'completed',
     approval: {
-      state: 'completed',
-      expires_at: new Date().toISOString(),
-      retry_safe: false,
       confirmation_required: false,
+      expires_at: new Date().toISOString(),
       pending_action_ids: [],
+      retry_safe: false,
+      state: 'completed',
     },
+    status: 'completed',
   });
 });
 afterEach(() => {

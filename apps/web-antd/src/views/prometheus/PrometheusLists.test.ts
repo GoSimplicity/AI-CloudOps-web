@@ -4,15 +4,15 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import MonitorScrapePool from './MonitorScrapePool.vue';
-import MonitorScrapeJob from './MonitorScrapeJob.vue';
-import MonitorSend from './MonitorSend.vue';
+import MonitorAlertEvent from './MonitorAlertEvent.vue';
 import MonitorAlertPool from './MonitorAlertPool.vue';
 import MonitorAlertRecord from './MonitorAlertRecord.vue';
-import MonitorAlertEvent from './MonitorAlertEvent.vue';
+import MonitorAlertRule from './MonitorAlertRule.vue';
 import MonitorConfig from './MonitorConfig.vue';
 import MonitorOnDutyGroup from './MonitorOnDutyGroup.vue';
-import MonitorAlertRule from './MonitorAlertRule.vue';
+import MonitorScrapeJob from './MonitorScrapeJob.vue';
+import MonitorScrapePool from './MonitorScrapePool.vue';
+import MonitorSend from './MonitorSend.vue';
 
 // FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
 vi.mock('#/utils/permission', async (importOriginal) => ({
@@ -29,10 +29,10 @@ function required<T>(value: null | T | undefined): T {
 }
 
 const client = vi.hoisted(() => ({
+  delete: vi.fn(),
   get: vi.fn(),
   post: vi.fn(),
   put: vi.fn(),
-  delete: vi.fn(),
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }));
@@ -50,8 +50,8 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -69,95 +69,95 @@ afterEach(() => {
 
 const pages: {
   component: Component;
-  title: string;
-  path: string;
   create?: string;
   expectedFailure?: string;
   modalTitle?: string;
+  path: string;
+  title: string;
 }[] = [
   {
     component: MonitorScrapePool,
-    title: '采集池',
-    path: '/monitor/scrape_pools/list',
     create: '创建采集池',
     expectedFailure: '加载采集池列表失败',
+    path: '/monitor/scrape_pools/list',
+    title: '采集池',
   },
   {
     component: MonitorScrapeJob,
-    title: '采集任务',
-    path: '/monitor/scrape_jobs/list',
     create: '创建采集任务',
     expectedFailure: '加载采集任务列表失败',
+    path: '/monitor/scrape_jobs/list',
+    title: '采集任务',
   },
   {
     component: MonitorSend,
-    title: '发送组',
-    path: '/monitor/send_groups/list',
     create: '创建发送组',
+    path: '/monitor/send_groups/list',
+    title: '发送组',
   },
   {
     component: MonitorAlertPool,
-    title: '告警实例池',
-    path: '/monitor/alert_manager_pools/list',
-    expectedFailure: '加载实例池列表失败',
     create: '新增AlertManager实例池',
+    expectedFailure: '加载实例池列表失败',
+    path: '/monitor/alert_manager_pools/list',
+    title: '告警实例池',
   },
   {
     component: MonitorAlertRecord,
-    title: '记录规则',
-    path: '/monitor/record_rules/list',
-    expectedFailure: '加载记录规则列表失败',
     create: '新增记录',
+    expectedFailure: '加载记录规则列表失败',
+    path: '/monitor/record_rules/list',
+    title: '记录规则',
   },
   {
     component: MonitorAlertEvent,
-    title: '告警事件',
     path: '/monitor/alert_events/list',
+    title: '告警事件',
   },
   {
     component: MonitorConfig,
-    title: '监控配置',
-    path: '/monitor/configs/list',
     create: '新增监控配置',
+    path: '/monitor/configs/list',
+    title: '监控配置',
   },
   {
     component: MonitorOnDutyGroup,
-    title: '值班组',
-    path: '/monitor/onduty_groups/list',
-    expectedFailure: '获取值班组列表失败',
     create: '新增值班组',
+    expectedFailure: '获取值班组列表失败',
+    path: '/monitor/onduty_groups/list',
+    title: '值班组',
   },
   {
     component: MonitorAlertRule,
-    title: '告警规则',
-    path: '/monitor/alert_rules/list',
     create: '新建告警规则',
+    path: '/monitor/alert_rules/list',
+    title: '告警规则',
   },
 ];
 const row = (name: string) => ({
   alert_name: name,
-  status: 1,
-  labels: [],
-  event_times: 5,
-  shift_days: 1,
-  users: [],
-  today_duty_user: null,
   config_type: 1,
-  instance_ip: '127.0.0.1',
+  enable: 1,
+  event_times: 5,
   expr: 'up',
-  severity: 1,
   id: 1,
+  instance_ip: '127.0.0.1',
+  labels: [],
   name,
   name_zh: name,
-  enable: 1,
-  support_alert: 1,
-  support_record: 2,
+  need_upgrade: 2,
+  notify_methods: [],
+  pool_id: 1,
   prometheus_instances: ['local-only'],
   service_discovery_type: 2,
-  pool_id: 1,
-  notify_methods: [],
+  severity: 1,
+  shift_days: 1,
   static_receive_users: [],
-  need_upgrade: 2,
+  status: 1,
+  support_alert: 1,
+  support_record: 2,
+  today_duty_user: null,
+  users: [],
 });
 function button(text: string) {
   const target = required(wrapper)
@@ -171,7 +171,7 @@ function mountPage(
   list: ReturnType<typeof vi.fn>,
 ) {
   client.get.mockImplementation((path: string) =>
-    path === page.path ? list() : Promise.resolve({ items: [], total: 0 }),
+    path === page.path ? list() : Promise.resolve({ total: 0, items: [] }),
   );
   wrapper = mount(page.component, {
     attachTo: document.body,
@@ -183,9 +183,9 @@ describe.each(pages)('$title 页面真实控件', (page) => {
   it('失败清除旧列表并通过错误区重试恢复', async () => {
     const list = vi
       .fn()
-      .mockResolvedValueOnce({ items: [row('旧记录')], total: 1 })
+      .mockResolvedValueOnce({ total: 1, items: [row('旧记录')] })
       .mockRejectedValueOnce(new Error('离线测试失败'))
-      .mockResolvedValue({ items: [row('恢复记录')], total: 1 });
+      .mockResolvedValue({ total: 1, items: [row('恢复记录')] });
     mountPage(page, list);
     await flushPromises();
     expect(required(wrapper).text()).toContain('旧记录');
@@ -212,11 +212,11 @@ describe.each(pages)('$title 页面真实控件', (page) => {
             complete = resolve;
           }),
       )
-      .mockResolvedValue({ items: [row('新结果')], total: 1 });
+      .mockResolvedValue({ total: 1, items: [row('新结果')] });
     mountPage(page, list);
     await button('重置').trigger('click');
     await flushPromises();
-    complete({ items: [row('过期结果')], total: 200 });
+    complete({ total: 200, items: [row('过期结果')] });
     await flushPromises();
     expect(required(wrapper).text()).toContain('新结果');
     expect(required(wrapper).text()).not.toContain('过期结果');
@@ -232,7 +232,7 @@ describe.each(pages)('$title 页面真实控件', (page) => {
             fail = reject;
           }),
       )
-      .mockResolvedValue({ items: [row('新结果')], total: 1 });
+      .mockResolvedValue({ total: 1, items: [row('新结果')] });
     mountPage(page, list);
     await button('重置').trigger('click');
     await flushPromises();
@@ -244,7 +244,7 @@ describe.each(pages)('$title 页面真实控件', (page) => {
 
   if (page.create)
     it('创建取消不会调用写API', async () => {
-      mountPage(page, vi.fn().mockResolvedValue({ items: [], total: 0 }));
+      mountPage(page, vi.fn().mockResolvedValue({ total: 0, items: [] }));
       await flushPromises();
       await button(required(page.create)).trigger('click');
       await flushPromises();
@@ -272,7 +272,7 @@ it('采集任务统计只展示本页观测，不把比例外推到总数', asyn
   const page = required(pages[1]);
   mountPage(
     page,
-    vi.fn().mockResolvedValue({ items: [row('本页唯一任务')], total: 100 }),
+    vi.fn().mockResolvedValue({ total: 100, items: [row('本页唯一任务')] }),
   );
   await flushPromises();
   const statistic = required(
@@ -288,11 +288,11 @@ it('告警事件次数筛选明确作用于本页并实际过滤数据', async (
   mountPage(
     page,
     vi.fn().mockResolvedValue({
+      total: 200,
       items: [
         { ...row('单次事件'), event_times: 1 },
-        { ...row('高频事件'), id: 2, event_times: 7 },
+        { ...row('高频事件'), event_times: 7, id: 2 },
       ],
-      total: 200,
     }),
   );
   await flushPromises();

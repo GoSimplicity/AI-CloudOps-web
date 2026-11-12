@@ -1,8 +1,8 @@
 import type { FormInstance } from 'ant-design-vue';
 
-import { mount, type VueWrapper } from '@vue/test-utils';
 import { effectScope } from 'vue';
 
+import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { usePodPage } from '#/views/k8s/pod/Pod';
@@ -16,9 +16,9 @@ function required<T>(value: null | T | undefined): T {
   return value;
 }
 
-const { connections, access } = vi.hoisted(() => ({
-  connections: vi.fn(),
+const { access, connections } = vi.hoisted(() => ({
   access: { accessToken: 'test.jwt.signature' },
+  connections: vi.fn(),
 }));
 vi.mock('@vben/stores', () => ({ useAccessStore: () => access }));
 vi.mock('@vben/hooks', () => ({ useAppConfig: () => ({ apiURL: '/api' }) }));
@@ -27,21 +27,21 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({ back: vi.fn(), push: vi.fn() }),
 }));
 vi.mock('#/api/request', () => ({
-  requestClient: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
+  requestClient: { delete: vi.fn(), get: vi.fn(), post: vi.fn(), put: vi.fn() },
 }));
 vi.mock('xterm', () => ({
   Terminal: class {
     cols = 120;
-    rows = 30;
-    reset = vi.fn();
-    write = vi.fn();
-    writeln = vi.fn();
-    open = vi.fn();
+    dispose = vi.fn();
     focus = vi.fn();
     loadAddon = vi.fn();
     onData = vi.fn(() => ({ dispose: vi.fn() }));
     onResize = vi.fn(() => ({ dispose: vi.fn() }));
-    dispose = vi.fn();
+    open = vi.fn();
+    reset = vi.fn();
+    rows = 30;
+    write = vi.fn();
+    writeln = vi.fn();
   },
 }));
 vi.mock('xterm-addon-fit', () => ({
@@ -52,12 +52,12 @@ vi.mock('xterm-addon-fit', () => ({
 vi.mock('xterm-addon-web-links', () => ({ WebLinksAddon: class {} }));
 
 class TestSocket {
-  static OPEN = 1;
-  static CONNECTING = 0;
   static CLOSED = 3;
+  static CONNECTING = 0;
+  static OPEN = 1;
+  close = vi.fn();
   readyState = TestSocket.CONNECTING;
   send = vi.fn();
-  close = vi.fn();
   constructor(url: string, protocols: string[]) {
     connections(url, protocols, this);
   }
@@ -71,8 +71,8 @@ beforeEach(() => {
   vi.stubGlobal(
     'ResizeObserver',
     class {
-      observe() {}
       disconnect() {}
+      observe() {}
       unobserve() {}
     },
   );
@@ -121,32 +121,32 @@ describe('三个终端客户端的握手契约', () => {
     const page = usePodPage();
     document.body.innerHTML = '<div id="terminal-container"></div>';
     page.currentOperationPod.value = {
-      cluster_id: 1,
-      name: 'web-pod',
-      namespace: 'example',
-      uid: 'uid',
-      labels: '{}',
       annotations: '{}',
-      status: 'Running',
-      phase: 'Running',
-      node_name: 'node',
-      pod_ip: '',
-      host_ip: '',
-      qos_class: 'Burstable',
-      restart_count: 0,
-      ready: '1/1',
-      service_account: 'default',
-      restart_policy: 'Always',
-      dns_policy: 'ClusterFirst',
+      cluster_id: 1,
       conditions: '[]',
       containers: '[]',
-      init_containers: '[]',
-      volumes: '[]',
       created_at: '',
-      owner_references: '[]',
-      resource_version: '1',
+      dns_policy: 'ClusterFirst',
       generation: 1,
+      host_ip: '',
+      init_containers: '[]',
+      labels: '{}',
+      name: 'web-pod',
+      namespace: 'example',
+      node_name: 'node',
+      owner_references: '[]',
+      phase: 'Running',
+      pod_ip: '',
+      qos_class: 'Burstable',
+      ready: '1/1',
+      resource_version: '1',
+      restart_count: 0,
+      restart_policy: 'Always',
+      service_account: 'default',
       spec: '{}',
+      status: 'Running',
+      uid: 'uid',
+      volumes: '[]',
     };
     page.execFormRef.value = {
       validate: vi.fn().mockResolvedValue(undefined),

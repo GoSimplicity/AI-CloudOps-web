@@ -31,13 +31,13 @@ function required<T>(value: null | T | undefined): T {
 vi.setConfig({ testTimeout: 15_000 });
 
 const api = vi.hoisted(() => ({
+  auditLogs: vi.fn(),
   clusters: vi.fn(),
+  deployments: vi.fn(),
   namespaces: vi.fn(),
   pods: vi.fn(),
-  deployments: vi.fn(),
-  secrets: vi.fn(),
   secretDetail: vi.fn(),
-  auditLogs: vi.fn(),
+  secrets: vi.fn(),
 }));
 vi.mock('#/api/core/k8s/k8s_cluster', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/api/core/k8s/k8s_cluster')>()),
@@ -57,14 +57,14 @@ vi.mock('#/api/core/k8s/k8s_deployment', async (importOriginal) => ({
 }));
 vi.mock('#/api/core/k8s/k8s_secret', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/api/core/k8s/k8s_secret')>()),
-  getSecretListApi: api.secrets,
   getSecretDetailsApi: api.secretDetail,
+  getSecretListApi: api.secrets,
 }));
 vi.mock('#/api/core/system/audit', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/api/core/system/audit')>()),
-  listAuditLogsApi: api.auditLogs,
   getAuditStatisticsApi: vi.fn(async () => ({})),
   getAuditTypesApi: vi.fn(async () => []),
+  listAuditLogsApi: api.auditLogs,
 }));
 vi.mock('#/api/core/system/user', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/api/core/system/user')>()),
@@ -72,9 +72,9 @@ vi.mock('#/api/core/system/user', async (importOriginal) => ({
 }));
 
 const pages = {
-  Pod: () => import('#/views/k8s/pod/Pod.vue'),
   Deployment: () => import('#/views/k8s/deployment/Deployment.vue'),
   Namespace: () => import('#/views/k8s/namespace/Namespace.vue'),
+  Pod: () => import('#/views/k8s/pod/Pod.vue'),
   Secret: () => import('#/views/k8s/secret/Secret.vue'),
   SystemAudit: () => import('#/views/dashboard/SystemAudit.vue'),
 };
@@ -131,16 +131,16 @@ async function selectFirstRow() {
 async function openRedactedSecretDetail() {
   const vm = required(wrapper).vm as any;
   vm.currentSecretDetail = {
-    cluster_id: 1,
-    namespace: 'ns-a',
-    name: 'secret-a',
-    type: 1,
-    labels: [],
     annotations: [],
+    cluster_id: 1,
     data: { token: '' },
     data_keys: [{ key: 'token', size: 16 }],
+    labels: [],
+    name: 'secret-a',
+    namespace: 'ns-a',
     redacted: true,
     string_data: {},
+    type: 1,
   };
   vm.isDetailModalVisible = true;
   for (let i = 0; i < 3; i += 1) await flushPromises();
@@ -165,91 +165,91 @@ type Case = {
 
 const CASES: Case[] = [
   {
+    find: () => rowButtons('删除'),
+    key: 'k8s.pod.delete',
     name: 'Pod 行内删除',
     page: 'Pod',
-    key: 'k8s.pod.delete',
-    find: () => rowButtons('删除'),
   },
   {
+    find: () => all('button[title="批量删除选中的 Pod"]'),
+    key: 'k8s.pod.batchDelete',
     name: 'Pod 批量删除',
     page: 'Pod',
-    key: 'k8s.pod.batchDelete',
     prepare: selectFirstRow,
-    find: () => all('button[title="批量删除选中的 Pod"]'),
   },
   {
+    find: () => rowButtons('删除'),
+    key: 'k8s.deployment.delete',
     name: 'Deployment 行内删除',
     page: 'Deployment',
-    key: 'k8s.deployment.delete',
-    find: () => rowButtons('删除'),
   },
   {
+    find: () => all('button[title="批量删除选中的 Deployment"]'),
+    key: 'k8s.deployment.batchDelete',
     name: 'Deployment 批量删除',
     page: 'Deployment',
-    key: 'k8s.deployment.batchDelete',
     prepare: selectFirstRow,
-    find: () => all('button[title="批量删除选中的 Deployment"]'),
   },
   {
+    find: () => rowButtons('删除'),
+    key: 'k8s.namespace.delete',
     name: '命名空间行内删除',
     page: 'Namespace',
-    key: 'k8s.namespace.delete',
-    find: () => rowButtons('删除'),
   },
   {
+    find: () => rowButtons('强制删除'),
+    key: 'k8s.namespace.forceDelete',
     name: '命名空间强制删除（Terminating）',
     page: 'Namespace',
-    key: 'k8s.namespace.forceDelete',
-    find: () => rowButtons('强制删除'),
   },
   {
+    find: () => all('button[title="批量删除选中的命名空间"]'),
+    key: 'k8s.namespace.batchDelete',
     name: '命名空间批量删除',
     page: 'Namespace',
-    key: 'k8s.namespace.batchDelete',
     prepare: selectFirstRow,
-    find: () => all('button[title="批量删除选中的命名空间"]'),
   },
   {
+    find: () => rowButtons('查看详情'),
+    key: SECRET_DETAIL_PERMISSION_CODE,
     // SEC-25/26 第 4 条：详情入口改由详情码控制（不再用 viewPlain/reveal 码）
     name: 'Secret 查看详情（详情码）',
     page: 'Secret',
-    key: SECRET_DETAIL_PERMISSION_CODE,
-    find: () => rowButtons('查看详情'),
   },
   {
+    find: () => rowButtons('查看 YAML'),
+    key: 'k8s.secret.viewYaml',
     name: 'Secret 查看 YAML',
     page: 'Secret',
-    key: 'k8s.secret.viewYaml',
-    find: () => rowButtons('查看 YAML'),
   },
   {
+    find: () => buttonsByText('复制内容', '.secret-data-keys'),
+    key: 'k8s.secret.copyPlain',
     name: 'Secret 复制明文（详情弹窗内）',
     page: 'Secret',
-    key: 'k8s.secret.copyPlain',
     // SEC-25/26：copyPlain 与 viewPlain 同为 reveal 码，这里直接把详情弹窗置为打开并填入脱敏详情
     // （只有键名与字节数），只验证复制按钮本身的门禁；详情里不应出现任何明文。
     prepare: openRedactedSecretDetail,
-    find: () => buttonsByText('复制内容', '.secret-data-keys'),
   },
   {
+    find: () => all('.secret-data-keys button.secret-view-plain'),
+    key: 'k8s.secret.viewPlain',
     name: 'Secret 按键查看明文（详情弹窗内，调 reveal）',
     page: 'Secret',
-    key: 'k8s.secret.viewPlain',
     prepare: openRedactedSecretDetail,
-    find: () => all('.secret-data-keys button.secret-view-plain'),
   },
   {
+    find: () => buttonsByText('删除', '.ant-table-tbody'),
+    key: 'system.audit.delete',
     name: '审计行内删除',
     page: 'SystemAudit',
-    key: 'system.audit.delete',
-    find: () => buttonsByText('删除', '.ant-table-tbody'),
   },
   {
+    find: () => buttonsByText('批量删除'),
+    key: 'system.audit.batchDelete',
     name: '审计批量删除',
     page: 'SystemAudit',
-    key: 'system.audit.batchDelete',
     prepare: selectFirstRow,
-    find: () => buttonsByText('批量删除'),
   },
 ];
 
@@ -259,11 +259,11 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
       addEventListener: vi.fn(),
+      addListener: vi.fn(),
+      matches: false,
       removeEventListener: vi.fn(),
+      removeListener: vi.fn(),
     })),
   );
   const computedStyle = window.getComputedStyle;
@@ -271,37 +271,37 @@ beforeEach(() => {
     computedStyle(element),
   );
   api.clusters.mockResolvedValue({
-    items: [{ id: 1, name: 'c1', status: 1 }],
     total: 1,
+    items: [{ id: 1, name: 'c1', status: 1 }],
   });
   api.namespaces.mockResolvedValue({
-    items: [{ cluster_id: 1, name: 'ns-a', status: 'Terminating' }],
     total: 1,
+    items: [{ cluster_id: 1, name: 'ns-a', status: 'Terminating' }],
   });
   api.pods.mockResolvedValue({
-    items: [{ cluster_id: 1, namespace: 'ns-a', name: 'pod-a', status: 1 }],
     total: 1,
+    items: [{ cluster_id: 1, name: 'pod-a', namespace: 'ns-a', status: 1 }],
   });
   api.deployments.mockResolvedValue({
-    items: [{ cluster_id: 1, namespace: 'ns-a', name: 'deploy-a', status: 1 }],
     total: 1,
+    items: [{ cluster_id: 1, name: 'deploy-a', namespace: 'ns-a', status: 1 }],
   });
   api.secrets.mockResolvedValue({
-    items: [{ cluster_id: 1, namespace: 'ns-a', name: 'secret-a', type: 1 }],
     total: 1,
+    items: [{ cluster_id: 1, name: 'secret-a', namespace: 'ns-a', type: 1 }],
   });
   api.secretDetail.mockResolvedValue({
     cluster_id: 1,
-    namespace: 'ns-a',
-    name: 'secret-a',
-    type: 1,
     data: { token: '' },
     data_keys: [{ key: 'token', size: 16 }],
+    name: 'secret-a',
+    namespace: 'ns-a',
     redacted: true,
+    type: 1,
   });
   api.auditLogs.mockResolvedValue({
-    items: [{ id: 11, user_id: 1, method: 'DELETE', endpoint: '/api/x' }],
     total: 1,
+    items: [{ endpoint: '/api/x', id: 11, method: 'DELETE', user_id: 1 }],
   });
 });
 

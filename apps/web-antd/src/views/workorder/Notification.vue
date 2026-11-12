@@ -13,20 +13,6 @@ import {
 
 import { useUserStore } from '@vben/stores';
 
-import OpsPage from '#/components/ops/OpsPage.vue';
-
-import NotificationEvents from './NotificationEvents.vue';
-import { useWindowSize } from '@vueuse/core';
-import { message, Modal } from 'ant-design-vue';
-import { debounce } from 'lodash-es';
-import dayjs from 'dayjs';
-
-import {
-  buildNotificationSchedule,
-  notificationScheduleFingerprint,
-  type NotificationSchedulePayload,
-} from './notification-schedule';
-
 import {
   BellOutlined,
   CheckCircleOutlined,
@@ -40,7 +26,16 @@ import {
   SendOutlined,
   StopOutlined,
 } from '@ant-design/icons-vue';
+import { useWindowSize } from '@vueuse/core';
+import { message, Modal } from 'ant-design-vue';
+import dayjs from 'dayjs';
+import { debounce } from 'lodash-es';
 
+import { getUserList, type User } from '#/api/core/system/user';
+import {
+  listWorkorderCategory,
+  type WorkorderCategoryItem,
+} from '#/api/core/workorder/workorder_category';
 import {
   createNotification,
   type CreateNotificationReq,
@@ -80,11 +75,7 @@ import {
   listWorkorderTemplate,
   type WorkorderTemplateItem,
 } from '#/api/core/workorder/workorder_template';
-import {
-  listWorkorderCategory,
-  type WorkorderCategoryItem,
-} from '#/api/core/workorder/workorder_category';
-import { getUserList, type User } from '#/api/core/system/user';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { useAuthStore } from '#/store';
 import { isBasicNotificationEmail } from '#/utils/notification-email';
 import { usePermission } from '#/utils/permission';
@@ -92,6 +83,13 @@ import {
   shouldNotifyPageError,
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
+
+import {
+  buildNotificationSchedule,
+  notificationScheduleFingerprint,
+  type NotificationSchedulePayload,
+} from './notification-schedule';
+import NotificationEvents from './NotificationEvents.vue';
 
 const { can, hasPerm } = usePermission();
 
@@ -259,7 +257,7 @@ const logsLoading = ref(false);
 const searchQuery = ref('');
 const channelFilter = ref<string | undefined>(undefined);
 const statusFilter = ref<number | undefined>(undefined);
-const notifications = ref<(Notification & { statusLoading?: boolean })[]>([]);
+const notifications = ref<({ statusLoading?: boolean } & Notification)[]>([]);
 const sendLogs = ref<NotificationLog[]>([]);
 
 // 联动数据
@@ -274,64 +272,64 @@ const templateLoading = ref(false);
 const categoryLoading = ref(false);
 const userLoading = ref(false);
 const optionErrors = reactive({
+  category: '',
   process: '',
   template: '',
-  category: '',
   user: '',
 });
 
 // 分页参数
 const processPagination = reactive({
   current: 1,
+  hasMore: true,
   pageSize: 20,
   total: 0,
-  hasMore: true,
 });
 
 const templatePagination = reactive({
   current: 1,
+  hasMore: true,
   pageSize: 20,
   total: 0,
-  hasMore: true,
 });
 
 const categoryPagination = reactive({
   current: 1,
+  hasMore: true,
   pageSize: 20,
   total: 0,
-  hasMore: true,
 });
 
 const userPagination = reactive({
   current: 1,
+  hasMore: true,
   pageSize: 20,
   total: 0,
-  hasMore: true,
 });
 
 // 统计数据
 const stats = reactive({
-  total: 0,
-  enabled: 0,
   disabled: 0,
+  enabled: 0,
+  total: 0,
 });
 
 // 分页配置
 const paginationConfig = reactive({
   current: 1,
   pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
   showQuickJumper: true,
+  showSizeChanger: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
   size: 'default' as const,
+  total: 0,
 });
 
 const logsPagination = reactive({
   current: 1,
   pageSize: 10,
-  total: 0,
   size: 'small' as const,
+  total: 0,
 });
 
 // 对话框状态
@@ -343,37 +341,37 @@ const manualSendDialogVisible = ref(false);
 
 // 通知配置对话框数据
 const notificationDialog = reactive({
-  isEdit: false,
-  saving: false,
   form: {
-    id: undefined as number | undefined,
-    name: '',
-    description: '',
-    processId: undefined as number | undefined,
-    templateId: undefined as number | undefined,
     categoryId: undefined as number | undefined,
-    eventTypes: [] as string[],
-    triggerType: NotificationTrigger.IMMEDIATE as string,
-    triggerCondition: '',
     channels: [] as string[],
-    recipientTypes: [] as string[],
-    recipientUsers: [] as string[],
-    recipientRoles: [] as string[],
-    recipientDepts: [] as string[],
-    recipientAddresses: [] as NotificationRecipientAddress[],
+    delayMinutes: undefined as number | undefined,
+    description: '',
+    eventTypes: [] as string[],
+    id: undefined as number | undefined,
+    isDefault: IsDefault.No as number,
+    maxRetries: 3,
     messageTemplate:
       '您好 {recipient_name}！\n\n工单通知：{title}\n工单编号：{serial_number}\n优先级：{priority_text}\n状态：{status}\n\n详情请查看系统。\n\n通知时间：{notification_time}\n平台：{platform_name}',
-    subjectTemplate: '',
-    scheduledTime: undefined as any,
-    delayMinutes: undefined as number | undefined,
+    name: '',
+    priority: NotificationPriority.Medium as number,
+    processId: undefined as number | undefined,
+    recipientAddresses: [] as NotificationRecipientAddress[],
+    recipientDepts: [] as string[],
+    recipientRoles: [] as string[],
+    recipientTypes: [] as string[],
+    recipientUsers: [] as string[],
     repeatCount: undefined as number | undefined,
     repeatInterval: undefined as number | undefined,
-    maxRetries: 3,
     retryInterval: 5,
+    scheduledTime: undefined as any,
     status: NotificationStatus.Disabled as number,
-    priority: NotificationPriority.Medium as number,
-    isDefault: IsDefault.No as number,
+    subjectTemplate: '',
+    templateId: undefined as number | undefined,
+    triggerCondition: '',
+    triggerType: NotificationTrigger.IMMEDIATE as string,
   },
+  isEdit: false,
+  saving: false,
 });
 
 // 详情对话框数据
@@ -383,13 +381,13 @@ const detailDialog = reactive({
 
 // 手动发送对话框数据
 const manualSendDialog = reactive({
-  saving: false,
   form: {
     channels: [] as string[],
+    content: '',
     recipient: '',
     subject: '',
-    content: '',
   },
+  saving: false,
 });
 
 const addRecipientAddress = () => {
@@ -398,8 +396,8 @@ const addRecipientAddress = () => {
   );
   if (channel)
     notificationDialog.form.recipientAddresses.push({
-      channel,
       address: '',
+      channel,
       name: '',
     });
 };
@@ -425,7 +423,15 @@ const addressError = (channel: string, raw: string) => {
 
 // 表单验证规则
 const notificationRules = {
-  name: [{ message: '请输入配置名称', required: true, trigger: 'blur' }],
+  channels: [
+    {
+      message: '请选择至少一个通知渠道',
+      min: 1,
+      required: true,
+      trigger: 'change',
+      type: 'array',
+    },
+  ],
   eventTypes: [
     {
       message: '请选择至少一个触发事件',
@@ -435,16 +441,39 @@ const notificationRules = {
       type: 'array',
     },
   ],
-  triggerType: [
-    { message: '请选择触发类型', required: true, trigger: 'change' },
-  ],
-  channels: [
+  maxRetries: [
     {
-      message: '请选择至少一个通知渠道',
-      min: 1,
+      max: 100,
+      message: '最大重试次数必须在0-100之间',
+      min: 0,
       required: true,
+      trigger: 'blur',
+      type: 'number',
+    },
+  ],
+  messageTemplate: [
+    { message: '请输入消息模板', required: true, trigger: 'blur' },
+  ],
+  name: [{ message: '请输入配置名称', required: true, trigger: 'blur' }],
+  priority: [{ message: '请选择优先级', required: true, trigger: 'change' }],
+  recipientDepts: [
+    {
       trigger: 'change',
-      type: 'array',
+      validator: (_rule: unknown, values: string[] = []) =>
+        !notificationDialog.form.recipientTypes.includes('dept') ||
+        validRecipientIds(values)
+          ? Promise.resolve()
+          : Promise.reject(new Error('请输入正整数部门ID')),
+    },
+  ],
+  recipientRoles: [
+    {
+      trigger: 'change',
+      validator: (_rule: unknown, values: string[] = []) =>
+        !notificationDialog.form.recipientTypes.includes('role') ||
+        validRecipientIds(values)
+          ? Promise.resolve()
+          : Promise.reject(new Error('请输入正整数角色ID')),
     },
   ],
   recipientTypes: [
@@ -458,45 +487,12 @@ const notificationRules = {
   ],
   recipientUsers: [
     {
+      trigger: 'change',
       validator: (_rule: unknown, values: string[] = []) =>
         !notificationDialog.form.recipientTypes.includes('user') ||
         validRecipientIds(values)
           ? Promise.resolve()
           : Promise.reject(new Error('请输入正整数用户ID')),
-      trigger: 'change',
-    },
-  ],
-  recipientRoles: [
-    {
-      validator: (_rule: unknown, values: string[] = []) =>
-        !notificationDialog.form.recipientTypes.includes('role') ||
-        validRecipientIds(values)
-          ? Promise.resolve()
-          : Promise.reject(new Error('请输入正整数角色ID')),
-      trigger: 'change',
-    },
-  ],
-  recipientDepts: [
-    {
-      validator: (_rule: unknown, values: string[] = []) =>
-        !notificationDialog.form.recipientTypes.includes('dept') ||
-        validRecipientIds(values)
-          ? Promise.resolve()
-          : Promise.reject(new Error('请输入正整数部门ID')),
-      trigger: 'change',
-    },
-  ],
-  messageTemplate: [
-    { message: '请输入消息模板', required: true, trigger: 'blur' },
-  ],
-  maxRetries: [
-    {
-      max: 100,
-      message: '最大重试次数必须在0-100之间',
-      min: 0,
-      required: true,
-      trigger: 'blur',
-      type: 'number',
     },
   ],
   retryInterval: [
@@ -508,7 +504,9 @@ const notificationRules = {
       type: 'number',
     },
   ],
-  priority: [{ message: '请选择优先级', required: true, trigger: 'change' }],
+  triggerType: [
+    { message: '请选择触发类型', required: true, trigger: 'change' },
+  ],
 };
 
 // 手动发送验证规则
@@ -522,9 +520,11 @@ const manualSendRules = {
       type: 'array',
     },
   ],
+  content: [{ message: '请输入通知内容', required: true, trigger: 'blur' }],
   recipient: [
     { message: '请输入接收人地址', required: true, trigger: 'blur' },
     {
+      trigger: 'blur',
       validator: (_rule: any, value: string, callback: Function) => {
         if (!value || !value.trim()) {
           callback(new Error('接收人地址不能为空'));
@@ -551,11 +551,9 @@ const manualSendRules = {
 
         callback();
       },
-      trigger: 'blur',
     },
   ],
   subject: [{ message: '请输入通知主题', required: true, trigger: 'blur' }],
-  content: [{ message: '请输入通知内容', required: true, trigger: 'blur' }],
 };
 
 // 计算统计数据
@@ -577,10 +575,10 @@ const loadNotifications = async (): Promise<void> => {
 
   try {
     const params: ListNotificationReq = {
+      channel: channelFilter.value,
+      name: searchQuery.value,
       page: paginationConfig.current,
       page_size: paginationConfig.pageSize,
-      name: searchQuery.value,
-      channel: channelFilter.value,
       status: statusFilter.value,
     };
 
@@ -644,8 +642,8 @@ const getRecipientTypesDisplay = (recipientTypes: string[]): string => {
 const getPriorityName = (priority: number): string => {
   const priorityMap: Record<number, string> = {
     [NotificationPriority.High]: '高',
-    [NotificationPriority.Medium]: '中',
     [NotificationPriority.Low]: '低',
+    [NotificationPriority.Medium]: '中',
   };
   return priorityMap[priority] || '未知';
 };
@@ -653,27 +651,27 @@ const getPriorityName = (priority: number): string => {
 const getPriorityColor = (priority: number): string => {
   const colorMap: Record<number, string> = {
     [NotificationPriority.High]: 'red',
-    [NotificationPriority.Medium]: 'orange',
     [NotificationPriority.Low]: 'green',
+    [NotificationPriority.Medium]: 'orange',
   };
   return colorMap[priority] || 'default';
 };
 
 const getTriggerTypeName = (type: string): string => {
   const typeMap: Record<string, string> = {
-    [NotificationTrigger.IMMEDIATE]: '立即触发',
-    [NotificationTrigger.DELAYED]: '延迟触发',
-    [NotificationTrigger.SCHEDULED]: '定时触发',
     [NotificationTrigger.CONDITIONAL]: '条件触发',
+    [NotificationTrigger.DELAYED]: '延迟触发',
+    [NotificationTrigger.IMMEDIATE]: '立即触发',
+    [NotificationTrigger.SCHEDULED]: '定时触发',
   };
   return typeMap[type] || type;
 };
 
 const getChannelColor = (channel: string): string => {
   const colorMap: Record<string, string> = {
-    [NotificationChannel.IN_APP]: 'cyan',
-    [NotificationChannel.FEISHU]: 'green',
     [NotificationChannel.EMAIL]: 'blue',
+    [NotificationChannel.FEISHU]: 'green',
+    [NotificationChannel.IN_APP]: 'cyan',
     [NotificationChannel.SMS]: 'orange',
     [NotificationChannel.WEBHOOK]: 'purple',
   };
@@ -682,9 +680,9 @@ const getChannelColor = (channel: string): string => {
 
 const getChannelIcon = (channel: string) => {
   const iconMap: Record<string, any> = {
-    [NotificationChannel.IN_APP]: BellOutlined,
-    [NotificationChannel.FEISHU]: MessageOutlined,
     [NotificationChannel.EMAIL]: MailOutlined,
+    [NotificationChannel.FEISHU]: MessageOutlined,
+    [NotificationChannel.IN_APP]: BellOutlined,
     [NotificationChannel.SMS]: PhoneOutlined,
     [NotificationChannel.WEBHOOK]: SendOutlined,
   };
@@ -693,9 +691,9 @@ const getChannelIcon = (channel: string) => {
 
 const getChannelIconColor = (channel: string): string => {
   const colorMap: Record<string, string> = {
-    [NotificationChannel.IN_APP]: '#08979c',
-    [NotificationChannel.FEISHU]: '#00b96b',
     [NotificationChannel.EMAIL]: '#1890ff',
+    [NotificationChannel.FEISHU]: '#00b96b',
+    [NotificationChannel.IN_APP]: '#08979c',
     [NotificationChannel.SMS]: '#fa8c16',
     [NotificationChannel.WEBHOOK]: '#722ed1',
   };
@@ -748,8 +746,8 @@ const loadProcesses = async (reset = false): Promise<void> => {
   try {
     const res = await listWorkorderProcess({
       page: processPagination.current,
-      size: processPagination.pageSize,
       search: '',
+      size: processPagination.pageSize,
       status: 2, // 只加载已发布的流程
     });
 
@@ -787,8 +785,8 @@ const loadTemplates = async (reset = false): Promise<void> => {
   try {
     const res = await listWorkorderTemplate({
       page: templatePagination.current,
-      size: templatePagination.pageSize,
       search: '',
+      size: templatePagination.pageSize,
       status: 1, // 只加载启用的模板
     });
 
@@ -827,8 +825,8 @@ const loadCategories = async (reset = false): Promise<void> => {
   try {
     const res = await listWorkorderCategory({
       page: categoryPagination.current,
-      size: categoryPagination.pageSize,
       search: '',
+      size: categoryPagination.pageSize,
       status: 1, // 只加载启用的分类
     });
 
@@ -866,10 +864,10 @@ const loadUsers = async (reset = false): Promise<void> => {
 
   try {
     const res = await getUserList({
-      page: userPagination.current,
-      size: userPagination.pageSize,
-      search: '',
       enable: 1, // 只加载启用的用户
+      page: userPagination.current,
+      search: '',
+      size: userPagination.pageSize,
     });
 
     if (res) {
@@ -896,7 +894,7 @@ const handleProcessScroll = (e: Event): void => {
   const { target } = e;
   if (target) {
     const element = target as HTMLElement;
-    const { scrollTop, scrollHeight, clientHeight } = element;
+    const { clientHeight, scrollHeight, scrollTop } = element;
     if (scrollTop + clientHeight >= scrollHeight - 5) {
       loadProcesses();
     }
@@ -907,7 +905,7 @@ const handleTemplateScroll = (e: Event): void => {
   const { target } = e;
   if (target) {
     const element = target as HTMLElement;
-    const { scrollTop, scrollHeight, clientHeight } = element;
+    const { clientHeight, scrollHeight, scrollTop } = element;
     if (scrollTop + clientHeight >= scrollHeight - 5) {
       loadTemplates();
     }
@@ -918,7 +916,7 @@ const handleCategoryScroll = (e: Event): void => {
   const { target } = e;
   if (target) {
     const element = target as HTMLElement;
-    const { scrollTop, scrollHeight, clientHeight } = element;
+    const { clientHeight, scrollHeight, scrollTop } = element;
     if (scrollTop + clientHeight >= scrollHeight - 5) {
       loadCategories();
     }
@@ -979,9 +977,9 @@ const loadSendLogs = async (notificationId: number): Promise<void> => {
 
   try {
     const params: ListSendLogReq = {
+      notification_id: notificationId,
       page: logsPagination.current,
       page_size: logsPagination.pageSize,
-      notification_id: notificationId,
     };
     const res = await getSendLogs(params);
     if (request !== logsRequest) return;
@@ -1030,33 +1028,33 @@ const handleCreateNotification = (): void => {
   notificationDialog.isEdit = false;
   notificationDialog.saving = false;
   notificationDialog.form = {
-    id: undefined,
-    name: '',
-    description: '',
-    processId: undefined,
-    templateId: undefined,
     categoryId: undefined,
-    eventTypes: ['instance_created', 'instance_submitted'],
-    triggerType: NotificationTrigger.IMMEDIATE as string,
-    triggerCondition: '',
     channels: [],
-    recipientTypes: ['creator'],
-    recipientUsers: [],
-    recipientRoles: [],
-    recipientDepts: [],
-    recipientAddresses: [],
+    delayMinutes: undefined,
+    description: '',
+    eventTypes: ['instance_created', 'instance_submitted'],
+    id: undefined,
+    isDefault: IsDefault.No,
+    maxRetries: 3,
     messageTemplate:
       '您好 {recipient_name}！\n\n工单通知：{title}\n工单编号：{serial_number}\n优先级：{priority_text}\n状态：{status}\n\n详情请查看系统。\n\n通知时间：{notification_time}\n平台：{platform_name}',
-    subjectTemplate: '',
-    scheduledTime: undefined,
-    delayMinutes: undefined,
+    name: '',
+    priority: NotificationPriority.Medium,
+    processId: undefined,
+    recipientAddresses: [],
+    recipientDepts: [],
+    recipientRoles: [],
+    recipientTypes: ['creator'],
+    recipientUsers: [],
     repeatCount: undefined,
     repeatInterval: undefined,
-    maxRetries: 3,
     retryInterval: 5,
+    scheduledTime: undefined,
     status: NotificationStatus.Disabled,
-    priority: NotificationPriority.Medium,
-    isDefault: IsDefault.No,
+    subjectTemplate: '',
+    templateId: undefined,
+    triggerCondition: '',
+    triggerType: NotificationTrigger.IMMEDIATE as string,
   };
 
   notificationDialogVisible.value = true;
@@ -1073,38 +1071,38 @@ const handleEditNotification = (record: Notification): void => {
   notificationDialog.isEdit = true;
   notificationDialog.saving = false;
   notificationDialog.form = {
-    id: record.id,
-    name: record.name,
-    description: record.description || '',
-    processId: record.process_id,
-    templateId: record.template_id,
     categoryId: record.category_id,
-    eventTypes: record.event_types || [],
-    triggerType: record.trigger_type,
-    triggerCondition: record.trigger_condition
-      ? JSON.stringify(record.trigger_condition)
-      : '',
     channels: [...(record.channels || [])],
-    recipientTypes: record.recipient_types || [],
-    recipientUsers: record.recipient_users || [],
-    recipientRoles: record.recipient_roles || [],
-    recipientDepts: [...(record.recipient_depts || [])],
+    delayMinutes: record.delay_minutes,
+    description: record.description || '',
+    eventTypes: record.event_types || [],
+    id: record.id,
+    isDefault: record.is_default as number,
+    maxRetries: record.max_retries,
+    messageTemplate: record.message_template,
+    name: record.name,
+    priority: record.priority as number,
+    processId: record.process_id,
     recipientAddresses: (record.recipient_addresses || []).map((address) => ({
       ...address,
     })),
-    messageTemplate: record.message_template,
-    subjectTemplate: record.subject_template || '',
+    recipientDepts: [...(record.recipient_depts || [])],
+    recipientRoles: record.recipient_roles || [],
+    recipientTypes: record.recipient_types || [],
+    recipientUsers: record.recipient_users || [],
+    repeatCount: record.repeat_count,
+    repeatInterval: record.repeat_interval,
+    retryInterval: record.retry_interval,
     scheduledTime: record.scheduled_time
       ? dayjs(record.scheduled_time)
       : undefined,
-    delayMinutes: record.delay_minutes,
-    repeatCount: record.repeat_count,
-    repeatInterval: record.repeat_interval,
-    maxRetries: record.max_retries,
-    retryInterval: record.retry_interval,
     status: record.status as number,
-    priority: record.priority as number,
-    isDefault: record.is_default as number,
+    subjectTemplate: record.subject_template || '',
+    templateId: record.template_id,
+    triggerCondition: record.trigger_condition
+      ? JSON.stringify(record.trigger_condition)
+      : '',
+    triggerType: record.trigger_type,
   };
 
   // 关闭详情对话框并显示编辑对话框
@@ -1143,7 +1141,7 @@ const handleViewNotification = async (record: Notification): Promise<void> => {
 };
 
 const handleStatusToggle = async (
-  record: Notification & { statusLoading?: boolean },
+  record: { statusLoading?: boolean } & Notification,
   checked: boolean,
 ): Promise<void> => {
   const id = record.id;
@@ -1240,11 +1238,10 @@ const handleDeleteNotification = (record: Notification): void => {
     can('workorder.notification.delete');
   let confirmationConsumed = false;
   Modal.confirm({
-    title: '删除确认',
+    cancelText: '取消',
     content: `确定要删除表单"${getFormName(record.template_id)}"的通知配置吗？`,
     okText: '删除',
     okType: 'danger',
-    cancelText: '取消',
     onOk: async () => {
       if (confirmationConsumed || !isCurrent()) return;
       confirmationConsumed = true;
@@ -1281,17 +1278,18 @@ const handleDeleteNotification = (record: Notification): void => {
         hideLoading?.();
       }
     },
+    title: '删除确认',
   });
 };
 
 const testSendDialog = reactive({
-  visible: false,
-  sending: false,
-  notificationId: 0,
-  channels: [] as string[],
   channel: '',
-  recipient: '',
+  channels: [] as string[],
   error: '',
+  notificationId: 0,
+  recipient: '',
+  sending: false,
+  visible: false,
 });
 function invalidateTestSend(): void {
   ++testSendEpoch;
@@ -1380,8 +1378,8 @@ const confirmTestSend = async (): Promise<void> => {
   testSendDialog.error = '';
   try {
     await testSendNotification({
-      notification_id: id,
       channel,
+      notification_id: id,
       recipient: recipient.trim(),
     });
     if (!isCurrent()) return;
@@ -1402,9 +1400,9 @@ function invalidateManualSend(): void {
   manualSendDialog.saving = false;
   manualSendDialog.form = {
     channels: [],
+    content: '',
     recipient: '',
     subject: '',
-    content: '',
   };
 }
 
@@ -1419,9 +1417,9 @@ const handleManualSend = (record: Notification): void => {
           ['email', 'feishu'].includes(channel),
         )
       : [],
+    content: record.message_template || '',
     recipient: '',
     subject: record.subject_template || 'AI-CloudOps 工单通知',
-    content: record.message_template || '',
   };
   manualSendDialogVisible.value = true;
 };
@@ -1556,8 +1554,8 @@ const saveNotification = async (): Promise<void> => {
 
   const recipientAddresses = formData.recipientTypes.includes('custom')
     ? formData.recipientAddresses.map((address) => ({
-        channel: address.channel,
         address: address.address.trim(),
+        channel: address.channel,
         name: (address.name || '').trim(),
       }))
     : [];
@@ -1602,29 +1600,29 @@ const saveNotification = async (): Promise<void> => {
       }
 
       const updateReq: UpdateNotificationReq = {
+        category_id: formData.categoryId,
+        description: formData.description,
+        event_types: [...formData.eventTypes],
         id: formData.id,
         name: formData.name,
-        description: formData.description,
         process_id: formData.processId,
         template_id: formData.templateId,
-        category_id: formData.categoryId,
-        event_types: [...formData.eventTypes],
         ...(schedule ? { ...schedule, clear_trigger: true } : {}),
         channels: [...formData.channels],
+        max_retries: formData.maxRetries,
+        message_template: formData.messageTemplate,
+        recipient_addresses: recipientAddresses,
+        recipient_depts: cleanRecipientDepts,
+        recipient_roles: cleanRecipientRoles,
         recipient_types: [...formData.recipientTypes],
         recipient_users: cleanRecipientUsers,
-        recipient_roles: cleanRecipientRoles,
-        recipient_depts: cleanRecipientDepts,
-        recipient_addresses: recipientAddresses,
-        message_template: formData.messageTemplate,
-        subject_template: formData.subjectTemplate,
-        max_retries: formData.maxRetries,
         retry_interval: formData.retryInterval,
+        subject_template: formData.subjectTemplate,
         ...(formData.status === originalNotificationStatus.value
           ? {}
           : { status: formData.status }),
-        priority: formData.priority,
         is_default: formData.isDefault,
+        priority: formData.priority,
       };
 
       await updateNotification(updateReq);
@@ -1637,26 +1635,26 @@ const saveNotification = async (): Promise<void> => {
         return;
       }
       const createReq: CreateNotificationReq = {
-        name: formData.name,
+        category_id: formData.categoryId,
         description: formData.description,
+        event_types: [...formData.eventTypes],
+        name: formData.name,
         process_id: formData.processId,
         template_id: formData.templateId,
-        category_id: formData.categoryId,
-        event_types: [...formData.eventTypes],
         ...schedule,
         channels: [...formData.channels],
+        is_default: formData.isDefault,
+        max_retries: formData.maxRetries,
+        message_template: formData.messageTemplate,
+        priority: formData.priority,
+        recipient_addresses: recipientAddresses,
+        recipient_depts: cleanRecipientDepts,
+        recipient_roles: cleanRecipientRoles,
         recipient_types: [...formData.recipientTypes],
         recipient_users: cleanRecipientUsers,
-        recipient_roles: cleanRecipientRoles,
-        recipient_depts: cleanRecipientDepts,
-        recipient_addresses: recipientAddresses,
-        message_template: formData.messageTemplate,
-        subject_template: formData.subjectTemplate,
-        max_retries: formData.maxRetries,
         retry_interval: formData.retryInterval,
-        priority: formData.priority,
         status: formData.status,
-        is_default: formData.isDefault,
+        subject_template: formData.subjectTemplate,
       };
 
       await createNotification(createReq);
@@ -1795,9 +1793,9 @@ const saveManualSend = async (): Promise<void> => {
   }
   const sendData: ManualSendNotificationReq = {
     channels: [...model.channels],
+    content: model.content.trim(),
     recipient: model.recipient.trim(),
     subject: model.subject.trim(),
-    content: model.content.trim(),
   };
   manualSendDialog.saving = true;
   try {
@@ -2201,10 +2199,10 @@ onMounted(() => {
     >
       <a-alert
         v-if="Object.values(optionErrors).some(Boolean)"
-        type="warning"
-        message="部分关联选项加载失败，重新打开相应选择器可重试"
         :description="Object.values(optionErrors).filter(Boolean).join('；')"
+        message="部分关联选项加载失败，重新打开相应选择器可重试"
         show-icon
+        type="warning"
       />
       <a-form
         ref="formRef"
@@ -2346,9 +2344,9 @@ onMounted(() => {
           >
             <a-row :gutter="[16, 8]">
               <a-col
-                :span="12"
                 v-for="eventType in getAllEventTypes()"
                 :key="eventType"
+                :span="12"
               >
                 <a-checkbox :value="eventType">
                   <span class="event-type-option">
@@ -2403,7 +2401,7 @@ onMounted(() => {
           <a-textarea
             v-model:value="notificationDialog.form.triggerCondition"
             :rows="4"
-            placeholder="例如 {&quot;status&quot;:2,&quot;priority&quot;:1}"
+            placeholder='例如 {"status":2,"priority":1}'
           />
         </a-form-item>
 
@@ -2413,9 +2411,9 @@ onMounted(() => {
               (channel) => !['email', 'feishu', 'in_app'].includes(channel),
             )
           "
-          type="warning"
           message="此配置含当前服务未支持的渠道，保存前请确认移除"
           show-icon
+          type="warning"
         >
           <template #action>
             <a-button
@@ -2437,11 +2435,11 @@ onMounted(() => {
           >
             <a-row :gutter="[16, 16]">
               <a-col
-                :span="12"
                 v-for="channel in getAllNotificationChannels().filter(
                   (channel) => ['email', 'feishu', 'in_app'].includes(channel),
                 )"
                 :key="channel"
+                :span="12"
               >
                 <a-checkbox :value="channel">
                   <span class="channel-option">
@@ -2456,12 +2454,12 @@ onMounted(() => {
             </a-row>
           </a-checkbox-group>
           <div
-            class="form-help"
-            style="margin-top: 8px"
             v-if="
               notificationDialog.form.channels.includes('feishu') ||
               notificationDialog.form.channels.includes('email')
             "
+            class="form-help"
+            style="margin-top: 8px"
           >
             <a-alert banner message="通知渠道配置建议" show-icon type="info">
               <template #description>
@@ -2492,9 +2490,9 @@ onMounted(() => {
           >
             <a-row :gutter="[16, 8]">
               <a-col
-                :span="12"
                 v-for="recipientType in getAllRecipientTypes()"
                 :key="recipientType"
+                :span="12"
               >
                 <a-checkbox :value="recipientType">
                   <span class="recipient-type-option">
@@ -2506,16 +2504,16 @@ onMounted(() => {
           </a-checkbox-group>
           <a-alert
             v-if="notificationDialog.form.channels.includes('in_app')"
-            type="info"
-            show-icon
             message="站内消息发送给系统用户；请至少选择创建人、处理人、用户、角色或部门。自定义外部地址不能接收站内消息。"
+            show-icon
+            type="info"
           />
         </a-form-item>
 
         <a-form-item
+          v-if="notificationDialog.form.recipientTypes.includes('user')"
           label="自定义接收人用户ID"
           name="recipientUsers"
-          v-if="notificationDialog.form.recipientTypes.includes('user')"
         >
           <a-select
             v-model:value="notificationDialog.form.recipientUsers"
@@ -2527,9 +2525,9 @@ onMounted(() => {
         </a-form-item>
 
         <a-form-item
+          v-if="notificationDialog.form.recipientTypes.includes('role')"
           label="接收人角色ID"
           name="recipientRoles"
-          v-if="notificationDialog.form.recipientTypes.includes('role')"
         >
           <a-select
             v-model:value="notificationDialog.form.recipientRoles"
@@ -2541,9 +2539,9 @@ onMounted(() => {
         </a-form-item>
 
         <a-form-item
+          v-if="notificationDialog.form.recipientTypes.includes('dept')"
           label="接收人部门ID"
           name="recipientDepts"
-          v-if="notificationDialog.form.recipientTypes.includes('dept')"
         >
           <a-select
             v-model:value="notificationDialog.form.recipientDepts"
@@ -2578,7 +2576,7 @@ onMounted(() => {
             <legend>接收地址 {{ index + 1 }}</legend>
             <a-select
               v-model:value="address.channel"
-              :aria-label="'自定义接收渠道' + (index + 1)"
+              :aria-label="`自定义接收渠道${index + 1}`"
             >
               <a-select-option
                 v-for="channel in notificationDialog.form.channels.filter(
@@ -2592,17 +2590,17 @@ onMounted(() => {
             </a-select>
             <a-input
               v-model:value="address.address"
-              :aria-label="'自定义接收地址' + (index + 1)"
+              :aria-label="`自定义接收地址${index + 1}`"
               placeholder="邮箱地址或飞书ID"
             />
             <a-input
               v-model:value="address.name"
-              :aria-label="'自定义接收人名称' + (index + 1)"
+              :aria-label="`自定义接收人名称${index + 1}`"
               :maxlength="100"
               placeholder="接收人名称（可选）"
             />
             <a-button
-              :aria-label="'移除接收地址' + (index + 1)"
+              :aria-label="`移除接收地址${index + 1}`"
               danger
               @click="
                 notificationDialog.form.recipientAddresses.splice(index, 1)
@@ -2612,7 +2610,6 @@ onMounted(() => {
             </a-button>
           </fieldset>
           <a-button
-            @click="addRecipientAddress"
             :disabled="
               notificationDialog.saving ||
               notificationDialog.form.recipientAddresses.length >= 100 ||
@@ -2620,6 +2617,7 @@ onMounted(() => {
                 ['email', 'feishu'].includes(channel),
               )
             "
+            @click="addRecipientAddress"
           >
             添加接收地址
           </a-button>
@@ -3118,18 +3116,18 @@ onMounted(() => {
     </a-modal>
 
     <a-modal
-      :open="testSendDialog.visible"
-      title="测试发送"
-      ok-text="发送"
-      cancel-text="取消"
-      :confirm-loading="testSendDialog.sending"
       :closable="!testSendDialog.sending"
+      :confirm-loading="testSendDialog.sending"
       :mask-closable="false"
       :ok-button-props="{
         disabled: !testSendDialog.channel || !testSendDialog.recipient.trim(),
       }"
-      @ok="confirmTestSend"
+      :open="testSendDialog.visible"
+      cancel-text="取消"
+      ok-text="发送"
+      title="测试发送"
       @cancel="closeTestSend"
+      @ok="confirmTestSend"
     >
       <a-alert message="测试将实际发送到下面指定的地址" show-icon type="info" />
       <a-alert
@@ -3193,11 +3191,11 @@ onMounted(() => {
           >
             <a-row :gutter="[16, 16]">
               <a-col
-                :span="12"
                 v-for="channel in getAllNotificationChannels().filter(
                   (channel) => ['email', 'feishu'].includes(channel),
                 )"
                 :key="channel"
+                :span="12"
               >
                 <a-checkbox :value="channel">
                   <span class="channel-option">

@@ -24,9 +24,9 @@ function required<T>(value: null | T | undefined): T {
  */
 const notices = vi.hoisted(() => ({
   error: vi.fn(),
-  warning: vi.fn(),
-  success: vi.fn(),
   info: vi.fn(),
+  success: vi.fn(),
+  warning: vi.fn(),
 }));
 const confirm = vi.hoisted(() => vi.fn());
 vi.mock('ant-design-vue', () => ({ message: notices, Modal: { confirm } }));
@@ -97,8 +97,8 @@ const adapter: AxiosAdapter = async (config) => {
             {
               code: 400,
               data: null,
-              message: RAW_ECHO,
               error: { message: RAW_ECHO },
+              message: RAW_ECHO,
             },
           ]
         : mode === 'unprocessable'
@@ -107,8 +107,8 @@ const adapter: AxiosAdapter = async (config) => {
               {
                 code: 422,
                 data: null,
-                message: RAW_ECHO,
                 error: { message: RAW_ECHO },
+                message: RAW_ECHO,
               },
             ]
           : [

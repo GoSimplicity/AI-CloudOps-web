@@ -1,3 +1,5 @@
+import { ref } from 'vue';
+
 import {
   DOMWrapper,
   flushPromises,
@@ -6,14 +8,13 @@ import {
 } from '@vue/test-utils';
 import Antd, { message, Modal } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ref } from 'vue';
 
-import CloudResourceManager from './CloudResourceManager.vue';
 import { getTreeNodeCloudResourcesApi } from '#/api/core/tree/tree_cloud';
 import { downloadCsv } from '#/utils/export-csv';
 import { markRequestLayerNotice } from '#/utils/permission/request-notice';
 
 import { createDeferred } from '../../../../../internal/test-utils/deferred';
+import CloudResourceManager from './CloudResourceManager.vue';
 
 vi.mock('#/utils/export-csv', () => ({ downloadCsv: vi.fn() }));
 
@@ -36,10 +37,10 @@ vi.mock('#/utils/permission', async (importOriginal) => ({
 }));
 
 const client = vi.hoisted(() => ({
+  delete: vi.fn(),
   get: vi.fn(),
   post: vi.fn(),
   put: vi.fn(),
-  delete: vi.fn(),
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }));
@@ -52,16 +53,15 @@ const account = (id = 7) => ({
   id,
   name: id === 7 ? '主阿里账户' : '第二阿里账户',
   provider: 1,
-  status: 1,
   regions:
     id === 7
       ? [
           {
             id: 21,
+            is_default: true,
             region: 'cn-hangzhou',
             region_name: '杭州',
             status: 1,
-            is_default: true,
           },
           { id: 22, region: 'cn-shanghai', region_name: '上海', status: 2 },
           { id: 23, region: 'cn-beijing', region_name: '北京', status: 1 },
@@ -69,29 +69,30 @@ const account = (id = 7) => ({
       : [
           {
             id: 41,
+            is_default: true,
             region: 'cn-shenzhen',
             region_name: '深圳',
             status: 1,
-            is_default: true,
           },
         ],
+  status: 1,
 });
 const resource = {
+  auth_mode: 1,
+  cloud_account: { id: 7, provider: 1 },
+  cloud_account_id: 7,
+  cpu: 1,
+  currency: 'CNY',
+  disk: 1,
   id: 1,
+  memory: 1,
+  monthly_cost: 0,
   name: '已有资源',
+  port: 22,
   resource_type: 1,
   status: 1,
-  cloud_account_id: 7,
-  cloud_account: { id: 7, provider: 1 },
   tags: [],
   tree_nodes: [],
-  cpu: 1,
-  memory: 1,
-  disk: 1,
-  monthly_cost: 0,
-  currency: 'CNY',
-  port: 22,
-  auth_mode: 1,
 };
 let wrapper: undefined | VueWrapper;
 beforeEach(() => {
@@ -100,8 +101,8 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -111,9 +112,10 @@ beforeEach(() => {
   );
   client.get.mockImplementation((path: string) => {
     if (path === '/tree/cloud/list')
-      return Promise.resolve({ items: [resource], total: 30 });
+      return Promise.resolve({ total: 30, items: [resource] });
     if (path === '/tree/cloud/account/list')
       return Promise.resolve({
+        total: 7,
         items: [
           account(),
           account(10),
@@ -124,13 +126,12 @@ beforeEach(() => {
           { ...account(14), name: 'GCP账户', provider: 6 },
           {
             ...account(15),
+            credential_type: 'temporary',
             name: 'AWS临时账户',
             provider: 3,
-            credential_type: 'temporary',
           },
           { ...account(9), name: '已禁用账户', status: 2 },
         ],
-        total: 7,
       });
     if (path.startsWith('/tree/cloud/account/') && path.endsWith('/detail')) {
       const id = Number(path.split('/').at(-2));
@@ -159,16 +160,16 @@ beforeEach(() => {
             : value.regions,
       });
     }
-    return Promise.resolve({ items: [], total: 0 });
+    return Promise.resolve({ total: 0, items: [] });
   });
   client.post.mockResolvedValue({
-    total_count: 3,
-    new_count: 1,
-    update_count: 2,
     delete_count: 0,
     failed_count: 0,
     failed_instances: [],
+    new_count: 1,
     sync_time: '2026-10-23T00:00:00Z',
+    total_count: 3,
+    update_count: 2,
   });
 });
 afterEach(() => {
@@ -267,22 +268,22 @@ describe('云资源真实控件合同', () => {
     client.get.mockImplementation((path: string, ...rest: unknown[]) =>
       path === '/tree/cloud/list'
         ? Promise.resolve({
+            total: 2,
             items: [
               {
                 ...resource,
-                name: '有费用',
-                monthly_cost: 12.5,
                 currency: 'USD',
+                monthly_cost: 12.5,
+                name: '有费用',
               },
               {
                 ...resource,
-                id: 2,
-                name: '费用未知',
-                monthly_cost: 0,
                 currency: 'USD',
+                id: 2,
+                monthly_cost: 0,
+                name: '费用未知',
               },
             ],
-            total: 2,
           })
         : original(path, ...rest),
     );
@@ -353,9 +354,9 @@ describe('云资源真实控件合同', () => {
     ).toBe(true);
   });
   it.each([
-    { name: '腾讯账户', id: 8 },
-    { name: 'AWS账户', id: 11 },
-  ])('$name 可选择已授权地域并同步', async ({ name, id }) => {
+    { id: 8, name: '腾讯账户' },
+    { id: 11, name: 'AWS账户' },
+  ])('$name 可选择已授权地域并同步', async ({ id, name }) => {
     await open();
     await select('cloud-sync-account', name);
     expect(client.get).toHaveBeenCalledWith(`/tree/cloud/account/${id}/detail`);
@@ -406,9 +407,9 @@ describe('云资源真实控件合同', () => {
     );
     await flushPromises();
     const enter = new KeyboardEvent('keydown', {
+      bubbles: true,
       key: 'Enter',
       keyCode: 13,
-      bubbles: true,
     });
     Object.defineProperty(enter, 'which', { value: 13 });
     input.dispatchEvent(enter);
@@ -419,19 +420,19 @@ describe('云资源真实控件合同', () => {
       expect.objectContaining({
         cloud_account_id: 13,
         cloud_account_region_ids: [41],
-        sync_mode: 'incremental',
         instance_ids: ['12345678-1234-1234-1234-123456789abc'],
+        sync_mode: 'incremental',
       }),
     );
   });
   it.each([
     {
-      name: 'Azure账户',
       id: 12,
       instance: '12345678-1234-1234-1234-123456789abc',
+      name: 'Azure账户',
     },
-    { name: 'GCP账户', id: 14, instance: '1234567890123456789' },
-  ])('$name 仅允许指定地域和实例的增量同步', async ({ name, id, instance }) => {
+    { id: 14, instance: '1234567890123456789', name: 'GCP账户' },
+  ])('$name 仅允许指定地域和实例的增量同步', async ({ id, instance, name }) => {
     await open();
     await select('cloud-sync-account', name);
     await button('开始同步', '.ant-modal-footer button');
@@ -442,9 +443,9 @@ describe('云资源真实控件合同', () => {
     );
     await new DOMWrapper(input).setValue(instance);
     const enter = new KeyboardEvent('keydown', {
+      bubbles: true,
       key: 'Enter',
       keyCode: 13,
-      bubbles: true,
     });
     Object.defineProperty(enter, 'which', { value: 13 });
     input.dispatchEvent(enter);
@@ -455,8 +456,8 @@ describe('云资源真实控件合同', () => {
       expect.objectContaining({
         cloud_account_id: id,
         cloud_account_region_ids: [41],
-        sync_mode: 'incremental',
         instance_ids: [instance],
+        sync_mode: 'incremental',
       }),
     );
   });
@@ -473,9 +474,9 @@ describe('云资源真实控件合同', () => {
     );
     await new DOMWrapper(input).setValue(instance);
     const enter = new KeyboardEvent('keydown', {
+      bubbles: true,
       key: 'Enter',
       keyCode: 13,
-      bubbles: true,
     });
     Object.defineProperty(enter, 'which', { value: 13 });
     input.dispatchEvent(enter);
@@ -485,21 +486,21 @@ describe('云资源真实控件合同', () => {
   });
   it('部分成功时保留地域结果和历史编号供核对', async () => {
     client.post.mockResolvedValueOnce({
-      status: 'partial',
-      total_count: 1,
-      new_count: 1,
-      update_count: 0,
       delete_count: 0,
       failed_count: 1,
+      new_count: 1,
       regions: [
         {
-          region_id: 41,
-          region: '深圳',
-          status: 'failed',
           history_id: 22,
+          region: '深圳',
+          region_id: 41,
           retry_safe: true,
+          status: 'failed',
         },
       ],
+      status: 'partial',
+      total_count: 1,
+      update_count: 0,
     });
     await open();
     await button('开始同步', '.ant-modal-footer button');
@@ -512,21 +513,21 @@ describe('云资源真实控件合同', () => {
   });
   it('地域审计不可用时展示结果并阻止直接重试', async () => {
     client.post.mockResolvedValueOnce({
-      status: 'failed',
-      total_count: 0,
-      new_count: 0,
-      update_count: 0,
       delete_count: 0,
       failed_count: 1,
+      new_count: 0,
       regions: [
         {
-          region_id: 41,
-          region: '深圳',
-          status: 'failed',
           error_category: 'audit_unavailable',
+          region: '深圳',
+          region_id: 41,
           retry_safe: false,
+          status: 'failed',
         },
       ],
+      status: 'failed',
+      total_count: 0,
+      update_count: 0,
     });
     await open();
     await button('开始同步', '.ant-modal-footer button');
@@ -541,12 +542,12 @@ describe('云资源真实控件合同', () => {
   });
   it('结果未知时保留提示并禁止直接重复提交', async () => {
     client.post.mockResolvedValueOnce({
-      status: 'unknown',
-      total_count: 0,
-      new_count: 0,
-      update_count: 0,
       delete_count: 0,
       failed_count: 0,
+      new_count: 0,
+      status: 'unknown',
+      total_count: 0,
+      update_count: 0,
     });
     await open();
     await button('开始同步', '.ant-modal-footer button');
@@ -583,12 +584,12 @@ describe('云资源真实控件合同', () => {
   });
   it('部分失败显示部分完成，缺失计数不伪造全0成功', async () => {
     client.post.mockResolvedValue({
-      total_count: 3,
-      new_count: 1,
-      update_count: 1,
       delete_count: 0,
       failed_count: 1,
       failed_instances: ['fixture'],
+      new_count: 1,
+      total_count: 3,
+      update_count: 1,
     });
     await open();
     await button('开始同步', '.ant-modal-footer button');
@@ -723,16 +724,16 @@ describe('云资源真实控件合同', () => {
     client.get.mockImplementation((path: string, ...rest: unknown[]) =>
       path === '/tree/cloud/list'
         ? Promise.resolve({
+            total: 2,
             items: [
               {
                 ...resource,
-                name: '未知厂商存量资源',
-                cloud_account_id: 99,
                 cloud_account: { id: 99, provider: 99 },
+                cloud_account_id: 99,
+                name: '未知厂商存量资源',
               },
               { ...resource, id: 2, name: '阿里存量RDS', resource_type: 2 },
             ],
-            total: 2,
           })
         : original(path, ...rest),
     );

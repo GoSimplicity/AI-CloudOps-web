@@ -93,11 +93,11 @@ export interface DeleteConfigMapReq {
 export async function getConfigMapListApi(params: GetConfigMapListReq) {
   return requestClient.get(`/k8s/configmap/${params.cluster_id}/list`, {
     params: {
-      namespace: params.namespace,
-      search: params.search,
       data_key: params.data_key,
       labels: params.labels,
+      namespace: params.namespace,
       page: params.page,
+      search: params.search,
       size: params.size,
     },
   });

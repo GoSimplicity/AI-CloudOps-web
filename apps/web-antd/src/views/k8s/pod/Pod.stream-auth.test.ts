@@ -1,3 +1,5 @@
+import { effectScope } from 'vue';
+
 import { type AxiosAdapter, AxiosError } from 'axios';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -6,8 +8,6 @@ import {
   LOGIN_EXPIRED_MESSAGE_KEY,
   requestClient,
 } from '#/api/request';
-
-import { effectScope } from 'vue';
 
 import {
   STREAM_MAX_RECONNECT_ATTEMPTS,
@@ -32,8 +32,8 @@ const logout = vi.hoisted(() => vi.fn());
 const access = vi.hoisted(() => {
   const store = {
     accessToken: 'old-token' as null | string,
-    refreshToken: 'refresh',
     isAccessChecked: true,
+    refreshToken: 'refresh',
     setAccessToken: (token: null | string) => {
       store.accessToken = token;
     },
@@ -123,6 +123,7 @@ class FakeWebSocket {
   static CLOSED = 3;
   static instances: FakeWebSocket[] = [];
   static OPEN = 1;
+  readyState = 0;
   close = vi.fn(() => {
     this.readyState = FakeWebSocket.CLOSED;
   });
@@ -130,7 +131,6 @@ class FakeWebSocket {
   onerror: ((event: any) => void) | null = null;
   onmessage: ((event: any) => void) | null = null;
   onopen: ((event: any) => void) | null = null;
-  readyState = 0;
   send = vi.fn();
   constructor(
     public url: string,

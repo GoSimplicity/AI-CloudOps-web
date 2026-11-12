@@ -1,13 +1,4 @@
 <script setup lang="ts">
-import { useUserStore } from '@vben/stores';
-
-import OpsPage from '#/components/ops/OpsPage.vue';
-
-import { useListRequest } from './useListRequest';
-import {
-  type BearerTokenAction,
-  bearerTokenPayload,
-} from './scrapeJobCredentials';
 import {
   computed,
   onBeforeUnmount,
@@ -17,9 +8,11 @@ import {
   watch,
 } from 'vue';
 
-import { type FormInstance, message, Modal } from 'ant-design-vue';
+import { useUserStore } from '@vben/stores';
+
 import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
+import { type FormInstance, message, Modal } from 'ant-design-vue';
 
 import {
   createMonitorScrapeJobApi,
@@ -34,10 +27,17 @@ import {
 } from '#/api/core/prometheus/prometheus_scrape_job';
 import { getMonitorScrapePoolListApi } from '#/api/core/prometheus/prometheus_scrape_pool';
 import { getTreeList, type TreeNode } from '#/api/core/tree/tree_node';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { useAuthStore } from '#/store';
 import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
+import {
+  type BearerTokenAction,
+  bearerTokenPayload,
+} from './scrapeJobCredentials';
+import { useListRequest } from './useListRequest';
 
 const { can, hasPerm } = usePermission();
 let disposed = false;
@@ -181,19 +181,19 @@ let searchTimeout: null | ReturnType<typeof setTimeout> = null;
 const paginationConfig = reactive({
   current: 1,
   pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
   showQuickJumper: true,
+  showSizeChanger: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
   size: 'default' as const,
+  total: 0,
 });
 
 // 统计数据
 const stats = reactive({
-  total: 0,
   enabled: 0,
-  k8sJobs: 0,
   httpJobs: 0,
+  k8sJobs: 0,
+  total: 0,
 });
 
 // 对话框状态
@@ -202,31 +202,31 @@ const detailDialogVisible = ref(false);
 
 // 表单对话框数据
 const formDialog = reactive({
-  isEdit: false,
   form: {
-    id: undefined as number | undefined,
-    name: '',
-    enableSwitch: true,
+    bearer_token: '',
+    bearer_token_file: '',
     enable: 1 as 1 | 2,
-    service_discovery_type: ServiceDiscoveryType.Http,
+    enableSwitch: true,
+    id: undefined as number | undefined,
+    ip_address: '',
+    kube_config_file_path: '',
+    kubernetes_sd_role: '',
     metrics_path: '/metrics',
+    name: '',
+    pool_id: null as null | number,
+    port: 9100,
+    refresh_interval: 30,
+    relabel_configs_yaml_string: '',
     scheme: 'http',
     scrape_interval: 15,
     scrape_timeout: 5,
-    pool_id: null as null | number,
-    refresh_interval: 30,
-    port: 9100,
-    ip_address: '',
-    relabel_configs_yaml_string: '',
-    kube_config_file_path: '',
-    tls_ca_file_path: '',
-    tls_ca_content: '',
-    bearer_token: '',
-    bearer_token_file: '',
-    kubernetes_sd_role: '',
-    tree_node_ids: [] as number[],
+    service_discovery_type: ServiceDiscoveryType.Http,
     tags: [] as string[],
+    tls_ca_content: '',
+    tls_ca_file_path: '',
+    tree_node_ids: [] as number[],
   },
+  isEdit: false,
 });
 
 const bearerTokenAction = ref<BearerTokenAction>('keep');
@@ -349,6 +349,24 @@ function validStaticTarget(value: unknown): boolean {
 
 // 表单验证规则（动态）
 const formRules = computed(() => ({
+  ip_address: [
+    ...(formDialog.form.service_discovery_type === ServiceDiscoveryType.Static
+      ? [{ message: '请输入目标主机或IP地址', required: true, trigger: 'blur' }]
+      : []),
+    {
+      trigger: 'blur',
+      validator: (_rule: unknown, value: unknown) => {
+        if (value === undefined || value === null || value === '')
+          return Promise.resolve();
+        return validStaticTarget(value)
+          ? Promise.resolve()
+          : Promise.reject(new Error('请输入单个有效主机/IP地址，可带端口'));
+      },
+    },
+  ],
+  metrics_path: [
+    { message: '请输入监控采集路径', required: true, trigger: 'blur' },
+  ],
   name: [
     {
       message: '请输入采集任务名称',
@@ -358,14 +376,29 @@ const formRules = computed(() => ({
     },
     { max: 50, message: '长度应为1到50个字符', min: 1, trigger: 'blur' },
   ],
-  service_discovery_type: [
-    { message: '请选择服务发现类型', required: true, trigger: 'change' },
+  pool_id: [{ message: '请选择关联采集池', required: true, trigger: 'change' }],
+  port: [
+    ...(formDialog.form.service_discovery_type === ServiceDiscoveryType.Static
+      ? [{ message: '请输入端口', required: true, trigger: 'blur' }]
+      : []),
+    {
+      max: 65_535,
+      message: '端口必须为0或1-65535的整数',
+      min: 0,
+      trigger: 'blur',
+      type: 'integer' as const,
+    },
+  ],
+  refresh_interval: [
+    { message: '请输入刷新间隔', required: true, trigger: 'blur' },
+    {
+      message: '刷新间隔必须为非负整数',
+      min: 0,
+      trigger: 'blur',
+      type: 'integer',
+    },
   ],
   scheme: [{ message: '请选择协议方案', required: true, trigger: 'change' }],
-  metrics_path: [
-    { message: '请输入监控采集路径', required: true, trigger: 'blur' },
-  ],
-  pool_id: [{ message: '请选择关联采集池', required: true, trigger: 'change' }],
   scrape_interval: [
     { message: '请输入采集间隔', required: true, trigger: 'blur' },
     {
@@ -384,41 +417,8 @@ const formRules = computed(() => ({
       type: 'integer',
     },
   ],
-  refresh_interval: [
-    { message: '请输入刷新间隔', required: true, trigger: 'blur' },
-    {
-      message: '刷新间隔必须为非负整数',
-      min: 0,
-      trigger: 'blur',
-      type: 'integer',
-    },
-  ],
-  port: [
-    ...(formDialog.form.service_discovery_type === ServiceDiscoveryType.Static
-      ? [{ message: '请输入端口', required: true, trigger: 'blur' }]
-      : []),
-    {
-      max: 65_535,
-      message: '端口必须为0或1-65535的整数',
-      min: 0,
-      trigger: 'blur',
-      type: 'integer' as const,
-    },
-  ],
-  ip_address: [
-    ...(formDialog.form.service_discovery_type === ServiceDiscoveryType.Static
-      ? [{ message: '请输入目标主机或IP地址', required: true, trigger: 'blur' }]
-      : []),
-    {
-      trigger: 'blur',
-      validator: (_rule: unknown, value: unknown) => {
-        if (value === undefined || value === null || value === '')
-          return Promise.resolve();
-        return validStaticTarget(value)
-          ? Promise.resolve()
-          : Promise.reject(new Error('请输入单个有效主机/IP地址，可带端口'));
-      },
-    },
+  service_discovery_type: [
+    { message: '请选择服务发现类型', required: true, trigger: 'change' },
   ],
 }));
 
@@ -458,11 +458,11 @@ const getPoolName = (poolId: number): string => {
 
 const getDiscoveryTypeLabel = (type: ServiceDiscoveryType): string => {
   switch (type) {
-    case ServiceDiscoveryType.K8s: {
-      return 'Kubernetes';
-    }
     case ServiceDiscoveryType.Http: {
       return 'HTTP';
+    }
+    case ServiceDiscoveryType.K8s: {
+      return 'Kubernetes';
     }
     case ServiceDiscoveryType.Static: {
       return 'Static';
@@ -475,11 +475,11 @@ const getDiscoveryTypeLabel = (type: ServiceDiscoveryType): string => {
 
 const getDiscoveryTypeColor = (type: ServiceDiscoveryType): string => {
   switch (type) {
-    case ServiceDiscoveryType.K8s: {
-      return 'blue';
-    }
     case ServiceDiscoveryType.Http: {
       return 'green';
+    }
+    case ServiceDiscoveryType.K8s: {
+      return 'blue';
     }
     case ServiceDiscoveryType.Static: {
       return 'purple';
@@ -519,8 +519,8 @@ const loadDialogPools = async (isNewSearch = false) => {
   try {
     const response = await getMonitorScrapePoolListApi({
       page,
-      size: 20,
       search,
+      size: 20,
     });
 
     if (!current()) return;
@@ -598,11 +598,11 @@ const loadScrapeJobList = async (): Promise<void> => {
   const request = beginRequest();
   try {
     const params: GetMonitorScrapeJobListReq = {
-      page: paginationConfig.current,
-      size: paginationConfig.pageSize,
-      search: searchQuery.value || undefined,
       enable: enableFilter.value,
+      page: paginationConfig.current,
       pool_id: poolFilter.value,
+      search: searchQuery.value || undefined,
+      size: paginationConfig.pageSize,
     };
 
     const response = await getMonitorScrapeJobListApi(params);
@@ -650,8 +650,8 @@ const loadPools = async (): Promise<void> => {
     while (hasMoreData) {
       const response = await getMonitorScrapePoolListApi({
         page: currentPage,
-        size: pageSize,
         search: '',
+        size: pageSize,
       });
       if (!current()) return;
 
@@ -754,32 +754,32 @@ const handleEditScrapeJob = (record: MonitorScrapeJob): void => {
   bearerTokenAction.value = 'keep';
   hasExistingBearerToken.value = record.has_bearer_token === true;
   formDialog.form = {
-    id: record.id,
-    name: record.name,
-    enableSwitch: record.enable === 1,
+    bearer_token: '',
+    bearer_token_file: record.bearer_token_file || '',
     enable: record.enable as 1 | 2,
-    service_discovery_type: record.service_discovery_type,
+    enableSwitch: record.enable === 1,
+    id: record.id,
+    ip_address: record.ip_address || '',
+    kube_config_file_path: record.kube_config_file_path || '',
+    kubernetes_sd_role: record.kubernetes_sd_role || '',
     metrics_path: record.metrics_path,
+    name: record.name,
+    pool_id: record.pool_id,
+    port: record.port,
+    refresh_interval: record.refresh_interval,
+    relabel_configs_yaml_string: record.relabel_configs_yaml_string || '',
     scheme: record.scheme,
     scrape_interval: record.scrape_interval,
     scrape_timeout: record.scrape_timeout,
-    pool_id: record.pool_id,
-    refresh_interval: record.refresh_interval,
-    port: record.port,
-    ip_address: record.ip_address || '',
-    relabel_configs_yaml_string: record.relabel_configs_yaml_string || '',
-    kube_config_file_path: record.kube_config_file_path || '',
-    tls_ca_file_path: record.tls_ca_file_path || '',
+    service_discovery_type: record.service_discovery_type,
+    tags: Array.isArray(record.tags) ? [...record.tags] : [],
     tls_ca_content: record.tls_ca_content || '',
-    bearer_token: '',
-    bearer_token_file: record.bearer_token_file || '',
-    kubernetes_sd_role: record.kubernetes_sd_role || '',
+    tls_ca_file_path: record.tls_ca_file_path || '',
     tree_node_ids: Array.isArray(record.tree_node_ids)
       ? record.tree_node_ids
           .map((id: any) => Number(id))
           .filter((n: any) => !Number.isNaN(n))
       : [],
-    tags: Array.isArray(record.tags) ? [...record.tags] : [],
   };
 
   // 重置 YAML 验证状态
@@ -862,26 +862,26 @@ const toggleJobStatus = async (record: MonitorScrapeJob): Promise<void> => {
   try {
     const newStatus = record.enable === 1 ? 2 : 1;
     const updateData: UpdateMonitorScrapeJobReq = {
-      id: ticket.id,
-      name: record.name,
+      bearer_token_file: record.bearer_token_file || '',
       enable: newStatus,
-      service_discovery_type: record.service_discovery_type,
+      id: ticket.id,
+      ip_address: record.ip_address || '',
+      kube_config_file_path: record.kube_config_file_path || '',
+      kubernetes_sd_role: record.kubernetes_sd_role || '',
       metrics_path: record.metrics_path,
+      name: record.name,
+      pool_id: record.pool_id,
+      port: record.port,
+      refresh_interval: record.refresh_interval,
+      relabel_configs_yaml_string: record.relabel_configs_yaml_string || '',
       scheme: record.scheme,
       scrape_interval: record.scrape_interval,
       scrape_timeout: record.scrape_timeout,
-      pool_id: record.pool_id,
-      refresh_interval: record.refresh_interval,
-      port: record.port,
-      ip_address: record.ip_address || '',
-      relabel_configs_yaml_string: record.relabel_configs_yaml_string || '',
-      kube_config_file_path: record.kube_config_file_path || '',
-      tls_ca_file_path: record.tls_ca_file_path || '',
-      tls_ca_content: record.tls_ca_content || '',
-      bearer_token_file: record.bearer_token_file || '',
-      kubernetes_sd_role: record.kubernetes_sd_role || '',
-      tree_node_ids: [...(record.tree_node_ids || [])],
+      service_discovery_type: record.service_discovery_type,
       tags: [...(record.tags || [])],
+      tls_ca_content: record.tls_ca_content || '',
+      tls_ca_file_path: record.tls_ca_file_path || '',
+      tree_node_ids: [...(record.tree_node_ids || [])],
     };
 
     await updateMonitorScrapeJobApi(updateData);
@@ -907,11 +907,10 @@ const confirmDelete = (record: MonitorScrapeJob): void => {
     currentRecord(ticket) &&
     can('monitor.scrapeJob.delete');
   Modal.confirm({
-    title: '警告',
+    cancelText: '取消',
     content: `确定要删除采集任务 "${record.name}" 吗？`,
     okText: '删除',
     okType: 'danger',
-    cancelText: '取消',
     onCancel: () => {
       if (deleteTickets.get(ticket.id) === ticket)
         deleteTickets.delete(ticket.id);
@@ -934,6 +933,7 @@ const confirmDelete = (record: MonitorScrapeJob): void => {
           deleteTickets.delete(ticket.id);
       }
     },
+    title: '警告',
   });
 };
 
@@ -1026,8 +1026,8 @@ const saveScrapeJob = async (): Promise<void> => {
     let credentials: ReturnType<typeof bearerTokenPayload>;
     try {
       credentials = bearerTokenPayload({
-        editing,
         action: bearerTokenAction.value,
+        editing,
         hasExisting: hasExistingBearerToken.value,
         token: bearer_token,
         tokenFile: configuration.bearer_token_file,
@@ -1043,8 +1043,8 @@ const saveScrapeJob = async (): Promise<void> => {
       ...credentials,
       enable: enableSwitch ? 1 : 2,
       pool_id: poolId,
-      tree_node_ids: draft.tree_node_ids.map((value) => String(value)),
       tags: [...draft.tags],
+      tree_node_ids: draft.tree_node_ids.map((value) => String(value)),
     };
     if (editing) {
       if (!validPositiveId(id)) return;
@@ -1072,28 +1072,28 @@ function resetFormDialog(): void {
   bearerTokenAction.value = 'keep';
   hasExistingBearerToken.value = false;
   formDialog.form = {
-    id: undefined,
-    name: '',
-    enableSwitch: true,
+    bearer_token: '',
+    bearer_token_file: '',
     enable: 1 as 1 | 2,
-    service_discovery_type: ServiceDiscoveryType.Http,
+    enableSwitch: true,
+    id: undefined,
+    ip_address: '',
+    kube_config_file_path: '',
+    kubernetes_sd_role: '',
     metrics_path: '/metrics',
+    name: '',
+    pool_id: null,
+    port: 9100,
+    refresh_interval: 30,
+    relabel_configs_yaml_string: '',
     scheme: 'http',
     scrape_interval: 15,
     scrape_timeout: 5,
-    pool_id: null,
-    refresh_interval: 30,
-    port: 9100,
-    ip_address: '',
-    relabel_configs_yaml_string: '',
-    kube_config_file_path: '',
-    tls_ca_file_path: '',
-    tls_ca_content: '',
-    bearer_token: '',
-    bearer_token_file: '',
-    kubernetes_sd_role: '',
-    tree_node_ids: [],
+    service_discovery_type: ServiceDiscoveryType.Http,
     tags: [],
+    tls_ca_content: '',
+    tls_ca_file_path: '',
+    tree_node_ids: [],
   };
   // 重置 YAML 验证状态
   yamlError.value = '';
@@ -1198,11 +1198,11 @@ const formatYaml = (): void => {
           if (value && value.trim() !== '') {
             // 有值的键值对
             formattedLines.push(
-              '  '.repeat(currentIndent) + key.trim() + ':' + value,
+              `${'  '.repeat(currentIndent) + key.trim()}:${value}`,
             );
           } else {
             // 没有值的键，可能是嵌套对象的开始
-            formattedLines.push('  '.repeat(currentIndent) + key.trim() + ':');
+            formattedLines.push(`${'  '.repeat(currentIndent) + key.trim()}:`);
             currentIndent++;
           }
         }
@@ -1511,7 +1511,7 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'name'">
               <div class="job-name-cell">
-                <div class="job-badge" :class="getJobStatusClass(record)"></div>
+                <div :class="getJobStatusClass(record)" class="job-badge"></div>
                 <span class="job-name-text">{{ record.name }}</span>
               </div>
             </template>
@@ -1570,12 +1570,12 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
             <template v-if="column.key === 'creator'">
               <div class="creator-info">
                 <a-avatar
-                  size="small"
                   :style="{
                     backgroundColor: getAvatarColor(
                       record.create_user_name || '',
                     ),
                   }"
+                  size="small"
                 >
                   {{ getInitials(record.create_user_name) }}
                 </a-avatar>
@@ -1676,8 +1676,8 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
                 <a-switch
                   v-model:checked="formDialog.form.enableSwitch"
                   checked-children="启用"
-                  un-checked-children="禁用"
                   class="tech-switch"
+                  un-checked-children="禁用"
                 />
               </a-form-item>
             </a-col>
@@ -1750,7 +1750,7 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
                   allow-clear
                   placeholder="请搜索并选择关联采集池"
                   show-search
-                  @popupScroll="handleDialogPoolScroll"
+                  @popup-scroll="handleDialogPoolScroll"
                   @search="handleDialogPoolSearch"
                 >
                   <a-select-option
@@ -2100,7 +2100,11 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
             </div>
           </div>
 
-          <a-descriptions :column="1" :labelStyle="{ width: '150px' }" bordered>
+          <a-descriptions
+            :column="1"
+            :label-style="{ width: '150px' }"
+            bordered
+          >
             <a-descriptions-item label="ID">
               {{ detailDialog.form.id }}
             </a-descriptions-item>

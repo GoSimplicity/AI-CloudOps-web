@@ -24,10 +24,10 @@ vi.mock('#/utils/permission', async (importOriginal) => ({
 }));
 
 const client = vi.hoisted(() => ({
+  delete: vi.fn(),
   get: vi.fn(),
   post: vi.fn(),
   put: vi.fn(),
-  delete: vi.fn(),
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 vi.mock('@vben/stores', async (importOriginal) => ({
@@ -46,60 +46,60 @@ const pages: {
 }[] = [
   {
     component: CloudAccount,
-    path: '/tree/cloud/account/list',
     create: '添加账户',
     hasSearch: true,
+    path: '/tree/cloud/account/list',
   },
   {
     component: CloudResource,
-    path: '/tree/cloud/list',
     create: '同步资源',
     hasSearch: true,
+    path: '/tree/cloud/list',
   },
   {
     component: LocalResource,
-    path: '/tree/local/list',
     create: '添加服务器',
     hasSearch: false,
+    path: '/tree/local/list',
   },
   {
     component: TreeNodes,
-    path: '/tree/node/list',
     create: '创建节点',
     hasSearch: true,
+    path: '/tree/node/list',
   },
 ];
 const row = (name: string) => ({
-  id: 1,
-  name,
-  provider: 1,
-  status: 1,
-  region: 'cn-hangzhou',
-  environment: 'test',
-  created_at: '2026-10-23T01:00:00Z',
-  create_user_name: 'fixture',
-  username: 'root',
-  ip_addr: '127.0.0.1',
-  port: 22,
   auth_mode: 1,
-  os_type: 'linux',
-  resource_type: 'ecs',
-  tree_nodes: [],
-  tags: [],
-  children: [],
-  parent_id: 0,
-  level: 1,
+  create_user_name: 'fixture',
+  created_at: '2026-10-23T01:00:00Z',
+  environment: 'test',
+  id: 1,
+  ip_addr: '127.0.0.1',
   is_leaf: 2,
+  level: 1,
+  name,
+  os_type: 'linux',
+  parent_id: 0,
+  port: 22,
+  provider: 1,
+  region: 'cn-hangzhou',
+  resource_type: 'ecs',
+  status: 1,
+  tags: [],
+  tree_nodes: [],
+  username: 'root',
+  children: [],
 });
-const result = (name: string) => ({ items: [row(name)], total: 1 });
+const result = (name: string) => ({ total: 1, items: [row(name)] });
 let wrapper: undefined | VueWrapper;
 beforeEach(() => {
   vi.resetAllMocks();
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -107,7 +107,7 @@ beforeEach(() => {
   vi.spyOn(window, 'getComputedStyle').mockImplementation((element) =>
     style(element),
   );
-  client.get.mockResolvedValue({ items: [], total: 0 });
+  client.get.mockResolvedValue({ total: 0, items: [] });
 });
 afterEach(() => {
   wrapper?.unmount();
@@ -137,7 +137,7 @@ for (const page of pages) {
     it('列表失败清旧结果并可从页面重试恢复', async () => {
       let calls = 0;
       client.get.mockImplementation((path: string) => {
-        if (path !== page.path) return Promise.resolve({ items: [], total: 0 });
+        if (path !== page.path) return Promise.resolve({ total: 0, items: [] });
         calls++;
         if (calls === 2)
           return Promise.reject(new Error('fixture unavailable'));
@@ -164,7 +164,7 @@ for (const page of pages) {
       const old = createDeferred<unknown>();
       let calls = 0;
       client.get.mockImplementation((path: string) => {
-        if (path !== page.path) return Promise.resolve({ items: [], total: 0 });
+        if (path !== page.path) return Promise.resolve({ total: 0, items: [] });
         return ++calls === 1
           ? old.promise
           : Promise.resolve(result('second-current'));
@@ -194,7 +194,7 @@ for (const page of pages) {
           Promise.resolve(
             path === '/tree/cloud/account/list'
               ? result('fixture-account')
-              : { items: [], total: 0 },
+              : { total: 0, items: [] },
           ),
         );
       }
@@ -245,7 +245,7 @@ it('取消节点选择立即收停详情loading，迟到结果不能恢复旧节
   client.get.mockImplementation((path: string) =>
     path === '/tree/node/detail/7'
       ? pending
-      : Promise.resolve({ items: [], total: 0 }),
+      : Promise.resolve({ total: 0, items: [] }),
   );
   const setup = Reflect.get(instance.vm.$, 'setupState');
   const select = Reflect.get(setup, 'handleTreeSelect');

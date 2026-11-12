@@ -6,6 +6,23 @@ import { message, Modal } from 'ant-design-vue';
 import yaml from 'js-yaml';
 
 import {
+  Env,
+  getClustersListApi,
+  type K8sCluster,
+  type ListClustersReq,
+} from '#/api/core/k8s/k8s_cluster';
+import {
+  getNamespacesListApi,
+  type K8sNamespace,
+  type K8sNamespaceListReq,
+} from '#/api/core/k8s/k8s_namespace';
+import {
+  getK8sPVList,
+  type GetPVListReq,
+  type K8sPV,
+  K8sPVStatus,
+} from '#/api/core/k8s/k8s_pv';
+import {
   createK8sPVC,
   createK8sPVCByYaml,
   type CreatePVCByYamlReq,
@@ -30,23 +47,6 @@ import {
   type UpdatePVCByYamlReq,
   type UpdatePVCReq,
 } from '#/api/core/k8s/k8s_pvc';
-import {
-  Env,
-  getClustersListApi,
-  type K8sCluster,
-  type ListClustersReq,
-} from '#/api/core/k8s/k8s_cluster';
-import {
-  getNamespacesListApi,
-  type K8sNamespace,
-  type K8sNamespaceListReq,
-} from '#/api/core/k8s/k8s_namespace';
-import {
-  getK8sPVList,
-  type GetPVListReq,
-  type K8sPV,
-  K8sPVStatus,
-} from '#/api/core/k8s/k8s_pv';
 import { getOwnLookupValue } from '#/utils/own-lookup';
 import {
   shouldNotifyPageError,
@@ -127,17 +127,17 @@ export function usePVCPage() {
     namespace: string;
     spec: PVCSpec;
   }>({
+    annotations: {},
+    labels: {},
     name: '',
     namespace: '',
-    labels: {},
-    annotations: {},
     spec: {
-      request_storage: '',
       access_modes: ['ReadWriteOnce'],
+      request_storage: '',
+      selector: {},
       storage_class: '',
       volume_mode: 'Filesystem',
       volume_name: '',
-      selector: {},
     },
   });
 
@@ -148,17 +148,17 @@ export function usePVCPage() {
     namespace: string;
     spec: PVCSpec;
   }>({
+    annotations: {},
+    labels: {},
     name: '',
     namespace: '',
-    labels: {},
-    annotations: {},
     spec: {
-      request_storage: '',
       access_modes: [],
+      request_storage: '',
+      selector: {},
       storage_class: '',
       volume_mode: '',
       volume_name: '',
-      selector: {},
     },
   });
 
@@ -182,33 +182,33 @@ export function usePVCPage() {
 
   const createFormRules: Record<string, any> = {
     name: [
-      { required: true, message: '请输入 PVC 名称', trigger: 'blur' },
+      { message: '请输入 PVC 名称', required: true, trigger: 'blur' },
       {
-        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         message:
           'PVC 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         trigger: 'blur',
       },
       { max: 253, message: 'PVC 名称长度不能超过253个字符', trigger: 'blur' },
     ],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' },
+      { message: '请选择命名空间', required: true, trigger: 'change' },
     ],
     spec: {
-      request_storage: [
-        { required: true, message: '请输入请求存储容量', trigger: 'blur' },
-        {
-          pattern: /^\d+[EGKMPT]i?$/,
-          message: '请输入有效的存储容量，如: 1Gi, 100Mi',
-          trigger: 'blur',
-        },
-      ],
       access_modes: [
         {
-          required: true,
           message: '请选择访问模式',
+          required: true,
           trigger: 'change',
           type: 'array',
+        },
+      ],
+      request_storage: [
+        { message: '请输入请求存储容量', required: true, trigger: 'blur' },
+        {
+          message: '请输入有效的存储容量，如: 1Gi, 100Mi',
+          pattern: /^\d+[EGKMPT]i?$/,
+          trigger: 'blur',
         },
       ],
     },
@@ -216,24 +216,24 @@ export function usePVCPage() {
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
   const expandFormRules: Record<string, Rule[]> = {
     new_capacity: [
-      { required: true, message: '请输入新容量', trigger: 'blur' },
+      { message: '请输入新容量', required: true, trigger: 'blur' },
       {
-        pattern: /^\d+[EGKMPT]i?$/,
         message: '请输入有效的存储容量，如: 10Gi, 200Mi',
+        pattern: /^\d+[EGKMPT]i?$/,
         trigger: 'blur',
       },
     ],
@@ -244,19 +244,19 @@ export function usePVCPage() {
   });
 
   const rowSelection = computed(() => ({
-    selectedRowKeys: selectedRowKeys.value,
     onChange: (keys: string[], rows: K8sPVC[]) => {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
     },
+    selectedRowKeys: selectedRowKeys.value,
   }));
 
   const pvOptions = computed(() => {
     const options = availablePVs.value.map((pv: K8sPV) => ({
-      value: pv.name,
-      label: pv.name,
-      capacity: pv.capacity,
       accessModes: pv.access_modes,
+      capacity: pv.capacity,
+      label: pv.name,
+      value: pv.name,
     }));
 
     if (
@@ -264,11 +264,11 @@ export function usePVCPage() {
       availablePVs.value.length < pvsTotal.value
     ) {
       options.push({
-        value: '__load_more_pvs__',
-        label: '加载更多',
-        capacity: '',
         accessModes: [],
+        capacity: '',
         disabled: true,
+        label: '加载更多',
+        value: '__load_more_pvs__',
       } as any);
     }
 
@@ -288,20 +288,20 @@ export function usePVCPage() {
     if (env === undefined || env === null) return '未知环境';
     const value = typeof env === 'string' ? Number.parseInt(env) : env;
     const map: Record<number, string> = {
-      [Env.Prod]: '生产',
       [Env.Dev]: '开发',
-      [Env.Stage]: '预发',
-      [Env.Rc]: '测试',
       [Env.Press]: '灰度',
+      [Env.Prod]: '生产',
+      [Env.Rc]: '测试',
+      [Env.Stage]: '预发',
     };
     return map[value] || '未知环境';
   };
 
   const getPVCStatusText = (status: K8sPVCStatus): string => {
     const statusMap: Record<K8sPVCStatus, string> = {
-      [K8sPVCStatus.Pending]: '等待中',
       [K8sPVCStatus.Bound]: '已绑定',
       [K8sPVCStatus.Lost]: '丢失',
+      [K8sPVCStatus.Pending]: '等待中',
       [K8sPVCStatus.Terminating]: '终止中',
       [K8sPVCStatus.Unknown]: '未知',
     };
@@ -310,9 +310,9 @@ export function usePVCPage() {
 
   const getPVCStatusColor = (status: K8sPVCStatus): string => {
     const colorMap: Record<K8sPVCStatus, string> = {
-      [K8sPVCStatus.Pending]: 'warning',
       [K8sPVCStatus.Bound]: 'success',
       [K8sPVCStatus.Lost]: 'error',
+      [K8sPVCStatus.Pending]: 'warning',
       [K8sPVCStatus.Terminating]: 'processing',
       [K8sPVCStatus.Unknown]: 'default',
     };
@@ -425,13 +425,13 @@ export function usePVCPage() {
       selectedRowKeys.value = [];
       selectedRows.value = [];
       const params: GetPVCListReq = {
+        access_mode: filterAccessMode.value || undefined,
         cluster_id: clusterId,
         namespace: namespace || undefined,
         page: currentPage.value,
-        size: pageSize.value,
         search: searchText.value || undefined,
+        size: pageSize.value,
         status: filterStatus.value ? String(filterStatus.value) : undefined,
-        access_mode: filterAccessMode.value || undefined,
       };
 
       const res = await getK8sPVCList(params);
@@ -567,8 +567,8 @@ export function usePVCPage() {
       detailLoading.value = true;
       const params: GetPVCDetailsReq = {
         cluster_id: clusterId,
-        namespace: record.namespace,
         name: record.name,
+        namespace: record.namespace,
       };
 
       const response = await getK8sPVCDetails(params);
@@ -591,8 +591,8 @@ export function usePVCPage() {
     try {
       const params: GetPVCYamlReq = {
         cluster_id: clusterId,
-        namespace: record.namespace,
         name: record.name,
+        namespace: record.namespace,
       };
 
       const response = await getK8sPVCYaml(params);
@@ -614,8 +614,8 @@ export function usePVCPage() {
       podsLoading.value = true;
       const params: GetPVCPodsReq = {
         cluster_id: clusterId,
-        namespace: record.namespace,
         name: record.name,
+        namespace: record.namespace,
       };
 
       const res = await getK8sPVCPods(params);
@@ -632,17 +632,17 @@ export function usePVCPage() {
 
   const resetCreateForm = () => {
     createFormModel.value = {
+      annotations: {},
+      labels: {},
       name: '',
       namespace: '',
-      labels: {},
-      annotations: {},
       spec: {
-        request_storage: '',
         access_modes: ['ReadWriteOnce'],
+        request_storage: '',
+        selector: {},
         storage_class: '',
         volume_mode: 'Filesystem',
         volume_name: '',
-        selector: {},
       },
     };
     formRef.value?.resetFields();
@@ -659,17 +659,17 @@ export function usePVCPage() {
       submitLoading.value = true;
 
       const params: CreatePVCReq = {
-        cluster_id: filterClusterId.value,
-        namespace: createFormModel.value.namespace,
-        name: createFormModel.value.name,
-        labels:
-          Object.keys(createFormModel.value.labels).length > 0
-            ? createFormModel.value.labels
-            : undefined,
         annotations:
           Object.keys(createFormModel.value.annotations).length > 0
             ? createFormModel.value.annotations
             : undefined,
+        cluster_id: filterClusterId.value,
+        labels:
+          Object.keys(createFormModel.value.labels).length > 0
+            ? createFormModel.value.labels
+            : undefined,
+        name: createFormModel.value.name,
+        namespace: createFormModel.value.namespace,
         spec: createFormModel.value.spec,
       };
 
@@ -723,17 +723,17 @@ export function usePVCPage() {
 
   const resetEditForm = () => {
     editFormModel.value = {
+      annotations: {},
+      labels: {},
       name: '',
       namespace: '',
-      labels: {},
-      annotations: {},
       spec: {
-        request_storage: '',
         access_modes: [],
+        request_storage: '',
+        selector: {},
         storage_class: '',
         volume_mode: '',
         volume_name: '',
-        selector: {},
       },
     };
     formRef.value?.resetFields();
@@ -750,17 +750,17 @@ export function usePVCPage() {
       submitLoading.value = true;
 
       const params: UpdatePVCReq = {
-        cluster_id: clusterId,
-        namespace: currentOperationPVC.value.namespace,
-        name: currentOperationPVC.value.name,
-        labels:
-          Object.keys(editFormModel.value.labels).length > 0
-            ? editFormModel.value.labels
-            : undefined,
         annotations:
           Object.keys(editFormModel.value.annotations).length > 0
             ? editFormModel.value.annotations
             : undefined,
+        cluster_id: clusterId,
+        labels:
+          Object.keys(editFormModel.value.labels).length > 0
+            ? editFormModel.value.labels
+            : undefined,
+        name: currentOperationPVC.value.name,
+        namespace: currentOperationPVC.value.namespace,
         spec: editFormModel.value.spec,
       };
 
@@ -796,8 +796,8 @@ export function usePVCPage() {
 
       const params: UpdatePVCByYamlReq = {
         cluster_id: clusterId,
-        namespace: currentOperationPVC.value.namespace,
         name: currentOperationPVC.value.name,
+        namespace: currentOperationPVC.value.namespace,
         yaml: yamlFormModel.value.yaml,
       };
 
@@ -819,17 +819,16 @@ export function usePVCPage() {
     if (!clusterId) return;
 
     Modal.confirm({
-      title: `确认删除PVC "${record.name}"?`,
+      cancelText: '取消',
       content: '此操作不可恢复，请确认！',
       okText: '确认删除',
-      cancelText: '取消',
       okType: 'danger',
       onOk: async () => {
         try {
           const params: DeletePVCReq = {
             cluster_id: clusterId,
-            namespace: record.namespace,
             name: record.name,
+            namespace: record.namespace,
           };
 
           await deleteK8sPVC(params);
@@ -840,6 +839,7 @@ export function usePVCPage() {
             message.error(error?.message || '删除PVC失败');
         }
       },
+      title: `确认删除PVC "${record.name}"?`,
     });
   };
 
@@ -862,8 +862,8 @@ export function usePVCPage() {
 
       const params: ExpandPVCReq = {
         cluster_id: clusterId,
-        namespace: currentOperationPVC.value.namespace,
         name: currentOperationPVC.value.name,
+        namespace: currentOperationPVC.value.namespace,
         new_capacity: expandFormModel.value.new_capacity,
       };
 
@@ -887,10 +887,9 @@ export function usePVCPage() {
     }
 
     Modal.confirm({
-      title: `确认删除选中的 ${selectedRows.value.length} 个PVC?`,
+      cancelText: '取消',
       content: '此操作不可恢复，请确认！',
       okText: '确认删除',
-      cancelText: '取消',
       okType: 'danger',
       onOk: async () => {
         try {
@@ -900,8 +899,8 @@ export function usePVCPage() {
 
             const params: DeletePVCReq = {
               cluster_id: clusterId,
-              namespace: record.namespace,
               name: record.name,
+              namespace: record.namespace,
             };
 
             return deleteK8sPVC(params);
@@ -917,6 +916,7 @@ export function usePVCPage() {
             message.error(error?.message || '批量删除PVC失败');
         }
       },
+      title: `确认删除选中的 ${selectedRows.value.length} 个PVC?`,
     });
   };
 
@@ -946,17 +946,17 @@ export function usePVCPage() {
     currentOperationPVC.value = record;
     resetEditForm();
     editFormModel.value = {
+      annotations: record.annotations || {},
+      labels: record.labels || {},
       name: record.name,
       namespace: record.namespace,
-      labels: record.labels || {},
-      annotations: record.annotations || {},
       spec: {
-        request_storage: record.request_storage,
         access_modes: record.access_modes || [],
+        request_storage: record.request_storage,
+        selector: record.selector || {},
         storage_class: record.storage_class,
         volume_mode: record.volume_mode,
         volume_name: record.volume_name,
-        selector: record.selector || {},
       },
     };
     isEditModalVisible.value = true;
@@ -1020,14 +1020,13 @@ export function usePVCPage() {
 
   const handleClusterDropdownScroll = (e: Event) => {
     const target = e.target as HTMLElement;
-    if (target.scrollTop + target.offsetHeight === target.scrollHeight) {
-      if (
-        clusters.value.length < clustersTotal.value &&
-        !clustersLoading.value
-      ) {
-        clustersPage.value += 1;
-        fetchClusters(false);
-      }
+    if (
+      target.scrollTop + target.offsetHeight === target.scrollHeight &&
+      clusters.value.length < clustersTotal.value &&
+      !clustersLoading.value
+    ) {
+      clustersPage.value += 1;
+      fetchClusters(false);
     }
   };
 
@@ -1042,7 +1041,7 @@ export function usePVCPage() {
   const newLabelKey = ref('');
   const newAnnotationKey = ref('');
 
-  const addLabelItem = (type: 'labels' | 'annotations') => {
+  const addLabelItem = (type: 'annotations' | 'labels') => {
     const key = type === 'labels' ? newLabelKey : newAnnotationKey;
     if (key.value && key.value.trim()) {
       if (type === 'labels') {
@@ -1064,7 +1063,7 @@ export function usePVCPage() {
     }
   };
 
-  const removeLabelItem = (key: string, type: 'labels' | 'annotations') => {
+  const removeLabelItem = (key: string, type: 'annotations' | 'labels') => {
     if (type === 'labels') {
       delete createFormModel.value.labels[key];
     } else {
@@ -1075,7 +1074,7 @@ export function usePVCPage() {
   const newEditLabelKey = ref('');
   const newEditAnnotationKey = ref('');
 
-  const addEditLabelItem = (type: 'labels' | 'annotations') => {
+  const addEditLabelItem = (type: 'annotations' | 'labels') => {
     const key = type === 'labels' ? newEditLabelKey : newEditAnnotationKey;
     if (key.value && key.value.trim()) {
       if (type === 'labels') {
@@ -1097,7 +1096,7 @@ export function usePVCPage() {
     }
   };
 
-  const removeEditLabelItem = (key: string, type: 'labels' | 'annotations') => {
+  const removeEditLabelItem = (key: string, type: 'annotations' | 'labels') => {
     if (type === 'labels') {
       delete editFormModel.value.labels[key];
     } else {

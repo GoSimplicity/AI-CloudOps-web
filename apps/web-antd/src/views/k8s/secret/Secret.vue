@@ -1,19 +1,6 @@
 <script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
-
-import {
-  formatDateTime,
-  formatK8sAge,
-  formatK8sTime,
-  getRelativeTime,
-  namespacedResourceKey,
-} from '../shared/utils';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 
-import { message } from 'ant-design-vue';
-
-import { useSecretPage } from './Secret';
-import { BINARY_VALUE_NOTICE } from './secret-data';
 import {
   AppstoreOutlined,
   CheckCircleOutlined,
@@ -35,7 +22,9 @@ import {
   SecurityScanOutlined,
   TagsOutlined,
 } from '@ant-design/icons-vue';
+import { message } from 'ant-design-vue';
 
+import OpsPage from '#/components/ops/OpsPage.vue';
 import {
   SECRET_DETAIL_PERMISSION_CODE,
   SECRET_UPDATE_PERMISSION_CODE,
@@ -44,145 +33,155 @@ import { getOwnLookupValue } from '#/utils/own-lookup';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
+import {
+  formatDateTime,
+  formatK8sAge,
+  formatK8sTime,
+  getRelativeTime,
+  namespacedResourceKey,
+} from '../shared/utils';
+import { useSecretPage } from './Secret';
+import { BINARY_VALUE_NOTICE } from './secret-data';
+
 const { can, hasPerm } = usePermission();
 
 const {
+  // SEC-25/26 reveal / data 编辑
+  addEditDataRow,
+  // filter operations
+  addFilterLabel,
+  // batch operations
+  batchOperation,
+  clearFilterLabels,
+  // operations
+  clearNamespaces,
+  clearRevealedValues,
+  clearSecrets,
+  // yaml operations
+  clearYaml,
+  // create operations
+  closeCreateModal,
+  closeCreateYamlModal,
+  // detail operations
+  closeDetailModal,
+  // edit operations
+  closeEditModal,
+  // YAML operations
+  closeYamlModal,
   // state
   clusters,
   clustersError,
   clustersLoading,
   clustersTotal,
-  currentPage,
-  filterClusterId,
-  filterLabels,
-  filterNamespace,
-  filterType,
-  loadError,
-  loading,
-  namespaces,
-  namespacesError,
-  namespacesLoading,
-  namespacesTotal,
-  pageSize,
-  searchText,
-  selectedRows,
-  total,
-
-  // modal state
-  detailLoading,
-  isCreateModalVisible,
-  isCreateYamlModalVisible,
-  isDetailModalVisible,
-  isEditModalVisible,
-  isYamlLoading,
-  isYamlModalVisible,
-  submitLoading,
-
-  // operation targets
-  currentOperationSecret,
-  currentSecretDetail,
-
   // form models
   createFormModel,
-  createYamlFormModel,
-  editFormModel,
-  yamlFormModel,
-
-  // form refs
-  createYamlFormRef,
-  formRef,
-  yamlFormRef,
-
   // form rules
   createFormRules,
+
+  createYamlFormModel,
+  // form refs
+  createYamlFormRef,
   createYamlFormRules,
-  yamlFormRules,
+  // operation targets
+  currentOperationSecret,
+  currentPage,
+  currentSecretDetail,
+  // secret operations
+  deleteSecret,
+  // modal state
+  detailLoading,
 
-  // computed
-  filteredSecrets,
-  rowSelection,
+  editDataLoading,
+  editDataRows,
 
-  // helpers
-  getEnvText,
-  getSecretTypeText,
-  K8sSecretType,
-
-  // operations
-  clearNamespaces,
-  clearSecrets,
+  editFormModel,
   fetchClusters,
   fetchNamespaces,
   fetchSecrets,
-  loadMoreClusters,
-  loadMoreNamespaces,
 
-  // detail operations
-  closeDetailModal,
-  showSecretDetail,
+  filterClusterId,
+  // computed
+  filteredSecrets,
+  filterLabels,
 
-  // YAML operations
-  closeYamlModal,
-  showYamlModal,
-  submitYamlForm,
+  filterNamespace,
+  filterType,
+  formatEditYaml,
 
-  // create operations
-  closeCreateModal,
-  closeCreateYamlModal,
-  openCreateModal,
-  openCreateYamlModal,
-  submitCreateForm,
-  submitCreateYamlForm,
+  formatYaml,
+  formRef,
 
-  // edit operations
-  closeEditModal,
-  openEditModal,
-  submitEditForm,
+  getEditDataRowError,
+  // helpers
+  getEnvText,
+  getPlainValueForCopy,
 
-  // secret operations
-  deleteSecret,
-
-  // filter operations
-  addFilterLabel,
-  clearFilterLabels,
-  removeFilterLabel,
-
-  // batch operations
-  batchOperation,
-
+  getSecretTypeText,
   // pagination operations
   handlePageChange,
+  hideRevealedKey,
+  insertYamlTemplate,
+  isCreateModalVisible,
+  isCreateYamlModalVisible,
+  isDetailModalVisible,
 
+  isEditModalVisible,
+  isYamlLoading,
+
+  isYamlModalVisible,
+  K8sSecretType,
+  loadError,
+
+  loading,
+  loadMoreClusters,
+  loadMoreNamespaces,
+  namespaces,
+  namespacesError,
+  namespacesLoading,
+
+  namespacesTotal,
+  openCreateModal,
+  openCreateYamlModal,
+
+  openEditModal,
+
+  pageSize,
   // form field operations
   removeAnnotationField,
   removeEditAnnotationField,
+
+  removeEditDataRow,
+
   removeEditLabelField,
+
   removeEditStringDataField,
+  removeFilterLabel,
   removeLabelField,
   removeStringDataField,
-
-  // yaml operations
-  clearYaml,
-  formatEditYaml,
-  formatYaml,
-  insertYamlTemplate,
-  validateEditYaml,
-  validateYaml,
-
-  // SEC-25/26 reveal / data 编辑
-  addEditDataRow,
-  clearRevealedValues,
-  editDataLoading,
-  editDataRows,
-  getEditDataRowError,
-  getPlainValueForCopy,
-  hideRevealedKey,
-  removeEditDataRow,
   resetEditDataRow,
   revealedValues,
+
   revealingKeys,
   revealSecretKey,
+  rowSelection,
+  searchText,
   secretDetailDataKeys,
+  selectedRows,
+
   setEditDataValue,
+  showSecretDetail,
+  showYamlModal,
+  submitCreateForm,
+  submitCreateYamlForm,
+  submitEditForm,
+  submitLoading,
+  submitYamlForm,
+  total,
+  validateEditYaml,
+  validateYaml,
+  yamlFormModel,
+  yamlFormRef,
+  yamlFormRules,
 } = useSecretPage();
 
 // 页面卸载时清空 reveal 得到的明文
@@ -628,7 +627,7 @@ onMounted(async () => {
               class="k8s-search-input"
               placeholder="搜索 Secret 名称"
               @input="onSearch"
-              @pressEnter="onSearch"
+              @press-enter="onSearch"
             >
               <template #suffix>
                 <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -641,7 +640,6 @@ onMounted(async () => {
         <div class="k8s-toolbar-actions">
           <div class="k8s-action-buttons">
             <a-button
-              @click="resetFilters"
               :disabled="
                 !searchText &&
                 !filterClusterId &&
@@ -651,6 +649,7 @@ onMounted(async () => {
               "
               class="k8s-toolbar-btn"
               title="重置所有筛选条件"
+              @click="resetFilters"
             >
               <template #icon><DeleteOutlined aria-hidden="true" /></template>
               重置筛选
@@ -667,13 +666,13 @@ onMounted(async () => {
             </a-button>
 
             <a-button
-              type="primary"
-              danger
-              @click="() => batchOperation('删除')"
-              :disabled="selectedRows.length === 0"
               v-if="can('k8s.secret.batchDelete') && selectedRows.length > 0"
+              :disabled="selectedRows.length === 0"
               class="k8s-toolbar-btn"
+              danger
               title="批量删除选中的 Secret"
+              type="primary"
+              @click="() => batchOperation('删除')"
             >
               <template #icon><DeleteOutlined aria-hidden="true" /></template>
               删除 ({{ selectedRows.length }})
@@ -1086,9 +1085,9 @@ onMounted(async () => {
                 @press-enter="addNewStringData"
               />
               <a-button
+                :disabled="!newStringDataKey.trim()"
                 type="primary"
                 @click="addNewStringData"
-                :disabled="!newStringDataKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1163,9 +1162,9 @@ onMounted(async () => {
                 @press-enter="addNewLabel"
               />
               <a-button
+                :disabled="!newLabelKey.trim()"
                 type="primary"
                 @click="addNewLabel"
-                :disabled="!newLabelKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1229,9 +1228,9 @@ onMounted(async () => {
                 @press-enter="addNewAnnotation"
               />
               <a-button
+                :disabled="!newAnnotationKey.trim()"
                 type="primary"
                 @click="addNewAnnotation"
-                :disabled="!newAnnotationKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1379,10 +1378,10 @@ onMounted(async () => {
               class="secret-edit-data-row"
             >
               <a-form-item
+                :help="getEditDataRowError(row) || undefined"
                 :validate-status="
                   getEditDataRowError(row) ? 'error' : undefined
                 "
-                :help="getEditDataRowError(row) || undefined"
                 style="margin-bottom: 8px"
               >
                 <div class="k8s-key-value-row">
@@ -1437,9 +1436,9 @@ onMounted(async () => {
                 @press-enter="addNewEditData"
               />
               <a-button
+                :disabled="editDataLoading || !newEditDataKey.trim()"
                 type="primary"
                 @click="addNewEditData"
-                :disabled="editDataLoading || !newEditDataKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1494,9 +1493,9 @@ onMounted(async () => {
                 @press-enter="addNewEditStringData"
               />
               <a-button
+                :disabled="editDataLoading || !newEditStringDataKey.trim()"
                 type="primary"
                 @click="addNewEditStringData"
-                :disabled="editDataLoading || !newEditStringDataKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1551,9 +1550,9 @@ onMounted(async () => {
                 @press-enter="addNewEditLabel"
               />
               <a-button
+                :disabled="editDataLoading || !newEditLabelKey.trim()"
                 type="primary"
                 @click="addNewEditLabel"
-                :disabled="editDataLoading || !newEditLabelKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1608,9 +1607,9 @@ onMounted(async () => {
                 @press-enter="addNewEditAnnotation"
               />
               <a-button
+                :disabled="editDataLoading || !newEditAnnotationKey.trim()"
                 type="primary"
                 @click="addNewEditAnnotation"
-                :disabled="editDataLoading || !newEditAnnotationKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1700,11 +1699,11 @@ onMounted(async () => {
                   </span>
                 </div>
                 <div
-                  class="k8s-detail-item"
                   v-if="
                     currentSecretDetail.string_data &&
                     Object.keys(currentSecretDetail.string_data).length > 0
                   "
+                  class="k8s-detail-item"
                 >
                   <span class="k8s-detail-label">字符串数据项:</span>
                   <span class="k8s-detail-value">
@@ -1786,12 +1785,12 @@ onMounted(async () => {
 
           <!-- 字符串数据内容 -->
           <a-row
-            :gutter="[24, 16]"
-            style="margin-top: 16px"
             v-if="
               currentSecretDetail.string_data &&
               Object.keys(currentSecretDetail.string_data).length > 0
             "
+            :gutter="[24, 16]"
+            style="margin-top: 16px"
           >
             <a-col :span="24">
               <a-card
@@ -1882,8 +1881,8 @@ onMounted(async () => {
                         </template>
                         <a-button
                           v-if="can('k8s.secret.copyPlain')"
-                          size="small"
                           class="secret-copy-plain"
+                          size="small"
                           @click="copySecretKey(item.key)"
                         >
                           <template #icon
@@ -2059,8 +2058,8 @@ onMounted(async () => {
     >
       <div class="labels-filter-form">
         <div
-          class="current-filters"
           v-if="Object.keys(filterLabels).length > 0"
+          class="current-filters"
         >
           <h4>当前过滤条件：</h4>
           <div class="filter-tags">
@@ -2099,10 +2098,10 @@ onMounted(async () => {
               style="flex: 1"
             />
             <a-button
-              type="primary"
-              @click="addNewFilterLabel"
               :disabled="!newFilterKey.trim()"
               size="small"
+              type="primary"
+              @click="addNewFilterLabel"
             >
               <template #icon><PlusOutlined aria-hidden="true" /></template>
             </a-button>

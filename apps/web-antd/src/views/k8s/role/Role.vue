@@ -1,14 +1,6 @@
 <script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
-
-import {
-  formatDateTime,
-  getRelativeTime,
-  namespacedResourceKey,
-} from '../shared/utils';
 import { onMounted, ref, watch } from 'vue';
 
-import { useRolePage } from './Role';
 import {
   AppstoreOutlined,
   CheckCircleOutlined,
@@ -27,133 +19,141 @@ import {
   TagsOutlined,
 } from '@ant-design/icons-vue';
 
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { usePermission } from '#/utils/permission';
+
+import {
+  formatDateTime,
+  getRelativeTime,
+  namespacedResourceKey,
+} from '../shared/utils';
+import { useRolePage } from './Role';
 
 const { can } = usePermission();
 
 const {
+  // form field operations
+  addApiGroupToRule,
+  // filter operations
+  addFilterLabel,
+  addResourceToRule,
+  addRuleField,
+  addVerbToRule,
+  // batch operations
+  batchOperation,
+  clearFilterLabels,
+  // operations
+  clearNamespaces,
+  clearRoles,
+  // YAML utility functions
+  clearYaml,
+  // create operations
+  closeCreateModal,
+  closeCreateYamlModal,
+  // detail operations
+  closeDetailModal,
+  // edit operations
+  closeEditModal,
+  // YAML operations
+  closeYamlModal,
   // state
   clusters,
   clustersError,
   clustersLoading,
-  clustersTotal,
-  currentPage,
-  filterClusterId,
-  filterLabels,
-  filterNamespace,
-  loadError,
-  loading,
-  namespaces,
-  namespacesError,
-  namespacesLoading,
-  namespacesTotal,
-  pageSize,
-  searchText,
-  selectedRows,
-  total,
 
+  clustersTotal,
+  // form models
+  createFormModel,
+  // form rules
+  createFormRules,
+  createYamlFormModel,
+  // form refs
+  createYamlFormRef,
+  createYamlFormRules,
+  // operation targets
+  currentOperationRole,
+
+  currentPage,
+  currentRoleDetail,
+
+  // role operations
+  deleteRole,
   // modal state
   detailLoading,
+  editFormModel,
+  editFormRef,
+
+  editFormRules,
+  fetchClusters,
+  fetchNamespaces,
+  fetchRoles,
+
+  filterClusterId,
+  // computed
+  filteredRoles,
+  filterLabels,
+  filterNamespace,
+
+  formatEditYaml,
+  formatYaml,
+
+  formRef,
+
+  // helpers
+  getEnvText,
+  // pagination operations
+  handlePageChange,
+  insertYamlTemplate,
   isCreateModalVisible,
   isCreateYamlModalVisible,
   isDetailModalVisible,
   isEditModalVisible,
+
   isYamlModalVisible,
-  submitLoading,
+  loadError,
 
-  // operation targets
-  currentOperationRole,
-  currentRoleDetail,
-
-  // form models
-  createFormModel,
-  createYamlFormModel,
-  editFormModel,
-  yamlFormModel,
-
-  // form refs
-  createYamlFormRef,
-  editFormRef,
-  formRef,
-  yamlFormRef,
-
-  // form rules
-  createFormRules,
-  createYamlFormRules,
-  editFormRules,
-  yamlFormRules,
-
-  // computed
-  filteredRoles,
-  rowSelection,
-
-  // helpers
-  getEnvText,
-
-  // operations
-  clearNamespaces,
-  clearRoles,
-  fetchClusters,
-  fetchNamespaces,
-  fetchRoles,
+  loading,
   loadMoreClusters,
   loadMoreNamespaces,
 
-  // detail operations
-  closeDetailModal,
-  showRoleDetail,
-
-  // YAML operations
-  closeYamlModal,
-  showYamlModal,
-  submitYamlForm,
-
-  // create operations
-  closeCreateModal,
-  closeCreateYamlModal,
+  namespaces,
+  namespacesError,
+  namespacesLoading,
+  namespacesTotal,
   openCreateModal,
   openCreateYamlModal,
-  submitCreateForm,
-  submitCreateYamlForm,
 
-  // edit operations
-  closeEditModal,
   openEditModal,
-  submitEditForm,
-
-  // role operations
-  deleteRole,
-
-  // filter operations
-  addFilterLabel,
-  clearFilterLabels,
-  removeFilterLabel,
-
-  // batch operations
-  batchOperation,
-
-  // pagination operations
-  handlePageChange,
-
-  // form field operations
-  addApiGroupToRule,
-  addResourceToRule,
-  addRuleField,
-  addVerbToRule,
+  pageSize,
   removeAnnotationField,
+
   removeApiGroupFromRule,
+
+  removeFilterLabel,
   removeLabelField,
   removeResourceFromRule,
+
   removeRuleField,
+
   removeVerbFromRule,
 
-  // YAML utility functions
-  clearYaml,
-  formatEditYaml,
-  formatYaml,
-  insertYamlTemplate,
+  rowSelection,
+  searchText,
+  selectedRows,
+  showRoleDetail,
+  showYamlModal,
+  submitCreateForm,
+  submitCreateYamlForm,
+  submitEditForm,
+  submitLoading,
+  submitYamlForm,
+
+  total,
   validateEditYaml,
   validateYaml,
+  yamlFormModel,
+  yamlFormRef,
+  yamlFormRules,
 } = useRolePage();
 
 // 添加新标签/注解的方法
@@ -558,7 +558,7 @@ onMounted(async () => {
               class="k8s-search-input"
               placeholder="搜索 Role 名称"
               @input="onSearch"
-              @pressEnter="onSearch"
+              @press-enter="onSearch"
             >
               <template #suffix>
                 <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -571,7 +571,6 @@ onMounted(async () => {
         <div class="k8s-toolbar-actions">
           <div class="k8s-action-buttons">
             <a-button
-              @click="resetFilters"
               :disabled="
                 !searchText &&
                 !filterClusterId &&
@@ -580,6 +579,7 @@ onMounted(async () => {
               "
               class="k8s-toolbar-btn"
               title="重置所有筛选条件"
+              @click="resetFilters"
             >
               <template #icon><DeleteOutlined aria-hidden="true" /></template>
               重置筛选
@@ -596,13 +596,13 @@ onMounted(async () => {
             </a-button>
 
             <a-button
-              type="primary"
-              danger
-              @click="() => batchOperation('删除')"
-              :disabled="selectedRows.length === 0"
               v-if="can('k8s.role.batchDelete') && selectedRows.length > 0"
+              :disabled="selectedRows.length === 0"
               class="k8s-toolbar-btn"
+              danger
               title="批量删除选中的 Role"
+              type="primary"
+              @click="() => batchOperation('删除')"
             >
               <template #icon><DeleteOutlined aria-hidden="true" /></template>
               删除 ({{ selectedRows.length }})
@@ -1095,11 +1095,11 @@ onMounted(async () => {
                   <div class="tags-display">
                     <a-tag
                       v-for="(resource, resourceIndex) in rule.resources || []"
-                      :key="resourceIndex"
                       v-show="resource && resource.trim()"
+                      :key="resourceIndex"
                       closable
-                      @close="removeResourceFromRule(ruleIndex, resourceIndex)"
                       color="orange"
+                      @close="removeResourceFromRule(ruleIndex, resourceIndex)"
                     >
                       {{ resource }}
                     </a-tag>
@@ -1123,6 +1123,8 @@ onMounted(async () => {
                       "
                     />
                     <a-button
+                      :disabled="!newResources[ruleIndex]?.trim()"
+                      size="small"
                       type="primary"
                       @click="
                         () => {
@@ -1133,8 +1135,6 @@ onMounted(async () => {
                           }
                         }
                       "
-                      :disabled="!newResources[ruleIndex]?.trim()"
-                      size="small"
                     >
                       <template #icon>
                         <PlusOutlined aria-hidden="true" />
@@ -1202,9 +1202,9 @@ onMounted(async () => {
                 @press-enter="addNewLabel"
               />
               <a-button
+                :disabled="!newLabelKey.trim()"
                 type="primary"
                 @click="addNewLabel"
-                :disabled="!newLabelKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1259,9 +1259,9 @@ onMounted(async () => {
                 @press-enter="addNewAnnotation"
               />
               <a-button
+                :disabled="!newAnnotationKey.trim()"
                 type="primary"
                 @click="addNewAnnotation"
-                :disabled="!newAnnotationKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1473,11 +1473,11 @@ onMounted(async () => {
                   <div class="tags-display">
                     <a-tag
                       v-for="(resource, resourceIndex) in rule.resources || []"
-                      :key="resourceIndex"
                       v-show="resource && resource.trim()"
+                      :key="resourceIndex"
                       closable
-                      @close="removeResourceFromRule(ruleIndex, resourceIndex)"
                       color="orange"
+                      @close="removeResourceFromRule(ruleIndex, resourceIndex)"
                     >
                       {{ resource }}
                     </a-tag>
@@ -1501,6 +1501,8 @@ onMounted(async () => {
                       "
                     />
                     <a-button
+                      :disabled="!newResources[ruleIndex]?.trim()"
+                      size="small"
                       type="primary"
                       @click="
                         () => {
@@ -1511,8 +1513,6 @@ onMounted(async () => {
                           }
                         }
                       "
-                      :disabled="!newResources[ruleIndex]?.trim()"
-                      size="small"
                     >
                       <template #icon>
                         <PlusOutlined aria-hidden="true" />
@@ -1581,9 +1581,9 @@ onMounted(async () => {
                 @press-enter="addNewLabel"
               />
               <a-button
+                :disabled="!newLabelKey.trim()"
                 type="primary"
                 @click="addNewLabel"
-                :disabled="!newLabelKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1639,9 +1639,9 @@ onMounted(async () => {
                 @press-enter="addNewAnnotation"
               />
               <a-button
+                :disabled="!newAnnotationKey.trim()"
                 type="primary"
                 @click="addNewAnnotation"
-                :disabled="!newAnnotationKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -2041,8 +2041,8 @@ onMounted(async () => {
     >
       <div class="labels-filter-form">
         <div
-          class="current-filters"
           v-if="Object.keys(filterLabels).length > 0"
+          class="current-filters"
         >
           <h4>当前过滤条件：</h4>
           <div class="filter-tags">
@@ -2081,10 +2081,10 @@ onMounted(async () => {
               style="flex: 1"
             />
             <a-button
-              type="primary"
-              @click="addNewFilterLabel"
               :disabled="!newFilterKey.trim()"
               size="small"
+              type="primary"
+              @click="addNewFilterLabel"
             >
               <template #icon><PlusOutlined aria-hidden="true" /></template>
             </a-button>

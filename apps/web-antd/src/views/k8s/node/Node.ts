@@ -5,6 +5,12 @@ import { computed, ref, toRaw } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 
 import {
+  Env,
+  getClustersListApi,
+  type K8sCluster,
+  type ListClustersReq,
+} from '#/api/core/k8s/k8s_cluster';
+import {
   addK8sNodeTaints,
   type AddK8sNodeTaintsReq,
   checkK8sNodeTaintYaml,
@@ -29,15 +35,7 @@ import {
   updateK8sNodeLabels,
   type UpdateNodeLabelsReq,
 } from '#/api/core/k8s/k8s_node';
-import {
-  Env,
-  getClustersListApi,
-  type K8sCluster,
-  type ListClustersReq,
-} from '#/api/core/k8s/k8s_cluster';
 import { usePermission } from '#/utils/permission';
-
-import { clusterResourceKey } from '../shared/utils';
 import {
   isPermissionDeniedError,
   PERMISSION_DENIED_MESSAGE,
@@ -47,6 +45,8 @@ import {
   shouldNotifyPageError,
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
+
+import { clusterResourceKey } from '../shared/utils';
 
 /** 批量禁用调度的最大并发请求数（复审 P2-1：避免一次性打出 N 个请求） */
 export const BATCH_CORDON_CONCURRENCY = 5;
@@ -79,7 +79,7 @@ export async function runWithConcurrency<T, R>(
           value: await worker(items[index] as T, index),
         };
       } catch (error) {
-        results[index] = { status: 'rejected', reason: error };
+        results[index] = { reason: error, status: 'rejected' };
       }
     }
   };
@@ -141,8 +141,8 @@ export function useNodePage() {
     taints: CoreTaint[];
     taintsToDelete: string[]; // 用于跟踪要删除的污点键
   }>({
-    taints: [],
     originalTaints: [],
+    taints: [],
     taintsToDelete: [],
   });
 
@@ -161,7 +161,7 @@ export function useNodePage() {
       if (original === undefined) throw new Error('节点污点原始记录缺失');
       savedTaintOrigins.set(row, original);
     });
-    taintFormModel.value = { taints: rows, originalTaints, taintsToDelete: [] };
+    taintFormModel.value = { originalTaints, taints: rows, taintsToDelete: [] };
   };
 
   // 驱逐表单模型
@@ -172,10 +172,10 @@ export function useNodePage() {
     ignore_daemon_sets: number;
     timeout_seconds?: number;
   }>({
-    force: 2,
-    ignore_daemon_sets: 1,
     delete_local_data: 2,
+    force: 2,
     grace_period_seconds: 30,
+    ignore_daemon_sets: 1,
     timeout_seconds: 300,
   });
 
@@ -191,20 +191,20 @@ export function useNodePage() {
   const drainFormRules: Record<string, Rule[]> = {
     grace_period_seconds: [
       {
-        type: 'number',
-        min: 0,
         max: 3600,
         message: '优雅关闭时间应在0-3600秒之间',
+        min: 0,
         trigger: 'blur',
+        type: 'number',
       },
     ],
     timeout_seconds: [
       {
-        type: 'number',
-        min: 30,
         max: 7200,
         message: '超时时间应在30-7200秒之间',
+        min: 30,
         trigger: 'blur',
+        type: 'number',
       },
     ],
   };
@@ -215,11 +215,11 @@ export function useNodePage() {
   });
 
   const rowSelection = computed(() => ({
-    selectedRowKeys: selectedRowKeys.value,
     onChange: (keys: string[], rows: K8sNode[]) => {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
     },
+    selectedRowKeys: selectedRowKeys.value,
   }));
 
   // helpers
@@ -236,33 +236,33 @@ export function useNodePage() {
     if (env === undefined || env === null) return '未知环境';
     const value = typeof env === 'string' ? Number.parseInt(env) : env;
     const map: Record<number, string> = {
-      [Env.Prod]: '生产',
       [Env.Dev]: '开发',
-      [Env.Stage]: '预发',
-      [Env.Rc]: '测试',
       [Env.Press]: '灰度',
+      [Env.Prod]: '生产',
+      [Env.Rc]: '测试',
+      [Env.Stage]: '预发',
     };
     return map[value] || '未知环境';
   };
 
   const getStatusText = (status?: NodeStatus) => {
     const map: Record<number, string> = {
-      [NodeStatus.Ready]: '就绪',
+      [NodeStatus.Error]: '异常',
       [NodeStatus.NotReady]: '未就绪',
+      [NodeStatus.Ready]: '就绪',
       [NodeStatus.SchedulingDisabled]: '调度禁用',
       [NodeStatus.Unknown]: '未知',
-      [NodeStatus.Error]: '异常',
     };
     return status === undefined ? '未知' : map[status] || '未知';
   };
 
   const getStatusColor = (status?: NodeStatus) => {
     const map: Record<number, string> = {
-      [NodeStatus.Ready]: 'success',
+      [NodeStatus.Error]: 'error',
       [NodeStatus.NotReady]: 'warning',
+      [NodeStatus.Ready]: 'success',
       [NodeStatus.SchedulingDisabled]: 'default',
       [NodeStatus.Unknown]: 'default',
-      [NodeStatus.Error]: 'error',
     };
     return status === undefined ? 'default' : map[status] || 'default';
   };
@@ -302,8 +302,8 @@ export function useNodePage() {
       const params: GetK8sNodeListReq = {
         cluster_id: clusterId,
         page: currentPage.value,
-        size: pageSize.value,
         search: searchText.value || undefined,
+        size: pageSize.value,
         status:
           filterStatus.value === undefined ? undefined : [filterStatus.value],
       };
@@ -317,10 +317,10 @@ export function useNodePage() {
       const nodesWithClusterId = (res?.items || []).map((node: any) => ({
         ...node,
         cluster_id: node.cluster_id || clusterId || 0,
-        taints: Array.isArray(node.taints) ? node.taints : [],
+        conditions: Array.isArray(node.conditions) ? node.conditions : [],
         labels: node.labels || {},
         roles: Array.isArray(node.roles) ? node.roles : [],
-        conditions: Array.isArray(node.conditions) ? node.conditions : [],
+        taints: Array.isArray(node.taints) ? node.taints : [],
       }));
       nodes.value = nodesWithClusterId;
       total.value = res?.total || 0;
@@ -403,15 +403,15 @@ export function useNodePage() {
       const nodeDetailWithDefaults = {
         ...(res || record),
         cluster_id: clusterId,
-        taints: Array.isArray((res || record).taints)
-          ? (res || record).taints
+        conditions: Array.isArray((res || record).conditions)
+          ? (res || record).conditions
           : [],
         labels: (res || record).labels || {},
         roles: Array.isArray((res || record).roles)
           ? (res || record).roles
           : [],
-        conditions: Array.isArray((res || record).conditions)
-          ? (res || record).conditions
+        taints: Array.isArray((res || record).taints)
+          ? (res || record).taints
           : [],
       };
       currentNodeDetail.value = nodeDetailWithDefaults;
@@ -421,10 +421,10 @@ export function useNodePage() {
       currentNodeDetail.value = {
         ...record,
         cluster_id: clusterId,
-        taints: Array.isArray(record.taints) ? record.taints : [],
+        conditions: Array.isArray(record.conditions) ? record.conditions : [],
         labels: record.labels || {},
         roles: Array.isArray(record.roles) ? record.roles : [],
-        conditions: Array.isArray(record.conditions) ? record.conditions : [],
+        taints: Array.isArray(record.taints) ? record.taints : [],
       };
     } finally {
       detailLoading.value = false;
@@ -459,8 +459,8 @@ export function useNodePage() {
       // 使用覆盖式更新，直接发送当前所有标签（会完全覆盖现有标签）
       const params: UpdateNodeLabelsReq = {
         cluster_id: currentOperationNode.value.cluster_id,
-        node_name: currentOperationNode.value.name,
         labels: labelFormModel.value.labels, // 直接发送当前标签，实现增删改的聚合操作
+        node_name: currentOperationNode.value.name,
       };
       await updateK8sNodeLabels(params);
 
@@ -510,9 +510,9 @@ export function useNodePage() {
 
   const addTaint = () => {
     taintFormModel.value.taints.push({
+      effect: 'NoSchedule',
       key: '',
       value: '',
-      effect: 'NoSchedule',
     });
   };
 
@@ -538,7 +538,7 @@ export function useNodePage() {
   // 后端 mergeTaints（AI-CloudOps internal/k8s/manager/taint_manager.go:247-263）按 key 整体替换：
   // 先去掉已有污点里所有出现在本次 add 里的 key，再追加本次的行；删除接口按 key 删掉该 key 的所有 effect（:312-344）
   const planTaintChanges = () => {
-    const { taints, originalTaints, taintsToDelete } = taintFormModel.value;
+    const { originalTaints, taints, taintsToDelete } = taintFormModel.value;
     const deleteKeys = [...taintsToDelete];
     const rows = taints.filter((taint) => taint.key); // 忽略没有key的污点
     // 复审 P3-1 兜底：已保存的行 key 输入框只读；万一 key 被改了，当作先删原 key 再加新 key，不留下原 key 的孤儿
@@ -729,11 +729,10 @@ export function useNodePage() {
       return;
 
     Modal.confirm({
-      title: `${action}节点调度`,
-      content: `确定要${action}节点 "${record.name}" 的调度吗？`,
-      okText: `确认${action}`,
       cancelText: '取消',
       centered: true,
+      content: `确定要${action}节点 "${record.name}" 的调度吗？`,
+      okText: `确认${action}`,
       onOk: async () => {
         // 复审 P3-4：确认框打开期间权限可能被收回，点确定时再复核一次
         if (
@@ -770,6 +769,7 @@ export function useNodePage() {
             message.error(`${action}节点调度失败`);
         }
       },
+      title: `${action}节点调度`,
     });
   };
 
@@ -777,10 +777,10 @@ export function useNodePage() {
   const openDrainModal = (record: K8sNode) => {
     currentOperationNode.value = record;
     drainFormModel.value = {
-      force: 2,
-      ignore_daemon_sets: 1,
       delete_local_data: 2,
+      force: 2,
       grace_period_seconds: 30,
+      ignore_daemon_sets: 1,
       timeout_seconds: 300,
     };
     isDrainModalVisible.value = true;
@@ -831,11 +831,10 @@ export function useNodePage() {
       return;
 
     Modal.confirm({
-      title: `批量${operation}`,
-      content: `确定要对选中的 ${selectedRows.value.length} 个节点执行${operation}操作吗？`,
-      okText: '确认执行',
       cancelText: '取消',
       centered: true,
+      content: `确定要对选中的 ${selectedRows.value.length} 个节点执行${operation}操作吗？`,
+      okText: '确认执行',
       onOk: async () => {
         // 复审 P3-4：确认框打开期间权限可能被收回，点确定时再复核一次
         if (operation === '禁用调度' && denyWithoutCode('k8s.node.batchCordon'))
@@ -920,6 +919,7 @@ export function useNodePage() {
           );
         }
       },
+      title: `批量${operation}`,
     });
   };
 
@@ -942,6 +942,18 @@ export function useNodePage() {
   };
 
   return {
+    // taint operations
+    addTaint,
+    // batch operations
+    batchOperation,
+    // operations
+    clearNodes,
+    closeDetailModal,
+    // drain operations
+    closeDrainModal,
+    // label operations
+    closeLabelModal,
+    closeTaintModal,
     // state
     clusters,
     clustersError,
@@ -949,95 +961,83 @@ export function useNodePage() {
     clustersPage,
     clustersSize,
     clustersTotal,
+    // detail modal
+    currentNodeDetail,
     currentPage,
-    filterClusterId,
-    filterStatus,
-    loadError,
-    loading,
-    nodes,
-    pageSize,
-    searchText,
-    selectedRowKeys,
-    selectedRows,
-    total,
+    detailLoading,
+    // form models
+    drainFormModel,
 
     // form refs
     drainFormRef,
-    labelFormRef,
-    taintFormRef,
-
-    // modal state
-    isDrainModalVisible,
-    isLabelModalVisible,
-    isTaintModalVisible,
-    submitLoading,
-
-    // detail modal
-    currentNodeDetail,
-    detailLoading,
-    isDetailModalVisible,
-
-    // form models
-    drainFormModel,
-    labelFormModel,
-    taintFormModel,
-
     // form rules
     drainFormRules,
-    labelFormRules,
-    taintFormRules,
+    fetchClusters,
 
+    fetchNodes,
+    filterClusterId,
     // computed
     filteredNodes,
-    rowSelection,
+    filterStatus,
 
     // helpers
     getEnvText,
     getSchedulableColor,
     getSchedulableText,
+
     getStatusColor,
     getStatusText,
-
-    // operations
-    clearNodes,
-    closeDetailModal,
-    fetchClusters,
-    fetchNodes,
-    showNodeDetail,
-
-    // label operations
-    closeLabelModal,
-    openEditLabelModal,
-    removeLabelField,
-    submitLabelForm,
-
-    // taint operations
-    addTaint,
-    closeTaintModal,
-    hasTaintChanges,
-    isNewTaint,
-    openTaintModal,
-    removeTaint,
-    submitTaintForm,
-    validateTaintYaml,
-
-    // schedule operations
-    toggleNodeSchedule,
-
-    // drain operations
-    closeDrainModal,
-    openDrainModal,
-    submitDrainForm,
-
-    // batch operations
-    batchOperation,
-
     // cluster pagination
     handlePageChange,
-    loadMoreClusters,
-    resetClusters,
 
+    hasTaintChanges,
+    isDetailModalVisible,
+    // modal state
+    isDrainModalVisible,
+
+    isLabelModalVisible,
+    isNewTaint,
+
+    isTaintModalVisible,
+    labelFormModel,
+    labelFormRef,
+    labelFormRules,
+    loadError,
+
+    loading,
+    loadMoreClusters,
+    nodes,
     // constants
     NodeStatus,
+    openDrainModal,
+
+    openEditLabelModal,
+    openTaintModal,
+    pageSize,
+    removeLabelField,
+
+    removeTaint,
+    resetClusters,
+    rowSelection,
+    searchText,
+    selectedRowKeys,
+    selectedRows,
+    showNodeDetail,
+    submitDrainForm,
+
+    submitLabelForm,
+
+    submitLoading,
+    submitTaintForm,
+    taintFormModel,
+
+    taintFormRef,
+
+    taintFormRules,
+    // schedule operations
+    toggleNodeSchedule,
+    total,
+
+    validateTaintYaml,
   };
 }

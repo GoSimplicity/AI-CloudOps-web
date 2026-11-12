@@ -155,9 +155,9 @@ async function run(): Promise<void> {
       />
       <div class="backtest-actions">
         <a-button
-          type="primary"
-          :loading="loading"
           :disabled="!scope.owner.value || !input.trim() || loading"
+          :loading="loading"
+          type="primary"
           @click="run"
         >
           计算回测

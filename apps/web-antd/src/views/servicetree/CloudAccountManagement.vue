@@ -1,14 +1,4 @@
 <script setup lang="ts">
-import { useUserStore } from '@vben/stores';
-
-import OpsPage from '#/components/ops/OpsPage.vue';
-
-import AccountRegionsEditor from './cloudaccountmanagement/AccountRegionsEditor.vue';
-import {
-  CLOUD_ACCOUNT_PERMISSIONS,
-  computeProviderName,
-  isSupportedAccountProvider,
-} from './cloudaccountmanagement/provider';
 import {
   computed,
   onBeforeUnmount,
@@ -18,7 +8,8 @@ import {
   watch,
 } from 'vue';
 
-import { type FormInstance, message, Modal } from 'ant-design-vue';
+import { useUserStore } from '@vben/stores';
+
 import {
   CheckCircleOutlined,
   ClearOutlined,
@@ -40,6 +31,7 @@ import {
   TagsOutlined,
   UserOutlined,
 } from '@ant-design/icons-vue';
+import { type FormInstance, message, Modal } from 'ant-design-vue';
 
 import {
   type CloudAccount,
@@ -59,6 +51,7 @@ import {
   updateCloudAccountStatusApi,
   verifyCloudAccountApi,
 } from '#/api/core/tree/tree_account';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { useAuthStore } from '#/store';
 import { downloadCsv } from '#/utils/export-csv';
 import { usePermission } from '#/utils/permission';
@@ -66,6 +59,13 @@ import {
   shouldNotifyPageError,
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
+
+import AccountRegionsEditor from './cloudaccountmanagement/AccountRegionsEditor.vue';
+import {
+  CLOUD_ACCOUNT_PERMISSIONS,
+  computeProviderName,
+  isSupportedAccountProvider,
+} from './cloudaccountmanagement/provider';
 
 const { can, hasPerm } = usePermission();
 
@@ -226,42 +226,42 @@ const pagination = reactive({
 
 const filterForm = reactive<GetCloudAccountListReq>({
   page: 1,
-  size: 10,
-  search: undefined,
   provider: undefined,
+  search: undefined,
+  size: 10,
   status: undefined,
 });
 
 const formData = ref<
-  CreateCloudAccountReq & {
+  {
     access_key: string;
     id?: number;
     secret_key: string;
-  }
+  } & CreateCloudAccountReq
 >({
-  status: CloudAccountStatus.Enabled,
+  access_key: '',
+  account_alias: '',
+  account_id: '',
+  account_name: '',
+  credential_expires_at: '',
+  credential_type: 'long_term',
+  description: '',
   name: '',
   provider: CloudProvider.AliCloud,
   regions: [],
-  access_key: '',
   secret_key: '',
-  credential_type: 'long_term',
   session_token: '',
-  credential_expires_at: '',
-  account_id: '',
-  account_name: '',
-  account_alias: '',
-  description: '',
+  status: CloudAccountStatus.Enabled,
 });
 
 // Provider credentials are write-only and never populated from account details.
 const providerCredentialDraft = reactive({
-  tenant_id: '',
   client_id: '',
   client_secret: '',
-  subscription_id: '',
   project_id: '',
   service_account_json: '',
+  subscription_id: '',
+  tenant_id: '',
 });
 const structuredProvider = computed(
   () =>
@@ -270,12 +270,12 @@ const structuredProvider = computed(
 );
 function clearProviderCredentials() {
   Object.assign(providerCredentialDraft, {
-    tenant_id: '',
     client_id: '',
     client_secret: '',
-    subscription_id: '',
     project_id: '',
     service_account_json: '',
+    subscription_id: '',
+    tenant_id: '',
   });
 }
 function buildProviderCredentials(
@@ -283,7 +283,7 @@ function buildProviderCredentials(
   editing: boolean,
 ): ProviderCredentialInput | undefined {
   if (provider === CloudProvider.Azure) {
-    const { tenant_id, client_id, client_secret, subscription_id } =
+    const { client_id, client_secret, subscription_id, tenant_id } =
       providerCredentialDraft;
     if (
       editing &&
@@ -303,7 +303,7 @@ function buildProviderCredentials(
       new TextEncoder().encode(client_secret).length > 8192
     )
       throw new Error('请完整填写有效的租户 ID、应用 ID、订阅 ID 和客户端密钥');
-    return { tenant_id, client_id, client_secret, subscription_id };
+    return { client_id, client_secret, subscription_id, tenant_id };
   }
   const { project_id, service_account_json } = providerCredentialDraft;
   if (editing && !project_id && !service_account_json) return undefined;
@@ -360,19 +360,19 @@ const tencentAndAwsCount = computed(
 const paginationConfig = computed(() => ({
   current: pagination.current,
   pageSize: pagination.pageSize,
-  total: pagination.total,
-  showSizeChanger: true,
-  showQuickJumper: true,
-  showTotal: (total: number) => `共 ${total} 条记录`,
   pageSizeOptions: ['10', '20', '50', '100'],
+  showQuickJumper: true,
+  showSizeChanger: true,
+  showTotal: (total: number) => `共 ${total} 条记录`,
+  total: pagination.total,
 }));
 
 const normalizeRegions = (regions: CloudAccountRegionInput[] = []) =>
   regions.map((item) => ({
-    region: item.region,
-    region_name: item.region_name ?? '',
     description: item.description ?? '',
     is_default: !!item.is_default,
+    region: item.region,
+    region_name: item.region_name ?? '',
     ...(item.project_id === undefined ? {} : { project_id: item.project_id }),
   }));
 const regionSignature = (regions: CloudAccountRegionInput[]) =>
@@ -381,21 +381,32 @@ const regionSignature = (regions: CloudAccountRegionInput[]) =>
   );
 
 const formRules = computed(() => ({
+  access_key: isEdit.value
+    ? [
+        {
+          max: 500,
+          message: '新 Access Key 长度需为10至500位',
+          min: 10,
+          trigger: 'blur',
+        },
+      ]
+    : [
+        { message: '请输入 Access Key', required: true, trigger: 'blur' },
+        {
+          max: 500,
+          message: 'Access Key 长度需为10至500位',
+          min: 10,
+          trigger: 'blur',
+        },
+      ],
   name: [
     { message: '请输入云账户名称', required: true, trigger: 'blur' },
     { max: 100, message: '名称长度在2-100个字符之间', min: 2, trigger: 'blur' },
   ],
   provider: [{ message: '请选择云厂商', required: true, trigger: 'change' }],
-  status: [
-    {
-      required: true,
-      type: 'enum' as const,
-      enum: [CloudAccountStatus.Enabled, CloudAccountStatus.Disabled],
-      message: '请选择初始状态',
-    },
-  ],
   regions: [
     {
+      trigger: 'change',
       validator: async (_: unknown, value: CloudAccountRegionInput[]) => {
         if (!value?.length) throw new Error('至少添加一个授权地域');
         if (
@@ -436,27 +447,8 @@ const formRules = computed(() => ({
             throw new Error('华为云每个地域必须填写有效的项目 ID');
         }
       },
-      trigger: 'change',
     },
   ],
-  access_key: isEdit.value
-    ? [
-        {
-          max: 500,
-          message: '新 Access Key 长度需为10至500位',
-          min: 10,
-          trigger: 'blur',
-        },
-      ]
-    : [
-        { message: '请输入 Access Key', required: true, trigger: 'blur' },
-        {
-          max: 500,
-          message: 'Access Key 长度需为10至500位',
-          min: 10,
-          trigger: 'blur',
-        },
-      ],
   secret_key: isEdit.value
     ? [
         {
@@ -475,6 +467,14 @@ const formRules = computed(() => ({
           trigger: 'blur',
         },
       ],
+  status: [
+    {
+      enum: [CloudAccountStatus.Enabled, CloudAccountStatus.Disabled],
+      message: '请选择初始状态',
+      required: true,
+      type: 'enum' as const,
+    },
+  ],
 }));
 
 // 表格列定义
@@ -493,11 +493,11 @@ const columns = [
 const getProviderColor = (provider: CloudProvider): string => {
   const colorMap: Record<CloudProvider, string> = {
     [CloudProvider.AliCloud]: '#ff6a00',
-    [CloudProvider.TencentCloud]: '#006eff',
-    [CloudProvider.HuaweiCloud]: '#e60012',
     [CloudProvider.AWS]: '#ff9900',
     [CloudProvider.Azure]: '#0078d4',
     [CloudProvider.GCP]: '#4285f4',
+    [CloudProvider.HuaweiCloud]: '#e60012',
+    [CloudProvider.TencentCloud]: '#006eff',
   };
   return colorMap[provider] || '#1890ff';
 };
@@ -505,11 +505,11 @@ const getProviderColor = (provider: CloudProvider): string => {
 const getProviderText = (provider: CloudProvider): string => {
   const textMap: Record<CloudProvider, string> = {
     [CloudProvider.AliCloud]: '阿里云',
-    [CloudProvider.TencentCloud]: '腾讯云',
-    [CloudProvider.HuaweiCloud]: '华为云',
     [CloudProvider.AWS]: 'AWS',
     [CloudProvider.Azure]: 'Azure',
     [CloudProvider.GCP]: 'GCP',
+    [CloudProvider.HuaweiCloud]: '华为云',
+    [CloudProvider.TencentCloud]: '腾讯云',
   };
   return textMap[provider] || '未知';
 };
@@ -539,11 +539,11 @@ const formatDateTime = (dateTime?: string): string => {
   if (!dateTime) return '-';
   try {
     return new Date(dateTime).toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
     });
   } catch {
     return dateTime;
@@ -552,7 +552,7 @@ const formatDateTime = (dateTime?: string): string => {
 
 const truncateText = (text: string, maxLength: number): string => {
   if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength) + '...';
+  return `${text.slice(0, maxLength)}...`;
 };
 
 const fetchCloudAccounts = async (): Promise<void> => {
@@ -637,19 +637,19 @@ const showCreateModal = (): void => {
   originalCredentialType.value = 'long_term';
   savedCredentialExpiry.value = undefined;
   formData.value = {
-    status: CloudAccountStatus.Enabled,
+    access_key: '',
+    account_alias: '',
+    account_id: '',
+    account_name: '',
+    credential_expires_at: '',
+    credential_type: 'long_term',
+    description: '',
     name: '',
     provider: CloudProvider.AliCloud,
     regions: [],
-    access_key: '',
     secret_key: '',
-    credential_type: 'long_term',
     session_token: '',
-    credential_expires_at: '',
-    account_id: '',
-    account_name: '',
-    account_alias: '',
-    description: '',
+    status: CloudAccountStatus.Enabled,
   };
   modalVisible.value = true;
 };
@@ -681,10 +681,10 @@ const handleEdit = async (record: CloudAccount): Promise<void> => {
   formOwner = owner;
   clearProviderCredentials();
   formData.value = {
+    access_key: '',
     name: '',
     provider: record.provider,
     regions: [],
-    access_key: '',
     secret_key: '',
   };
   isEdit.value = true;
@@ -721,19 +721,19 @@ const handleEdit = async (record: CloudAccount): Promise<void> => {
     const regions = normalizeRegions(current.regions);
     originalRegions = regionSignature(regions);
     formData.value = {
+      access_key: '',
+      account_alias: current.account_alias ?? '',
+      account_id: current.account_id ?? '',
+      account_name: current.account_name ?? '',
+      credential_expires_at: '',
+      credential_type: originalCredentialType.value,
+      description: current.description ?? '',
       id: current.id,
       name: current.name,
       provider: current.provider,
       regions,
-      access_key: '',
       secret_key: '',
-      credential_type: originalCredentialType.value,
       session_token: '',
-      credential_expires_at: '',
-      account_id: current.account_id ?? '',
-      account_name: current.account_name ?? '',
-      account_alias: current.account_alias ?? '',
-      description: current.description ?? '',
     };
   } catch (error) {
     if (!active || ticket !== formRequest || owner !== actionOwner()) return;
@@ -899,11 +899,11 @@ const handleSubmit = async (): Promise<void> => {
     }
     if (editing && draft.id) {
       const updateData: Omit<UpdateCloudAccountReq, 'id'> = {
-        name: draft.name,
+        account_alias: draft.account_alias || undefined,
         account_id: draft.account_id || undefined,
         account_name: draft.account_name || undefined,
-        account_alias: draft.account_alias || undefined,
         description: draft.description || undefined,
+        name: draft.name,
       };
       if (providerCredentials)
         updateData.provider_credentials = providerCredentials;
@@ -976,11 +976,10 @@ const handleDelete = (record: CloudAccount): void => {
     currentAccountAction(ticket) &&
     can('tree.cloudAccount.delete');
   Modal.confirm({
-    title: '确认删除',
+    cancelText: '取消',
     content: `确定要删除云账户 "${record.name}" 吗？此操作不可恢复。`,
     okText: '确定删除',
     okType: 'danger',
-    cancelText: '取消',
     onCancel: () => {
       if (deleteTickets.get(ticket.id) === ticket)
         deleteTickets.delete(ticket.id);
@@ -1002,6 +1001,7 @@ const handleDelete = (record: CloudAccount): void => {
           deleteTickets.delete(ticket.id);
       }
     },
+    title: '确认删除',
   });
 };
 
@@ -1071,10 +1071,9 @@ const handleVerify = (record: CloudAccount): void => {
     ticket.record.status === status &&
     hasPerm(CLOUD_ACCOUNT_PERMISSIONS.verify);
   Modal.confirm({
-    title: '验证云账户凭据',
+    cancelText: '取消',
     content: `将向${computeProviderName(record.provider)}验证账户“${record.name}”的凭据，验证失败不会删除账户`,
     okText: '开始验证',
-    cancelText: '取消',
     onCancel: () => {
       if (verifyTickets.get(ticket.id) === ticket)
         verifyTickets.delete(ticket.id);
@@ -1096,6 +1095,7 @@ const handleVerify = (record: CloudAccount): void => {
           verifyTickets.delete(ticket.id);
       }
     },
+    title: '验证云账户凭据',
   });
 };
 
@@ -1152,6 +1152,8 @@ const exportToExcel = (data: CloudAccount[]) => {
 
   // 准备导出数据
   const exportData = data.map((item) => ({
+    // Object.keys order is the CSV column order.
+    /* eslint-disable perfectionist/sort-objects */
     账户名称: item.name,
     云厂商: getProviderText(item.provider),
     地域: (item.regions ?? []).map((region) => region.region).join(', '),
@@ -1162,6 +1164,7 @@ const exportToExcel = (data: CloudAccount[]) => {
     创建时间: formatDateTime(item.created_at),
     更新时间: formatDateTime(item.updated_at),
     描述: item.description || '-',
+    /* eslint-enable perfectionist/sort-objects */
   }));
 
   // 导出文件
@@ -1231,10 +1234,10 @@ watch(
       <a-space :size="12">
         <a-button
           v-if="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.create)"
-          type="primary"
           aria-label="添加账户"
-          @click="showCreateModal"
           class="btn-create"
+          type="primary"
+          @click="showCreateModal"
         >
           <template #icon><PlusOutlined /></template>
           <span class="btn-text">添加账户</span>
@@ -1301,7 +1304,7 @@ watch(
             placeholder="搜索账户名称"
             style="width: 220px"
             @change="handleSearchChange"
-            @pressEnter="handleSearch"
+            @press-enter="handleSearch"
           >
             <template #prefix><SearchOutlined /></template>
           </a-input>
@@ -1455,17 +1458,17 @@ watch(
             <!-- 状态列 -->
             <template v-else-if="column.key === 'status'">
               <a-switch
+                :checked="record.status === CloudAccountStatus.Enabled"
                 :disabled="
                   !isSupportedAccountProvider(record.provider) ||
                   !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.status)
                 "
-                :checked="record.status === CloudAccountStatus.Enabled"
                 :loading="switchLoading[record.id]"
+                checked-children="启用"
+                un-checked-children="禁用"
                 @change="
                   (checked: boolean) => handleStatusChange(record, checked)
                 "
-                checked-children="启用"
-                un-checked-children="禁用"
               />
             </template>
 
@@ -1473,12 +1476,12 @@ watch(
             <template v-else-if="column.key === 'creator'">
               <div class="creator-cell">
                 <a-avatar
-                  size="small"
                   :style="{
                     backgroundColor: getAvatarColor(
                       record.create_user_name || '',
                     ),
                   }"
+                  size="small"
                 >
                   {{ getInitials(record.create_user_name || 'Admin') }}
                 </a-avatar>
@@ -1519,9 +1522,9 @@ watch(
                   title="编辑"
                 >
                   <a-button
-                    type="text"
-                    size="small"
                     :disabled="!isSupportedAccountProvider(record.provider)"
+                    size="small"
+                    type="text"
                     @click="handleEdit(record)"
                   >
                     <EditOutlined />
@@ -1532,12 +1535,12 @@ watch(
                   title="验证凭证"
                 >
                   <a-button
-                    type="text"
-                    size="small"
                     :disabled="
                       !isSupportedAccountProvider(record.provider) ||
                       record.status !== CloudAccountStatus.Enabled
                     "
+                    size="small"
+                    type="text"
                     @click="handleVerify(record)"
                   >
                     <SafetyCertificateOutlined />
@@ -1545,10 +1548,10 @@ watch(
                 </a-tooltip>
                 <a-tooltip v-if="can('tree.cloudAccount.delete')" title="删除">
                   <a-button
-                    type="text"
-                    size="small"
                     :disabled="!isSupportedAccountProvider(record.provider)"
                     danger
+                    size="small"
+                    type="text"
                     @click="handleDelete(record)"
                   >
                     <DeleteOutlined />
@@ -1659,13 +1662,13 @@ watch(
             <a-form-item label="授权地域" name="regions">
               <AccountRegionsEditor
                 v-model="formData.regions"
-                :disabled="formLoading || submitLoading || !modalVisible"
-                :provider="formData.provider"
-                :account-id="isEdit ? formData.id : undefined"
                 :account-enabled="
                   editAccountStatus === CloudAccountStatus.Enabled
                 "
+                :account-id="isEdit ? formData.id : undefined"
                 :can-read="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.regions)"
+                :disabled="formLoading || submitLoading || !modalVisible"
+                :provider="formData.provider"
               />
             </a-form-item>
           </a-col>
@@ -2010,29 +2013,29 @@ watch(
               <a-descriptions-item :span="2" label="状态">
                 <a-switch
                   v-if="currentDetail"
+                  :checked="currentDetail.status === CloudAccountStatus.Enabled"
                   :disabled="
                     !isSupportedAccountProvider(currentDetail.provider) ||
                     !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.status)
                   "
-                  :checked="currentDetail.status === CloudAccountStatus.Enabled"
                   :loading="switchLoading[currentDetail.id]"
+                  checked-children="启用"
+                  un-checked-children="禁用"
                   @change="
                     (checked: boolean) =>
                       currentDetail &&
                       handleStatusChange(currentDetail, checked)
                   "
-                  checked-children="启用"
-                  un-checked-children="禁用"
                 />
               </a-descriptions-item>
               <a-descriptions-item :span="1" label="创建人">
                 <a-avatar
-                  size="small"
                   :style="{
                     backgroundColor: getAvatarColor(
                       currentDetail.create_user_name || '',
                     ),
                   }"
+                  size="small"
                 >
                   {{ getInitials(currentDetail.create_user_name || 'Admin') }}
                 </a-avatar>
@@ -2053,11 +2056,11 @@ watch(
               <a-button-group>
                 <a-button
                   v-if="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.verify)"
-                  type="primary"
                   :disabled="
                     !isSupportedAccountProvider(currentDetail.provider) ||
                     currentDetail.status !== CloudAccountStatus.Enabled
                   "
+                  type="primary"
                   @click="handleVerify(currentDetail)"
                 >
                   <SafetyCertificateOutlined /> 验证凭证
@@ -2077,8 +2080,8 @@ watch(
               </a-button-group>
               <a-button
                 v-if="can('tree.cloudAccount.delete')"
-                danger
                 :disabled="!isSupportedAccountProvider(currentDetail.provider)"
+                danger
                 @click="handleDelete(currentDetail)"
               >
                 <DeleteOutlined /> 删除

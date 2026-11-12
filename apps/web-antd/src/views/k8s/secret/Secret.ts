@@ -6,6 +6,18 @@ import { message, Modal } from 'ant-design-vue';
 import yaml from 'js-yaml';
 
 import {
+  Env,
+  getClustersListApi,
+  type K8sCluster,
+  type KeyValueList,
+  type ListClustersReq,
+} from '#/api/core/k8s/k8s_cluster';
+import {
+  getNamespacesListApi,
+  type K8sNamespace,
+  type K8sNamespaceListReq,
+} from '#/api/core/k8s/k8s_namespace';
+import {
   createSecretApi,
   createSecretByYamlApi,
   type CreateSecretByYamlReq,
@@ -26,23 +38,11 @@ import {
   type UpdateSecretByYamlReq,
   type UpdateSecretReq,
 } from '#/api/core/k8s/k8s_secret';
-import {
-  Env,
-  getClustersListApi,
-  type K8sCluster,
-  type KeyValueList,
-  type ListClustersReq,
-} from '#/api/core/k8s/k8s_cluster';
-import {
-  getNamespacesListApi,
-  type K8sNamespace,
-  type K8sNamespaceListReq,
-} from '#/api/core/k8s/k8s_namespace';
+import { isNotifiedByRequestLayer } from '#/api/http-error-notice';
 import {
   shouldNotifyPageError,
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
-import { isNotifiedByRequestLayer } from '#/api/http-error-notice';
 
 import {
   buildSecretDataPayload,
@@ -155,14 +155,14 @@ export function useSecretPage() {
     string_data: Record<string, string>;
     type: K8sSecretType;
   }>({
+    annotations: {},
+    data: {},
+    immutable: false,
+    labels: {},
     name: '',
     namespace: '',
-    type: K8sSecretType.Opaque,
-    data: {},
     string_data: {},
-    labels: {},
-    annotations: {},
-    immutable: false,
+    type: K8sSecretType.Opaque,
   });
 
   const editFormModel = ref<{
@@ -173,12 +173,12 @@ export function useSecretPage() {
     namespace: string;
     string_data: Record<string, string>;
   }>({
+    annotations: {},
+    data: {},
+    labels: {},
     name: '',
     namespace: '',
-    data: {},
     string_data: {},
-    labels: {},
-    annotations: {},
   });
 
   const yamlFormModel = ref<{
@@ -196,11 +196,11 @@ export function useSecretPage() {
   // form validation rules
   const createFormRules: Record<string, Rule[]> = {
     name: [
-      { required: true, message: '请输入 Secret 名称', trigger: 'blur' },
+      { message: '请输入 Secret 名称', required: true, trigger: 'blur' },
       {
-        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         message:
           'Secret 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         trigger: 'blur',
       },
       {
@@ -210,21 +210,21 @@ export function useSecretPage() {
       },
     ],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' },
+      { message: '请选择命名空间', required: true, trigger: 'change' },
     ],
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
@@ -234,11 +234,11 @@ export function useSecretPage() {
   });
 
   const rowSelection = computed(() => ({
-    selectedRowKeys: selectedRowKeys.value,
     onChange: (keys: string[], rows: K8sSecret[]) => {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
     },
+    selectedRowKeys: selectedRowKeys.value,
   }));
 
   // helpers
@@ -255,11 +255,11 @@ export function useSecretPage() {
     if (env === undefined || env === null) return '未知环境';
     const value = typeof env === 'string' ? Number.parseInt(env) : env;
     const map: Record<number, string> = {
-      [Env.Prod]: '生产',
       [Env.Dev]: '开发',
-      [Env.Stage]: '预发',
-      [Env.Rc]: '测试',
       [Env.Press]: '灰度',
+      [Env.Prod]: '生产',
+      [Env.Rc]: '测试',
+      [Env.Stage]: '预发',
     };
     return map[value] || '未知环境';
   };
@@ -267,14 +267,14 @@ export function useSecretPage() {
   // 获取Secret类型显示文本
   const getSecretTypeText = (type: K8sSecretType): string => {
     const typeMap: Record<K8sSecretType, string> = {
-      [K8sSecretType.Opaque]: '通用Secret',
-      [K8sSecretType.ServiceAccountToken]: 'SA令牌',
+      [K8sSecretType.BasicAuth]: '基础认证',
+      [K8sSecretType.BootstrapToken]: '引导令牌',
       [K8sSecretType.Dockercfg]: 'Docker配置',
       [K8sSecretType.DockerConfigJson]: 'Docker配置JSON',
-      [K8sSecretType.BasicAuth]: '基础认证',
+      [K8sSecretType.Opaque]: '通用Secret',
+      [K8sSecretType.ServiceAccountToken]: 'SA令牌',
       [K8sSecretType.SSHAuth]: 'SSH认证',
       [K8sSecretType.TLS]: 'TLS证书',
-      [K8sSecretType.BootstrapToken]: '引导令牌',
     };
     return typeMap[type] || type;
   };
@@ -418,14 +418,14 @@ export function useSecretPage() {
       selectedRows.value = [];
       const params: GetSecretListReq = {
         cluster_id: clusterId,
-        page: currentPage.value,
-        size: pageSize.value,
-        namespace,
-        type: filterType.value,
         labels:
           Object.keys(filterLabels.value).length > 0
             ? filterLabels.value
             : undefined,
+        namespace,
+        page: currentPage.value,
+        size: pageSize.value,
+        type: filterType.value,
       };
       const res = await getSecretListApi(params);
       if (
@@ -439,12 +439,12 @@ export function useSecretPage() {
       const secretsWithClusterId = (res?.items || []).map(
         (secret: K8sSecret) => ({
           ...secret,
+          annotations: parseJsonField(secret.annotations, {}),
           cluster_id: secret.cluster_id || clusterId || 0,
           // 解析JSON字段
           data: parseJsonField(secret.data, {}),
-          string_data: parseJsonField(secret.string_data, {}),
           labels: parseJsonField(secret.labels, {}),
-          annotations: parseJsonField(secret.annotations, {}),
+          string_data: parseJsonField(secret.string_data, {}),
         }),
       );
 
@@ -547,9 +547,9 @@ export function useSecretPage() {
     try {
       const res = await revealSecretApi({
         cluster_id: detail.cluster_id,
-        namespace: detail.namespace,
-        name: detail.name,
         keys: [key],
+        name: detail.name,
+        namespace: detail.namespace,
       });
       if (generation !== revealGeneration) return undefined;
       const value = readRevealedValue(res, key);
@@ -603,8 +603,8 @@ export function useSecretPage() {
       isDetailModalVisible.value = true;
       const params: GetSecretDetailsReq = {
         cluster_id: clusterId,
-        namespace: record.namespace,
         name: record.name,
+        namespace: record.namespace,
       };
       const res = await getSecretDetailsApi(params);
 
@@ -612,22 +612,22 @@ export function useSecretPage() {
       const processedDetail = res
         ? {
             ...res,
-            cluster_id: clusterId,
-            labels: recordToKeyValueList(parseJsonField(res.labels, {})),
             annotations: recordToKeyValueList(
               parseJsonField(res.annotations, {}),
             ),
+            cluster_id: clusterId,
             data: parseJsonField(res.data, {}),
+            labels: recordToKeyValueList(parseJsonField(res.labels, {})),
             string_data: parseJsonField(res.string_data, {}),
           }
         : {
             ...record,
-            cluster_id: clusterId,
-            labels: recordToKeyValueList(parseJsonField(record.labels, {})),
             annotations: recordToKeyValueList(
               parseJsonField(record.annotations, {}),
             ),
+            cluster_id: clusterId,
             data: parseJsonField(record.data, {}),
+            labels: recordToKeyValueList(parseJsonField(record.labels, {})),
             string_data: parseJsonField(record.string_data, {}),
           };
 
@@ -639,12 +639,12 @@ export function useSecretPage() {
       try {
         const fallbackDetail = {
           ...record,
-          cluster_id: clusterId,
-          labels: recordToKeyValueList(parseJsonField(record.labels, {})),
           annotations: recordToKeyValueList(
             parseJsonField(record.annotations, {}),
           ),
+          cluster_id: clusterId,
           data: parseJsonField(record.data, {}),
+          labels: recordToKeyValueList(parseJsonField(record.labels, {})),
           string_data: parseJsonField(record.string_data, {}),
         };
         currentSecretDetail.value = fallbackDetail;
@@ -652,10 +652,10 @@ export function useSecretPage() {
         // 最终的安全fallback
         currentSecretDetail.value = {
           ...record,
-          cluster_id: clusterId,
-          labels: [],
           annotations: [],
+          cluster_id: clusterId,
           data: {},
+          labels: [],
           string_data: {},
         };
       }
@@ -683,8 +683,8 @@ export function useSecretPage() {
       currentOperationSecret.value = { ...record, cluster_id: clusterId };
       const params: GetSecretYamlReq = {
         cluster_id: clusterId,
-        namespace: record.namespace,
         name: record.name,
+        namespace: record.namespace,
       };
       const res = await getSecretYamlApi(params);
       // incr9 P3-D：等待期间关闭了弹窗或打开了别的 Secret，这次的响应作废
@@ -771,8 +771,8 @@ export function useSecretPage() {
 
       const params: UpdateSecretByYamlReq = {
         cluster_id: target.cluster_id,
-        namespace: target.namespace,
         name: target.name,
+        namespace: target.namespace,
         yaml: encodedYaml,
       };
 
@@ -795,14 +795,14 @@ export function useSecretPage() {
   // 创建 Secret
   const openCreateModal = () => {
     createFormModel.value = {
+      annotations: {},
+      data: {},
+      immutable: false,
+      labels: {},
       name: '',
       namespace: '',
-      type: K8sSecretType.Opaque,
-      data: {},
       string_data: {},
-      labels: {},
-      annotations: {},
-      immutable: false,
+      type: K8sSecretType.Opaque,
     };
     isCreateModalVisible.value = true;
   };
@@ -840,27 +840,27 @@ export function useSecretPage() {
       submitLoading.value = true;
 
       const params: CreateSecretReq = {
-        cluster_id: filterClusterId.value,
-        namespace: createFormModel.value.namespace,
-        name: createFormModel.value.name,
-        type: createFormModel.value.type,
-        data:
-          Object.keys(createFormModel.value.data).length > 0
-            ? createFormModel.value.data
-            : undefined,
-        string_data:
-          Object.keys(createFormModel.value.string_data).length > 0
-            ? createFormModel.value.string_data
-            : undefined,
-        labels:
-          Object.keys(createFormModel.value.labels).length > 0
-            ? createFormModel.value.labels
-            : undefined,
         annotations:
           Object.keys(createFormModel.value.annotations).length > 0
             ? createFormModel.value.annotations
             : undefined,
+        cluster_id: filterClusterId.value,
+        data:
+          Object.keys(createFormModel.value.data).length > 0
+            ? createFormModel.value.data
+            : undefined,
         immutable: createFormModel.value.immutable,
+        labels:
+          Object.keys(createFormModel.value.labels).length > 0
+            ? createFormModel.value.labels
+            : undefined,
+        name: createFormModel.value.name,
+        namespace: createFormModel.value.namespace,
+        string_data:
+          Object.keys(createFormModel.value.string_data).length > 0
+            ? createFormModel.value.string_data
+            : undefined,
+        type: createFormModel.value.type,
       };
 
       await createSecretApi(params);
@@ -926,16 +926,16 @@ export function useSecretPage() {
     const seq = ++editOpenSeq;
     currentOperationSecret.value = record;
     editFormModel.value = {
-      name: record.name,
-      namespace: record.namespace,
+      annotations: {},
       // data 改由 editDataRows 管理（列表返回的是脱敏空值，不能回填）
       data: {},
-      // incr5：string_data 同理，先置空，等详情返回后整体用详情的值
-      string_data: {},
       // 第四轮：labels / annotations 提交时是整体覆盖，列表行里的可能已过期（会冲掉别人刚改的），
       // 先置空，等详情返回后整体用详情的值
       labels: {},
-      annotations: {},
+      name: record.name,
+      namespace: record.namespace,
+      // incr5：string_data 同理，先置空，等详情返回后整体用详情的值
+      string_data: {},
     };
     // 列表行里的 data_keys 可能已过期，先清空，等详情返回后再填
     resetEditData();
@@ -944,8 +944,8 @@ export function useSecretPage() {
     try {
       const detail = await getSecretDetailsApi({
         cluster_id: clusterId,
-        namespace: record.namespace,
         name: record.name,
+        namespace: record.namespace,
       });
       if (seq !== editOpenSeq) return;
       editFormModel.value.labels = { ...parseJsonField(detail?.labels, {}) };
@@ -1046,19 +1046,19 @@ export function useSecretPage() {
       // 冲突时后端返回 HTTP 200 + code=1（该接口没有 409）：由请求层按业务错误弹后端原文，
       // 下面 catch 里 isNotifiedByRequestLayer 跳过页面自身提示，弹窗保留供用户刷新后重试
       const params: UpdateSecretReq = {
-        cluster_id: target.cluster_id,
-        namespace: target.namespace,
-        name: target.name,
-        data,
-        string_data: stringData,
-        labels:
-          Object.keys(editFormModel.value.labels).length > 0
-            ? editFormModel.value.labels
-            : undefined,
         annotations:
           Object.keys(editFormModel.value.annotations).length > 0
             ? editFormModel.value.annotations
             : undefined,
+        cluster_id: target.cluster_id,
+        data,
+        labels:
+          Object.keys(editFormModel.value.labels).length > 0
+            ? editFormModel.value.labels
+            : undefined,
+        name: target.name,
+        namespace: target.namespace,
+        string_data: stringData,
       };
 
       await updateSecretApi(params);
@@ -1082,18 +1082,17 @@ export function useSecretPage() {
     if (!clusterId) return;
 
     Modal.confirm({
-      title: '删除 Secret',
+      cancelText: '取消',
+      centered: true,
       content: `确定要删除 Secret "${record.name}" 吗？此操作不可逆！`,
       okText: '确认删除',
       okType: 'danger',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           const params: DeleteSecretReq = {
             cluster_id: clusterId,
-            namespace: record.namespace,
             name: record.name,
+            namespace: record.namespace,
           };
           await deleteSecretApi(params);
           message.success('Secret 删除成功');
@@ -1102,6 +1101,7 @@ export function useSecretPage() {
           if (shouldNotifyPageError(error)) message.error('Secret 删除失败');
         }
       },
+      title: '删除 Secret',
     });
   };
 
@@ -1131,12 +1131,11 @@ export function useSecretPage() {
     if (selectedRows.value.length === 0) return;
 
     Modal.confirm({
-      title: `批量${operation}`,
+      cancelText: '取消',
+      centered: true,
       content: `确定要对选中的 ${selectedRows.value.length} 个 Secret 执行${operation}操作吗？`,
       okText: '确认执行',
       okType: operation === '删除' ? 'danger' : 'primary',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           if (operation === '删除') {
@@ -1151,8 +1150,8 @@ export function useSecretPage() {
 
               const params: DeleteSecretReq = {
                 cluster_id: clusterId,
-                namespace: secret.namespace,
                 name: secret.name,
+                namespace: secret.namespace,
               };
               await deleteSecretApi(params);
             }
@@ -1167,6 +1166,7 @@ export function useSecretPage() {
             message.error(`批量${operation}失败`);
         }
       },
+      title: `批量${operation}`,
     });
   };
 
@@ -1493,152 +1493,152 @@ export function useSecretPage() {
   return {
     // SEC-25/26 reveal / data 编辑
     addEditDataRow,
+    // filter operations
+    addFilterLabel,
+    // batch operations
+    batchOperation,
+    clearFilterLabels,
+    // operations
+    clearNamespaces,
     clearRevealedValues,
-    editDataLoading,
-    editDataRows,
-    getEditDataRowError,
-    getPlainValueForCopy,
-    hideRevealedKey,
-    removeEditDataRow,
-    resetEditDataRow,
-    revealedValues,
-    revealingKeys,
-    revealSecretKey,
-    secretDetailDataKeys,
-    setEditDataValue,
-
+    clearSecrets,
+    // yaml operations
+    clearYaml,
+    // create operations
+    closeCreateModal,
+    closeCreateYamlModal,
+    // detail operations
+    closeDetailModal,
+    // edit operations
+    closeEditModal,
+    // YAML operations
+    closeYamlModal,
     // state
     clusters,
+
     clustersError,
     clustersLoading,
     clustersPage,
     clustersSize,
     clustersTotal,
+    // form models
+    createFormModel,
+    // form rules
+    createFormRules,
+    createYamlFormModel,
+    // form refs
+    createYamlFormRef,
+    createYamlFormRules,
+    // operation targets
+    currentOperationSecret,
     currentPage,
+    currentSecretDetail,
+    // secret operations
+    deleteSecret,
+    // modal state
+    detailLoading,
+    editDataLoading,
+    editDataRows,
+    editFormModel,
+    fetchClusters,
+    fetchNamespaces,
+    fetchSecrets,
     filterClusterId,
+    // computed
+    filteredSecrets,
     filterLabels,
     filterNamespace,
+
     filterType,
+    formatEditYaml,
+    formatYaml,
+
+    formRef,
+    getEditDataRowError,
+    // helpers
+    getEnvText,
+    getPlainValueForCopy,
+    getSecretTypeText,
+    // pagination operations
+    handlePageChange,
+    hideRevealedKey,
+    insertYamlTemplate,
+
+    isCreateModalVisible,
+    isCreateYamlModalVisible,
+
+    isDetailModalVisible,
+    isEditModalVisible,
+    isYamlLoading,
+    isYamlModalVisible,
+
+    K8sSecretType,
+    keyValueListToRecord,
     loadError,
+
     loading,
+    loadMoreClusters,
+
+    loadMoreNamespaces,
     namespaces,
     namespacesError,
     namespacesLoading,
     namespacesPage,
     namespacesSize,
     namespacesTotal,
-    pageSize,
-    searchText,
-    secrets,
-    selectedRowKeys,
-    selectedRows,
-    total,
 
-    // form refs
-    createYamlFormRef,
-    formRef,
-    yamlFormRef,
-
-    // modal state
-    detailLoading,
-    isCreateModalVisible,
-    isCreateYamlModalVisible,
-    isDetailModalVisible,
-    isEditModalVisible,
-    isYamlLoading,
-    isYamlModalVisible,
-    submitLoading,
-
-    // operation targets
-    currentOperationSecret,
-    currentSecretDetail,
-
-    // form models
-    createFormModel,
-    createYamlFormModel,
-    editFormModel,
-    yamlFormModel,
-
-    // form rules
-    createFormRules,
-    createYamlFormRules,
-    yamlFormRules,
-
-    // computed
-    filteredSecrets,
-    rowSelection,
-
-    // helpers
-    getEnvText,
-    getSecretTypeText,
-    K8sSecretType,
-    keyValueListToRecord,
-    parseJsonField,
-    recordToKeyValueList,
-    validateClusterId,
-
-    // operations
-    clearNamespaces,
-    clearSecrets,
-    fetchClusters,
-    fetchNamespaces,
-    fetchSecrets,
-    loadMoreClusters,
-    loadMoreNamespaces,
-
-    // detail operations
-    closeDetailModal,
-    showSecretDetail,
-
-    // YAML operations
-    closeYamlModal,
-    showYamlModal,
-    submitYamlForm,
-
-    // create operations
-    closeCreateModal,
-    closeCreateYamlModal,
     openCreateModal,
     openCreateYamlModal,
-    submitCreateForm,
-    submitCreateYamlForm,
-
-    // edit operations
-    closeEditModal,
     openEditModal,
-    submitEditForm,
-
-    // secret operations
-    deleteSecret,
-
-    // filter operations
-    addFilterLabel,
-    clearFilterLabels,
-    removeFilterLabel,
-
-    // batch operations
-    batchOperation,
-
-    // pagination operations
-    handlePageChange,
-    resetClusters,
-
+    pageSize,
+    parseJsonField,
+    recordToKeyValueList,
     // form field operations
     removeAnnotationField,
+
     removeDataField,
     removeEditAnnotationField,
+
     removeEditDataField,
+    removeEditDataRow,
     removeEditLabelField,
+
     removeEditStringDataField,
+    removeFilterLabel,
     removeLabelField,
     removeStringDataField,
+    resetClusters,
+    resetEditDataRow,
 
-    // yaml operations
-    clearYaml,
-    formatEditYaml,
-    formatYaml,
-    insertYamlTemplate,
+    revealedValues,
+    revealingKeys,
+    revealSecretKey,
+
+    rowSelection,
+
+    searchText,
+    secretDetailDataKeys,
+    secrets,
+
+    selectedRowKeys,
+
+    selectedRows,
+    setEditDataValue,
+
+    showSecretDetail,
+    showYamlModal,
+    submitCreateForm,
+    submitCreateYamlForm,
+    submitEditForm,
+    submitLoading,
+    submitYamlForm,
+    total,
+
+    validateClusterId,
     validateEditYaml,
     validateYaml,
+    yamlFormModel,
+    yamlFormRef,
+    yamlFormRules,
   };
 }

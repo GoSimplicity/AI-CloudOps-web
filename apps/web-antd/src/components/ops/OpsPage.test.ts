@@ -6,12 +6,12 @@ import OpsPage from './OpsPage.vue';
 describe('运维列表页面骨架', () => {
   it('提供唯一标题和按任务顺序排列的操作、摘要、筛选、正文', () => {
     const wrapper = mount(OpsPage, {
-      props: { title: '角色管理', description: '维护角色权限' },
+      props: { description: '维护角色权限', title: '角色管理' },
       slots: {
         actions: '<button>新建角色</button>',
-        summary: '<p>本页角色数 2</p>',
-        filters: '<input aria-label="搜索角色" />',
         default: '<table aria-label="角色列表" />',
+        filters: '<input aria-label="搜索角色" />',
+        summary: '<p>本页角色数 2</p>',
       },
     });
     expect(wrapper.get('section').attributes('aria-label')).toBe('角色管理');

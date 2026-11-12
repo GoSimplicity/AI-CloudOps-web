@@ -80,13 +80,6 @@ function dispatch(action: Action) {
       break;
     }
 
-    case actionTypes.UPDATE_TOAST: {
-      state.toasts = state.toasts.map((t) =>
-        t.id === action.toast.id ? { ...t, ...action.toast } : t,
-      );
-      break;
-    }
-
     case actionTypes.DISMISS_TOAST: {
       const { toastId } = action;
 
@@ -115,6 +108,13 @@ function dispatch(action: Action) {
           ? []
           : state.toasts.filter((t) => t.id !== action.toastId);
 
+      break;
+    }
+
+    case actionTypes.UPDATE_TOAST: {
+      state.toasts = state.toasts.map((t) =>
+        t.id === action.toast.id ? { ...t, ...action.toast } : t,
+      );
       break;
     }
   }

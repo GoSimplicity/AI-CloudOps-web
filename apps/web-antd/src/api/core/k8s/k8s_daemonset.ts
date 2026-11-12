@@ -2,8 +2,8 @@ import { requestClient } from '#/api/request';
 
 // DaemonSet状态枚举
 export enum K8sDaemonSetStatus {
-  Running = 1, // 运行中
   Error = 2, // 异常
+  Running = 1, // 运行中
   Updating = 3, // 更新中
 }
 

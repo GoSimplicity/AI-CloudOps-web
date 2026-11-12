@@ -1,4 +1,3 @@
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import {
   defineComponent,
   h,
@@ -9,17 +8,18 @@ import {
 } from 'vue';
 import { createMemoryHistory, createRouter } from 'vue-router';
 
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import LayoutContent from './content.vue';
 
 const state = vi.hoisted(() => ({
-  user: null as any,
   access: null as any,
-  tabs: null as any,
   keepAlive: true,
   mounts: [] as string[],
+  tabs: null as any,
   unmounts: [] as string[],
+  user: null as any,
 }));
 vi.mock('@vben/preferences', () => ({
   preferences: {
@@ -29,10 +29,10 @@ vi.mock('@vben/preferences', () => ({
   usePreferences: () => ({ keepAlive: state.keepAlive }),
 }));
 vi.mock('@vben/stores', () => ({
+  storeToRefs: (store: object) => toRefs(store),
+  useAccessStore: () => state.access,
   useTabbarStore: () => state.tabs,
   useUserStore: () => state.user,
-  useAccessStore: () => state.access,
-  storeToRefs: (store: object) => toRefs(store),
 }));
 vi.mock('../../iframe', () => ({
   IFrameRouterView: { template: '<span class="iframe-host">iframe</span>' },
@@ -68,8 +68,8 @@ async function render() {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
-      { path: '/a', name: 'OwnerPageA', component: page('OwnerPageA') },
-      { path: '/b', name: 'OwnerPageB', component: page('OwnerPageB') },
+      { component: page('OwnerPageA'), name: 'OwnerPageA', path: '/a' },
+      { component: page('OwnerPageB'), name: 'OwnerPageB', path: '/b' },
     ],
   });
   await router.push('/a');

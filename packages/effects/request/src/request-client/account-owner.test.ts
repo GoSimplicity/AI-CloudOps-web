@@ -6,19 +6,19 @@ import { createDeferred } from '../../../../../internal/test-utils/deferred';
 
 const state = vi.hoisted(() => ({
   access: null as any,
-  user: null as any,
   revision: 0,
+  user: null as any,
 }));
 const api = vi.hoisted(() => ({ refreshTokenApi: vi.fn() }));
 vi.mock('../../../hooks/src/index.ts', () => ({
-  useAppConfig: () => ({ apiURL: '/api', aiopsURL: '/api/v1' }),
+  useAppConfig: () => ({ aiopsURL: '/api/v1', apiURL: '/api' }),
 }));
 vi.mock('../../../../preferences/src/index.ts', () => ({
   preferences: {
     app: {
       enableRefreshToken: true,
-      loginExpiredMode: 'modal',
       locale: 'zh-CN',
+      loginExpiredMode: 'modal',
     },
   },
 }));
@@ -48,16 +48,16 @@ beforeEach(async () => {
   vi.clearAllMocks();
   state.revision = 0;
   state.user = {
-    userInfo: { userId: '1' },
     setUserInfo(info: unknown) {
       this.userInfo = info;
     },
+    userInfo: { userId: '1' },
   };
   state.access = {
     accessToken: 'credential-one',
-    refreshToken: 'refresh-one',
-    loginExpired: false,
     isAccessChecked: true,
+    loginExpired: false,
+    refreshToken: 'refresh-one',
     setAccessToken(value: string) {
       this.accessToken = value;
     },

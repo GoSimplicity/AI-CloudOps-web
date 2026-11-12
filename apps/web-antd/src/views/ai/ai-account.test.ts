@@ -1,15 +1,14 @@
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
-
 import { reactive } from 'vue';
-
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import AiAssistant from './ai.vue';
-import axios, { AxiosError } from 'axios';
 
 import { RequestClient, RequestOwnerChangedError } from '@vben/request';
 
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+import axios, { AxiosError } from 'axios';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { createAssistantAccountScope } from '#/utils/assistant-account-scope';
+
+import AiAssistant from './ai.vue';
 
 function required<T>(value: null | T | undefined): T {
   if (value === null || value === undefined) {
@@ -18,17 +17,17 @@ function required<T>(value: null | T | undefined): T {
   return value;
 }
 
-const state = vi.hoisted(() => ({ user: null as any, access: null as any }));
+const state = vi.hoisted(() => ({ access: null as any, user: null as any }));
 const api = vi.hoisted(() => ({
   assistantQuery: vi.fn(),
+  clearAssistantCache: vi.fn(),
   createAssistantSession: vi.fn(),
   getSessionInfo: vi.fn(),
-  clearAssistantCache: vi.fn(),
   refreshKnowledgeBase: vi.fn(),
 }));
 vi.mock('@vben/stores', () => ({
-  useUserStore: () => state.user,
   useAccessStore: () => state.access,
+  useUserStore: () => state.user,
 }));
 vi.mock('#/api/core/aiops/assistant', () => api);
 let wrapper: VueWrapper;
@@ -40,7 +39,7 @@ const deferred = () => {
     resolve = yes;
     reject = no;
   });
-  return { promise, resolve, reject };
+  return { promise, reject, resolve };
 };
 beforeEach(() => {
   localStorage.clear();
@@ -51,10 +50,10 @@ beforeEach(() => {
     session_id: state.user.userInfo?.userId === '2' ? 'new-sid' : 'first-sid',
   }));
   api.getSessionInfo.mockImplementation(async (session_id: string) => ({
+    conversation_history: [],
+    mode: 1,
     session_id,
     status: 'idle',
-    mode: 1,
-    conversation_history: [],
   }));
 });
 afterEach(() => {
@@ -67,27 +66,27 @@ describe('悬浮助手真实状态隔离', () => {
     localStorage.setItem(
       'aiAssistantChatState',
       JSON.stringify({
-        sessionId: 'legacy',
         chatMessages: [{ content: 'legacy private' }],
+        sessionId: 'legacy',
       }),
     );
     const cache = createAssistantAccountScope(localStorage);
     cache.setOwner('1');
     cache.write('sessions', {
-      sessions: [{ localId: 'local-one', name: 'first' }],
       currentLocalSessionId: 'local-one',
+      sessions: [{ localId: 'local-one', name: 'first' }],
     });
     cache.write('chat', {
-      sessionId: 'owner-one',
       chatMessages: [{ content: 'owner one private', type: 'user' }],
+      sessionId: 'owner-one',
     });
     api.getSessionInfo.mockResolvedValueOnce({
+      conversation_history: [
+        { a: 'owned answer', mode: 1, q: 'owner one private' },
+      ],
+      mode: 1,
       session_id: 'owner-one',
       status: 'idle',
-      mode: 1,
-      conversation_history: [
-        { q: 'owner one private', a: 'owned answer', mode: 1 },
-      ],
     });
     wrapper = mount(AiAssistant);
     await flushPromises();
@@ -153,11 +152,11 @@ describe('悬浮助手真实状态隔离', () => {
             config,
             undefined,
             {
+              config,
               data: { code: status, message: 'session denied' },
+              headers: {},
               status,
               statusText: 'Denied',
-              headers: {},
-              config,
             },
           );
         },

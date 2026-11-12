@@ -6,13 +6,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resetHttpErrorNoticeTracking } from '#/api/http-error-notice';
 
+import { useSecretPage } from './Secret';
 import * as sd from './secret-data';
 import {
   encodeUtf8ToBase64,
   processSecretYaml,
   REDACTED_PLACEHOLDER,
 } from './secret-data';
-import { useSecretPage } from './Secret';
 
 function required<T>(value: null | T | undefined): T {
   if (value === null || value === undefined) {
@@ -32,10 +32,10 @@ const api = vi.hoisted(() => ({
   create: vi.fn(),
   createByYaml: vi.fn(),
   detail: vi.fn(),
-  list: vi.fn(),
   update: vi.fn(),
   updateByYaml: vi.fn(),
   yaml: vi.fn(),
+  list: vi.fn(),
 }));
 vi.mock('#/api/core/k8s/k8s_secret', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/api/core/k8s/k8s_secret')>()),
@@ -52,16 +52,16 @@ const PH = REDACTED_PLACEHOLDER;
 const PH_B64 = encodeUtf8ToBase64(PH);
 const PH_B64_ESCAPED = `\\x50${PH_B64.slice(1)}`;
 const RECORD = {
+  annotations: {},
   cluster_id: 1,
-  namespace: 'ns-a',
-  name: 'secret-a',
-  type: 'Opaque',
   data: { alpha: '' },
   data_keys: [{ key: 'alpha', size: 11 }],
-  string_data: {},
   labels: {},
-  annotations: {},
+  name: 'secret-a',
+  namespace: 'ns-a',
   redacted: true,
+  string_data: {},
+  type: 'Opaque',
 } as any;
 const HEAD = 'apiVersion: v1\nkind: Secret\nmetadata:\n  name: secret-a\n';
 const OK_YAML = `${HEAD}data:\n  alpha: ${encodeUtf8ToBase64('fake-alpha')}\n`;
@@ -80,7 +80,7 @@ beforeEach(() => {
   vi.spyOn(message, 'success').mockImplementation((() => {}) as any);
   vi.spyOn(message, 'warning').mockImplementation((() => {}) as any);
   api.detail.mockResolvedValue({ ...RECORD });
-  api.list.mockResolvedValue({ items: [], total: 0 });
+  api.list.mockResolvedValue({ total: 0, items: [] });
   api.updateByYaml.mockResolvedValue({});
   api.createByYaml.mockResolvedValue({});
   api.yaml.mockResolvedValue({ data: OK_YAML });
@@ -124,12 +124,12 @@ const BLOCKED: Array<[string, string, () => string]> = [
     () => msg.YAML_MERGE_KEY_MESSAGE,
   ],
   [
-    'P3-B f08 stringData !!binary 折行（占位符 + \\n）',
+    String.raw`P3-B f08 stringData !!binary 折行（占位符 + \n）`,
     `${HEAD}stringData:\n  k: !!binary |\n${fold7(encodeUtf8ToBase64(`${PH}\n`), '    ')}\n`,
     () => msg.yamlStringDataBinaryRedactedMessage('k'),
   ],
   [
-    'P3-C w10 stringData "\\N<redacted>"',
+    String.raw`P3-C w10 stringData "\N<redacted>"`,
     `${HEAD}stringData:\n  k: "\\N${PH}"\n`,
     () => msg.yamlStringDataRedactedMessage('k'),
   ],

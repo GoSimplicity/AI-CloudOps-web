@@ -1,181 +1,181 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useStatefulSetPage } from '../statefulset/StatefulSet';
+import { createDeferred } from '../../../../../../internal/test-utils/deferred';
+import { useClusterRoleBindingPage } from '../clusterrolebinding/ClusterRoleBinding';
 import { useDaemonSetPage } from '../daemonset/DaemonSet';
 import { useIngressPage } from '../ingress/Ingress';
-import { useSecretPage } from '../secret/Secret';
+import { useNodePage } from '../node/Node';
+import { usePVPage } from '../pv/PV';
 import { usePVCPage } from '../pvc/PVC';
 import { useRolePage } from '../role/Role';
 import { useRoleBindingPage } from '../rolebinding/RoleBinding';
-import { useNodePage } from '../node/Node';
-import { usePVPage } from '../pv/PV';
-import { createDeferred } from '../../../../../../internal/test-utils/deferred';
-import { useClusterRoleBindingPage } from '../clusterrolebinding/ClusterRoleBinding';
+import { useSecretPage } from '../secret/Secret';
+import { useStatefulSetPage } from '../statefulset/StatefulSet';
 import { useTaskPage } from '../task/Task';
 import { useTemplatePage } from '../template/Template';
 
 const client = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 vi.mock('ant-design-vue', () => ({
-  message: { error: vi.fn(), warning: vi.fn(), info: vi.fn() },
+  message: { error: vi.fn(), info: vi.fn(), warning: vi.fn() },
   Modal: { confirm: vi.fn() },
 }));
 const cases = [
   {
-    name: 'YAML任务',
     create: () => {
       const state = useTaskPage();
       return {
-        state,
-        namespace: undefined,
-        items: state.tasks,
-        fetch: state.fetchTasks,
         clear: state.clearTasks,
+        fetch: state.fetchTasks,
+        namespace: undefined,
+        state,
+        items: state.tasks,
       };
     },
+    name: 'YAML任务',
   },
   {
-    name: 'YAML模板',
     create: () => {
       const state = useTemplatePage();
       return {
-        state,
-        namespace: undefined,
-        items: state.templates,
-        fetch: state.fetchTemplates,
         clear: state.clearTemplates,
+        fetch: state.fetchTemplates,
+        namespace: undefined,
+        state,
+        items: state.templates,
       };
     },
+    name: 'YAML模板',
   },
   {
-    name: 'StatefulSet',
     create: () => {
       const state = useStatefulSetPage();
       return {
-        state,
-        namespace: state.filterNamespace,
-        items: state.statefulSets,
-        fetch: state.fetchStatefulSets,
         clear: state.clearStatefulSets,
+        fetch: state.fetchStatefulSets,
+        namespace: state.filterNamespace,
+        state,
+        items: state.statefulSets,
       };
     },
+    name: 'StatefulSet',
   },
   {
-    name: 'DaemonSet',
     create: () => {
       const state = useDaemonSetPage();
       return {
-        state,
-        namespace: state.filterNamespace,
-        items: state.daemonSets,
-        fetch: state.fetchDaemonSets,
         clear: state.clearDaemonSets,
+        fetch: state.fetchDaemonSets,
+        namespace: state.filterNamespace,
+        state,
+        items: state.daemonSets,
       };
     },
+    name: 'DaemonSet',
   },
   {
-    name: 'Ingress',
     create: () => {
       const state = useIngressPage();
       return {
-        state,
-        namespace: state.filterNamespace,
-        items: state.ingresses,
-        fetch: state.fetchIngresses,
         clear: state.clearIngresses,
+        fetch: state.fetchIngresses,
+        namespace: state.filterNamespace,
+        state,
+        items: state.ingresses,
       };
     },
+    name: 'Ingress',
   },
   {
-    name: 'Secret',
     create: () => {
       const state = useSecretPage();
       return {
-        state,
-        namespace: state.filterNamespace,
-        items: state.secrets,
-        fetch: state.fetchSecrets,
         clear: state.clearSecrets,
+        fetch: state.fetchSecrets,
+        namespace: state.filterNamespace,
+        state,
+        items: state.secrets,
       };
     },
+    name: 'Secret',
   },
   {
-    name: 'PVC',
     create: () => {
       const state = usePVCPage();
       return {
-        state,
-        namespace: state.filterNamespace,
-        items: state.pvcs,
-        fetch: state.fetchPVCs,
         clear: state.clearPVCs,
+        fetch: state.fetchPVCs,
+        namespace: state.filterNamespace,
+        state,
+        items: state.pvcs,
       };
     },
+    name: 'PVC',
   },
   {
-    name: 'Role',
     create: () => {
       const state = useRolePage();
       return {
-        state,
-        namespace: state.filterNamespace,
-        items: state.roles,
-        fetch: state.fetchRoles,
         clear: state.clearRoles,
+        fetch: state.fetchRoles,
+        namespace: state.filterNamespace,
+        state,
+        items: state.roles,
       };
     },
+    name: 'Role',
   },
   {
-    name: 'RoleBinding',
     create: () => {
       const state = useRoleBindingPage();
       return {
-        state,
-        namespace: state.filterNamespace,
-        items: state.roleBindings,
-        fetch: state.fetchRoleBindings,
         clear: state.clearRoleBindings,
+        fetch: state.fetchRoleBindings,
+        namespace: state.filterNamespace,
+        state,
+        items: state.roleBindings,
       };
     },
+    name: 'RoleBinding',
   },
   {
-    name: 'Node',
     create: () => {
       const state = useNodePage();
       return {
-        state,
-        namespace: undefined,
-        items: state.nodes,
-        fetch: state.fetchNodes,
         clear: state.clearNodes,
+        fetch: state.fetchNodes,
+        namespace: undefined,
+        state,
+        items: state.nodes,
       };
     },
+    name: 'Node',
   },
   {
-    name: 'PV',
     create: () => {
       const state = usePVPage();
       return {
-        state,
-        namespace: undefined,
-        items: state.pvs,
-        fetch: state.fetchPVs,
         clear: state.clearPVs,
+        fetch: state.fetchPVs,
+        namespace: undefined,
+        state,
+        items: state.pvs,
       };
     },
+    name: 'PV',
   },
   {
-    name: 'ClusterRoleBinding',
     create: () => {
       const state = useClusterRoleBindingPage();
       return {
-        state,
-        namespace: undefined,
-        items: state.clusterRoleBindings,
-        fetch: state.fetchClusterRoleBindings,
         clear: state.clearClusterRoleBindings,
+        fetch: state.fetchClusterRoleBindings,
+        namespace: undefined,
+        state,
+        items: state.clusterRoleBindings,
       };
     },
+    name: 'ClusterRoleBinding',
   },
 ];
 beforeEach(() => vi.clearAllMocks());
@@ -196,15 +196,15 @@ for (const testCase of cases) {
         page.state.filterClusterId.value = 2;
         if (page.namespace) page.namespace.value = 'beta';
         client.get.mockResolvedValueOnce({
-          items: [{ name: 'current', namespace: 'beta', cluster_id: 2 }],
           total: 1,
+          items: [{ cluster_id: 2, name: 'current', namespace: 'beta' }],
         });
         await page.fetch();
         if (outcome === 'failure') old.reject(new Error('stale failure'));
         else
           old.resolve({
-            items: [{ name: 'old', namespace: 'alpha', cluster_id: 1 }],
             total: 1,
+            items: [{ cluster_id: 1, name: 'old', namespace: 'alpha' }],
           });
         await pending;
         expect(page.items.value.map((item) => item.name)).toEqual(['current']);
@@ -215,8 +215,8 @@ for (const testCase of cases) {
       const page = testCase.create();
       page.state.filterClusterId.value = 1;
       client.get.mockResolvedValueOnce({
-        items: [{ name: 'old', namespace: 'alpha', cluster_id: 1 }],
         total: 1,
+        items: [{ cluster_id: 1, name: 'old', namespace: 'alpha' }],
       });
       await page.fetch();
       page.state.rowSelection.value.onChange(['old'], []);
@@ -228,8 +228,8 @@ for (const testCase of cases) {
       expect(page.state.loadError.value).toContain('重试');
       expect(page.state.loading.value).toBe(false);
       client.get.mockResolvedValueOnce({
-        items: [{ name: 'recovered', namespace: 'alpha', cluster_id: 1 }],
         total: 1,
+        items: [{ cluster_id: 1, name: 'recovered', namespace: 'alpha' }],
       });
       await page.fetch();
       expect(page.items.value.map((item) => item.name)).toEqual(['recovered']);
@@ -247,8 +247,8 @@ for (const testCase of cases) {
       page.state.filterClusterId.value = undefined;
       page.clear();
       old.resolve({
-        items: [{ name: 'old', namespace: 'alpha', cluster_id: 1 }],
         total: 1,
+        items: [{ cluster_id: 1, name: 'old', namespace: 'alpha' }],
       });
       await pending;
       expect(page.items.value).toEqual([]);
@@ -271,11 +271,11 @@ describe('yAML 模板目录隔离', () => {
     state.filterClusterId.value = 2;
     state.clearTemplates();
     client.get.mockResolvedValueOnce({
-      items: [{ id: 2, name: 'current' }],
       total: 1,
+      items: [{ id: 2, name: 'current' }],
     });
     await state.fetchTemplates(true);
-    old.resolve({ items: [{ id: 1, name: 'old' }], total: 1 });
+    old.resolve({ total: 1, items: [{ id: 1, name: 'old' }] });
     await pending;
     expect(state.templates.value.map((item) => item.name)).toEqual(['current']);
     expect(state.templatesLoading.value).toBe(false);
@@ -286,7 +286,7 @@ it('yAML 任务名称搜索按真实 name 参数发送', async () => {
   const state = useTaskPage();
   state.filterClusterId.value = 1;
   state.searchText.value = 'task-name';
-  client.get.mockResolvedValue({ items: [], total: 0 });
+  client.get.mockResolvedValue({ total: 0, items: [] });
   await state.fetchTasks();
   expect(client.get).toHaveBeenLastCalledWith('/k8s/yaml_task/1/list', {
     params: expect.objectContaining({ name: 'task-name' }),

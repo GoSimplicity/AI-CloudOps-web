@@ -28,15 +28,15 @@ vi.mock('#/utils/permission', async (importOriginal) => ({
 }));
 
 const api = vi.hoisted(() => ({
-  listRolesApi: vi.fn(),
-  createRoleApi: vi.fn(),
-  updateRoleApi: vi.fn(),
-  deleteRoleApi: vi.fn(),
-  getRoleDetailApi: vi.fn(),
   assignApisToRoleApi: vi.fn(),
-  revokeApisFromRoleApi: vi.fn(),
+  createRoleApi: vi.fn(),
+  deleteRoleApi: vi.fn(),
   getRoleApisApi: vi.fn(),
+  getRoleDetailApi: vi.fn(),
   listApisApi: vi.fn(),
+  listRolesApi: vi.fn(),
+  revokeApisFromRoleApi: vi.fn(),
+  updateRoleApi: vi.fn(),
 }));
 vi.mock('#/api/core/system/system', () => api);
 vi.mock('#/api/core/system/api', () => api);
@@ -45,14 +45,14 @@ let wrapper: VueWrapper;
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(message, 'error');
-  api.listRolesApi.mockResolvedValue({ items: [], total: 0 });
-  api.listApisApi.mockResolvedValue({ items: [], total: 0 });
+  api.listRolesApi.mockResolvedValue({ total: 0, items: [] });
+  api.listApisApi.mockResolvedValue({ total: 0, items: [] });
   api.createRoleApi.mockResolvedValue({ id: 1 });
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -87,12 +87,12 @@ describe('角色列表真实控件交互', () => {
     await button('搜索').trigger('click');
     await flushPromises();
     expect(api.listRolesApi).toHaveBeenLastCalledWith(
-      expect.objectContaining({ search: '值班', page: 1 }),
+      expect.objectContaining({ page: 1, search: '值班' }),
     );
     await button('重置').trigger('click');
     await flushPromises();
     expect(api.listRolesApi).toHaveBeenLastCalledWith(
-      expect.objectContaining({ search: '', page: 1 }),
+      expect.objectContaining({ page: 1, search: '' }),
     );
   });
 
@@ -139,7 +139,7 @@ describe('角色列表真实控件交互', () => {
     submit.click();
     await vi.waitFor(() =>
       expect(api.createRoleApi).toHaveBeenCalledWith(
-        expect.objectContaining({ name: '值班员', code: 'oncall', status: 1 }),
+        expect.objectContaining({ code: 'oncall', name: '值班员', status: 1 }),
       ),
     );
     await flushPromises();
@@ -149,18 +149,18 @@ describe('角色列表真实控件交互', () => {
   it('查询失败时清空旧结果且提供错误反馈', async () => {
     await flushPromises();
     api.listRolesApi.mockResolvedValueOnce({
+      total: 1,
       items: [
         {
-          id: 12,
-          name: '值班员',
-          code: 'oncall',
-          status: 1,
-          is_system: 0,
           apis: [],
+          code: 'oncall',
+          id: 12,
+          is_system: 0,
+          name: '值班员',
+          status: 1,
           users: [],
         },
       ],
-      total: 1,
     });
     await button('刷新').trigger('click');
     await flushPromises();

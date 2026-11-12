@@ -26,9 +26,9 @@ export function parseManagedMarker(
     )
       return null;
     return {
-      version: 2,
       operation_id: value.operation_id,
       resource_ids: [...value.resource_ids],
+      version: 2,
     };
   } catch {
     return null;

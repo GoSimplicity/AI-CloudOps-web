@@ -7,9 +7,9 @@ export interface RequestOwnerContext {
   generation: number;
   authenticated: boolean;
 }
-type OwnedRequest = AxiosRequestConfig & {
+type OwnedRequest = {
   __requestOwner?: RequestOwnerContext;
-};
+} & AxiosRequestConfig;
 
 export class RequestOwnerChangedError extends CanceledError<unknown> {
   constructor() {
@@ -54,15 +54,14 @@ export function createRequestOwnerScope(current: () => RequestOwnerContext) {
     },
   };
   return {
-    capture,
     assert,
     assertRequest,
     bindRequest,
-    response,
     canRefresh(config: AxiosRequestConfig) {
       assertRequest(config);
       return !!(config as OwnedRequest).__requestOwner?.authenticated;
     },
+    capture,
     refreshKey(config: AxiosRequestConfig) {
       const expected = assertRequest(config);
       return JSON.stringify([
@@ -71,6 +70,7 @@ export function createRequestOwnerScope(current: () => RequestOwnerContext) {
         expected.authenticated,
       ]);
     },
+    response,
   };
 }
 export type RequestOwnerScope = ReturnType<typeof createRequestOwnerScope>;

@@ -1,14 +1,6 @@
 <script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
-
-import {
-  formatDateTime,
-  getRelativeTime,
-  namespacedResourceKey,
-} from '../shared/utils';
 import { onMounted, ref } from 'vue';
 
-import { useRoleBindingPage } from './RoleBinding';
 import {
   AppstoreOutlined,
   CheckCircleOutlined,
@@ -27,132 +19,140 @@ import {
   TeamOutlined,
 } from '@ant-design/icons-vue';
 
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { usePermission } from '#/utils/permission';
+
+import {
+  formatDateTime,
+  getRelativeTime,
+  namespacedResourceKey,
+} from '../shared/utils';
+import { useRoleBindingPage } from './RoleBinding';
 
 const { can } = usePermission();
 
 const {
+  // form field operations
+  addEditSubjectField,
+  // filter operations
+  addFilterLabel,
+  addSubjectField,
+  // batch operations
+  batchOperation,
+  clearFilterLabels,
+  // operations
+  clearNamespaces,
+  clearRoleBindings,
+  // YAML utility functions
+  clearYaml,
+  // create operations
+  closeCreateModal,
+  closeCreateYamlModal,
+  // detail operations
+  closeDetailModal,
+  // edit operations
+  closeEditModal,
+  // YAML operations
+  closeYamlModal,
   // state
   clusters,
   clustersError,
   clustersLoading,
   clustersTotal,
-  currentPage,
-  filterClusterId,
-  filterLabels,
-  filterNamespace,
-  loadError,
-  loading,
-  namespaces,
-  namespacesError,
-  namespacesLoading,
-  namespacesTotal,
-  pageSize,
-  searchText,
-  selectedRows,
-  total,
+  // form models
+  createFormModel,
 
+  // form rules
+  createFormRules,
+  createYamlFormModel,
+  // form refs
+  createYamlFormRef,
+  createYamlFormRules,
+  // operation targets
+  currentOperationRoleBinding,
+  currentPage,
+  currentRoleBindingDetail,
+
+  // roleBinding operations
+  deleteRoleBinding,
   // modal state
   detailLoading,
+
+  editFormModel,
+  editFormRef,
+  editFormRules,
+  fetchClusters,
+
+  fetchNamespaces,
+  fetchRoleBindings,
+  filterClusterId,
+  // computed
+  filteredRoleBindings,
+
+  filterLabels,
+  filterNamespace,
+  formatEditYaml,
+  formatYaml,
+
+  formRef,
+  // helpers
+  getClusterName,
+
+  getEnvText,
+  // pagination operations
+  handlePageChange,
+
+  insertYamlTemplate,
   isCreateModalVisible,
   isCreateYamlModalVisible,
   isDetailModalVisible,
   isEditModalVisible,
   isYamlModalVisible,
-  submitLoading,
+  loadError,
 
-  // operation targets
-  currentOperationRoleBinding,
-  currentRoleBindingDetail,
-
-  // form models
-  createFormModel,
-  createYamlFormModel,
-  editFormModel,
-  yamlFormModel,
-
-  // form refs
-  createYamlFormRef,
-  editFormRef,
-  formRef,
-  yamlFormRef,
-
-  // form rules
-  createFormRules,
-  createYamlFormRules,
-  editFormRules,
-  yamlFormRules,
-
-  // computed
-  filteredRoleBindings,
-  rowSelection,
-
-  // helpers
-  getClusterName,
-  getEnvText,
-
-  // operations
-  clearNamespaces,
-  clearRoleBindings,
-  fetchClusters,
-  fetchNamespaces,
-  fetchRoleBindings,
+  loading,
   loadMoreClusters,
+
   loadMoreNamespaces,
+  namespaces,
+  namespacesError,
 
-  // detail operations
-  closeDetailModal,
-  showRoleBindingDetail,
-
-  // YAML operations
-  closeYamlModal,
-  showYamlModal,
-  submitYamlForm,
-
-  // create operations
-  closeCreateModal,
-  closeCreateYamlModal,
+  namespacesLoading,
+  namespacesTotal,
   openCreateModal,
   openCreateYamlModal,
-  submitCreateForm,
-  submitCreateYamlForm,
-
-  // edit operations
-  closeEditModal,
   openEditModal,
-  submitEditForm,
+  pageSize,
 
-  // roleBinding operations
-  deleteRoleBinding,
-
-  // filter operations
-  addFilterLabel,
-  clearFilterLabels,
-  removeFilterLabel,
-
-  // batch operations
-  batchOperation,
-
-  // pagination operations
-  handlePageChange,
-
-  // form field operations
-  addEditSubjectField,
-  addSubjectField,
   removeAnnotationField,
   removeEditAnnotationField,
   removeEditLabelField,
+
   removeEditSubjectField,
+
+  removeFilterLabel,
   removeLabelField,
   removeSubjectField,
 
-  // YAML utility functions
-  clearYaml,
-  formatEditYaml,
-  formatYaml,
-  insertYamlTemplate,
+  rowSelection,
+
+  searchText,
+
+  selectedRows,
+  showRoleBindingDetail,
+  showYamlModal,
+  submitCreateForm,
+  submitCreateYamlForm,
+  submitEditForm,
+  submitLoading,
+  submitYamlForm,
+
+  total,
   validateEditYaml,
   validateYaml,
+  yamlFormModel,
+  yamlFormRef,
+  yamlFormRules,
 } = useRoleBindingPage();
 
 // 添加新标签/注解的方法
@@ -496,7 +496,7 @@ onMounted(async () => {
               class="k8s-search-input"
               placeholder="搜索 RoleBinding 名称"
               @input="onSearch"
-              @pressEnter="onSearch"
+              @press-enter="onSearch"
             >
               <template #suffix>
                 <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -509,7 +509,6 @@ onMounted(async () => {
         <div class="k8s-toolbar-actions">
           <div class="k8s-action-buttons">
             <a-button
-              @click="resetFilters"
               :disabled="
                 !searchText &&
                 !filterClusterId &&
@@ -518,6 +517,7 @@ onMounted(async () => {
               "
               class="k8s-toolbar-btn"
               title="重置所有筛选条件"
+              @click="resetFilters"
             >
               <template #icon><DeleteOutlined aria-hidden="true" /></template>
               重置筛选
@@ -534,15 +534,15 @@ onMounted(async () => {
             </a-button>
 
             <a-button
-              type="primary"
-              danger
-              @click="() => batchOperation('删除')"
-              :disabled="selectedRows.length === 0"
               v-if="
                 can('k8s.rolebinding.batchDelete') && selectedRows.length > 0
               "
+              :disabled="selectedRows.length === 0"
               class="k8s-toolbar-btn"
+              danger
               title="批量删除选中的 RoleBinding"
+              type="primary"
+              @click="() => batchOperation('删除')"
             >
               <template #icon><DeleteOutlined aria-hidden="true" /></template>
               删除 ({{ selectedRows.length }})
@@ -1015,9 +1015,9 @@ onMounted(async () => {
                 @press-enter="addNewLabel"
               />
               <a-button
+                :disabled="!newLabelKey.trim()"
                 type="primary"
                 @click="addNewLabel"
-                :disabled="!newLabelKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1072,9 +1072,9 @@ onMounted(async () => {
                 @press-enter="addNewAnnotation"
               />
               <a-button
+                :disabled="!newAnnotationKey.trim()"
                 type="primary"
                 @click="addNewAnnotation"
-                :disabled="!newAnnotationKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1262,9 +1262,9 @@ onMounted(async () => {
                 @press-enter="addEditLabel"
               />
               <a-button
+                :disabled="!editLabelKey.trim()"
                 type="primary"
                 @click="addEditLabel"
-                :disabled="!editLabelKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1319,9 +1319,9 @@ onMounted(async () => {
                 @press-enter="addEditAnnotation"
               />
               <a-button
+                :disabled="!editAnnotationKey.trim()"
                 type="primary"
                 @click="addEditAnnotation"
-                :disabled="!editAnnotationKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1676,8 +1676,8 @@ onMounted(async () => {
     >
       <div class="labels-filter-form">
         <div
-          class="current-filters"
           v-if="Object.keys(filterLabels).length > 0"
+          class="current-filters"
         >
           <h4>当前过滤条件：</h4>
           <div class="filter-tags">
@@ -1716,10 +1716,10 @@ onMounted(async () => {
               style="flex: 1"
             />
             <a-button
-              type="primary"
-              @click="addNewFilterLabel"
               :disabled="!newFilterKey.trim()"
               size="small"
+              type="primary"
+              @click="addNewFilterLabel"
             >
               <template #icon><PlusOutlined aria-hidden="true" /></template>
             </a-button>

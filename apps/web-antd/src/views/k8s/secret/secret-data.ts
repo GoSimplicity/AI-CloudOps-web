@@ -413,7 +413,7 @@ const UNSAFE_DISPLAY_CHAR_PATTERN =
 
 /** 展示用双引号转义：先 `\` 再 `"`；编码器只还原这两种（`\\` → `\`，`\"` → `"`），两边对称 */
 const escapeDisplayQuoted = (value: string) =>
-  value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  value.replace(/\\/g, '\\\\').replace(/"/g, String.raw`\"`);
 
 // 处理 Secret YAML 中的 base64 编码数据（展示用：data 下的值解成明文）
 export const processSecretYaml = (yamlContent: string): string => {
@@ -491,8 +491,8 @@ function decodeLiteralBlock(content: string) {
     if (line.trim() !== '' && leadingWidth(line) < width) return undefined;
   }
   return {
-    trailingBlankLines: lines.length - last,
     endsWithNewline,
+    trailingBlankLines: lines.length - last,
     value: body.map((line) => line.slice(width)).join('\n'),
   };
 }

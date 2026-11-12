@@ -24,8 +24,8 @@ vi.mock('#/utils/permission', async (importOriginal) => ({
 
 const client = vi.hoisted(() => ({
   get: vi.fn(),
-  put: vi.fn(),
   post: vi.fn(),
+  put: vi.fn(),
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 vi.mock('@vben/stores', async (importOriginal) => ({
@@ -40,29 +40,29 @@ let record: Record<string, unknown>;
 beforeEach(() => {
   vi.clearAllMocks();
   record = {
+    bearer_token_file: '',
+    enable: 1,
+    has_bearer_token: true,
     id: 7,
+    metrics_path: '/metrics',
     name: '凭据任务',
     pool_id: 3,
-    enable: 1,
-    service_discovery_type: 2,
-    metrics_path: '/metrics',
+    port: 9100,
+    refresh_interval: 30,
+    relabel_configs_yaml_string: '[]',
     scheme: 'https',
     scrape_interval: 15,
     scrape_timeout: 5,
-    refresh_interval: 30,
-    port: 9100,
-    has_bearer_token: true,
-    bearer_token_file: '',
-    tls_ca_content: 'public CA',
-    relabel_configs_yaml_string: '[]',
+    service_discovery_type: 2,
     tags: ['test'],
+    tls_ca_content: 'public CA',
     tree_node_ids: ['8'],
   };
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -72,11 +72,11 @@ beforeEach(() => {
   );
   client.get.mockImplementation((path: string) => {
     if (path === '/monitor/scrape_jobs/list')
-      return Promise.resolve({ items: [record], total: 1 });
+      return Promise.resolve({ total: 1, items: [record] });
     if (path.includes('/scrape_jobs/detail/')) return Promise.resolve(record);
     if (path === '/monitor/scrape_pools/list')
-      return Promise.resolve({ items: [{ id: 3, name: '测试池' }], total: 1 });
-    return Promise.resolve({ items: [], total: 0 });
+      return Promise.resolve({ total: 1, items: [{ id: 3, name: '测试池' }] });
+    return Promise.resolve({ total: 0, items: [] });
   });
   client.put.mockResolvedValue({});
 });
@@ -248,10 +248,10 @@ describe('采集任务凭据更新合同', () => {
     expect(payload()).toEqual(
       expect.objectContaining({
         bearer_token_file: '/run/token',
-        tls_ca_content: 'public CA',
         relabel_configs_yaml_string: '[]',
-        tree_node_ids: ['8'],
         tags: ['test'],
+        tls_ca_content: 'public CA',
+        tree_node_ids: ['8'],
       }),
     );
     expect(payload()).not.toHaveProperty('bearer_token');

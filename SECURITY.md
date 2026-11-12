@@ -11,6 +11,7 @@
 - Vite 5、Nitro、Rollup、glob与构建解析器等属于开发/构建链；生产镜像只复制静态 dist，不复制 Node 或 node_modules。开发服务仅绑定回环地址，禁止直接对公网提供 Vite。
 - ECharts GHSA-fgmj-fm8m-jvvx 针对 `series.type = 'lines'` 的默认HTML tooltip，本项目使用 `line`、`bar`、`pie`，未启用受影响的 `lines` 图。该结论是当前使用路径检查，不是依赖已修复；未来增加地图连线图前应升级到 ECharts 6.1+ 并做图表兼容回归。
 - 构建工具链整体大版本升级需要独立兼容验证，不能为了让审计数字归零强制覆盖不兼容依赖。
+- 根 `package.json` 的 `pnpm.overrides` 把 `tinypool` 钉在 `2.1.2`，用来覆盖 GHSA-5gmw-xhrv-c9v3（修复版本 >=2.1.1）和 GHSA-85c8-ppgw-ccpr（修复版本 >=2.1.2）。Vitest 3.2.7 声明的范围是 `tinypool ^1.1.1`，3.x 没有把依赖升到 2.x 的补丁。这条 override 写的是 `tinypool`，没有限定 `@1`，以后升级 Vitest 时仍会强制停在 2.1.2，升级时要一起复查。
 
 依据：[ECharts 官方安全公告](https://lists.apache.org/thread/1g6xk7gd9vg1c6zyqqt2lnko10zomc3o)、[DOMPurify 官方文档](https://github.com/cure53/DOMPurify)、[Axios 变更记录](https://github.com/axios/axios/blob/v1.x/CHANGELOG.md)。
 

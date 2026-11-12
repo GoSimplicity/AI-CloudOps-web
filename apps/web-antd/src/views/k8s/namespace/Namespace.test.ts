@@ -41,7 +41,7 @@ describe('命名空间查询作用域', () => {
     page.selectedRowKeys.value = ['old'];
     page.filterClusterId.value = undefined;
     page.clearNamespaces();
-    response.resolve({ items: [{ name: 'stale', cluster_id: 1 }], total: 1 });
+    response.resolve({ total: 1, items: [{ cluster_id: 1, name: 'stale' }] });
     await pending;
     expect(page.namespaces.value).toEqual([]);
     expect(page.total.value).toBe(0);
@@ -60,11 +60,11 @@ describe('命名空间查询作用域', () => {
     const pending = page.fetchNamespaces();
     page.filterClusterId.value = 2;
     client.get.mockResolvedValueOnce({
-      items: [{ name: 'current', cluster_id: 2 }],
       total: 1,
+      items: [{ cluster_id: 2, name: 'current' }],
     });
     await page.fetchNamespaces();
-    old.resolve({ items: [{ name: 'old', cluster_id: 1 }], total: 1 });
+    old.resolve({ total: 1, items: [{ cluster_id: 1, name: 'old' }] });
     await pending;
     expect(page.namespaces.value.map((namespace) => namespace.name)).toEqual([
       'current',
@@ -74,7 +74,7 @@ describe('命名空间查询作用域', () => {
   it('查询失败清除旧记录并允许成功重试', async () => {
     const page = useNamespacePage();
     page.filterClusterId.value = 1;
-    page.namespaces.value = [{ name: 'old', cluster_id: 1 }];
+    page.namespaces.value = [{ cluster_id: 1, name: 'old' }];
     page.total.value = 1;
     client.get.mockRejectedValueOnce(new Error('unavailable'));
     await page.fetchNamespaces();
@@ -83,8 +83,8 @@ describe('命名空间查询作用域', () => {
     expect(page.total.value).toBe(0);
     expect(page.loading.value).toBe(false);
     client.get.mockResolvedValueOnce({
-      items: [{ name: 'current', cluster_id: 1 }],
       total: 1,
+      items: [{ cluster_id: 1, name: 'current' }],
     });
     await page.fetchNamespaces();
     expect(page.loadError.value).toBe('');

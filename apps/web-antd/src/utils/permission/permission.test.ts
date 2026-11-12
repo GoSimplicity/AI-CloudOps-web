@@ -1,6 +1,6 @@
-import { createPinia, setActivePinia } from 'pinia';
 import { useAccessStore, useUserStore } from '@vben/stores';
 
+import { createPinia, setActivePinia } from 'pinia';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -16,17 +16,17 @@ import {
 } from '#/constants/permission-codes';
 
 import {
+  createPermissionDeniedError,
+  isForbiddenResponse,
+  isPermissionDeniedError,
+} from './forbidden';
+import {
   checkPermission,
   getPermissionCode,
   isPermissionEnforced,
   isSuperAdmin,
   usePermission,
 } from './index';
-import {
-  createPermissionDeniedError,
-  isForbiddenResponse,
-  isPermissionDeniedError,
-} from './forbidden';
 
 /** U3 开关：默认取常量文件的真实值，个别用例临时打开以验证「获批后」状态 */
 const u3 = vi.hoisted(() => ({ override: undefined as boolean | undefined }));
@@ -102,17 +102,17 @@ describe('权限码常量（permission-codes.md v4 第 6 / 6.1 节）', () => {
 
   it('待定按钮用清单里的临时码（验收标准「W2 先用清单里的临时码」）', () => {
     expect(PERMISSION_CODES).toMatchObject({
-      'system.audit.delete': '/api/audit/:id',
-      'system.audit.batchDelete': '/api/audit/batch-delete',
       'k8s.namespace.forceDelete':
         '/api/k8s/clusters/:cluster_id/namespace/:name/delete',
+      'k8s.secret.copyPlain':
+        '/api/k8s/secret/:cluster_id/:namespace/:name/reveal',
       // SEC-25/26：明文两个按钮已改为 reveal 正式码
       'k8s.secret.viewPlain':
         '/api/k8s/secret/:cluster_id/:namespace/:name/reveal',
-      'k8s.secret.copyPlain':
-        '/api/k8s/secret/:cluster_id/:namespace/:name/reveal',
       'k8s.secret.viewYaml':
         '/api/k8s/secret/:cluster_id/:namespace/:name/detail/yaml',
+      'system.audit.batchDelete': '/api/audit/batch-delete',
+      'system.audit.delete': '/api/audit/:id',
     });
     expect(FE02_SUPPLEMENT_PERMISSION_CODES).toMatchObject({
       'k8s.cluster.kubeconfigCopy': '/api/k8s/cluster/:cluster_id/detail',
@@ -143,8 +143,8 @@ describe('权限码常量（permission-codes.md v4 第 6 / 6.1 节）', () => {
     expect(getAccountPermissionCodes(true)).toHaveLength(75);
     // 获批前 = S1 ∪ S2（59 个码）再加 S1b 的 2 个码
     const s1s2 = new Set<string>([
-      ...Object.values(PERMISSION_CODES),
       ...Object.values(FE02_SUPPLEMENT_PERMISSION_CODES),
+      ...Object.values(PERMISSION_CODES),
     ]);
     expect(s1s2.size).toBe(59);
     expect(
@@ -154,7 +154,7 @@ describe('权限码常量（permission-codes.md v4 第 6 / 6.1 节）', () => {
       '/api/k8s/node/:cluster_id/:node_name/uncordon',
     ]);
     expect(new Set(getAccountPermissionCodes(false))).toEqual(
-      new Set([...s1s2, ...Object.values(S1B_PERMISSION_CODES)]),
+      new Set([...Object.values(S1B_PERMISSION_CODES), ...s1s2]),
     );
     // 按码判断的按钮数：获批前 S1 77 + S1b 3 + S2 4 = 84，获批后再加 S3 19 = 103
     const allKeys = Object.keys(ALL_PERMISSION_CODES) as PermissionKey[];
@@ -184,8 +184,8 @@ describe('权限码常量（permission-codes.md v4 第 6 / 6.1 节）', () => {
     ]);
     expect(new Set(accountC)).toEqual(
       new Set([
-        ...Object.values(PERMISSION_CODES),
         ...Object.values(FE02_SUPPLEMENT_PERMISSION_CODES),
+        ...Object.values(PERMISSION_CODES),
       ]),
     );
   });
@@ -266,14 +266,14 @@ describe('p3-2 / P3-4 / P3-1 边界', () => {
 
   it('业务码 403 只在 HTTP 2xx / 403 时认作无权限', () => {
     const body = { code: 403 };
-    expect(isForbiddenResponse({ response: { status: 200, data: body } })).toBe(
+    expect(isForbiddenResponse({ response: { data: body, status: 200 } })).toBe(
       true,
     );
-    expect(isForbiddenResponse({ response: { status: 403, data: 'x' } })).toBe(
+    expect(isForbiddenResponse({ response: { data: 'x', status: 403 } })).toBe(
       true,
     );
     for (const status of [400, 404, 500, 502, undefined]) {
-      expect(isForbiddenResponse({ response: { status, data: body } })).toBe(
+      expect(isForbiddenResponse({ response: { data: body, status } })).toBe(
         false,
       );
     }
@@ -282,7 +282,7 @@ describe('p3-2 / P3-4 / P3-1 边界', () => {
 
   it('hTTP 403 的错误即使标记丢失也视为已统一提示', () => {
     const wrapped = Object.defineProperty(new Error('Forbidden'), 'response', {
-      value: { status: 403, data: 'Forbidden' },
+      value: { data: 'Forbidden', status: 403 },
     });
     expect(isPermissionDeniedError(wrapped)).toBe(true);
     expect(isPermissionDeniedError({ response: { status: 500 } })).toBe(false);

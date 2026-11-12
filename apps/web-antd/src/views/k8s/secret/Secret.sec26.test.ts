@@ -12,13 +12,13 @@ import {
   notifyBusinessError,
 } from '#/utils/permission/business-error';
 
+import { useSecretPage } from './Secret';
 import {
   EMPTY_VALUE_MESSAGE,
   REDACTED_PLACEHOLDER,
   YAML_BLOCK_REDACTED_MESSAGE,
   YAML_QUOTED_REDACTED_MESSAGE,
 } from './secret-data';
-import { useSecretPage } from './Secret';
 
 /**
  * SEC-25/26 规则 1（reveal 明文）与规则 2（更新 data）——页面组合函数层。
@@ -34,28 +34,28 @@ const api = vi.hoisted(() => ({
 vi.mock('#/api/core/k8s/k8s_secret', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/api/core/k8s/k8s_secret')>()),
   getSecretDetailsApi: api.detail,
+  getSecretListApi: api.list,
   revealSecretApi: api.reveal,
   updateSecretApi: api.update,
   updateSecretByYamlApi: api.updateByYaml,
-  getSecretListApi: api.list,
 }));
 
 const FAKE = 'fake-plain-value-for-test';
 const FAKE_B64 = btoa(FAKE);
 const RECORD = {
+  annotations: {},
   cluster_id: 1,
-  namespace: 'ns-a',
-  name: 'secret-a',
-  type: 'Opaque',
   data: { alpha: '', beta: '' },
   data_keys: [
     { key: 'alpha', size: 11 },
     { key: 'beta', size: 12 },
   ],
-  string_data: {},
   labels: {},
-  annotations: {},
+  name: 'secret-a',
+  namespace: 'ns-a',
   redacted: true,
+  string_data: {},
+  type: 'Opaque',
 } as any;
 
 /** 必须存在的编辑记录或调用缺失时立即失败，并为后续操作收窄类型。 */
@@ -76,16 +76,16 @@ beforeEach(() => {
   vi.spyOn(message, 'success').mockImplementation((() => {}) as any);
   vi.spyOn(message, 'warning').mockImplementation((() => {}) as any);
   api.detail.mockResolvedValue({ ...RECORD });
-  api.list.mockResolvedValue({ items: [], total: 0 });
+  api.list.mockResolvedValue({ total: 0, items: [] });
   api.update.mockResolvedValue({});
   api.reveal.mockImplementation(async (params: { keys: string[] }) => ({
     cluster_id: 1,
-    namespace: 'ns-a',
-    name: 'secret-a',
-    type: 'Opaque',
     data: Object.fromEntries(params.keys.map((key) => [key, FAKE_B64])),
-    string_data: {},
     keys: params.keys,
+    name: 'secret-a',
+    namespace: 'ns-a',
+    string_data: {},
+    type: 'Opaque',
   }));
 });
 afterEach(() => {
@@ -112,9 +112,9 @@ describe('规则 1：详情不再前端解码，明文按键调 reveal', () => {
     expect(api.reveal).toHaveBeenCalledTimes(1);
     expect(api.reveal).toHaveBeenCalledWith({
       cluster_id: 1,
-      namespace: 'ns-a',
-      name: 'secret-a',
       keys: ['alpha'],
+      name: 'secret-a',
+      namespace: 'ns-a',
     });
     expect(page.revealedValues.value).toEqual({ alpha: FAKE });
     page.hideRevealedKey('alpha');
@@ -150,7 +150,7 @@ describe('规则 1：详情不再前端解码，明文按键调 reveal', () => {
     );
     const pending = page.revealSecretKey('alpha');
     await page.showSecretDetail({ ...RECORD, name: 'secret-b' });
-    resolve({ data: { alpha: FAKE_B64 }, string_data: {}, keys: ['alpha'] });
+    resolve({ data: { alpha: FAKE_B64 }, keys: ['alpha'], string_data: {} });
     await pending;
     expect(page.revealedValues.value).toEqual({});
   });
@@ -221,8 +221,8 @@ describe('规则 2：更新 Secret 的 data', () => {
     expect(api.detail).toHaveBeenCalledTimes(1);
     expect(api.detail).toHaveBeenCalledWith({
       cluster_id: 1,
-      namespace: 'ns-a',
       name: 'secret-a',
+      namespace: 'ns-a',
     });
     expect(keysOf(page)).toEqual(['alpha', 'gamma']);
     page.setEditDataValue(required(page.editDataRows.value[1]), FAKE);
@@ -324,9 +324,9 @@ describe('规则 2：更新 Secret 的 data', () => {
     const openA = page.openEditModal(RECORD);
     const recordB = {
       ...RECORD,
-      name: 'secret-b',
       data: { delta: '' },
       data_keys: [{ key: 'delta', size: 5 }],
+      name: 'secret-b',
     };
     const openB = page.openEditModal(recordB);
     second.resolve({ ...recordB });
@@ -359,8 +359,8 @@ describe('规则 2：更新 Secret 的 data', () => {
     page.formRef.value = { validate: vi.fn(async () => ({})) } as any;
     const staleRow = {
       ...RECORD,
-      labels: { app: 'fake-stale', removed: 'fake-stale' },
       annotations: { note: 'fake-stale' },
+      labels: { app: 'fake-stale', removed: 'fake-stale' },
     };
     const opening = page.openEditModal(staleRow);
     // 加载中不展示列表行里可能过期的 labels / annotations
@@ -368,9 +368,9 @@ describe('规则 2：更新 Secret 的 data', () => {
     expect(page.editFormModel.value.annotations).toEqual({});
     pending.resolve({
       ...RECORD,
-      labels: { app: 'fake-fresh', added: 'fake-fresh' },
       // 详情接口可能返回 JSON 字符串
       annotations: JSON.stringify({ note: 'fake-fresh' }),
+      labels: { added: 'fake-fresh', app: 'fake-fresh' },
     });
     await opening;
     expect(page.editFormModel.value.labels).toEqual({
@@ -396,7 +396,7 @@ describe('规则 2：更新 Secret 的 data', () => {
     page.formRef.value = { validate: vi.fn(async () => ({})) } as any;
     const opening = page.openEditModal({
       ...RECORD,
-      string_data: { stale: 'fake-stale', shared: 'fake-stale' },
+      string_data: { shared: 'fake-stale', stale: 'fake-stale' },
     });
     // 加载中不展示列表行里可能过期的 string_data
     expect(page.editFormModel.value.string_data).toEqual({});
@@ -404,8 +404,8 @@ describe('规则 2：更新 Secret 的 data', () => {
       ...RECORD,
       // 详情接口可能返回 JSON 字符串
       string_data: JSON.stringify({
-        shared: 'fake-fresh',
         added: 'fake-fresh',
+        shared: 'fake-fresh',
       }),
     });
     await opening;
@@ -436,15 +436,15 @@ describe('规则 2：更新 Secret 的 data', () => {
   it('第四轮：详情里没有 labels / annotations：不沿用列表行的旧值', async () => {
     api.detail.mockResolvedValueOnce({
       ...RECORD,
-      labels: undefined,
       annotations: undefined,
+      labels: undefined,
     });
     const page = useSecretPage();
     page.formRef.value = { validate: vi.fn(async () => ({})) } as any;
     await page.openEditModal({
       ...RECORD,
-      labels: { app: 'fake-stale' },
       annotations: { note: 'fake-stale' },
+      labels: { app: 'fake-stale' },
     });
     await page.submitEditForm();
     expect(lastPayload().labels).toBeUndefined();

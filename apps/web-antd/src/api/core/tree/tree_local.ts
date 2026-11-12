@@ -3,18 +3,18 @@ import type { KeyValueList } from './tree_cloud';
 import { requestClient } from '#/api/request';
 
 export enum AuthMode {
-  PASSWORD = 1,
   KEY = 2,
+  PASSWORD = 1,
 }
 
 export enum ResourceStatus {
-  RUNNING = 1,
-  STOPPED = 2,
-  STARTING = 3,
-  STOPPING = 4,
-  RESTARTING = 5,
   DELETING = 6,
   ERROR = 7,
+  RESTARTING = 5,
+  RUNNING = 1,
+  STARTING = 3,
+  STOPPED = 2,
+  STOPPING = 4,
 }
 
 export interface TreeNode {

@@ -44,12 +44,12 @@ export interface CurrentPermissions {
 }
 
 export const notificationEventPermissions = {
-  list: 'GET /api/workorder/notification/events',
+  cancel: 'POST /api/workorder/notification/events/:id/cancel',
   deliveries: 'GET /api/workorder/notification/events/:id/deliveries',
   resolutions: 'GET /api/workorder/notification/events/:id/resolutions',
-  cancel: 'POST /api/workorder/notification/events/:id/cancel',
-  retry: 'POST /api/workorder/notification/events/:id/retry',
   resolve: 'POST /api/workorder/notification/events/:id/resolve',
+  retry: 'POST /api/workorder/notification/events/:id/retry',
+  list: 'GET /api/workorder/notification/events',
 } as const;
 
 export function getCurrentPermissions() {
@@ -98,8 +98,8 @@ export function resolveNotificationDelivery(
   reason: string,
 ) {
   return requestClient.post(`/workorder/notification/events/${id}/resolve`, {
-    delivery_id: deliveryId,
     action,
+    delivery_id: deliveryId,
     reason,
   });
 }

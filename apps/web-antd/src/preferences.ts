@@ -9,25 +9,25 @@ export const overridesPreferences = defineOverridesPreferences({
   app: {
     // accessMode: 'backend',
     accessMode: 'frontend',
-    locale: 'zh-CN',
     compact: true,
     enableRefreshToken: true,
+    locale: 'zh-CN',
     name: import.meta.env.VITE_APP_TITLE,
-  },
-  theme: {
-    mode: 'light',
-    colorPrimary: 'hsl(205 84% 39%)',
-  },
-  logo: {
-    source: `${import.meta.env.BASE_URL}cloudops.svg`,
   },
   copyright: {
     companyName: 'AI-CloudOps',
     companySiteLink: 'https://github.com/GoSimplicity/AI-CloudOps-web',
     date: String(new Date().getFullYear()),
   },
+  logo: {
+    source: `${import.meta.env.BASE_URL}cloudops.svg`,
+  },
   tabbar: {
     // 确保页面缓存功能启用，避免切换页面时重新加载
     keepAlive: true,
+  },
+  theme: {
+    colorPrimary: 'hsl(205 84% 39%)',
+    mode: 'light',
   },
 });

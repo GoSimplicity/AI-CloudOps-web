@@ -9,9 +9,6 @@
 div[aria-hidden='true'][tabindex='0'] {
   /* Remove focus capability from aria-hidden elements */
   pointer-events: none !important;
-
-  /* Hide from tab navigation */
-  tabindex: -1 !important;
 }
 
 /* 就绪状态显示样式 */
@@ -794,7 +791,7 @@ div[aria-hidden='true'][tabindex='0'] {
 }
 
 /* 动画效果 */
-@keyframes podPulse {
+@keyframes pod-pulse {
   0% {
     transform: scale(1);
   }
@@ -810,10 +807,10 @@ div[aria-hidden='true'][tabindex='0'] {
 
 .pod-table .ant-btn[title*='命令']:active,
 .pod-table .ant-btn[title*='日志']:active {
-  animation: podPulse 0.3s ease-in-out;
+  animation: pod-pulse 0.3s ease-in-out;
 }
 
-.pod-ready .ant-progress-bg {
+:is(.pod-ready .ant-progress-bg) {
   transition: all 0.3s ease;
 }
 
@@ -1109,10 +1106,10 @@ div[aria-hidden='true'][tabindex='0'] {
   background: #f6ffed;
   border: 1px solid #52c41a;
   box-shadow: 0 2px 12px rgb(82 196 26 / 20%);
-  animation: streamingGlow 3s ease-in-out infinite;
+  animation: streaming-glow 3s ease-in-out infinite;
 }
 
-@keyframes streamingGlow {
+@keyframes streaming-glow {
   0%,
   100% {
     box-shadow: 0 2px 12px rgb(82 196 26 / 20%);

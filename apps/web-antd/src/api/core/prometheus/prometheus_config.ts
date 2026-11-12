@@ -2,9 +2,9 @@ import { requestClient } from '#/api/request';
 
 // 配置类型枚举
 export enum ConfigType {
-  Prometheus = 1, // Prometheus 主配置
   AlertManager = 2, // AlertManager 主配置
   AlertRule = 3, // 告警规则配置
+  Prometheus = 1, // Prometheus 主配置
   RecordRule = 4, // 预聚合规则配置
   WebhookFile = 5, // webhook file
 }

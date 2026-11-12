@@ -1,10 +1,6 @@
 <script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
-
-import { clusterResourceKey, formatK8sTime } from '../shared/utils';
 import { onMounted, ref } from 'vue';
 
-import { useClusterRoleBindingPage } from './ClusterRoleBinding';
 import {
   CheckCircleOutlined,
   ClearOutlined,
@@ -22,123 +18,127 @@ import {
   UserSwitchOutlined,
 } from '@ant-design/icons-vue';
 
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { usePermission } from '#/utils/permission';
+
+import { clusterResourceKey, formatK8sTime } from '../shared/utils';
+import { useClusterRoleBindingPage } from './ClusterRoleBinding';
 
 const { can } = usePermission();
 
 const {
-  // state
-  clusters,
-  clustersError,
-  clustersLoading,
-  clustersTotal,
-  currentPage,
-  filterClusterId,
-  filterLabels,
-  loadError,
-  loading,
-  pageSize,
-  searchText,
-  selectedRows,
-  total,
-
-  // modal state
-  detailLoading,
-  isCreateModalVisible,
-  isCreateYamlModalVisible,
-  isDetailModalVisible,
-  isEditModalVisible,
-  isYamlModalVisible,
-  submitLoading,
-
-  // operation targets
-  currentClusterRoleBindingDetail,
-  currentOperationClusterRoleBinding,
-
-  // form models
-  createFormModel,
-  createYamlFormModel,
-  editFormModel,
-  yamlFormModel,
-
-  // form refs
-  createYamlFormRef,
-  editFormRef,
-  formRef,
-  yamlFormRef,
-
-  // form rules
-  createFormRules,
-  createYamlFormRules,
-  editFormRules,
-  yamlFormRules,
-
-  // computed
-  filteredClusterRoleBindings,
-  rowSelection,
-
-  // helpers
-  getEnvText,
-
+  // form field operations
+  addEditSubjectField,
+  // filter operations
+  addFilterLabel,
+  addSubjectField,
+  // batch operations
+  batchOperation,
   // operations
   clearClusterRoleBindings,
-  fetchClusterRoleBindings,
-  fetchClusters,
-  loadMoreClusters,
-
-  // detail operations
-  closeDetailModal,
-  showClusterRoleBindingDetail,
-
-  // YAML operations
-  closeYamlModal,
-  showYamlModal,
-  submitYamlForm,
-
+  clearFilterLabels,
+  // YAML utility functions
+  clearYaml,
   // create operations
   closeCreateModal,
   closeCreateYamlModal,
-  openCreateModal,
-  openCreateYamlModal,
-  submitCreateForm,
-  submitCreateYamlForm,
-
+  // detail operations
+  closeDetailModal,
   // edit operations
   closeEditModal,
-  openEditModal,
-  submitEditForm,
+  // YAML operations
+  closeYamlModal,
+  // state
+  clusters,
 
+  clustersError,
+  clustersLoading,
+  clustersTotal,
+  // form models
+  createFormModel,
+  // form rules
+  createFormRules,
+  createYamlFormModel,
+  // form refs
+  createYamlFormRef,
+
+  createYamlFormRules,
+  // operation targets
+  currentClusterRoleBindingDetail,
+
+  currentOperationClusterRoleBinding,
+  currentPage,
   // clusterRoleBinding operations
   deleteClusterRoleBinding,
+  // modal state
+  detailLoading,
 
-  // filter operations
-  addFilterLabel,
-  clearFilterLabels,
-  removeFilterLabel,
+  editFormModel,
+  editFormRef,
+  editFormRules,
+  fetchClusterRoleBindings,
 
-  // batch operations
-  batchOperation,
+  fetchClusters,
+  filterClusterId,
+  // computed
+  filteredClusterRoleBindings,
+  filterLabels,
 
+  formatEditYaml,
+  formatYaml,
+
+  formRef,
+
+  // helpers
+  getEnvText,
   // pagination operations
   handlePageChange,
+  insertYamlTemplate,
+  isCreateModalVisible,
 
-  // form field operations
-  addEditSubjectField,
-  addSubjectField,
+  isCreateYamlModalVisible,
+  isDetailModalVisible,
+
+  isEditModalVisible,
+  isYamlModalVisible,
+  loadError,
+
+  loading,
+  loadMoreClusters,
+  openCreateModal,
+  openCreateYamlModal,
+  openEditModal,
+  pageSize,
+
   removeAnnotationField,
   removeEditAnnotationField,
   removeEditLabelField,
+
   removeEditSubjectField,
+
+  removeFilterLabel,
   removeLabelField,
   removeSubjectField,
 
-  // YAML utility functions
-  clearYaml,
-  formatEditYaml,
-  formatYaml,
-  insertYamlTemplate,
+  rowSelection,
+
+  searchText,
+
+  selectedRows,
+  showClusterRoleBindingDetail,
+  showYamlModal,
+  submitCreateForm,
+  submitCreateYamlForm,
+  submitEditForm,
+  submitLoading,
+  submitYamlForm,
+
+  total,
   validateEditYaml,
   validateYaml,
+  yamlFormModel,
+  yamlFormRef,
+  yamlFormRules,
 } = useClusterRoleBindingPage();
 
 // 添加新标签/注解的方法
@@ -439,9 +439,9 @@ onMounted(async () => {
               </a-select-option>
               <a-select-option
                 v-if="clusters.length > 0 && clusters.length < clustersTotal"
-                value="__load_more__"
                 disabled
                 style="text-align: center; color: var(--ops-muted)"
+                value="__load_more__"
               >
                 <a-spin :spinning="clustersLoading" size="small" />
                 <span v-if="!clustersLoading">滚动加载更多...</span>
@@ -493,7 +493,7 @@ onMounted(async () => {
               class="k8s-search-input"
               placeholder="搜索 ClusterRoleBinding 名称"
               @input="onSearch"
-              @pressEnter="onSearch"
+              @press-enter="onSearch"
             >
               <template #suffix>
                 <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -506,7 +506,6 @@ onMounted(async () => {
         <div class="k8s-toolbar-actions">
           <div class="k8s-action-buttons">
             <a-button
-              @click="resetFilters"
               :disabled="
                 !searchText &&
                 !filterClusterId &&
@@ -514,6 +513,7 @@ onMounted(async () => {
               "
               class="k8s-toolbar-btn"
               title="重置所有筛选条件"
+              @click="resetFilters"
             >
               <template #icon><DeleteOutlined aria-hidden="true" /></template>
               重置筛选
@@ -530,16 +530,16 @@ onMounted(async () => {
             </a-button>
 
             <a-button
-              type="primary"
-              danger
-              @click="() => batchOperation('删除')"
-              :disabled="selectedRows.length === 0"
               v-if="
                 can('k8s.clusterrolebinding.batchDelete') &&
                 selectedRows.length > 0
               "
+              :disabled="selectedRows.length === 0"
               class="k8s-toolbar-btn"
+              danger
               title="批量删除选中的 ClusterRoleBinding"
+              type="primary"
+              @click="() => batchOperation('删除')"
             >
               <template #icon><DeleteOutlined aria-hidden="true" /></template>
               删除 ({{ selectedRows.length }})
@@ -649,7 +649,7 @@ onMounted(async () => {
                     record.subjects
                       .map(
                         (s: any) =>
-                          `${s.kind || 'Unknown'}: ${s.name || 'Unknown'}${s.namespace ? ' @' + s.namespace : ''}`,
+                          `${s.kind || 'Unknown'}: ${s.name || 'Unknown'}${s.namespace ? ` @${s.namespace}` : ''}`,
                       )
                       .join('\n')
                   "
@@ -967,9 +967,9 @@ onMounted(async () => {
                 @press-enter="addNewLabel"
               />
               <a-button
+                :disabled="!newLabelKey.trim()"
                 type="primary"
                 @click="addNewLabel"
-                :disabled="!newLabelKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1024,9 +1024,9 @@ onMounted(async () => {
                 @press-enter="addNewAnnotation"
               />
               <a-button
+                :disabled="!newAnnotationKey.trim()"
                 type="primary"
                 @click="addNewAnnotation"
-                :disabled="!newAnnotationKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1201,9 +1201,9 @@ onMounted(async () => {
                 @press-enter="addEditLabel"
               />
               <a-button
+                :disabled="!editLabelKey.trim()"
                 type="primary"
                 @click="addEditLabel"
-                :disabled="!editLabelKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1258,9 +1258,9 @@ onMounted(async () => {
                 @press-enter="addEditAnnotation"
               />
               <a-button
+                :disabled="!editAnnotationKey.trim()"
                 type="primary"
                 @click="addEditAnnotation"
-                :disabled="!editAnnotationKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1623,8 +1623,8 @@ onMounted(async () => {
     >
       <div class="labels-filter-form">
         <div
-          class="current-filters"
           v-if="Object.keys(filterLabels).length > 0"
+          class="current-filters"
         >
           <h4>当前过滤条件：</h4>
           <div class="filter-tags">
@@ -1663,10 +1663,10 @@ onMounted(async () => {
               style="flex: 1"
             />
             <a-button
-              type="primary"
-              @click="addNewFilterLabel"
               :disabled="!newFilterKey.trim()"
               size="small"
+              type="primary"
+              @click="addNewFilterLabel"
             >
               <template #icon><PlusOutlined aria-hidden="true" /></template>
             </a-button>

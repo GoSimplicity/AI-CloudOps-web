@@ -1,13 +1,8 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-
-import { useListRequest } from './useListRequest';
-
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 
 import { useUserStore } from '@vben/stores';
 
-import { type FormInstance, message, Modal } from 'ant-design-vue';
 import {
   DownOutlined,
   MinusCircleOutlined,
@@ -15,6 +10,7 @@ import {
 } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import { useDebounceFn } from '@vueuse/core';
+import { type FormInstance, message, Modal } from 'ant-design-vue';
 
 import {
   AlertRuleSeverity,
@@ -38,10 +34,13 @@ import {
   getMonitorSendGroupListApi,
   type MonitorSendGroup,
 } from '#/api/core/prometheus/prometheus_send_group';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { useAuthStore } from '#/store';
 import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
+import { useListRequest } from './useListRequest';
 
 const { can } = usePermission();
 
@@ -69,8 +68,8 @@ onBeforeUnmount(() => {
 });
 
 const ENABLE_STATUS = {
-  ENABLED: 1,
   DISABLED: 2,
+  ENABLED: 1,
 } as const;
 
 // --- 类型定义 ---
@@ -110,21 +109,21 @@ const poolLoading = ref(false);
 const sendGroupLoading = ref(false);
 
 const createInitialForm = () => ({
-  name: '',
-  pool_id: undefined as number | undefined,
-  send_group_id: undefined as number | undefined,
-  ip: '',
-  port: '',
-  expr: '',
-  severity: undefined as AlertRuleSeverity | undefined,
-  for_time: '10s',
-  labels: [
-    { key: Date.now(), labelKey: '', labelValue: '' },
-  ] as LabelOrAnnotationItem[],
   annotations: [
     { key: Date.now(), labelKey: '', labelValue: '' },
   ] as LabelOrAnnotationItem[],
+  expr: '',
+  for_time: '10s',
   grafana_link: '',
+  ip: '',
+  labels: [
+    { key: Date.now(), labelKey: '', labelValue: '' },
+  ] as LabelOrAnnotationItem[],
+  name: '',
+  pool_id: undefined as number | undefined,
+  port: '',
+  send_group_id: undefined as number | undefined,
+  severity: undefined as AlertRuleSeverity | undefined,
 });
 
 const handleApiError = (error: unknown, defaultMessage: string): void => {
@@ -167,32 +166,32 @@ const currentRecord = ref<MonitorAlertRule | null>(null);
 
 // --- 筛选与分页 ---
 const searchParams = reactive({
+  enable: undefined as number | undefined,
   search: '',
   severity: undefined as AlertRuleSeverity | undefined,
-  enable: undefined as number | undefined,
 });
 
 const paginationConfig = reactive({
   current: 1,
   pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
   showQuickJumper: true,
+  showSizeChanger: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
   size: 'default' as const,
+  total: 0,
 });
 
 // --- 统计数据 ---
 const stats = computed(() => ({
-  total: paginationConfig.total,
   critical: data.value.filter(
     (item) => item.severity === AlertRuleSeverity.Critical,
   ).length,
+  enabled: data.value.filter((item) => item.enable === ENABLE_STATUS.ENABLED)
+    .length,
+  total: paginationConfig.total,
   warning: data.value.filter(
     (item) => item.severity === AlertRuleSeverity.Warning,
   ).length,
-  enabled: data.value.filter((item) => item.enable === ENABLE_STATUS.ENABLED)
-    .length,
 }));
 
 // --- 模态框状态 ---
@@ -204,27 +203,28 @@ const detailModalVisible = ref(false);
 const addForm = reactive(createInitialForm());
 
 const editForm = reactive({
-  id: 0,
-  name: '',
-  pool_id: undefined as number | undefined,
-  send_group_id: undefined as number | undefined,
-  ip: '',
-  port: '',
+  annotations: [] as LabelOrAnnotationItem[],
   enableSwitch: true,
   expr: '',
-  severity: undefined as AlertRuleSeverity | undefined,
   for_time: '',
-  labels: [] as LabelOrAnnotationItem[],
-  annotations: [] as LabelOrAnnotationItem[],
   grafana_link: '',
+  id: 0,
+  ip: '',
+  labels: [] as LabelOrAnnotationItem[],
+  name: '',
+  pool_id: undefined as number | undefined,
+  port: '',
+  send_group_id: undefined as number | undefined,
+  severity: undefined as AlertRuleSeverity | undefined,
 });
 
 const formRules = {
-  name: [{ message: '请输入名称', required: true, trigger: 'blur' }],
-  pool_id: [{ message: '请选择所属实例池', required: true, trigger: 'change' }],
+  expr: [{ message: '请输入PromQL表达式', required: true, trigger: 'blur' }],
+  for_time: [{ message: '请输入持续时间', required: true, trigger: 'blur' }],
   ip_address: [
     {
       required: true,
+      trigger: 'blur',
       validator: () => {
         const form = isEditModalVisible.value ? editForm : addForm;
         if (!form.ip || !form.port) {
@@ -232,15 +232,14 @@ const formRules = {
         }
         return Promise.resolve();
       },
-      trigger: 'blur',
     },
   ],
-  expr: [{ message: '请输入PromQL表达式', required: true, trigger: 'blur' }],
+  name: [{ message: '请输入名称', required: true, trigger: 'blur' }],
+  pool_id: [{ message: '请选择所属实例池', required: true, trigger: 'change' }],
   send_group_id: [
     { message: '请选择发送组', required: true, trigger: 'change' },
   ],
   severity: [{ message: '请选择严重性', required: true, trigger: 'change' }],
-  for_time: [{ message: '请输入持续时间', required: true, trigger: 'blur' }],
 };
 
 // --- 响应式布局 ---
@@ -330,11 +329,11 @@ const fetchAlertRules = async () => {
   const request = beginRequest();
   try {
     const params: GetMonitorAlertRuleListReq = {
+      enable: searchParams.enable,
       page: paginationConfig.current,
-      size: paginationConfig.pageSize,
       search: searchParams.search || undefined,
       severity: searchParams.severity,
-      enable: searchParams.enable,
+      size: paginationConfig.pageSize,
     };
     const response = await getMonitorAlertRuleListApi(params);
     if (!request.isCurrent()) return;
@@ -475,7 +474,7 @@ const fetchSendGroups = async (page = 1, size = 20): Promise<void> => {
 
 // --- 分页处理 ---
 const handlePoolScroll = (e: any) => {
-  const { scrollTop, scrollHeight, clientHeight } = e.target;
+  const { clientHeight, scrollHeight, scrollTop } = e.target;
   if (
     scrollTop + clientHeight >= scrollHeight - 10 &&
     !poolLoading.value &&
@@ -486,7 +485,7 @@ const handlePoolScroll = (e: any) => {
 };
 
 const handleSendGroupScroll = (e: any) => {
-  const { scrollTop, scrollHeight, clientHeight } = e.target;
+  const { clientHeight, scrollHeight, scrollTop } = e.target;
   if (
     scrollTop + clientHeight >= scrollHeight - 10 &&
     !sendGroupLoading.value &&
@@ -656,19 +655,19 @@ const showEditModal = async (record: MonitorAlertRule): Promise<void> => {
       : [{ key: Date.now(), labelKey: '', labelValue: '' }];
   // 先绑定原记录；关联选项的慢请求不能延后覆盖另一条记录的表单。
   Object.assign(editForm, {
-    id,
-    name: record.name,
-    pool_id: record.pool_id,
-    send_group_id: record.send_group_id,
-    ip,
-    port,
+    annotations: parseItems(record.annotations),
     enableSwitch: record.enable === ENABLE_STATUS.ENABLED,
     expr: record.expr,
-    severity: record.severity,
     for_time: record.for_time,
-    labels: parseItems(record.labels),
-    annotations: parseItems(record.annotations),
     grafana_link: record.grafana_link || '',
+    id,
+    ip,
+    labels: parseItems(record.labels),
+    name: record.name,
+    pool_id: record.pool_id,
+    port,
+    send_group_id: record.send_group_id,
+    severity: record.severity,
   });
   isEditModalVisible.value = true;
   closeDetailModal();
@@ -759,13 +758,13 @@ const handleAdd = async (): Promise<void> => {
     }
     const apiData: CreateMonitorAlertRuleReq = {
       ...addForm,
+      annotations: formatItemsForApi(addForm.annotations),
+      grafana_link: addForm.grafana_link,
       ip_address: `${addForm.ip}:${addForm.port}`,
+      labels: formatItemsForApi(addForm.labels),
       pool_id: poolId,
       send_group_id: groupId,
       severity,
-      labels: formatItemsForApi(addForm.labels),
-      annotations: formatItemsForApi(addForm.annotations),
-      grafana_link: addForm.grafana_link,
     };
     await createMonitorAlertRuleApi(apiData);
     if (!isCurrent()) return;
@@ -826,17 +825,17 @@ const handleEdit = async (): Promise<void> => {
     }
     const apiData: UpdateMonitorAlertRuleReq = {
       ...editForm,
-      id,
-      ip_address: `${editForm.ip}:${editForm.port}`,
+      annotations: formatItemsForApi(editForm.annotations),
       enable: editForm.enableSwitch
         ? ENABLE_STATUS.ENABLED
         : ENABLE_STATUS.DISABLED,
+      grafana_link: editForm.grafana_link,
+      id,
+      ip_address: `${editForm.ip}:${editForm.port}`,
+      labels: formatItemsForApi(editForm.labels),
       pool_id: poolId,
       send_group_id: groupId,
       severity,
-      labels: formatItemsForApi(editForm.labels),
-      annotations: formatItemsForApi(editForm.annotations),
-      grafana_link: editForm.grafana_link,
     };
     await updateMonitorAlertRuleApi(apiData);
     if (!isCurrent()) return;
@@ -1117,8 +1116,8 @@ onMounted(() => {
             <template v-if="column.key === 'name'">
               <div class="rule-name-cell">
                 <div
-                  class="rule-badge"
                   :class="getAlertStatusClass(record)"
+                  class="rule-badge"
                 ></div>
                 <span class="rule-name-text">{{ record.name }}</span>
               </div>
@@ -1238,8 +1237,8 @@ onMounted(() => {
 
             <template v-if="column.key === 'severity'">
               <a-tag
-                class="tech-tag"
                 :class="[`severity-${severityText(record.severity)}`]"
+                class="tech-tag"
               >
                 {{ severityLabel(record.severity) }}
               </a-tag>
@@ -1271,12 +1270,12 @@ onMounted(() => {
             <template v-if="column.key === 'creator'">
               <div class="creator-info">
                 <a-avatar
-                  size="small"
                   :style="{
                     backgroundColor: getAvatarColor(
                       record.create_user_name || '',
                     ),
                   }"
+                  size="small"
                 >
                   {{ getInitials(record.create_user_name) }}
                 </a-avatar>
@@ -1362,7 +1361,7 @@ onMounted(() => {
                   placeholder="请选择所属实例池"
                   show-search
                   @dropdown-visible-change="onPoolDropdownChange"
-                  @popupScroll="handlePoolScroll"
+                  @popup-scroll="handlePoolScroll"
                   @search="handlePoolSearch"
                 >
                   <a-select-option
@@ -1382,7 +1381,7 @@ onMounted(() => {
                   :loading="sendGroupLoading"
                   placeholder="请选择发送组"
                   @dropdown-visible-change="onSendGroupDropdownChange"
-                  @popupScroll="handleSendGroupScroll"
+                  @popup-scroll="handleSendGroupScroll"
                 >
                   <a-select-option
                     v-for="group in sendGroups"
@@ -1589,7 +1588,7 @@ onMounted(() => {
                   placeholder="请选择所属实例池"
                   show-search
                   @dropdown-visible-change="onPoolDropdownChange"
-                  @popupScroll="handlePoolScroll"
+                  @popup-scroll="handlePoolScroll"
                   @search="handlePoolSearch"
                 >
                   <a-select-option
@@ -1609,7 +1608,7 @@ onMounted(() => {
                   :loading="sendGroupLoading"
                   placeholder="请选择发送组"
                   @dropdown-visible-change="onSendGroupDropdownChange"
-                  @popupScroll="handleSendGroupScroll"
+                  @popup-scroll="handleSendGroupScroll"
                 >
                   <a-select-option
                     v-for="group in sendGroups"
@@ -1807,8 +1806,8 @@ onMounted(() => {
           <h2>{{ currentRecord.name }}</h2>
           <div class="detail-badges">
             <a-tag
-              class="tech-tag"
               :class="[`severity-${severityText(currentRecord.severity)}`]"
+              class="tech-tag"
             >
               {{ severityLabel(currentRecord.severity) }}
             </a-tag>
@@ -2227,7 +2226,7 @@ onMounted(() => {
   flex: 1;
 }
 
-.label-separator {
+:is(.label-separator) {
   font-weight: bold;
   color: var(--ops-muted);
 }

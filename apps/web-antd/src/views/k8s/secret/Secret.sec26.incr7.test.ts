@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resetHttpErrorNoticeTracking } from '#/api/http-error-notice';
 
+import { useSecretPage } from './Secret';
 import * as sd from './secret-data';
 import {
   encodeUtf8ToBase64,
@@ -11,7 +12,6 @@ import {
   REDACTED_VALUE_MESSAGE,
   YAML_BLOCK_REDACTED_MESSAGE,
 } from './secret-data';
-import { useSecretPage } from './Secret';
 
 function required<T>(value: null | T | undefined): T {
   if (value === null || value === undefined) {
@@ -28,9 +28,9 @@ const api = vi.hoisted(() => ({
   create: vi.fn(),
   createByYaml: vi.fn(),
   detail: vi.fn(),
-  list: vi.fn(),
   update: vi.fn(),
   updateByYaml: vi.fn(),
+  list: vi.fn(),
 }));
 vi.mock('#/api/core/k8s/k8s_secret', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/api/core/k8s/k8s_secret')>()),
@@ -45,19 +45,19 @@ vi.mock('#/api/core/k8s/k8s_secret', async (importOriginal) => ({
 const FAKE = 'fake-plain-value-for-test';
 const PH_B64 = encodeUtf8ToBase64(REDACTED_PLACEHOLDER);
 const RECORD = {
+  annotations: {},
   cluster_id: 1,
-  namespace: 'ns-a',
-  name: 'secret-a',
-  type: 'Opaque',
   data: { alpha: '', beta: '' },
   data_keys: [
     { key: 'alpha', size: 11 },
     { key: 'beta', size: 12 },
   ],
-  string_data: {},
   labels: {},
-  annotations: {},
+  name: 'secret-a',
+  namespace: 'ns-a',
   redacted: true,
+  string_data: {},
+  type: 'Opaque',
 } as any;
 const HEAD = 'apiVersion: v1\nkind: Secret\nmetadata:\n  name: secret-a\n';
 
@@ -80,7 +80,7 @@ beforeEach(() => {
   vi.spyOn(message, 'success').mockImplementation((() => {}) as any);
   vi.spyOn(message, 'warning').mockImplementation((() => {}) as any);
   api.detail.mockResolvedValue({ ...RECORD });
-  api.list.mockResolvedValue({ items: [], total: 0 });
+  api.list.mockResolvedValue({ total: 0, items: [] });
   api.update.mockResolvedValue({});
   api.updateByYaml.mockResolvedValue({});
   api.create.mockResolvedValue({});
@@ -282,7 +282,7 @@ describe('incr7 总兜底：各种写法的明文都不会出现在发出的 YAM
 
   it('jSON 写法（整份流式）：data 明文拦截', async () => {
     const page = yamlPage(
-      JSON.stringify({ apiVersion: 'v1', kind: 'Secret', data: { k: FAKE } }),
+      JSON.stringify({ apiVersion: 'v1', data: { k: FAKE }, kind: 'Secret' }),
     );
     await page.submitYamlForm();
     expect(api.updateByYaml).not.toHaveBeenCalled();
@@ -292,7 +292,7 @@ describe('incr7 总兜底：各种写法的明文都不会出现在发出的 YAM
   });
 
   it('对照：展示 → 不改直接保存，照常提交且 data 与原 base64 一致', async () => {
-    const original = `${HEAD}data:\n  a: ${encodeUtf8ToBase64('fake-a')}\n  b: ${encodeUtf8ToBase64('fake-l1\nfake-l2')}\n  c: ${encodeUtf8ToBase64('fa"ke\\c')}\n  r: ${REDACTED_PLACEHOLDER}\ntype: Opaque\n`;
+    const original = `${HEAD}data:\n  a: ${encodeUtf8ToBase64('fake-a')}\n  b: ${encodeUtf8ToBase64('fake-l1\nfake-l2')}\n  c: ${encodeUtf8ToBase64(String.raw`fa"ke\c`)}\n  r: ${REDACTED_PLACEHOLDER}\ntype: Opaque\n`;
     const page = yamlPage(sd.processSecretYaml(original));
     await page.submitYamlForm();
     expect(message.warning).not.toHaveBeenCalled();
@@ -349,8 +349,8 @@ describe('incr7 P3-B：编辑提交 validate 返回后再核对打开序号；�
     expect(api.update).toHaveBeenCalledTimes(1);
     expect(required(api.update.mock.calls[0])[0]).toMatchObject({
       cluster_id: 1,
-      namespace: 'ns-a',
       name: 'secret-a',
+      namespace: 'ns-a',
     });
     expect(message.success).toHaveBeenCalledTimes(1);
   });

@@ -5,6 +5,13 @@ import { computed, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 
 import {
+  Env,
+  getClustersListApi,
+  type K8sCluster,
+  type KeyValueList,
+  type ListClustersReq,
+} from '#/api/core/k8s/k8s_cluster';
+import {
   type CreateIngressByYamlReq,
   type CreateIngressReq,
   createK8sIngress,
@@ -28,13 +35,6 @@ import {
   updateK8sIngress,
   updateK8sIngressByYaml,
 } from '#/api/core/k8s/k8s_ingress';
-import {
-  Env,
-  getClustersListApi,
-  type K8sCluster,
-  type KeyValueList,
-  type ListClustersReq,
-} from '#/api/core/k8s/k8s_cluster';
 import {
   getNamespacesListApi,
   type K8sNamespace,
@@ -105,17 +105,17 @@ export function useIngressPage() {
     rules: IngressRule[];
     tls: IngressTLS[];
   }>({
+    annotations: {},
+    ingress_class_name: '',
+    labels: {},
     name: '',
     namespace: '',
-    ingress_class_name: '',
     rules: [
       {
         host: '',
         http: {
           paths: [
             {
-              path: '/',
-              path_type: 'Prefix',
               backend: {
                 service: {
                   name: '',
@@ -124,14 +124,14 @@ export function useIngressPage() {
                   },
                 },
               },
+              path: '/',
+              path_type: 'Prefix',
             } as IngressHTTPIngressPath,
           ],
         } as IngressHTTPRuleValue,
       },
     ],
     tls: [],
-    labels: {},
-    annotations: {},
   });
 
   const editFormModel = ref<{
@@ -143,17 +143,17 @@ export function useIngressPage() {
     rules: IngressRule[];
     tls: IngressTLS[];
   }>({
+    annotations: {},
+    ingress_class_name: '',
+    labels: {},
     name: '',
     namespace: '',
-    ingress_class_name: '',
     rules: [
       {
         host: '',
         http: {
           paths: [
             {
-              path: '/',
-              path_type: 'Prefix',
               backend: {
                 service: {
                   name: '',
@@ -162,14 +162,14 @@ export function useIngressPage() {
                   },
                 },
               },
+              path: '/',
+              path_type: 'Prefix',
             } as IngressHTTPIngressPath,
           ],
         } as IngressHTTPRuleValue,
       },
     ],
     tls: [],
-    labels: {},
-    annotations: {},
   });
 
   const yamlFormModel = ref<{
@@ -187,47 +187,47 @@ export function useIngressPage() {
   // form validation rules
   const createFormRules: Record<string, Rule[]> = {
     name: [
-      { required: true, message: '请输入 Ingress 名称', trigger: 'blur' },
+      { message: '请输入 Ingress 名称', required: true, trigger: 'blur' },
       {
-        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         message:
           'Ingress 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         trigger: 'blur',
       },
       { max: 63, message: 'Ingress 名称长度不能超过63个字符', trigger: 'blur' },
     ],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' },
+      { message: '请选择命名空间', required: true, trigger: 'change' },
     ],
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
   const editFormRules: Record<string, Rule[]> = {
     name: [
-      { required: true, message: '请输入 Ingress 名称', trigger: 'blur' },
+      { message: '请输入 Ingress 名称', required: true, trigger: 'blur' },
       {
-        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         message:
           'Ingress 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        pattern: /^[\da-z]([\da-z-]*[\da-z])?$/,
         trigger: 'blur',
       },
       { max: 63, message: 'Ingress 名称长度不能超过63个字符', trigger: 'blur' },
     ],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' },
+      { message: '请选择命名空间', required: true, trigger: 'change' },
     ],
   };
 
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
-      { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+      { message: '请输入 YAML 内容', required: true, trigger: 'blur' },
+      { message: 'YAML 内容过短，请检查是否完整', min: 50, trigger: 'blur' },
     ],
   };
 
@@ -237,11 +237,11 @@ export function useIngressPage() {
   });
 
   const rowSelection = computed(() => ({
-    selectedRowKeys: selectedRowKeys.value,
     onChange: (keys: string[], rows: K8sIngress[]) => {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
     },
+    selectedRowKeys: selectedRowKeys.value,
   }));
 
   // helpers
@@ -291,29 +291,29 @@ export function useIngressPage() {
     if (env === undefined || env === null) return '未知环境';
     const value = typeof env === 'string' ? Number.parseInt(env) : env;
     const map: Record<number, string> = {
-      [Env.Prod]: '生产',
       [Env.Dev]: '开发',
-      [Env.Stage]: '预发',
-      [Env.Rc]: '测试',
       [Env.Press]: '灰度',
+      [Env.Prod]: '生产',
+      [Env.Rc]: '测试',
+      [Env.Stage]: '预发',
     };
     return map[value] || '未知环境';
   };
 
   const getStatusText = (status?: K8sIngressStatus) => {
     const map: Record<K8sIngressStatus, string> = {
-      [K8sIngressStatus.RUNNING]: '运行中',
-      [K8sIngressStatus.PENDING]: '等待中',
       [K8sIngressStatus.FAILED]: '失败',
+      [K8sIngressStatus.PENDING]: '等待中',
+      [K8sIngressStatus.RUNNING]: '运行中',
     };
     return status === undefined ? '未知' : map[status] || '未知';
   };
 
   const getStatusColor = (status?: K8sIngressStatus) => {
     const map: Record<K8sIngressStatus, string> = {
-      [K8sIngressStatus.RUNNING]: 'success',
-      [K8sIngressStatus.PENDING]: 'warning',
       [K8sIngressStatus.FAILED]: 'error',
+      [K8sIngressStatus.PENDING]: 'warning',
+      [K8sIngressStatus.RUNNING]: 'success',
     };
     return status === undefined ? 'default' : map[status] || 'default';
   };
@@ -472,15 +472,15 @@ export function useIngressPage() {
       selectedRows.value = [];
       const params: GetIngressListReq = {
         cluster_id: clusterId,
-        namespace: namespace || undefined,
-        search: searchText.value || undefined,
-        status: filterStatus.value || undefined,
         labels:
           Object.keys(filterLabels.value).length > 0
             ? filterLabels.value
             : undefined,
+        namespace: namespace || undefined,
         page: currentPage.value,
+        search: searchText.value || undefined,
         size: pageSize.value,
+        status: filterStatus.value || undefined,
       };
       const res = await getK8sIngressList(params);
       if (
@@ -493,9 +493,9 @@ export function useIngressPage() {
       const ingressesWithClusterId = (res?.items || []).map(
         (ingress: K8sIngress) => ({
           ...ingress,
-          cluster_id: ingress.cluster_id || clusterId || 0,
           // 计算前端使用的字段
           age: calculateAge(ingress.created_at),
+          cluster_id: ingress.cluster_id || clusterId || 0,
           hosts: extractHosts(ingress.rules),
         }),
       );
@@ -577,22 +577,22 @@ export function useIngressPage() {
       isDetailModalVisible.value = true;
       const res = await getK8sIngressDetails({
         cluster_id: clusterId,
-        namespace: record.namespace,
         name: record.name,
+        namespace: record.namespace,
       });
 
       // 直接使用详情数据，不需要转换格式
       const processedDetail = res
         ? {
             ...res,
-            cluster_id: clusterId,
             age: calculateAge(res.created_at),
+            cluster_id: clusterId,
             hosts: extractHosts(res.rules),
           }
         : {
             ...record,
-            cluster_id: clusterId,
             age: calculateAge(record.created_at),
+            cluster_id: clusterId,
             hosts: extractHosts(record.rules),
           };
 
@@ -603,8 +603,8 @@ export function useIngressPage() {
       // 错误时使用原始记录数据
       const fallbackDetail = {
         ...record,
-        cluster_id: clusterId,
         age: calculateAge(record.created_at),
+        cluster_id: clusterId,
         hosts: extractHosts(record.rules),
       };
       currentIngressDetail.value = fallbackDetail;
@@ -628,8 +628,8 @@ export function useIngressPage() {
       currentOperationIngress.value = { ...record, cluster_id: clusterId };
       const res = await getK8sIngressYaml({
         cluster_id: clusterId,
-        namespace: record.namespace,
         name: record.name,
+        namespace: record.namespace,
       });
       currentYamlContent.value = res?.yaml || '';
       yamlFormModel.value.yaml = res?.yaml || '';
@@ -657,8 +657,8 @@ export function useIngressPage() {
 
       const params: UpdateIngressByYamlReq = {
         cluster_id: currentOperationIngress.value.cluster_id,
-        namespace: currentOperationIngress.value.namespace,
         name: currentOperationIngress.value.name,
+        namespace: currentOperationIngress.value.namespace,
         yaml: yamlFormModel.value.yaml,
       };
 
@@ -682,17 +682,17 @@ export function useIngressPage() {
   // 创建 Ingress
   const openCreateModal = () => {
     createFormModel.value = {
+      annotations: {},
+      ingress_class_name: '',
+      labels: {},
       name: '',
       namespace: '',
-      ingress_class_name: '',
       rules: [
         {
           host: '',
           http: {
             paths: [
               {
-                path: '/',
-                path_type: 'Prefix',
                 backend: {
                   service: {
                     name: '',
@@ -701,14 +701,14 @@ export function useIngressPage() {
                     },
                   },
                 },
+                path: '/',
+                path_type: 'Prefix',
               },
             ],
           },
         },
       ],
       tls: [],
-      labels: {},
-      annotations: {},
     };
     isCreateModalVisible.value = true;
   };
@@ -736,22 +736,22 @@ export function useIngressPage() {
       submitLoading.value = true;
 
       const params: CreateIngressReq = {
-        cluster_id: filterClusterId.value,
-        name: createFormModel.value.name,
-        namespace: createFormModel.value.namespace,
-        ingress_class_name:
-          createFormModel.value.ingress_class_name || undefined,
-        rules: createFormModel.value.rules,
-        tls:
-          createFormModel.value.tls.length > 0 ? createFormModel.value.tls : [],
-        labels:
-          Object.keys(createFormModel.value.labels).length > 0
-            ? createFormModel.value.labels
-            : {},
         annotations:
           Object.keys(createFormModel.value.annotations).length > 0
             ? createFormModel.value.annotations
             : {},
+        cluster_id: filterClusterId.value,
+        ingress_class_name:
+          createFormModel.value.ingress_class_name || undefined,
+        labels:
+          Object.keys(createFormModel.value.labels).length > 0
+            ? createFormModel.value.labels
+            : {},
+        name: createFormModel.value.name,
+        namespace: createFormModel.value.namespace,
+        rules: createFormModel.value.rules,
+        tls:
+          createFormModel.value.tls.length > 0 ? createFormModel.value.tls : [],
       };
 
       await createK8sIngress(params);
@@ -803,17 +803,17 @@ export function useIngressPage() {
   const openEditModal = (record: K8sIngress) => {
     currentOperationIngress.value = record;
     editFormModel.value = {
+      annotations: record.annotations || {},
+      ingress_class_name: record.ingress_class_name || '',
+      labels: record.labels || {},
       name: record.name,
       namespace: record.namespace,
-      ingress_class_name: record.ingress_class_name || '',
       rules: record.rules || [
         {
           host: '',
           http: {
             paths: [
               {
-                path: '/',
-                path_type: 'Prefix',
                 backend: {
                   service: {
                     name: '',
@@ -822,14 +822,14 @@ export function useIngressPage() {
                     },
                   },
                 },
+                path: '/',
+                path_type: 'Prefix',
               },
             ],
           },
         },
       ],
       tls: record.tls || [],
-      labels: record.labels || {},
-      annotations: record.annotations || {},
     };
     isEditModalVisible.value = true;
   };
@@ -850,20 +850,20 @@ export function useIngressPage() {
       submitLoading.value = true;
 
       const params: UpdateIngressReq = {
-        cluster_id: currentOperationIngress.value.cluster_id,
-        namespace: currentOperationIngress.value.namespace,
-        name: currentOperationIngress.value.name,
-        ingress_class_name: editFormModel.value.ingress_class_name || undefined,
-        rules: editFormModel.value.rules,
-        tls: editFormModel.value.tls.length > 0 ? editFormModel.value.tls : [],
-        labels:
-          Object.keys(editFormModel.value.labels).length > 0
-            ? editFormModel.value.labels
-            : {},
         annotations:
           Object.keys(editFormModel.value.annotations).length > 0
             ? editFormModel.value.annotations
             : {},
+        cluster_id: currentOperationIngress.value.cluster_id,
+        ingress_class_name: editFormModel.value.ingress_class_name || undefined,
+        labels:
+          Object.keys(editFormModel.value.labels).length > 0
+            ? editFormModel.value.labels
+            : {},
+        name: currentOperationIngress.value.name,
+        namespace: currentOperationIngress.value.namespace,
+        rules: editFormModel.value.rules,
+        tls: editFormModel.value.tls.length > 0 ? editFormModel.value.tls : [],
       };
 
       await updateK8sIngress(params);
@@ -888,18 +888,17 @@ export function useIngressPage() {
     if (!clusterId) return;
 
     Modal.confirm({
-      title: '删除 Ingress',
+      cancelText: '取消',
+      centered: true,
       content: `确定要删除 Ingress "${record.name}" 吗？此操作不可逆！`,
       okText: '确认删除',
       okType: 'danger',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           await deleteK8sIngress({
             cluster_id: clusterId,
-            namespace: record.namespace,
             name: record.name,
+            namespace: record.namespace,
           });
           message.success('✅ Ingress 删除成功');
           await fetchIngresses();
@@ -908,6 +907,7 @@ export function useIngressPage() {
             message.error('❌ Ingress 删除失败');
         }
       },
+      title: '删除 Ingress',
     });
   };
 
@@ -937,12 +937,11 @@ export function useIngressPage() {
     if (selectedRows.value.length === 0) return;
 
     Modal.confirm({
-      title: `批量${operation}`,
+      cancelText: '取消',
+      centered: true,
       content: `确定要对选中的 ${selectedRows.value.length} 个 Ingress 执行${operation}操作吗？`,
       okText: '确认执行',
       okType: operation === '删除' ? 'danger' : 'primary',
-      cancelText: '取消',
-      centered: true,
       onOk: async () => {
         try {
           for (const ingress of selectedRows.value) {
@@ -957,8 +956,8 @@ export function useIngressPage() {
             if (operation === '删除') {
               await deleteK8sIngress({
                 cluster_id: clusterId,
-                namespace: ingress.namespace,
                 name: ingress.name,
+                namespace: ingress.namespace,
               });
             }
           }
@@ -971,6 +970,7 @@ export function useIngressPage() {
             message.error(`❌ 批量${operation}失败`);
         }
       },
+      title: `批量${operation}`,
     });
   };
 
@@ -1011,8 +1011,6 @@ export function useIngressPage() {
       http: {
         paths: [
           {
-            path: '/',
-            path_type: 'Prefix',
             backend: {
               service: {
                 name: '',
@@ -1021,6 +1019,8 @@ export function useIngressPage() {
                 },
               },
             },
+            path: '/',
+            path_type: 'Prefix',
           } as IngressHTTPIngressPath,
         ],
       } as IngressHTTPRuleValue,
@@ -1035,8 +1035,8 @@ export function useIngressPage() {
 
   const addTlsField = () => {
     createFormModel.value.tls.push({
-      secret_name: '',
       hosts: [],
+      secret_name: '',
     });
   };
 
@@ -1051,8 +1051,6 @@ export function useIngressPage() {
       http: {
         paths: [
           {
-            path: '/',
-            path_type: 'Prefix',
             backend: {
               service: {
                 name: '',
@@ -1061,6 +1059,8 @@ export function useIngressPage() {
                 },
               },
             },
+            path: '/',
+            path_type: 'Prefix',
           } as IngressHTTPIngressPath,
         ],
       } as IngressHTTPRuleValue,
@@ -1075,8 +1075,8 @@ export function useIngressPage() {
 
   const addEditTlsField = () => {
     editFormModel.value.tls.push({
-      secret_name: '',
       hosts: [],
+      secret_name: '',
     });
   };
 
@@ -1125,6 +1125,33 @@ export function useIngressPage() {
   };
 
   return {
+    // edit form field operations
+    addEditRuleField,
+    addEditTlsField,
+    // filter operations
+    addFilterLabel,
+    addNewEditAnnotation,
+    addNewEditLabel,
+    // form field operations
+    addRuleField,
+    addTlsField,
+    // batch operations
+    batchOperation,
+    // helpers
+    calculateAge,
+    clearFilterLabels,
+    // operations
+    clearIngresses,
+    clearNamespaces,
+    // create operations
+    closeCreateModal,
+    closeCreateYamlModal,
+    // detail operations
+    closeDetailModal,
+    // edit operations
+    closeEditModal,
+    // YAML operations
+    closeYamlModal,
     // state
     clusters,
     clustersError,
@@ -1132,143 +1159,116 @@ export function useIngressPage() {
     clustersPage,
     clustersSize,
     clustersTotal,
+    // form models
+    createFormModel,
+    // form rules
+    createFormRules,
+
+    createYamlFormModel,
+    // form refs
+    createYamlFormRef,
+    createYamlFormRules,
+    // operation targets
+    currentIngressDetail,
+
+    currentOperationIngress,
     currentPage,
+    currentYamlContent,
+    // ingress operations
+    deleteIngress,
+    // modal state
+    detailLoading,
+    editFormModel,
+    editFormRef,
+
+    editFormRules,
+    extractHosts,
+    fetchClusters,
+
+    fetchIngresses,
+    fetchNamespaces,
     filterClusterId,
+    // computed
+    filteredIngresses,
+
     filterLabels,
     filterNamespace,
     filterStatus,
-    ingresses,
-    loadError,
-    loading,
-    namespaces,
-    namespacesError,
-    namespacesLoading,
-    namespacesPage,
-    namespacesSize,
-    namespacesTotal,
-    pageSize,
-    searchText,
-    selectedRowKeys,
-    selectedRows,
-    total,
-
-    // form refs
-    createYamlFormRef,
-    editFormRef,
     formRef,
-    yamlFormRef,
 
-    // modal state
-    detailLoading,
+    getEnvText,
+    getStatusColor,
+
+    getStatusText,
+    // pagination operations
+    handlePageChange,
+    ingresses,
     isCreateModalVisible,
     isCreateYamlModalVisible,
     isDetailModalVisible,
     isEditModalVisible,
     isYamlModalVisible,
-    submitLoading,
-
-    // operation targets
-    currentIngressDetail,
-    currentOperationIngress,
-    currentYamlContent,
-
-    // form models
-    createFormModel,
-    createYamlFormModel,
-    editFormModel,
-    yamlFormModel,
-
-    // form rules
-    createFormRules,
-    createYamlFormRules,
-    editFormRules,
-    yamlFormRules,
-
-    // computed
-    filteredIngresses,
-    rowSelection,
-
-    // helpers
-    calculateAge,
-    extractHosts,
-    getEnvText,
-    getStatusColor,
-    getStatusText,
+    // constants
+    K8sIngressStatus,
     keyValueListToRecord,
-    parseHTTPPaths,
-    parseLoadBalancerInfo,
-    recordToKeyValueList,
-    validateClusterId,
 
-    // operations
-    clearIngresses,
-    clearNamespaces,
-    fetchClusters,
-    fetchIngresses,
-    fetchNamespaces,
+    loadError,
+    loading,
     loadMoreClusters,
     loadMoreNamespaces,
+    namespaces,
+    namespacesError,
+    namespacesLoading,
 
-    // detail operations
-    closeDetailModal,
-    showIngressDetail,
+    namespacesPage,
+    namespacesSize,
 
-    // YAML operations
-    closeYamlModal,
-    showYamlModal,
-    submitYamlForm,
-
-    // create operations
-    closeCreateModal,
-    closeCreateYamlModal,
-    openCreateModal,
-    openCreateYamlModal,
-    submitCreateForm,
-    submitCreateYamlForm,
-
-    // edit operations
-    closeEditModal,
-    openEditModal,
-    submitEditForm,
-
-    // ingress operations
-    deleteIngress,
-
-    // filter operations
-    addFilterLabel,
-    clearFilterLabels,
-    removeFilterLabel,
-
-    // batch operations
-    batchOperation,
-
-    // pagination operations
-    handlePageChange,
-    resetClusters,
-
-    // form field operations
-    addRuleField,
-    addTlsField,
-    removeAnnotationField,
-    removeLabelField,
-    removeRuleField,
-    removeTlsField,
-
-    // edit form field operations
-    addEditRuleField,
-    addEditTlsField,
-    addNewEditAnnotation,
-    addNewEditLabel,
-    removeEditAnnotationField,
-    removeEditLabelField,
-    removeEditRuleField,
-    removeEditTlsField,
-
+    namespacesTotal,
     // edit form helper variables
     newEditAnnotationKey,
     newEditLabelKey,
 
-    // constants
-    K8sIngressStatus,
+    openCreateModal,
+    openCreateYamlModal,
+    openEditModal,
+    pageSize,
+    parseHTTPPaths,
+    parseLoadBalancerInfo,
+
+    recordToKeyValueList,
+    removeAnnotationField,
+    removeEditAnnotationField,
+
+    removeEditLabelField,
+
+    removeEditRuleField,
+    removeEditTlsField,
+    removeFilterLabel,
+
+    removeLabelField,
+
+    removeRuleField,
+    removeTlsField,
+
+    resetClusters,
+    rowSelection,
+    searchText,
+    selectedRowKeys,
+    selectedRows,
+    showIngressDetail,
+
+    showYamlModal,
+    submitCreateForm,
+    submitCreateYamlForm,
+    submitEditForm,
+    submitLoading,
+    submitYamlForm,
+    total,
+    validateClusterId,
+
+    yamlFormModel,
+    yamlFormRef,
+
+    yamlFormRules,
   };
 }

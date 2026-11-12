@@ -1,7 +1,6 @@
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
-
 import { defineComponent, ref } from 'vue';
 
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import Antd from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -23,51 +22,51 @@ const api = vi.hoisted(() => ({
 const charts = vi.hoisted(() => ({ instances: [] as any[] }));
 vi.mock('#/api/core/system/system', () => api);
 vi.mock('echarts/core', () => ({
-  use: vi.fn(),
-  init: (element: HTMLElement) => {
-    const chart = {
-      element,
-      disposed: false,
-      setOption: vi.fn(),
-      clear: vi.fn(),
-      resize: vi.fn(),
-      dispose() {
-        this.disposed = true;
-      },
-      isDisposed() {
-        return this.disposed;
-      },
-    };
-    charts.instances.push(chart);
-    return chart;
-  },
   getInstanceByDom: (element: HTMLElement) =>
     charts.instances.find(
       (chart) => chart.element === element && !chart.disposed,
     ),
+  init: (element: HTMLElement) => {
+    const chart = {
+      clear: vi.fn(),
+      dispose() {
+        this.disposed = true;
+      },
+      disposed: false,
+      element,
+      isDisposed() {
+        return this.disposed;
+      },
+      resize: vi.fn(),
+      setOption: vi.fn(),
+    };
+    charts.instances.push(chart);
+    return chart;
+  },
+  use: vi.fn(),
 }));
 const sample = (overrides: Record<string, unknown> = {}) => ({
-  hostname: 'owned-host',
-  os: 'linux',
-  os_version: 'test',
   arch: 'arm64',
-  cpu_model: 'test CPU',
   cpu_cores: 8,
+  cpu_model: 'test CPU',
   cpu_usage: 0,
-  memory_usage: 0,
-  disk_usage: 0,
-  memory_total: 1024,
-  memory_used: 0,
   disk_total: 100,
+  disk_usage: 0,
   disk_used: 0,
-  network_in: 12,
-  network_out: 6,
-  uptime: 0,
-  process_count: 0,
+  hostname: 'owned-host',
+  last_update_time: 1_792_740_000,
   load_avg_1: 0,
   load_avg_5: 0,
   load_avg_15: 0,
-  last_update_time: 1_792_740_000,
+  memory_total: 1024,
+  memory_usage: 0,
+  memory_used: 0,
+  network_in: 12,
+  network_out: 6,
+  os: 'linux',
+  os_version: 'test',
+  process_count: 0,
+  uptime: 0,
   ...overrides,
 });
 let wrapper: undefined | VueWrapper;
@@ -85,7 +84,7 @@ function deferred() {
   const promise = new Promise((yes) => {
     resolve = yes;
   });
-  return { resolve, promise };
+  return { promise, resolve };
 }
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
@@ -97,8 +96,8 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -198,9 +197,9 @@ describe('系统欢迎页真实采样合同', () => {
     api.getSystemMetricsApi.mockResolvedValue(
       sample({
         cpu_usage: undefined,
-        memory_usage: Number.NaN,
         disk_usage: 101,
         load_avg_1: undefined,
+        memory_usage: Number.NaN,
       }),
     );
     render();

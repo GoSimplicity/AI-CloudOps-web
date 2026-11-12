@@ -7,18 +7,18 @@ function explicitTimezone(value: string) {
   return /T.*(?:Z|[+-]\d{2}:\d{2})$/i.test(value);
 }
 
-export function formatPredictionTime(timestamp: string | Date, chart = false) {
+export function formatPredictionTime(timestamp: Date | string, chart = false) {
   if (typeof timestamp === 'string' && !explicitTimezone(timestamp))
     return '未知';
   const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
   if (!Number.isFinite(date.getTime())) return '未知';
   return date.toLocaleString('zh-CN', {
-    timeZone: 'Asia/Shanghai',
-    year: 'numeric',
-    month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    month: '2-digit',
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
     ...(chart ? {} : { second: '2-digit' }),
   });
 }
@@ -44,7 +44,7 @@ export function forecastPoints(response: PredictionResponse) {
       )
         throw new Error('预测时间序列包含无效或重复时间、数值，请检查源数据');
       seen.add(time);
-      return { time, point };
+      return { point, time };
     })
     .sort((left, right) => left.time - right.time);
 }
@@ -62,14 +62,17 @@ export function confidenceValues(
 /** 各序列按同一实际时间轴对齐，缺失为null，不插值、补零或制造当前时间 */
 export function alignForecasts(cache: Record<string, PredictionResponse>) {
   const labels: Record<string, string> = {
+    // Object.entries order is the chart series order.
+    /* eslint-disable perfectionist/sort-objects */
     qps: 'QPS',
     cpu: 'CPU',
     memory: '内存',
     disk: '磁盘',
+    /* eslint-enable perfectionist/sort-objects */
   };
   const available = Object.entries(labels).flatMap(([type, name]) => {
     const response = cache[type];
-    return response ? [{ type, name, points: forecastPoints(response) }] : [];
+    return response ? [{ name, points: forecastPoints(response), type }] : [];
   });
   const timeline = [
     ...new Set(
@@ -77,20 +80,20 @@ export function alignForecasts(cache: Record<string, PredictionResponse>) {
     ),
   ].sort((a, b) => a - b);
   return {
-    timeline,
     labels: timeline.map((time) => formatPredictionTime(new Date(time), true)),
     series: available
       .filter((item) => item.points.length > 0)
       .map((item) => {
         const values = new Map(
-          item.points.map(({ time, point }) => [time, point.predicted_value]),
+          item.points.map(({ point, time }) => [time, point.predicted_value]),
         );
         return {
-          type: item.type,
-          name: item.name,
-          yAxisIndex: item.type === 'qps' ? 0 : 1,
           data: timeline.map((time) => values.get(time) ?? null),
+          name: item.name,
+          type: item.type,
+          yAxisIndex: item.type === 'qps' ? 0 : 1,
         };
       }),
+    timeline,
   };
 }

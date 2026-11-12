@@ -26,117 +26,68 @@ export const U3_SCOPE_APPROVED: boolean = false;
 
 /** S1：FE-02 主范围 #1–#77 */
 export const PERMISSION_CODES = {
-  // 系统管理/用户
-  // #1
-  'system.user.delete': '/api/user/:id/delete',
-  // 系统管理/角色
-  // #2
-  'system.role.delete': '/api/role/delete/:id',
-  // 系统管理/API
-  // #3
-  'system.api.delete': '/api/apis/delete/:id',
-  // 系统管理/审计日志
-  // #4（待确认（SEC-13/D4 计划下线接口），临时码）
-  'system.audit.delete': '/api/audit/:id',
-  // #5（待确认（SEC-13/D4 计划下线接口），临时码）
-  'system.audit.batchDelete': '/api/audit/batch-delete',
+  // AIOps/AI 助手浮窗
+  // #75
+  'aiops.assistant.clearCache': '/api/v1/assistant/clear-cache',
+  // AIOps/知识库
+  // #76
+  'aiops.assistant.refreshKnowledge': '/api/v1/assistant/refresh',
+  // #71
+  'aiops.autofix.confirm': '/api/v1/autofix/workflow/confirm',
+  // AIOps/自动修复
+  // #70
+  'aiops.autofix.run': '/api/v1/autofix/workflow',
+  // AIOps/RCA 缓存
+  // #72
+  'aiops.rca.clearAll': '/api/v1/rca/cache/clear',
+  // #73
+  'aiops.rca.clearNamespace': '/api/v1/rca/cache/clear/namespace',
+  // #74
+  'aiops.rca.clearOperation': '/api/v1/rca/cache/clear/operation',
+  // #7
+  'cron.job.batchDelete': '/api/cron/job/:id/delete',
   // 任务调度/任务管理
   // #6
   'cron.job.delete': '/api/cron/job/:id/delete',
-  // #7
-  'cron.job.batchDelete': '/api/cron/job/:id/delete',
   // #8
   'cron.job.trigger': '/api/cron/job/:id/trigger',
-  // K8s/Pod
-  // #9
-  'k8s.pod.delete': '/api/k8s/pod/:cluster_id/:namespace/:name/delete',
-  // #10
-  'k8s.pod.batchDelete': '/api/k8s/pod/:cluster_id/:namespace/:name/delete',
-  // K8s/Deployment
-  // #11
-  'k8s.deployment.delete':
-    '/api/k8s/deployment/:cluster_id/:namespace/:name/delete',
-  // #12
-  'k8s.deployment.batchDelete':
-    '/api/k8s/deployment/:cluster_id/:namespace/:name/delete',
-  // K8s/StatefulSet
-  // #13
-  'k8s.statefulset.delete':
-    '/api/k8s/statefulset/:cluster_id/:namespace/:name/delete',
-  // #14
-  'k8s.statefulset.batchDelete':
-    '/api/k8s/statefulset/:cluster_id/:namespace/:name/delete',
-  // K8s/DaemonSet
-  // #15
-  'k8s.daemonset.delete':
-    '/api/k8s/daemonset/:cluster_id/:namespace/:name/delete',
-  // #16
-  'k8s.daemonset.batchDelete':
-    '/api/k8s/daemonset/:cluster_id/:namespace/:name/delete',
-  // K8s/Service
-  // #17
-  'k8s.service.delete': '/api/k8s/service/:cluster_id/:namespace/:name/delete',
-  // #18
-  'k8s.service.batchDelete':
-    '/api/k8s/service/:cluster_id/:namespace/:name/delete',
-  // K8s/Ingress
-  // #19
-  'k8s.ingress.delete': '/api/k8s/ingress/:cluster_id/:namespace/:name/delete',
-  // #20
-  'k8s.ingress.batchDelete':
-    '/api/k8s/ingress/:cluster_id/:namespace/:name/delete',
-  // K8s/ConfigMap
-  // #21
-  'k8s.configmap.delete':
-    '/api/k8s/configmap/:cluster_id/:namespace/:name/delete',
-  // #22
-  'k8s.configmap.batchDelete':
-    '/api/k8s/configmap/:cluster_id/:namespace/:name/delete',
-  // K8s/Secret
-  // #23
-  'k8s.secret.delete': '/api/k8s/secret/:cluster_id/:namespace/:name/delete',
-  // #24
-  'k8s.secret.batchDelete':
-    '/api/k8s/secret/:cluster_id/:namespace/:name/delete',
-  // K8s/PV
-  // #25
-  'k8s.pv.delete': '/api/k8s/pv/:cluster_id/:name/delete',
-  // #26
-  'k8s.pv.batchDelete': '/api/k8s/pv/:cluster_id/:name/delete',
-  // K8s/PVC
-  // #27
-  'k8s.pvc.delete': '/api/k8s/pvc/:cluster_id/:namespace/:name/delete',
-  // #28
-  'k8s.pvc.batchDelete': '/api/k8s/pvc/:cluster_id/:namespace/:name/delete',
-  // K8s/Role
-  // #29
-  'k8s.role.delete': '/api/k8s/role/:cluster_id/:namespace/:name/delete',
-  // #30
-  'k8s.role.batchDelete': '/api/k8s/role/:cluster_id/:namespace/:name/delete',
-  // K8s/RoleBinding
-  // #31
-  'k8s.rolebinding.delete':
-    '/api/k8s/rolebinding/:cluster_id/:namespace/:name/delete',
-  // #32
-  'k8s.rolebinding.batchDelete':
-    '/api/k8s/rolebinding/:cluster_id/:namespace/:name/delete',
+  // #34
+  'k8s.clusterrolebinding.batchDelete':
+    '/api/k8s/clusterrolebinding/:cluster_id/:name/delete',
   // K8s/ClusterRoleBinding
   // #33
   'k8s.clusterrolebinding.delete':
     '/api/k8s/clusterrolebinding/:cluster_id/:name/delete',
-  // #34
-  'k8s.clusterrolebinding.batchDelete':
-    '/api/k8s/clusterrolebinding/:cluster_id/:name/delete',
-  // K8s/YAML 模板
-  // #35
-  'k8s.template.delete': '/api/k8s/yaml_template/:cluster_id/:id/delete',
-  // #36
-  'k8s.template.batchDelete': '/api/k8s/yaml_template/:cluster_id/:id/delete',
-  // K8s/YAML 任务
-  // #37
-  'k8s.task.delete': '/api/k8s/yaml_task/:cluster_id/:id/delete',
-  // #38
-  'k8s.task.batchDelete': '/api/k8s/yaml_task/:cluster_id/:id/delete',
+  // #22
+  'k8s.configmap.batchDelete':
+    '/api/k8s/configmap/:cluster_id/:namespace/:name/delete',
+  // K8s/ConfigMap
+  // #21
+  'k8s.configmap.delete':
+    '/api/k8s/configmap/:cluster_id/:namespace/:name/delete',
+  // #16
+  'k8s.daemonset.batchDelete':
+    '/api/k8s/daemonset/:cluster_id/:namespace/:name/delete',
+  // K8s/DaemonSet
+  // #15
+  'k8s.daemonset.delete':
+    '/api/k8s/daemonset/:cluster_id/:namespace/:name/delete',
+  // #12
+  'k8s.deployment.batchDelete':
+    '/api/k8s/deployment/:cluster_id/:namespace/:name/delete',
+  // K8s/Deployment
+  // #11
+  'k8s.deployment.delete':
+    '/api/k8s/deployment/:cluster_id/:namespace/:name/delete',
+  // #20
+  'k8s.ingress.batchDelete':
+    '/api/k8s/ingress/:cluster_id/:namespace/:name/delete',
+  // K8s/Ingress
+  // #19
+  'k8s.ingress.delete': '/api/k8s/ingress/:cluster_id/:namespace/:name/delete',
+  // #41
+  'k8s.namespace.batchDelete':
+    '/api/k8s/clusters/:cluster_id/namespace/:name/delete',
   // K8s/Namespace
   // #39
   'k8s.namespace.delete':
@@ -144,36 +95,89 @@ export const PERMISSION_CODES = {
   // #40（待后端确认（与普通删除同接口），临时码）
   'k8s.namespace.forceDelete':
     '/api/k8s/clusters/:cluster_id/namespace/:name/delete',
-  // #41
-  'k8s.namespace.batchDelete':
-    '/api/k8s/clusters/:cluster_id/namespace/:name/delete',
+  // K8s/Node
+  // #77
+  'k8s.node.taintAdd': '/api/k8s/node/:cluster_id/:node_name/taints/add',
   // K8s/Node
   // #42
   'k8s.node.taintDelete': '/api/k8s/node/:cluster_id/:node_name/taints/delete',
+  // #10
+  'k8s.pod.batchDelete': '/api/k8s/pod/:cluster_id/:namespace/:name/delete',
+  // K8s/Pod
+  // #9
+  'k8s.pod.delete': '/api/k8s/pod/:cluster_id/:namespace/:name/delete',
+  // K8s/Pod
+  // #45
+  'k8s.pod.exec':
+    '/api/k8s/pod/:cluster_id/:namespace/:name/containers/:container/exec',
+  // #26
+  'k8s.pv.batchDelete': '/api/k8s/pv/:cluster_id/:name/delete',
+  // K8s/PV
+  // #25
+  'k8s.pv.delete': '/api/k8s/pv/:cluster_id/:name/delete',
+  // #28
+  'k8s.pvc.batchDelete': '/api/k8s/pvc/:cluster_id/:namespace/:name/delete',
+  // K8s/PVC
+  // #27
+  'k8s.pvc.delete': '/api/k8s/pvc/:cluster_id/:namespace/:name/delete',
+  // #30
+  'k8s.role.batchDelete': '/api/k8s/role/:cluster_id/:namespace/:name/delete',
+  // K8s/Role
+  // #29
+  'k8s.role.delete': '/api/k8s/role/:cluster_id/:namespace/:name/delete',
+  // #32
+  'k8s.rolebinding.batchDelete':
+    '/api/k8s/rolebinding/:cluster_id/:namespace/:name/delete',
+  // K8s/RoleBinding
+  // #31
+  'k8s.rolebinding.delete':
+    '/api/k8s/rolebinding/:cluster_id/:namespace/:name/delete',
+  // #24
+  'k8s.secret.batchDelete':
+    '/api/k8s/secret/:cluster_id/:namespace/:name/delete',
+  // #47 同 #46（复制明文同样先调 reveal）
+  'k8s.secret.copyPlain': '/api/k8s/secret/:cluster_id/:namespace/:name/reveal',
+  // K8s/Secret
+  // #23
+  'k8s.secret.delete': '/api/k8s/secret/:cluster_id/:namespace/:name/delete',
+  // K8s/Secret
+  // #46 SEC-25/26：明文改走 reveal 接口，码为 reveal 路由模板（AI-CloudOps@ed683ef
+  // internal/model/k8s_secret.go:107 K8sSecretRevealRoute）。显式授权码，只认精确匹配，见 utils/permission
+  'k8s.secret.viewPlain': '/api/k8s/secret/:cluster_id/:namespace/:name/reveal',
+  // #48（待后端补齐（SEC-19 独立明文权限），临时码）
+  'k8s.secret.viewYaml':
+    '/api/k8s/secret/:cluster_id/:namespace/:name/detail/yaml',
+  // #18
+  'k8s.service.batchDelete':
+    '/api/k8s/service/:cluster_id/:namespace/:name/delete',
+  // K8s/Service
+  // #17
+  'k8s.service.delete': '/api/k8s/service/:cluster_id/:namespace/:name/delete',
+  // #14
+  'k8s.statefulset.batchDelete':
+    '/api/k8s/statefulset/:cluster_id/:namespace/:name/delete',
+  // K8s/StatefulSet
+  // #13
+  'k8s.statefulset.delete':
+    '/api/k8s/statefulset/:cluster_id/:namespace/:name/delete',
   // K8s/YAML 任务
   // #43
   'k8s.task.apply': '/api/k8s/yaml_task/:cluster_id/:id/apply',
   // #44
   'k8s.task.batchApply': '/api/k8s/yaml_task/:cluster_id/:id/apply',
-  // K8s/Pod
-  // #45
-  'k8s.pod.exec':
-    '/api/k8s/pod/:cluster_id/:namespace/:name/containers/:container/exec',
-  // K8s/Secret
-  // #46 SEC-25/26：明文改走 reveal 接口，码为 reveal 路由模板（AI-CloudOps@ed683ef
-  // internal/model/k8s_secret.go:107 K8sSecretRevealRoute）。显式授权码，只认精确匹配，见 utils/permission
-  'k8s.secret.viewPlain': '/api/k8s/secret/:cluster_id/:namespace/:name/reveal',
-  // #47 同 #46（复制明文同样先调 reveal）
-  'k8s.secret.copyPlain': '/api/k8s/secret/:cluster_id/:namespace/:name/reveal',
-  // #48（待后端补齐（SEC-19 独立明文权限），临时码）
-  'k8s.secret.viewYaml':
-    '/api/k8s/secret/:cluster_id/:namespace/:name/detail/yaml',
+  // #38
+  'k8s.task.batchDelete': '/api/k8s/yaml_task/:cluster_id/:id/delete',
+  // K8s/YAML 任务
+  // #37
+  'k8s.task.delete': '/api/k8s/yaml_task/:cluster_id/:id/delete',
+  // #36
+  'k8s.template.batchDelete': '/api/k8s/yaml_template/:cluster_id/:id/delete',
+  // K8s/YAML 模板
+  // #35
+  'k8s.template.delete': '/api/k8s/yaml_template/:cluster_id/:id/delete',
   // 监控/AlertManager 实例池
   // #49
   'monitor.alertPool.delete': '/api/monitor/alert_manager_pools/delete/:id',
-  // 监控/预聚合规则
-  // #50
-  'monitor.recordRule.delete': '/api/monitor/record_rules/delete/:id',
   // 监控/告警规则
   // #51
   'monitor.alertRule.delete': '/api/monitor/alert_rules/delete/:id',
@@ -183,6 +187,9 @@ export const PERMISSION_CODES = {
   // 监控/值班组
   // #53
   'monitor.onDutyGroup.delete': '/api/monitor/onduty_groups/delete/:id',
+  // 监控/预聚合规则
+  // #50
+  'monitor.recordRule.delete': '/api/monitor/record_rules/delete/:id',
   // 监控/采集任务
   // #54
   'monitor.scrapeJob.delete': '/api/monitor/scrape_jobs/delete/:id',
@@ -192,24 +199,20 @@ export const PERMISSION_CODES = {
   // 监控/发送组
   // #56
   'monitor.sendGroup.delete': '/api/monitor/send_groups/delete/:id',
-  // 工单/分类
-  // #57
-  'workorder.category.delete': '/api/workorder/category/delete/:id',
-  // 工单/表单设计
-  // #58
-  'workorder.formDesign.delete': '/api/workorder/form-design/delete/:id',
-  // 工单/工单实例
-  // #59
-  'workorder.instance.delete': '/api/workorder/instance/delete/:id',
-  // 工单/通知配置
-  // #60
-  'workorder.notification.delete': '/api/workorder/notification/delete/:id',
-  // 工单/流程
-  // #61
-  'workorder.process.delete': '/api/workorder/process/delete/:id',
-  // 工单/模板
-  // #62
-  'workorder.template.delete': '/api/workorder/template/delete/:id',
+  // 系统管理/API
+  // #3
+  'system.api.delete': '/api/apis/delete/:id',
+  // #5（待确认（SEC-13/D4 计划下线接口），临时码）
+  'system.audit.batchDelete': '/api/audit/batch-delete',
+  // 系统管理/审计日志
+  // #4（待确认（SEC-13/D4 计划下线接口），临时码）
+  'system.audit.delete': '/api/audit/:id',
+  // 系统管理/角色
+  // #2
+  'system.role.delete': '/api/role/delete/:id',
+  // 系统管理/用户
+  // #1
+  'system.user.delete': '/api/user/:id/delete',
   // 服务树/云账号
   // #63
   'tree.cloudAccount.delete': '/api/tree/cloud/account/:id/delete',
@@ -228,36 +231,33 @@ export const PERMISSION_CODES = {
   'tree.node.delete': '/api/tree/node/delete/:id',
   // #69
   'tree.node.removeMember': '/api/tree/node/member/remove/:id',
-  // AIOps/自动修复
-  // #70
-  'aiops.autofix.run': '/api/v1/autofix/workflow',
-  // #71
-  'aiops.autofix.confirm': '/api/v1/autofix/workflow/confirm',
-  // AIOps/RCA 缓存
-  // #72
-  'aiops.rca.clearAll': '/api/v1/rca/cache/clear',
-  // #73
-  'aiops.rca.clearNamespace': '/api/v1/rca/cache/clear/namespace',
-  // #74
-  'aiops.rca.clearOperation': '/api/v1/rca/cache/clear/operation',
-  // AIOps/AI 助手浮窗
-  // #75
-  'aiops.assistant.clearCache': '/api/v1/assistant/clear-cache',
-  // AIOps/知识库
-  // #76
-  'aiops.assistant.refreshKnowledge': '/api/v1/assistant/refresh',
-  // K8s/Node
-  // #77
-  'k8s.node.taintAdd': '/api/k8s/node/:cluster_id/:node_name/taints/add',
+  // 工单/分类
+  // #57
+  'workorder.category.delete': '/api/workorder/category/delete/:id',
+  // 工单/表单设计
+  // #58
+  'workorder.formDesign.delete': '/api/workorder/form-design/delete/:id',
+  // 工单/工单实例
+  // #59
+  'workorder.instance.delete': '/api/workorder/instance/delete/:id',
+  // 工单/通知配置
+  // #60
+  'workorder.notification.delete': '/api/workorder/notification/delete/:id',
+  // 工单/流程
+  // #61
+  'workorder.process.delete': '/api/workorder/process/delete/:id',
+  // 工单/模板
+  // #62
+  'workorder.template.delete': '/api/workorder/template/delete/:id',
 } as const;
 
 /** S2：FE-02 补（views/k8s/cluster/**，W3） */
 export const FE02_SUPPLEMENT_PERMISSION_CODES = {
+  // #2
+  'k8s.cluster.batchDelete': '/api/k8s/cluster/:cluster_id/delete',
   // K8s/集群（FE-02 补）
   // #1
   'k8s.cluster.delete': '/api/k8s/cluster/:cluster_id/delete',
-  // #2
-  'k8s.cluster.batchDelete': '/api/k8s/cluster/:cluster_id/delete',
   // #3（待确认（FE-03 移除），临时码）
   'k8s.cluster.kubeconfigCopy': '/api/k8s/cluster/:cluster_id/detail',
   // #4（待确认（FE-03 移除），临时码）
@@ -266,74 +266,74 @@ export const FE02_SUPPLEMENT_PERMISSION_CODES = {
 
 /** S1b：Node 调度 #84 / #85 / #87，始终按码判断（清单 v4） */
 export const S1B_PERMISSION_CODES = {
+  // #87（和 #84 同码）
+  'k8s.node.batchCordon': '/api/k8s/node/:cluster_id/:node_name/cordon',
   // K8s/Node
   // #84
   'k8s.node.cordon': '/api/k8s/node/:cluster_id/:node_name/cordon',
   // #85
   'k8s.node.uncordon': '/api/k8s/node/:cluster_id/:node_name/uncordon',
-  // #87（和 #84 同码）
-  'k8s.node.batchCordon': '/api/k8s/node/:cluster_id/:node_name/cordon',
 } as const;
 
 /** S3：U3 产品推荐纳入 #78–#83、#86、#88–#99，U3_SCOPE_APPROVED 为 true 时才按码判断 */
 export const U3_PERMISSION_CODES = {
-  // K8s/Deployment
-  // #78
-  'k8s.deployment.restart':
-    '/api/k8s/deployment/:cluster_id/:namespace/:name/restart',
-  // #79
-  'k8s.deployment.batchRestart':
-    '/api/k8s/deployment/:cluster_id/:namespace/:name/restart',
-  // K8s/StatefulSet
-  // #80
-  'k8s.statefulset.restart':
-    '/api/k8s/statefulset/:cluster_id/:namespace/:name/restart',
-  // #81
-  'k8s.statefulset.batchRestart':
-    '/api/k8s/statefulset/:cluster_id/:namespace/:name/restart',
+  // AIOps/知识库
+  // #95
+  'aiops.assistant.uploadKnowledge': '/api/v1/assistant/upload-knowledge-file',
+  // #91
+  'cron.job.batchDisable': '/api/cron/job/:id/disable',
+  // #90
+  'cron.job.batchEnable': '/api/cron/job/:id/enable',
+  // #89
+  'cron.job.disable': '/api/cron/job/:id/disable',
+  // 任务调度/任务管理
+  // #88
+  'cron.job.enable': '/api/cron/job/:id/enable',
+  // #83
+  'k8s.daemonset.batchRestart':
+    '/api/k8s/daemonset/:cluster_id/:namespace/:name/restart',
   // K8s/DaemonSet
   // #82
   'k8s.daemonset.restart':
     '/api/k8s/daemonset/:cluster_id/:namespace/:name/restart',
-  // #83
-  'k8s.daemonset.batchRestart':
-    '/api/k8s/daemonset/:cluster_id/:namespace/:name/restart',
+  // #79
+  'k8s.deployment.batchRestart':
+    '/api/k8s/deployment/:cluster_id/:namespace/:name/restart',
+  // K8s/Deployment
+  // #78
+  'k8s.deployment.restart':
+    '/api/k8s/deployment/:cluster_id/:namespace/:name/restart',
   // K8s/Node
   // #86
   'k8s.node.drain': '/api/k8s/node/:cluster_id/:node_name/drain',
-  // 任务调度/任务管理
-  // #88
-  'cron.job.enable': '/api/cron/job/:id/enable',
-  // #89
-  'cron.job.disable': '/api/cron/job/:id/disable',
-  // #90
-  'cron.job.batchEnable': '/api/cron/job/:id/enable',
-  // #91
-  'cron.job.batchDisable': '/api/cron/job/:id/disable',
+  // #94
+  'k8s.pod.fileDownload':
+    '/api/k8s/pod/:cluster_id/:namespace/:name/containers/:container/files/download',
+  // #93
+  'k8s.pod.fileUpload':
+    '/api/k8s/pod/:cluster_id/:namespace/:name/containers/:container/files/upload',
   // K8s/Pod
   // #92
   'k8s.pod.portForward':
     '/api/k8s/pod/:cluster_id/:namespace/:name/port-forward',
-  // #93
-  'k8s.pod.fileUpload':
-    '/api/k8s/pod/:cluster_id/:namespace/:name/containers/:container/files/upload',
-  // #94
-  'k8s.pod.fileDownload':
-    '/api/k8s/pod/:cluster_id/:namespace/:name/containers/:container/files/download',
-  // AIOps/知识库
-  // #95
-  'aiops.assistant.uploadKnowledge': '/api/v1/assistant/upload-knowledge-file',
+  // #81
+  'k8s.statefulset.batchRestart':
+    '/api/k8s/statefulset/:cluster_id/:namespace/:name/restart',
+  // K8s/StatefulSet
+  // #80
+  'k8s.statefulset.restart':
+    '/api/k8s/statefulset/:cluster_id/:namespace/:name/restart',
   // 系统管理/角色
   // #96
   'system.role.revokeApi': '/api/role/revoke-apis',
   // 系统管理/用户
   // #97
   'system.user.revokeRole': '/api/role/revoke_users',
+  // #99
+  'workorder.notification.manualSend': '/api/workorder/notification/send',
   // 工单/通知配置
   // #98
   'workorder.notification.testSend': '/api/workorder/notification/test/send',
-  // #99
-  'workorder.notification.manualSend': '/api/workorder/notification/send',
 } as const;
 
 /**

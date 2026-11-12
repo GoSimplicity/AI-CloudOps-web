@@ -21,9 +21,9 @@ import { HTTP_ERROR_MESSAGE_KEY_PREFIX, requestClient } from './request';
  */
 const notices = vi.hoisted(() => ({
   error: vi.fn(),
-  warning: vi.fn(),
-  success: vi.fn(),
   info: vi.fn(),
+  success: vi.fn(),
+  warning: vi.fn(),
 }));
 const refreshTokenApi = vi.hoisted(() => vi.fn());
 
@@ -40,8 +40,8 @@ vi.mock('@vben/preferences', () => ({
 const access = vi.hoisted(() => {
   const store = {
     accessToken: 'token' as null | string,
-    refreshToken: 'refresh',
     isAccessChecked: true,
+    refreshToken: 'refresh',
     setAccessToken: (token: null | string) => {
       store.accessToken = token;
     },
@@ -372,8 +372,8 @@ describe('业务错误（code≠0）统一提示 · 请求链路集成', () => {
     const keys = notices.error.mock.calls.map((call) => (call[0] as any).key);
     expect(new Set(keys)).toEqual(
       new Set([
-        `${BUSINESS_ERROR_MESSAGE_KEY_PREFIX}任务名已存在`,
         `${BUSINESS_ERROR_MESSAGE_KEY_PREFIX}Cron 表达式无效`,
+        `${BUSINESS_ERROR_MESSAGE_KEY_PREFIX}任务名已存在`,
       ]),
     );
   });

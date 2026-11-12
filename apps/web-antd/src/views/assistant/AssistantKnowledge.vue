@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
 import { onMounted, reactive, ref } from 'vue';
 
-import { message, Upload, type UploadProps } from 'ant-design-vue';
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -13,6 +11,7 @@ import {
   NodeIndexOutlined,
   ReloadOutlined,
 } from '@ant-design/icons-vue';
+import { message, Upload, type UploadProps } from 'ant-design-vue';
 
 import {
   addDocument as addDocumentAPI,
@@ -23,6 +22,7 @@ import {
   uploadKnowledgeFile,
   type UploadKnowledgeResponse,
 } from '#/api/core/aiops/assistant';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { usePermission } from '#/utils/permission';
 import {
   shouldNotifyPageError,
@@ -41,15 +41,15 @@ const fileList = ref<any[]>([]);
 // 知识库统计
 const knowledgeStats = reactive({
   documents_count: 0,
-  vector_count: 0,
   last_update: '暂无数据',
+  vector_count: 0,
 });
 
 // 文档表单
 const documentForm = reactive<AddDocumentRequest>({
-  title: '',
   content: '',
   file_name: '',
+  title: '',
 });
 
 // 操作日志
@@ -64,9 +64,9 @@ const operationLogs = ref<OperationLog[]>([]);
 // 添加日志
 const addLog = (type: OperationLog['type'], message: string) => {
   operationLogs.value.unshift({
-    type,
     message,
     timestamp: new Date().toLocaleString(),
+    type,
   });
   // 保持最多显示 50 条日志
   if (operationLogs.value.length > 50) {
@@ -222,9 +222,9 @@ onMounted(() => {
     <template #actions>
       <a-button
         v-if="can('aiops.assistant.refreshKnowledge')"
+        :loading="refreshing"
         type="primary"
         @click="refreshKnowledge"
-        :loading="refreshing"
       >
         <template #icon><ReloadOutlined /></template>
         重建知识索引
@@ -283,7 +283,7 @@ onMounted(() => {
             <a-card class="function-card" title="文档上传">
               <div class="upload-area">
                 <a-upload-dragger
-                  v-model:fileList="fileList"
+                  v-model:file-list="fileList"
                   :before-upload="beforeUpload"
                   :custom-request="handleUpload"
                   :multiple="true"
@@ -353,11 +353,11 @@ onMounted(() => {
             <div
               v-for="(log, index) in operationLogs"
               :key="index"
-              class="log-item"
               :class="{
                 success: log.type === 'success',
                 error: log.type === 'error',
               }"
+              class="log-item"
             >
               <div class="log-icon">
                 <CheckCircleOutlined v-if="log.type === 'success'" />

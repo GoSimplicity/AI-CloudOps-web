@@ -1,9 +1,4 @@
 <script setup lang="ts">
-import { useUserStore } from '@vben/stores';
-
-import OpsPage from '#/components/ops/OpsPage.vue';
-
-import { useListRequest } from './useListRequest';
 import {
   computed,
   onBeforeUnmount,
@@ -13,13 +8,15 @@ import {
   watch,
 } from 'vue';
 
-import { type FormInstance, message, Modal } from 'ant-design-vue';
+import { useUserStore } from '@vben/stores';
+
 import {
   DownOutlined,
   MinusCircleOutlined,
   PlusOutlined,
 } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
+import { type FormInstance, message, Modal } from 'ant-design-vue';
 
 import {
   createMonitorScrapePoolApi,
@@ -30,10 +27,13 @@ import {
   type MonitorScrapePool,
   updateMonitorScrapePoolApi,
 } from '#/api/core/prometheus/prometheus_scrape_pool';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { useAuthStore } from '#/store';
 import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
+import { useListRequest } from './useListRequest';
 
 const { can, hasPerm } = usePermission();
 let disposed = false;
@@ -156,19 +156,19 @@ let searchTimeout: null | ReturnType<typeof setTimeout> = null;
 const paginationConfig = reactive({
   current: 1,
   pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
   showQuickJumper: true,
+  showSizeChanger: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
   size: 'default' as const,
+  total: 0,
 });
 
 // 统计数据
 const stats = reactive({
-  total: 0,
+  activeInstances: 0,
   supportAlert: 0,
   supportRecord: 0,
-  activeInstances: 0,
+  total: 0,
 });
 
 // 对话框状态
@@ -177,23 +177,23 @@ const detailDialogVisible = ref(false);
 
 // 表单对话框数据
 const formDialog = reactive({
-  isEdit: false,
   form: {
+    alert_manager_url: '',
     id: undefined as number | undefined,
     name: '',
     prometheus_instances: [] as DynamicItem[],
+    record_file_path: '',
+    remote_read_url: '',
+    remote_timeout_seconds: 30,
+    remote_write_url: '',
+    rule_file_path: '',
     scrape_interval: 15,
     scrape_timeout: 10,
-    remote_timeout_seconds: 30,
     support_alert: false,
     support_record: false,
     tags: [] as string[],
-    remote_write_url: '',
-    remote_read_url: '',
-    alert_manager_url: '',
-    rule_file_path: '',
-    record_file_path: '',
   },
+  isEdit: false,
 });
 
 // 详情对话框数据
@@ -261,14 +261,14 @@ const formRules = {
     },
     { max: 50, message: '长度应为1到50个字符', min: 1, trigger: 'blur' },
   ],
+  remote_timeout_seconds: [
+    { message: '请输入远程超时时间', required: true, trigger: 'blur' },
+  ],
   scrape_interval: [
     { message: '请输入采集间隔', required: true, trigger: 'blur' },
   ],
   scrape_timeout: [
     { message: '请输入采集超时时间', required: true, trigger: 'blur' },
-  ],
-  remote_timeout_seconds: [
-    { message: '请输入远程超时时间', required: true, trigger: 'blur' },
   ],
 };
 
@@ -326,8 +326,8 @@ const loadScrapePoolList = async (): Promise<void> => {
   try {
     const params: GetMonitorScrapePoolListReq = {
       page: paginationConfig.current,
-      size: paginationConfig.pageSize,
       search: searchQuery.value || undefined,
+      size: paginationConfig.pageSize,
       support_alert: supportAlertFilter.value,
       support_record: supportRecordFilter.value,
     };
@@ -412,22 +412,22 @@ const handleEditScrapePool = (record: MonitorScrapePool): void => {
   formOwner = scope.owner;
   formDialog.isEdit = true;
   formDialog.form = {
+    alert_manager_url: record.alert_manager_url || '',
     id: record.id,
     name: record.name,
+    prometheus_instances: record.prometheus_instances?.map((value) => ({
+      key: Date.now() + Math.random(),
+      value,
+    })) || [{ key: Date.now(), value: '' }],
+    record_file_path: record.record_file_path || '',
+    remote_read_url: record.remote_read_url || '',
+    remote_timeout_seconds: record.remote_timeout_seconds,
+    remote_write_url: record.remote_write_url || '',
+    rule_file_path: record.rule_file_path || '',
     scrape_interval: record.scrape_interval,
     scrape_timeout: record.scrape_timeout,
-    remote_timeout_seconds: record.remote_timeout_seconds,
     support_alert: record.support_alert === 1,
     support_record: record.support_record === 1,
-    remote_write_url: record.remote_write_url || '',
-    remote_read_url: record.remote_read_url || '',
-    alert_manager_url: record.alert_manager_url || '',
-    rule_file_path: record.rule_file_path || '',
-    record_file_path: record.record_file_path || '',
-    prometheus_instances: record.prometheus_instances?.map((value) => ({
-      value,
-      key: Date.now() + Math.random(),
-    })) || [{ value: '', key: Date.now() }],
     tags: record.tags ? [...record.tags] : [],
   };
   formDialogVisible.value = true;
@@ -480,11 +480,10 @@ const confirmDelete = (record: MonitorScrapePool): void => {
     currentRecord(ticket) &&
     can('monitor.scrapePool.delete');
   Modal.confirm({
-    title: '警告',
+    cancelText: '取消',
     content: `确定要删除采集池 "${record.name}" 吗？`,
     okText: '删除',
     okType: 'danger',
-    cancelText: '取消',
     onCancel: () => {
       if (deleteTickets.get(ticket.id) === ticket)
         deleteTickets.delete(ticket.id);
@@ -506,6 +505,7 @@ const confirmDelete = (record: MonitorScrapePool): void => {
           deleteTickets.delete(ticket.id);
       }
     },
+    title: '警告',
   });
 };
 
@@ -565,13 +565,13 @@ const saveScrapePool = async (): Promise<void> => {
     if (!validPositiveId(userId)) return;
     const formData = {
       ...draft,
-      user_id: userId,
       prometheus_instances: draft.prometheus_instances
         .map((item) => item.value)
         .filter((value) => value.trim() !== ''),
       support_alert: draft.support_alert ? 1 : 2,
       support_record: draft.support_record ? 1 : 2,
       tags: draft.tags.filter((value) => String(value).trim() !== ''),
+      user_id: userId,
     };
     if (editing) {
       if (!validPositiveId(id)) return;
@@ -597,19 +597,19 @@ const saveScrapePool = async (): Promise<void> => {
 // 重置表单对话框
 function resetFormDialog(): void {
   formDialog.form = {
+    alert_manager_url: '',
     id: undefined,
     name: '',
+    prometheus_instances: [{ key: Date.now(), value: '' }],
+    record_file_path: '',
+    remote_read_url: '',
+    remote_timeout_seconds: 30,
+    remote_write_url: '',
+    rule_file_path: '',
     scrape_interval: 15,
     scrape_timeout: 10,
-    remote_timeout_seconds: 30,
     support_alert: false,
     support_record: false,
-    remote_write_url: '',
-    remote_read_url: '',
-    alert_manager_url: '',
-    rule_file_path: '',
-    record_file_path: '',
-    prometheus_instances: [{ value: '', key: Date.now() }],
     tags: [],
   };
 }
@@ -617,8 +617,8 @@ function resetFormDialog(): void {
 // 动态表单项操作
 const addPrometheusInstance = (): void => {
   formDialog.form.prometheus_instances.push({
-    value: '',
     key: Date.now(),
+    value: '',
   });
 };
 
@@ -839,8 +839,8 @@ onMounted(() => {
             <template v-if="column.key === 'name'">
               <div class="pool-name-cell">
                 <div
-                  class="pool-badge"
                   :class="getPoolStatusClass(record)"
+                  class="pool-badge"
                 ></div>
                 <span class="pool-name-text">{{ record.name }}</span>
               </div>
@@ -912,12 +912,12 @@ onMounted(() => {
             <template v-if="column.key === 'creator'">
               <div class="creator-info">
                 <a-avatar
-                  size="small"
                   :style="{
                     backgroundColor: getAvatarColor(
                       record.create_user_name || '',
                     ),
                   }"
+                  size="small"
                 >
                   {{ getInitials(record.create_user_name) }}
                 </a-avatar>
@@ -1216,7 +1216,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <a-descriptions :column="1" :labelStyle="{ width: '150px' }" bordered>
+        <a-descriptions :column="1" :label-style="{ width: '150px' }" bordered>
           <a-descriptions-item label="ID">
             {{ detailDialog.form.id }}
           </a-descriptions-item>
@@ -1598,7 +1598,7 @@ onMounted(() => {
   flex: 1;
 }
 
-.label-separator {
+:is(.label-separator) {
   font-weight: bold;
   color: var(--ops-muted);
 }

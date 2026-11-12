@@ -97,13 +97,13 @@ export function notificationScheduleFingerprint(
   form: NotificationScheduleForm,
 ): string {
   return JSON.stringify({
-    type: form.triggerType,
     condition: form.triggerCondition.trim(),
+    count: form.repeatCount ?? null,
+    delay: form.delayMinutes ?? null,
+    interval: form.repeatInterval ?? null,
     scheduled: form.scheduledTime?.isValid()
       ? form.scheduledTime.toISOString()
       : null,
-    delay: form.delayMinutes ?? null,
-    interval: form.repeatInterval ?? null,
-    count: form.repeatCount ?? null,
+    type: form.triggerType,
   });
 }

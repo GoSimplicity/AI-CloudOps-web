@@ -1,16 +1,10 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-
-import { useListRequest } from './useListRequest';
-
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
-import { message } from 'ant-design-vue';
-
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
-import dayjs, { Dayjs } from 'dayjs';
 import { Icon } from '@iconify/vue';
+import { message } from 'ant-design-vue';
+import dayjs, { Dayjs } from 'dayjs';
 
 import {
   createMonitorOnDutyGroupChangeApi,
@@ -22,6 +16,10 @@ import {
   type MonitorOnDutyGroup,
   type MonitorOnDutyHistory,
 } from '#/api/core/prometheus/prometheus_onduty';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
+import { useListRequest } from './useListRequest';
 
 // Define User type locally
 interface User {
@@ -114,18 +112,18 @@ const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '�
 const paginationConfig = reactive({
   current: 1,
   pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
   showQuickJumper: true,
+  showSizeChanger: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
+  total: 0,
 });
 
 // 统计数据
 const stats = reactive({
-  totalMembers: 0,
-  todayOnDuty: '',
   changeRecords: 0,
   monthlyDutyDays: 0,
+  todayOnDuty: '',
+  totalMembers: 0,
 });
 
 // 对话框状态
@@ -134,14 +132,14 @@ const dayDetailVisible = ref(false);
 
 // 表单对话框数据
 const formDialog = reactive({
-  isEdit: false,
   form: {
-    id: undefined as number | undefined,
     date: undefined as Dayjs | undefined,
-    origin_user_id: null as null | number,
+    id: undefined as number | undefined,
     on_duty_user_id: null as null | number,
+    origin_user_id: null as null | number,
     reason: '',
   },
+  isEdit: false,
 });
 
 // 计算属性
@@ -208,8 +206,8 @@ const fetchDutySchedule = async (): Promise<void> => {
     const endOfCalendar = currentMonth.endOf('month').endOf('week');
 
     const response = await getMonitorOnDutyGroupFuturePlanApi(id, {
-      start_time: startOfCalendar.format('YYYY-MM-DD'),
       end_time: endOfCalendar.format('YYYY-MM-DD'),
+      start_time: startOfCalendar.format('YYYY-MM-DD'),
     });
     if (!request.isCurrent()) return;
 
@@ -283,8 +281,8 @@ const fetchDutySchedule = async (): Promise<void> => {
               const userName = getUserName(detail.user);
               user = {
                 id: detail.user,
-                username: userName,
                 real_name: userName,
+                username: userName,
               };
             }
           }
@@ -298,10 +296,10 @@ const fetchDutySchedule = async (): Promise<void> => {
 
         days.push({
           date: dateStr,
-          user,
-          originUser,
-          isCurrentMonth,
           isAdjusted,
+          isCurrentMonth,
+          originUser,
+          user,
         });
       }
 
@@ -319,10 +317,10 @@ const fetchDutySchedule = async (): Promise<void> => {
 
         days.push({
           date: dateStr,
-          user: null,
-          originUser: undefined,
-          isCurrentMonth,
           isAdjusted: false,
+          isCurrentMonth,
+          originUser: undefined,
+          user: null,
         });
       }
       calendarDays.value = days;
@@ -363,11 +361,11 @@ const loadHistoryRecords = async (): Promise<void> => {
     const endDate = currentMonth.endOf('month').format('YYYY-MM-DD');
 
     const response = await getMonitorOnDutyHistoryApi(dutyGroupId.value, {
-      start_date: dateFilter.value?.format('YYYY-MM-DD') || startDate,
       end_date: dateFilter.value?.format('YYYY-MM-DD') || endDate,
-      search: searchQuery.value.trim() || undefined,
       page: paginationConfig.current,
+      search: searchQuery.value.trim() || undefined,
       size: paginationConfig.pageSize,
+      start_date: dateFilter.value?.format('YYYY-MM-DD') || startDate,
     });
     if (!request.isCurrent()) return;
 
@@ -444,9 +442,9 @@ const loadHistoryRecords = async (): Promise<void> => {
 // 调班记录分页配置
 const changeRecordsPagination = reactive({
   current: 1,
+  hasMore: true,
   pageSize: 20,
   total: 0,
-  hasMore: true,
 });
 
 // 加载调班记录
@@ -770,11 +768,11 @@ const exportSchedule = async (): Promise<void> => {
     const exportData = calendarDays.value
       .filter((day) => day.isCurrentMonth)
       .map((day) => ({
+        值班人员: day.user ? day.user.real_name || day.user.username : '无安排',
+        原值班人: day.originUser || '无',
         日期: formatDate(day.date),
         星期: getDayOfWeek(day.date),
-        值班人员: day.user ? day.user.real_name || day.user.username : '无安排',
         是否换班: day.isAdjusted ? '是' : '否',
-        原值班人: day.originUser || '无',
       }));
 
     const headers = Object.keys(exportData[0] || {});
@@ -785,7 +783,7 @@ const exportSchedule = async (): Promise<void> => {
       ),
     ].join('\n');
 
-    const blob = new Blob(['\uFEFF' + csvContent], {
+    const blob = new Blob([`\uFEFF${csvContent}`], {
       type: 'text/csv;charset=utf-8;',
     });
     const link = document.createElement('a');
@@ -795,7 +793,7 @@ const exportSchedule = async (): Promise<void> => {
 
     message.success('值班安排已导出');
   } catch (error: any) {
-    message.error('导出失败：' + (error.message || '未知错误'));
+    message.error(`导出失败：${error.message || '未知错误'}`);
   } finally {
     exportLoading.value = false;
   }
@@ -821,10 +819,10 @@ const handleDateChange = (): void => {
 // 重置表单对话框
 const resetFormDialog = (): void => {
   formDialog.form = {
-    id: undefined,
     date: undefined,
-    origin_user_id: null,
+    id: undefined,
     on_duty_user_id: null,
+    origin_user_id: null,
     reason: '',
   };
 };
@@ -845,10 +843,10 @@ const handleDayClick = (day: Day): void => {
 const openSwapModal = (day: Day): void => {
   formDialog.isEdit = false;
   formDialog.form = {
-    id: undefined,
     date: dayjs(day.date),
-    origin_user_id: day.user?.id || null,
+    id: undefined,
     on_duty_user_id: null,
+    origin_user_id: day.user?.id || null,
     reason: '',
   };
   formDialogVisible.value = true;
@@ -877,10 +875,10 @@ const saveChange = async (): Promise<void> => {
 
     // 创建换班记录
     const formData: CreateMonitorOnDutyGroupChangeReq = {
-      on_duty_group_id: dutyGroupId.value,
       date: formDialog.form.date.format('YYYY-MM-DD'),
-      origin_user_id: formDialog.form.origin_user_id as number,
+      on_duty_group_id: dutyGroupId.value,
       on_duty_user_id: formDialog.form.on_duty_user_id as number,
+      origin_user_id: formDialog.form.origin_user_id as number,
       reason: formDialog.form.reason?.trim(),
     };
 
@@ -1104,10 +1102,8 @@ onMounted(async () => {
             <!-- 日历内容 -->
             <div class="calendar-grid">
               <div
-                class="calendar-day"
                 v-for="day in calendarDays"
                 :key="day.date"
-                @click="handleDayClick(day)"
                 :class="{
                   'has-duty': day.user,
                   today: isToday(day.date),
@@ -1116,13 +1112,15 @@ onMounted(async () => {
                   clickable: day.isCurrentMonth,
                   'is-adjusted': day.isAdjusted,
                 }"
+                class="calendar-day"
+                @click="handleDayClick(day)"
               >
                 <div class="day-header">
                   <div class="day-number">{{ formatDayNumber(day.date) }}</div>
                   <div v-if="day.isCurrentMonth" class="day-badges">
-                    <div class="today-badge" v-if="isToday(day.date)">今日</div>
+                    <div v-if="isToday(day.date)" class="today-badge">今日</div>
                     <div v-if="day.isAdjusted" class="adjusted-badge">换班</div>
-                    <div class="weekend-badge" v-if="isWeekend(day.date)">
+                    <div v-if="isWeekend(day.date)" class="weekend-badge">
                       {{ getWeekendType(day.date) }}
                     </div>
                   </div>
@@ -1131,12 +1129,12 @@ onMounted(async () => {
                 <div class="day-content">
                   <div v-if="day.user" class="duty-info">
                     <a-avatar
-                      size="small"
                       :style="{
                         backgroundColor: getAvatarColor(
                           day.user.real_name || day.user.username,
                         ),
                       }"
+                      size="small"
                     >
                       {{ getInitials(day.user.real_name || day.user.username) }}
                     </a-avatar>
@@ -1197,12 +1195,12 @@ onMounted(async () => {
               <div class="users-change">
                 <div class="user-item">
                   <a-avatar
-                    size="small"
                     :style="{
                       backgroundColor: getAvatarColor(
                         getUserName(record.origin_user_id) || '',
                       ),
                     }"
+                    size="small"
                   >
                     {{ getInitials(getUserName(record.origin_user_id)) }}
                   </a-avatar>
@@ -1213,12 +1211,12 @@ onMounted(async () => {
                 <Icon class="arrow" icon="carbon:arrow-right" />
                 <div class="user-item">
                   <a-avatar
-                    size="small"
                     :style="{
                       backgroundColor: getAvatarColor(
                         getUserName(record.on_duty_user_id) || '',
                       ),
                     }"
+                    size="small"
                   >
                     {{ getInitials(getUserName(record.on_duty_user_id)) }}
                   </a-avatar>
@@ -1254,7 +1252,7 @@ onMounted(async () => {
 
     <!-- 换班申请对话框 -->
     <a-modal
-      :confirmLoading="submitting"
+      :confirm-loading="submitting"
       :open="formDialogVisible"
       :title="formDialog.isEdit ? '编辑换班记录' : '申请换班'"
       @cancel="closeFormDialog"
@@ -1356,12 +1354,12 @@ onMounted(async () => {
           <div v-if="selectedDay.user" class="duty-assigned">
             <div class="duty-user-info">
               <a-avatar
-                size="large"
                 :style="{
                   backgroundColor: getAvatarColor(
                     selectedDay.user.real_name || selectedDay.user.username,
                   ),
                 }"
+                size="large"
               >
                 {{
                   getInitials(
@@ -1384,10 +1382,10 @@ onMounted(async () => {
 
             <div class="duty-actions-full">
               <a-button
-                type="primary"
-                @click="openSwapModal(selectedDay)"
                 :disabled="isPastDate(selectedDay.date)"
                 block
+                type="primary"
+                @click="openSwapModal(selectedDay)"
               >
                 <Icon icon="carbon:change-catalog" />
                 申请换班
@@ -1662,12 +1660,6 @@ onMounted(async () => {
   font-size: 16px;
   font-weight: 500;
   color: var(--ops-ink);
-}
-
-.day-badges {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
 }
 
 .today-badge,

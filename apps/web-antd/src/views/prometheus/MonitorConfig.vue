@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { useListRequest } from './useListRequest';
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 
 import { useUserStore } from '@vben/stores';
 
-import { type FormInstance, message, Modal } from 'ant-design-vue';
 import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
+import { type FormInstance, message, Modal } from 'ant-design-vue';
+
 import {
   ConfigStatus,
   ConfigType,
@@ -21,15 +20,16 @@ import {
   updateMonitorConfigApi,
   type UpdateMonitorConfigParams,
 } from '#/api/core/prometheus/prometheus_config';
-
 import {
   getMonitorScrapePoolListApi,
   type MonitorScrapePool,
 } from '#/api/core/prometheus/prometheus_scrape_pool';
-
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { useAuthStore } from '#/store';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
+import { useListRequest } from './useListRequest';
 
 const { can, hasPerm } = usePermission();
 const CREATE_CONFIG_PERMISSION = '/api/monitor/configs/create';
@@ -162,7 +162,7 @@ const poolOptions = ref<PoolOption[]>([]);
 
 // 状态数据
 const loading = ref(false);
-const { loadError, beginRequest } = useListRequest(loading);
+const { beginRequest, loadError } = useListRequest(loading);
 const data = ref<MonitorConfigItem[]>([]);
 const searchText = ref('');
 const searchPoolId = ref<number | undefined>(undefined);
@@ -170,7 +170,7 @@ const searchConfigType = ref<ConfigType | undefined>(undefined);
 const searchStatus = ref<ConfigStatus | undefined>(undefined);
 
 // 防抖处理
-let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+let searchTimeout: null | ReturnType<typeof setTimeout> = null;
 onBeforeUnmount(() => {
   if (searchTimeout) clearTimeout(searchTimeout);
 });
@@ -179,19 +179,19 @@ onBeforeUnmount(() => {
 const paginationConfig = reactive<PaginationConfig>({
   current: 1,
   pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
   showQuickJumper: true,
+  showSizeChanger: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
   size: 'default',
+  total: 0,
 });
 
 // 统计数据
 const stats = reactive<Stats>({
-  total: 0,
   active: 0,
   alertRules: 0,
   instances: 0,
+  total: 0,
 });
 
 // 模态框状态
@@ -206,41 +206,41 @@ const detailConfig = ref<MonitorConfigItem | null>(null);
 const addFormRef = ref<FormInstance>();
 const editFormRef = ref<FormInstance>();
 const addForm = reactive<ConfigForm>({
+  config_content: '',
+  config_type: undefined,
+  instance_ip: '',
   name: '',
   pool_id: undefined,
-  instance_ip: '',
-  config_type: undefined,
-  config_content: '',
   status: ConfigStatus.Active,
 });
 
 const editForm = reactive<ConfigForm>({
+  config_content: '',
+  config_type: undefined,
   id: undefined,
+  instance_ip: '',
   name: '',
   pool_id: undefined,
-  instance_ip: '',
-  config_type: undefined,
-  config_content: '',
   status: ConfigStatus.Active,
 });
 
 // 表单验证规则
 const formRules = {
-  name: [
-    { required: true, message: '请输入配置名称', trigger: 'blur' },
-    { min: 1, max: 255, message: '长度应为1到255个字符', trigger: 'blur' },
+  config_content: [
+    { message: '请输入配置内容', required: true, trigger: 'blur' },
   ],
   config_type: [
-    { required: true, message: '请选择配置类型', trigger: 'change' },
+    { message: '请选择配置类型', required: true, trigger: 'change' },
   ],
-  pool_id: [{ required: true, message: '请选择实例池', trigger: 'change' }],
   instance_ip: [
-    { required: true, message: '请输入实例IP', trigger: 'blur' },
+    { message: '请输入实例IP', required: true, trigger: 'blur' },
     { max: 128, message: '长度应为1到128个字符', min: 1, trigger: 'blur' },
   ],
-  config_content: [
-    { required: true, message: '请输入配置内容', trigger: 'blur' },
+  name: [
+    { message: '请输入配置名称', required: true, trigger: 'blur' },
+    { max: 255, message: '长度应为1到255个字符', min: 1, trigger: 'blur' },
   ],
+  pool_id: [{ message: '请选择实例池', required: true, trigger: 'change' }],
 };
 
 const SECRET_PLACEHOLDER = '<secret>';
@@ -265,9 +265,9 @@ const editContentHidden = computed(() =>
 
 const getConfigTypeName = (type: ConfigType): string => {
   const typeNames: Record<ConfigType, string> = {
-    [ConfigType.Prometheus]: 'Prometheus',
     [ConfigType.AlertManager]: 'AlertManager',
     [ConfigType.AlertRule]: '告警规则',
+    [ConfigType.Prometheus]: 'Prometheus',
     [ConfigType.RecordRule]: '预聚合规则',
     [ConfigType.WebhookFile]: 'Webhook文件',
   };
@@ -276,9 +276,9 @@ const getConfigTypeName = (type: ConfigType): string => {
 
 const getConfigTypeColor = (type: ConfigType): string => {
   const typeColors: Record<ConfigType, string> = {
-    [ConfigType.Prometheus]: 'prometheus-tag',
     [ConfigType.AlertManager]: 'alert-tag',
     [ConfigType.AlertRule]: 'rule-tag',
+    [ConfigType.Prometheus]: 'prometheus-tag',
     [ConfigType.RecordRule]: 'record-tag',
     [ConfigType.WebhookFile]: 'webhook-tag',
   };
@@ -336,10 +336,10 @@ const fetchConfigs = async (): Promise<void> => {
   const request = beginRequest();
   try {
     const params: GetMonitorConfigListParams = {
-      page: paginationConfig.current,
-      size: paginationConfig.pageSize,
-      search: searchText.value || undefined,
       config_type: searchConfigType.value,
+      page: paginationConfig.current,
+      search: searchText.value || undefined,
+      size: paginationConfig.pageSize,
       status: searchStatus.value,
     };
 
@@ -474,11 +474,10 @@ const confirmDelete = (record: MonitorConfigItem): void => {
     !disposed && record.id === id && operationOwner() === owner;
   let confirmationConsumed = false;
   Modal.confirm({
-    title: '警告',
+    cancelText: '取消',
     content: `确定要删除配置 "${name}" 吗？`,
     okText: '删除',
     okType: 'danger',
-    cancelText: '取消',
     async onOk() {
       if (confirmationConsumed || !isCurrent()) return;
       confirmationConsumed = true;
@@ -492,6 +491,7 @@ const confirmDelete = (record: MonitorConfigItem): void => {
           message.error(errorText(error, '删除配置失败'));
       }
     },
+    title: '警告',
   });
 };
 
@@ -502,12 +502,12 @@ const showPreviewModal = (record: MonitorConfigItem): void => {
 
 const handleMenuClick = (command: string, record: MonitorConfigItem): void => {
   switch (command) {
-    case 'preview': {
-      showPreviewModal(record);
-      break;
-    }
     case 'delete': {
       confirmDelete(record);
+      break;
+    }
+    case 'preview': {
+      showPreviewModal(record);
       break;
     }
   }
@@ -534,11 +534,11 @@ let editTarget: MonitorConfigItem | undefined;
 
 const resetAddForm = (): void => {
   Object.assign(addForm, {
+    config_content: '',
+    config_type: undefined,
+    instance_ip: '',
     name: '',
     pool_id: undefined,
-    instance_ip: '',
-    config_type: undefined,
-    config_content: '',
     status: ConfigStatus.Active,
   });
 };
@@ -619,11 +619,11 @@ const handleAdd = async (): Promise<void> => {
       return;
     }
     const params: CreateMonitorConfigParams = {
+      config_content: addForm.config_content,
+      config_type: configType,
+      instance_ip: addForm.instance_ip,
       name: addForm.name,
       pool_id: poolId,
-      instance_ip: addForm.instance_ip,
-      config_type: configType,
-      config_content: addForm.config_content,
       status,
     };
     await createMonitorConfigApi(params);
@@ -633,7 +633,7 @@ const handleAdd = async (): Promise<void> => {
     message.success('新增配置成功');
   } catch (error: unknown) {
     if (isCurrent() && shouldNotifyPageError(error))
-      message.error('新增配置失败: ' + errorText(error));
+      message.error(`新增配置失败: ${errorText(error)}`);
   } finally {
     if (addRevision === ticket) addSubmitting.value = false;
   }
@@ -728,12 +728,12 @@ const handleEdit = async (): Promise<void> => {
       return;
     }
     const params: UpdateMonitorConfigParams = {
+      config_content: editForm.config_content,
+      config_type: configType,
       id,
+      instance_ip: editForm.instance_ip,
       name: editForm.name,
       pool_id: poolId,
-      instance_ip: editForm.instance_ip,
-      config_type: configType,
-      config_content: editForm.config_content,
       status,
     };
     await updateMonitorConfigApi(params);
@@ -743,7 +743,7 @@ const handleEdit = async (): Promise<void> => {
     message.success('更新配置成功');
   } catch (error: unknown) {
     if (isCurrent() && shouldNotifyPageError(error))
-      message.error('更新配置失败: ' + errorText(error));
+      message.error(`更新配置失败: ${errorText(error)}`);
   } finally {
     if (editRevision === ticket) editSubmitting.value = false;
   }
@@ -770,7 +770,7 @@ const handleViewDetail = async (record: MonitorConfigItem): Promise<void> => {
     isDetailModalVisible.value = true;
   } catch (error: unknown) {
     if (isCurrent() && shouldNotifyPageError(error))
-      message.error('获取配置详情失败: ' + errorText(error));
+      message.error(`获取配置详情失败: ${errorText(error)}`);
   }
 };
 
@@ -960,12 +960,12 @@ onMounted(() => {
             <template v-if="column.key === 'name'">
               <div class="config-name-cell">
                 <div
-                  class="status-dot"
                   :class="
                     record.status === ConfigStatus.Active
                       ? 'status-dot-active'
                       : 'status-dot-inactive'
                   "
+                  class="status-dot"
                 ></div>
                 <span class="config-name">{{ record.name }}</span>
               </div>
@@ -973,8 +973,8 @@ onMounted(() => {
 
             <template v-if="column.key === 'config_type'">
               <a-tag
-                class="tech-tag"
                 :class="getConfigTypeColor(record.config_type)"
+                class="tech-tag"
               >
                 {{ getConfigTypeName(record.config_type) }}
               </a-tag>
@@ -1329,8 +1329,8 @@ onMounted(() => {
           <h3 class="preview-name">{{ previewConfig.name }}</h3>
           <div class="preview-badges">
             <a-tag
-              class="tech-tag"
               :class="getConfigTypeColor(previewConfig.config_type)"
+              class="tech-tag"
             >
               {{ getConfigTypeName(previewConfig.config_type) }}
             </a-tag>
@@ -1364,8 +1364,8 @@ onMounted(() => {
           <h2>{{ detailConfig.name }}</h2>
           <div class="detail-badges">
             <a-tag
-              class="tech-tag"
               :class="getConfigTypeColor(detailConfig.config_type)"
+              class="tech-tag"
             >
               {{ getConfigTypeName(detailConfig.config_type) }}
             </a-tag>
@@ -1383,7 +1383,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <a-descriptions :column="1" :labelStyle="{ width: '150px' }" bordered>
+        <a-descriptions :column="1" :label-style="{ width: '150px' }" bordered>
           <a-descriptions-item label="ID">
             {{ detailConfig.id }}
           </a-descriptions-item>

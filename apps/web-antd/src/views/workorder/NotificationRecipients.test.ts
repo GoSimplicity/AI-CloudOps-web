@@ -24,10 +24,10 @@ function required<T>(value: null | T | undefined): T {
 }
 
 const client = vi.hoisted(() => ({
+  delete: vi.fn(),
   get: vi.fn(),
   post: vi.fn(),
   put: vi.fn(),
-  delete: vi.fn(),
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 vi.mock('@vben/stores', () => ({
@@ -37,19 +37,19 @@ vi.mock('#/store', () => ({
   useAuthStore: () => ({ getAuthGeneration: () => 0 }),
 }));
 const fixture = {
-  id: 17,
-  name: '接收范围验收',
   channels: ['email'],
-  recipient_types: ['creator'],
+  created_at: '2026-10-23T10:00:00Z',
   event_types: ['instance_created'],
-  trigger_type: 'immediate',
-  message_template: '真实工单 {title}',
-  status: 2,
-  priority: 2,
+  id: 17,
   is_default: 2,
   max_retries: 3,
+  message_template: '真实工单 {title}',
+  name: '接收范围验收',
+  priority: 2,
+  recipient_types: ['creator'],
   retry_interval: 5,
-  created_at: '2026-10-23T10:00:00Z',
+  status: 2,
+  trigger_type: 'immediate',
   updated_at: '2026-10-23T10:00:00Z',
 };
 let wrapper: VueWrapper;
@@ -83,7 +83,7 @@ const save = async () => {
   await flushPromises();
 };
 const edit = async (record: object) => {
-  client.get.mockResolvedValueOnce({ items: [record], total: 1 });
+  client.get.mockResolvedValueOnce({ total: 1, items: [record] });
   await wrapper.get('.ant-input-search-button').trigger('click');
   await flushPromises();
   await required(
@@ -111,8 +111,8 @@ beforeEach(() => {
   client.get.mockImplementation((url) =>
     Promise.resolve(
       url === '/workorder/notification/list'
-        ? { items: [{ ...fixture }], total: 1 }
-        : { items: [], total: 0 },
+        ? { total: 1, items: [{ ...fixture }] }
+        : { total: 0, items: [] },
     ),
   );
   client.post.mockResolvedValue({});
@@ -120,8 +120,8 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -161,8 +161,8 @@ describe('通知接收范围与状态合同', () => {
       '/workorder/notification/create',
       expect.objectContaining({
         channels: ['in_app'],
-        recipient_types: ['creator'],
         event_types: ['instance_created', 'instance_submitted'],
+        recipient_types: ['creator'],
       }),
     );
     expect(
@@ -221,8 +221,8 @@ describe('通知接收范围与状态合同', () => {
     await flushPromises();
     await edit({
       ...fixture,
-      recipient_types: ['dept'],
       recipient_depts: ['12'],
+      recipient_types: ['dept'],
     });
     expect(checkbox('部门用户')?.querySelector('input')?.checked).toBe(true);
     await save();
@@ -230,8 +230,8 @@ describe('通知接收范围与状态合同', () => {
     expect(client.put).toHaveBeenCalledWith(
       '/workorder/notification/update/17',
       expect.objectContaining({
-        recipient_types: ['dept'],
         recipient_depts: ['12'],
+        recipient_types: ['dept'],
       }),
     );
   });
@@ -240,14 +240,14 @@ describe('通知接收范围与状态合同', () => {
     await edit({
       ...fixture,
       max_retries: 0,
-      recipient_types: ['custom'],
       recipient_addresses: [
         {
-          channel: 'email',
           address: 'original@example.test',
+          channel: 'email',
           name: '原接收人',
         },
       ],
+      recipient_types: ['custom'],
     });
     await setInput('[aria-label="自定义接收地址1"]', ' next@example.test ');
     await save();
@@ -257,7 +257,7 @@ describe('通知接收范围与状态合同', () => {
       expect.objectContaining({
         max_retries: 0,
         recipient_addresses: [
-          { channel: 'email', address: 'next@example.test', name: '原接收人' },
+          { address: 'next@example.test', channel: 'email', name: '原接收人' },
         ],
       }),
     );
@@ -266,10 +266,10 @@ describe('通知接收范围与状态合同', () => {
     await flushPromises();
     const record = {
       ...fixture,
-      recipient_types: ['custom'],
       recipient_addresses: [
-        { channel: 'email', address: 'original@example.test', name: '' },
+        { address: 'original@example.test', channel: 'email', name: '' },
       ],
+      recipient_types: ['custom'],
     };
     await edit(record);
     await setInput('[aria-label="自定义接收地址1"]', 'not-saved@example.test');
@@ -289,8 +289,8 @@ describe('通知接收范围与状态合同', () => {
     await flushPromises();
     await edit({
       ...fixture,
-      recipient_types: ['custom'],
       recipient_addresses: [],
+      recipient_types: ['custom'],
     });
     await save();
     expect(client.put).not.toHaveBeenCalled();
@@ -302,8 +302,8 @@ describe('通知接收范围与状态合同', () => {
     await flushPromises();
     await edit({
       ...fixture,
-      recipient_types: ['dept'],
       recipient_depts: ['not-an-id'],
+      recipient_types: ['dept'],
     });
     await save();
     expect(client.put).not.toHaveBeenCalled();
@@ -315,8 +315,8 @@ describe('通知接收范围与状态合同', () => {
     await flushPromises();
     await edit({
       ...fixture,
+      recipient_addresses: [{ address: 'ou_owned', channel: 'feishu' }],
       recipient_types: ['custom'],
-      recipient_addresses: [{ channel: 'feishu', address: 'ou_owned' }],
     });
     await save();
     expect(client.put).not.toHaveBeenCalled();
@@ -327,16 +327,16 @@ describe('通知接收范围与状态合同', () => {
   it('复制自定义地址不丢接收范围和禁用状态', async () => {
     await flushPromises();
     client.get.mockResolvedValueOnce({
+      total: 1,
       items: [
         {
           ...fixture,
-          recipient_types: ['custom'],
           recipient_addresses: [
-            { channel: 'email', address: 'owner@example.test', name: '负责人' },
+            { address: 'owner@example.test', channel: 'email', name: '负责人' },
           ],
+          recipient_types: ['custom'],
         },
       ],
-      total: 1,
     });
     await wrapper.get('.ant-input-search-button').trigger('click');
     await flushPromises();
@@ -346,11 +346,11 @@ describe('通知接收范围与状态合同', () => {
     expect(client.post).toHaveBeenCalledWith(
       '/workorder/notification/create',
       expect.objectContaining({
-        status: 2,
-        recipient_types: ['custom'],
         recipient_addresses: [
-          { channel: 'email', address: 'owner@example.test', name: '负责人' },
+          { address: 'owner@example.test', channel: 'email', name: '负责人' },
         ],
+        recipient_types: ['custom'],
+        status: 2,
       }),
     );
   });
@@ -392,10 +392,10 @@ describe('通知接收范围与状态合同', () => {
     await vi.waitFor(() => expect(client.post).toHaveBeenCalledTimes(1));
     expect(required(client.post.mock.calls[0])[1]).toEqual(
       expect.objectContaining({
-        trigger_type: 'delayed',
         delay_minutes: 15,
-        repeat_interval: 10,
         repeat_count: 3,
+        repeat_interval: 10,
+        trigger_type: 'delayed',
       }),
     );
   });
@@ -403,9 +403,9 @@ describe('通知接收范围与状态合同', () => {
     await flushPromises();
     await edit({
       ...fixture,
+      scheduled_time: '2030-01-01T00:00:00Z',
       status: 1,
       trigger_type: 'scheduled',
-      scheduled_time: '2030-01-01T00:00:00Z',
       trigger_version: 0,
     });
     expect(
@@ -428,8 +428,8 @@ describe('通知接收范围与状态合同', () => {
     await flushPromises();
     await edit({
       ...fixture,
-      scheduled_time: '2030-01-01T00:00:00Z',
       repeat_interval: 30,
+      scheduled_time: '2030-01-01T00:00:00Z',
       trigger_condition: { previous: true },
     });
     await save();
@@ -462,8 +462,8 @@ describe('通知接收范围与状态合同', () => {
     await flushPromises();
     await edit({
       ...fixture,
-      recipient_types: ['dept'],
       recipient_depts: [id],
+      recipient_types: ['dept'],
     });
     await save();
     expect(client.put).not.toHaveBeenCalled();

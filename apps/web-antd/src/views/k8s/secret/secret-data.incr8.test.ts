@@ -119,12 +119,15 @@ describe('incr8 P2-1：顶层键不区分大小写等于 data / stringData 但�
 });
 
 describe('incr8 P3-1：loadAll + json:true；多文档拦截；其他解析失败一律拦截（取舍 8 作废）', () => {
-  it('p01 重复键（kind 两次）+ \\x50 转义：json:true 后者生效，结构检查拦下', () => {
-    const text = `{apiVersion: v1, kind: Secret, kind: Secret, metadata: {name: s1}, data: {k: "${PH_B64_ESCAPED}"}}`;
-    expect(sd.getYamlDataPayloadError(text)).toBe(
-      sd.yamlDataEncodedRedactedMessage('k'),
-    );
-  });
+  it(
+    String.raw`p01 重复键（kind 两次）+ \x50 转义：json:true 后者生效，结构检查拦下`,
+    () => {
+      const text = `{apiVersion: v1, kind: Secret, kind: Secret, metadata: {name: s1}, data: {k: "${PH_B64_ESCAPED}"}}`;
+      expect(sd.getYamlDataPayloadError(text)).toBe(
+        sd.yamlDataEncodedRedactedMessage('k'),
+      );
+    },
+  );
 
   it('重复的 data 键：与 Go 一致取后一个，后一个里的转义占位符 base64 → 拦截', () => {
     const text = `kind: Secret\ndata:\n  a: ${sd.encodeUtf8ToBase64('fake-a')}\ndata:\n  k: "${PH_B64_ESCAPED}"\n`;

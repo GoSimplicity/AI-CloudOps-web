@@ -1,7 +1,8 @@
+import { defineComponent, h } from 'vue';
+
 import { flushPromises, mount } from '@vue/test-utils';
 import { Form, FormItem, message } from 'ant-design-vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { defineComponent, h } from 'vue';
 
 import { useClusterPage } from './Cluster';
 
@@ -14,8 +15,8 @@ function required<T>(value: null | T | undefined): T {
 
 const client = vi.hoisted(() => ({
   get: vi.fn(),
-  put: vi.fn(),
   post: vi.fn(),
+  put: vi.fn(),
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 // 只替换 message / Modal，Form 保持 ant-design-vue 真实实现，走真实校验
@@ -28,14 +29,14 @@ vi.mock('ant-design-vue', async (importOriginal) => ({
 // jsdom 没有 matchMedia，a-form-item 内部的栅格响应式监听需要它
 if (!window.matchMedia) {
   window.matchMedia = ((query: string) => ({
+    addEventListener: () => {},
+    addListener: () => {},
+    dispatchEvent: () => false,
     matches: false,
     media: query,
     onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
     removeEventListener: () => {},
-    dispatchEvent: () => false,
+    removeListener: () => {},
   })) as unknown as typeof window.matchMedia;
 }
 
@@ -56,8 +57,8 @@ const mountWithForm = (page: Page) => {
         h(
           Form,
           {
-            ref: page.formRef,
             model: page.formModel.value,
+            ref: page.formRef,
             rules: page.formRules.value,
           },
           () =>
@@ -73,11 +74,11 @@ const mountWithForm = (page: Page) => {
 const WHITESPACE = '   \n\t  \n ';
 const VALID_KUBECONFIG = `apiVersion: v1\nkind: Config\n${'x'.repeat(120)}`;
 const record = {
+  has_kube_config: true,
   id: 1,
   name: 'example',
   restrict_namespace: [],
   status: 1,
-  has_kube_config: true,
 };
 const detail = { ...record };
 
@@ -88,7 +89,7 @@ const deferred = <T>() => {
     resolve = res;
     reject = rej;
   });
-  return { promise, resolve, reject };
+  return { promise, reject, resolve };
 };
 
 const validationErrors = async (page: Page, fields: string[]) => {
@@ -116,7 +117,7 @@ describe('kubeconfig 纯空白处理（真实表单校验）', () => {
     expect(await validationErrors(page, ['kube_config_content'])).toEqual([]);
 
     client.get.mockResolvedValueOnce(detail); // 危险操作对比
-    client.get.mockResolvedValueOnce({ items: [], total: 0 }); // 刷新列表
+    client.get.mockResolvedValueOnce({ total: 0, items: [] }); // 刷新列表
     client.put.mockResolvedValueOnce({});
     await page.submitForm();
 
@@ -174,7 +175,7 @@ describe('编辑详情晚到不覆盖后续打开的表单', () => {
     page.openCreate();
     page.formModel.value.name = 'new-cluster';
 
-    pending.resolve({ ...detail, name: 'stale-detail', has_kube_config: true });
+    pending.resolve({ ...detail, has_kube_config: true, name: 'stale-detail' });
     await editing;
 
     expect(page.isEdit.value).toBe(false);
@@ -227,7 +228,7 @@ describe('取消/保存后清空 kubeconfig 输入', () => {
     await flushPromises();
 
     client.post.mockResolvedValueOnce({});
-    client.get.mockResolvedValueOnce({ items: [], total: 0 });
+    client.get.mockResolvedValueOnce({ total: 0, items: [] });
     await page.submitForm();
 
     expect(client.post).toHaveBeenCalledTimes(1);
@@ -247,7 +248,7 @@ describe('取消/保存后清空 kubeconfig 输入', () => {
     await flushPromises();
 
     client.get.mockResolvedValueOnce(detail); // 危险操作对比
-    client.get.mockResolvedValueOnce({ items: [], total: 0 });
+    client.get.mockResolvedValueOnce({ total: 0, items: [] });
     client.put.mockResolvedValueOnce({});
     await page.submitForm();
 

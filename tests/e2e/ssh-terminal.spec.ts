@@ -1,7 +1,7 @@
+import { readFileSync } from 'node:fs';
 import process from 'node:process';
 
 import { expect, test } from '@playwright/test';
-import { readFileSync } from 'node:fs';
 
 import { requireFixtureValue } from '../../internal/test-utils/required-fixture-value';
 
@@ -20,8 +20,8 @@ function route(path: string) {
 }
 
 test('isolated OpenSSH terminal executes, interrupts and resizes from the browser', async ({
-  page,
   baseURL,
+  page,
 }) => {
   const resourceId = process.env.CLOUDOPS_TEST_SSH_RESOURCE_ID;
   const password = administratorPassword();
@@ -35,7 +35,7 @@ test('isolated OpenSSH terminal executes, interrupts and resizes from the browse
   expect(resourceId).toMatch(/^[1-9]\d*$/);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.setViewportSize({ height: 1000, width: 1440 });
   await page.goto(route('/auth/login'));
   await page.getByLabel('账号', { exact: true }).fill('admin');
   await page
@@ -84,12 +84,12 @@ test('isolated OpenSSH terminal executes, interrupts and resizes from the browse
   await expect(terminal).toContainText('SSH_UI_RESULT_493');
   expect(terminalConnections).toBe(1);
   await page.screenshot({
-    path: '.cache/ui-verification/ssh-desktop-light.png',
-    fullPage: true,
     animations: 'disabled',
+    fullPage: true,
+    path: '.cache/ui-verification/ssh-desktop-light.png',
   });
   const initialCols = Number(url.searchParams.get('cols'));
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ height: 844, width: 390 });
   await expect
     .poll(() =>
       frames.some((frame) => {
@@ -112,9 +112,9 @@ test('isolated OpenSSH terminal executes, interrupts and resizes from the browse
   await expect(terminal).toContainText('SSH_UI_CANCEL_341');
   expect(terminalConnections).toBe(1);
   await page.screenshot({
-    path: '.cache/ui-verification/ssh-mobile-dark.png',
-    fullPage: true,
     animations: 'disabled',
+    fullPage: true,
+    path: '.cache/ui-verification/ssh-mobile-dark.png',
   });
   await page.getByRole('button', { exact: true, name: '关闭连接' }).click();
   await expect(page.getByText('连接已关闭', { exact: true })).toBeVisible();

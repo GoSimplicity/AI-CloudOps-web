@@ -4,8 +4,8 @@ import type { PredictionResponse } from '#/api/core/aiops/predict';
 import { computed } from 'vue';
 
 const props = defineProps<{
-  result: PredictionResponse;
   aiRequested: boolean;
+  result: PredictionResponse;
 }>();
 const methodLabel = computed(() => {
   if (props.result.method === 'rule_based') return '规则降级';

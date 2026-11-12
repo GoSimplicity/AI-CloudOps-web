@@ -30,10 +30,10 @@ vi.setConfig({ testTimeout: 15_000 });
 
 const api = vi.hoisted(() => ({
   clusters: vi.fn(),
-  namespaces: vi.fn(),
-  secrets: vi.fn(),
   detail: vi.fn(),
+  namespaces: vi.fn(),
   reveal: vi.fn(),
+  secrets: vi.fn(),
 }));
 vi.mock('#/api/core/k8s/k8s_cluster', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/api/core/k8s/k8s_cluster')>()),
@@ -45,8 +45,8 @@ vi.mock('#/api/core/k8s/k8s_namespace', async (importOriginal) => ({
 }));
 vi.mock('#/api/core/k8s/k8s_secret', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/api/core/k8s/k8s_secret')>()),
-  getSecretListApi: api.secrets,
   getSecretDetailsApi: api.detail,
+  getSecretListApi: api.secrets,
   revealSecretApi: api.reveal,
 }));
 
@@ -100,11 +100,11 @@ beforeEach(() => {
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
       addEventListener: vi.fn(),
+      addListener: vi.fn(),
+      matches: false,
       removeEventListener: vi.fn(),
+      removeListener: vi.fn(),
     })),
   );
   const computedStyle = window.getComputedStyle;
@@ -112,30 +112,30 @@ beforeEach(() => {
     computedStyle(element),
   );
   api.clusters.mockResolvedValue({
-    items: [{ id: 1, name: 'c1', status: 1 }],
     total: 1,
+    items: [{ id: 1, name: 'c1', status: 1 }],
   });
   api.namespaces.mockResolvedValue({
-    items: [{ cluster_id: 1, name: 'ns-a' }],
     total: 1,
+    items: [{ cluster_id: 1, name: 'ns-a' }],
   });
   api.secrets.mockResolvedValue({
-    items: [{ cluster_id: 1, namespace: 'ns-a', name: 'secret-a', type: 1 }],
     total: 1,
+    items: [{ cluster_id: 1, name: 'secret-a', namespace: 'ns-a', type: 1 }],
   });
   api.detail.mockResolvedValue({
     cluster_id: 1,
-    namespace: 'ns-a',
-    name: 'secret-a',
-    type: 1,
     data: { token: '' },
     data_keys: [{ key: 'token', size: 25 }],
+    name: 'secret-a',
+    namespace: 'ns-a',
     redacted: true,
+    type: 1,
   });
   api.reveal.mockResolvedValue({
     data: { token: btoa(FAKE) },
-    string_data: {},
     keys: ['token'],
+    string_data: {},
   });
 });
 afterEach(() => {

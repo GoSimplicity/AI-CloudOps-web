@@ -2,10 +2,10 @@ import { requestClient } from '#/api/request';
 
 // 告警事件状态枚举
 export enum MonitorAlertEventStatus {
-  FIRING = 1, // 告警触发
-  SILENCED = 2, // 告警静默
   CLAIMED = 3, // 告警认领
+  FIRING = 1, // 告警触发
   RESOLVED = 4, // 告警恢复
+  SILENCED = 2, // 告警静默
   UPGRADED = 5, // 告警升级
 }
 
@@ -67,8 +67,8 @@ export async function getMonitorAlertEventListApi(
 // 告警事件静默
 export async function eventAlertSilenceApi(data: EventAlertSilenceReq) {
   return requestClient.post(`/monitor/alert_events/silence/${data.id}`, {
-    use_name: data.use_name,
     time: data.time,
+    use_name: data.use_name,
   });
 }
 

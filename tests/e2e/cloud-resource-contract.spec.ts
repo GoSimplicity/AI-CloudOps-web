@@ -1,10 +1,10 @@
+import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import process from 'node:process';
 
-import { withFixtureCleanup } from '../../internal/test-utils/fixture-cleanup';
 import { expect, test } from '@playwright/test';
-import { readFileSync } from 'node:fs';
-import { randomUUID } from 'node:crypto';
 
+import { withFixtureCleanup } from '../../internal/test-utils/fixture-cleanup';
 import { requireFixtureValue } from '../../internal/test-utils/required-fixture-value';
 
 function password() {
@@ -45,12 +45,12 @@ test('cloud resource sync selection uses local regions and cancellation never ca
   let id = 0;
   const api = async (path: string, data?: unknown, method = 'GET') => {
     const response = await fetch(`http://localhost:18080/api${path}`, {
-      method,
+      body: data === undefined ? undefined : JSON.stringify(data),
       headers: {
         Authorization: `Bearer ${token}`,
         ...(data === undefined ? {} : { 'Content-Type': 'application/json' }),
       },
-      body: data === undefined ? undefined : JSON.stringify(data),
+      method,
       signal: AbortSignal.timeout(10_000),
     });
     const result = await response.json();
@@ -60,7 +60,7 @@ test('cloud resource sync selection uses local regions and cancellation never ca
   };
   await withFixtureCleanup(
     async () => {
-      await page.setViewportSize({ width: 1440, height: 1000 });
+      await page.setViewportSize({ height: 1000, width: 1440 });
       await page.goto(route('/auth/login'));
       await page.getByLabel('账号', { exact: true }).fill('admin');
       try {
@@ -85,14 +85,14 @@ test('cloud resource sync selection uses local regions and cancellation never ca
       await api(
         '/tree/cloud/account/create',
         {
+          access_key: `fake-access-${nonce}`,
           name: nonce,
           provider: 1,
-          access_key: `fake-access-${nonce}`,
-          secret_key: `fake-secret-${nonce}`,
           regions: [
-            { region: 'cn-hangzhou', is_default: true },
-            { region: 'cn-beijing', is_default: false },
+            { is_default: true, region: 'cn-hangzhou' },
+            { is_default: false, region: 'cn-beijing' },
           ],
+          secret_key: `fake-secret-${nonce}`,
         },
         'POST',
       );
@@ -126,7 +126,7 @@ test('cloud resource sync selection uses local regions and cancellation never ca
         .click();
       expect((await (await loaded).json()).code).toBe(0);
       await expect(
-        dialog.getByRole('button', { name: '开始同步', exact: true }),
+        dialog.getByRole('button', { exact: true, name: '开始同步' }),
       ).toBeEnabled();
       await dialog
         .locator('.ant-select')
@@ -148,13 +148,13 @@ test('cloud resource sync selection uses local regions and cancellation never ca
         dialog.locator('input[type="radio"][value="incremental"]'),
       ).toBeChecked();
       await page.screenshot({
-        path: '.cache/ui-verification/cloud-resource-sync-desktop.png',
-        fullPage: true,
         animations: 'disabled',
+        fullPage: true,
+        path: '.cache/ui-verification/cloud-resource-sync-desktop.png',
       });
       await dialog.getByRole('button', { name: /^取\s*消$/ }).click();
       await page.getByLabel('深色', { exact: true }).click();
-      await page.setViewportSize({ width: 390, height: 844 });
+      await page.setViewportSize({ height: 844, width: 390 });
       await page.getByRole('button', { exact: true, name: '同步资源' }).click();
       await expect(dialog.locator('#cloud-sync-regions')).toBeVisible();
       const cancel = dialog.getByRole('button', { name: /^取\s*消$/ });
@@ -179,9 +179,9 @@ test('cloud resource sync selection uses local regions and cancellation never ca
         ),
       ).toBe(true);
       await page.screenshot({
-        path: '.cache/ui-verification/cloud-resource-sync-mobile.png',
-        fullPage: true,
         animations: 'disabled',
+        fullPage: true,
+        path: '.cache/ui-verification/cloud-resource-sync-mobile.png',
       });
       await cancel.click();
       expect(forbidden).toEqual([]);
@@ -195,7 +195,7 @@ test('cloud resource sync selection uses local regions and cancellation never ca
         const owned = ownedResponse.items.filter(
           (row: { id: number; name: string }) =>
             (id === 0 || row.id === id) &&
-            [nonce, `${nonce}-updated`].includes(row.name),
+            [`${nonce}-updated`, nonce].includes(row.name),
         );
         for (const account of owned) {
           const detail = await api(`/tree/cloud/account/${account.id}/detail`);

@@ -108,10 +108,10 @@ function setupAccessGuard(router: Router) {
       const userInfo = userStore.userInfo || (await authStore.fetchUserInfo());
       assertCurrent();
       const { accessibleMenus, accessibleRoutes } = await generateAccess({
+        assertCurrent,
         roles: userInfo.roles ?? [],
         router,
         routes: dynamicRoutes,
-        assertCurrent,
       });
       assertCurrent();
       accessStore.setAccessMenus(accessibleMenus);

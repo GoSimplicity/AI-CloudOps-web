@@ -101,8 +101,8 @@ export const getRoleBindingListApi = (params: GetRoleBindingListReq) => {
   return requestClient.get(`/k8s/rolebinding/${params.cluster_id}/list`, {
     params: {
       namespace: params.namespace,
-      search: params.search,
       page: params.page,
+      search: params.search,
       size: params.size,
     },
   });

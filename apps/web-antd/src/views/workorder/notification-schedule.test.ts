@@ -6,7 +6,7 @@ import {
   notificationScheduleFingerprint,
 } from './notification-schedule';
 
-const base = { triggerType: 'immediate', triggerCondition: '' };
+const base = { triggerCondition: '', triggerType: 'immediate' };
 
 describe('通知排期合同', () => {
   it('支持即时、延迟、UTC定时和有限重复', () => {
@@ -16,21 +16,21 @@ describe('通知排期合同', () => {
     expect(
       buildNotificationSchedule({
         ...base,
-        triggerType: 'delayed',
         delayMinutes: 15,
-        repeatInterval: 10,
         repeatCount: 3,
+        repeatInterval: 10,
+        triggerType: 'delayed',
       }),
     ).toEqual({
-      trigger_type: 'delayed',
       delay_minutes: 15,
-      repeat_interval: 10,
       repeat_count: 3,
+      repeat_interval: 10,
+      trigger_type: 'delayed',
     });
     const time = dayjs('2030-01-02T12:30:00+08:00');
     expect(
       buildNotificationSchedule(
-        { ...base, triggerType: 'scheduled', scheduledTime: time },
+        { ...base, scheduledTime: time, triggerType: 'scheduled' },
         Date.parse('2030-01-01T00:00:00Z'),
       ).scheduled_time,
     ).toBe('2030-01-02T04:30:00.000Z');
@@ -39,10 +39,10 @@ describe('通知排期合同', () => {
     expect(
       buildNotificationSchedule({
         ...base,
-        triggerType: 'conditional',
         triggerCondition: '{"status":2,"priority":1}',
+        triggerType: 'conditional',
       }).trigger_condition,
-    ).toEqual({ status: 2, priority: 1 });
+    ).toEqual({ priority: 1, status: 2 });
     for (const value of [
       '{}',
       '{"status":1.5}',
@@ -54,8 +54,8 @@ describe('通知排期合同', () => {
       expect(() =>
         buildNotificationSchedule({
           ...base,
-          triggerType: 'conditional',
           triggerCondition: value,
+          triggerType: 'conditional',
         }),
       ).toThrow();
     }
@@ -63,17 +63,17 @@ describe('通知排期合同', () => {
   it('拒绝不完整或越界排期并识别配置变更', () => {
     for (const form of [
       { ...base, triggerType: 'delayed' },
-      { ...base, triggerType: 'delayed', delayMinutes: 0 },
+      { ...base, delayMinutes: 0, triggerType: 'delayed' },
       { ...base, repeatInterval: 1 },
-      { ...base, repeatInterval: 1, repeatCount: 101 },
+      { ...base, repeatCount: 101, repeatInterval: 1 },
       { ...base, triggerType: 'scheduled' },
     ])
       expect(() => buildNotificationSchedule(form)).toThrow();
     expect(notificationScheduleFingerprint(base)).not.toBe(
       notificationScheduleFingerprint({
         ...base,
-        repeatInterval: 2,
         repeatCount: 2,
+        repeatInterval: 2,
       }),
     );
   });

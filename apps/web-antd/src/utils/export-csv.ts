@@ -1,21 +1,18 @@
 /** RFC 4180 quoting plus spreadsheet formula injection protection. */
 export function encodeCsv(rows: unknown[][]): string {
-  return (
-    '\uFEFF' +
-    rows
-      .map((row) =>
-        row
-          .map((value) => {
-            const text = value == null ? '' : String(value);
-            const safe = /^[\s\u0000-\u001F]*[+=@-]/.test(text)
-              ? `'${text}`
-              : text;
-            return `"${safe.replaceAll('"', '""')}"`;
-          })
-          .join(','),
-      )
-      .join('\r\n')
-  );
+  return `\uFEFF${rows
+    .map((row) =>
+      row
+        .map((value) => {
+          const text = value == null ? '' : String(value);
+          const safe = /^[\s\u0000-\u001F]*[+=@-]/.test(text)
+            ? `'${text}`
+            : text;
+          return `"${safe.replaceAll('"', '""')}"`;
+        })
+        .join(','),
+    )
+    .join('\r\n')}`;
 }
 
 export function downloadCsv(filename: string, rows: unknown[][]): void {

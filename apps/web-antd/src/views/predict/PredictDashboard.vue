@@ -1,27 +1,6 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-
-import PredictionProvenance from './PredictionProvenance.vue';
-import { formatProbability } from './prediction-display';
-import { useAiRequestScope } from '../assistant/useAiRequestScope';
-import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
-import {
-  alignForecasts,
-  forecastPoints,
-  formatPredictionTime,
-} from './prediction-series';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
-// 按需引入echarts，减少打包体积
-import * as echarts from 'echarts/core';
-import { BarChart, LineChart, PieChart } from 'echarts/charts';
-import {
-  DataZoomComponent,
-  GridComponent,
-  LegendComponent,
-  TitleComponent,
-  TooltipComponent,
-} from 'echarts/components';
-import { CanvasRenderer } from 'echarts/renderers';
+
 import {
   ApiOutlined,
   ArrowDownOutlined,
@@ -33,6 +12,29 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
+import { BarChart, LineChart, PieChart } from 'echarts/charts';
+import {
+  DataZoomComponent,
+  GridComponent,
+  LegendComponent,
+  TitleComponent,
+  TooltipComponent,
+} from 'echarts/components';
+
+import OpsPage from '#/components/ops/OpsPage.vue';
+
+import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
+import { useAiRequestScope } from '../assistant/useAiRequestScope';
+import { formatProbability } from './prediction-display';
+import {
+  alignForecasts,
+  forecastPoints,
+  formatPredictionTime,
+} from './prediction-series';
+import PredictionProvenance from './PredictionProvenance.vue';
+// 按需引入echarts，减少打包体积
+import * as echarts from 'echarts/core';
+import { CanvasRenderer } from 'echarts/renderers';
 
 import {
   predictCpu,
@@ -67,10 +69,10 @@ const hasInitialData = ref(false);
 
 // 用户输入数据
 const inputData = ref({
-  currentQps: null as null | number,
   currentCpu: null as null | number,
-  currentMemory: null as null | number,
   currentDisk: null as null | number,
+  currentMemory: null as null | number,
+  currentQps: null as null | number,
 });
 
 // 表单验证
@@ -101,41 +103,41 @@ let utilizationChart: echarts.ECharts | null = null;
 // 指标数据
 const metricsData = ref([
   {
-    type: 'qps',
-    name: 'QPS',
+    currentValue: 0,
     icon: ThunderboltOutlined,
-    currentValue: 0,
+    name: 'QPS',
+    trend: null as null | number,
+    type: 'qps',
     unit: '/s',
-    trend: null as null | number,
   },
   {
-    type: 'cpu',
-    name: 'CPU使用率',
+    currentValue: 0,
     icon: ApiOutlined,
-    currentValue: 0,
-    unit: '%',
+    name: 'CPU使用率',
     trend: null as null | number,
+    type: 'cpu',
+    unit: '%',
   },
   {
-    type: 'memory',
-    name: '内存使用率',
+    currentValue: 0,
     icon: DatabaseOutlined,
-    currentValue: 0,
-    unit: '%',
+    name: '内存使用率',
     trend: null as null | number,
+    type: 'memory',
+    unit: '%',
   },
   {
-    type: 'disk',
-    name: '磁盘使用率',
-    icon: HddOutlined,
     currentValue: 0,
-    unit: '%',
+    icon: HddOutlined,
+    name: '磁盘使用率',
     trend: null as null | number,
+    type: 'disk',
+    unit: '%',
   },
 ]);
 
 const scalingRecommendations = ref<
-  Array<ScalingRecommendation & { source: string }>
+  Array<{ source: string } & ScalingRecommendation>
 >([]);
 const aiInsights = ref<string[]>([]);
 
@@ -151,10 +153,10 @@ const metricCards = computed(() =>
 const scope = useAiRequestScope(() => {
   clearPredictions();
   inputData.value = {
-    currentQps: null,
     currentCpu: null,
-    currentMemory: null,
     currentDisk: null,
+    currentMemory: null,
+    currentQps: null,
   };
 });
 const predictionLane = scope.createLane();
@@ -167,16 +169,16 @@ const costEntries = computed(() =>
     response.cost_analysis
       ? [
           {
-            type,
+            cost: response.cost_analysis,
             name: (
               {
-                qps: 'QPS',
                 cpu: 'CPU',
-                memory: '内存',
                 disk: '磁盘',
+                memory: '内存',
+                qps: 'QPS',
               } as Record<string, string>
             )[type],
-            cost: response.cost_analysis,
+            type,
           },
         ]
       : [],
@@ -260,38 +262,38 @@ const updateTrendChart = () => {
   const data = alignForecasts(predictionCache.value);
   trendChart.setOption(
     {
+      series: data.series.map((series, index) => ({
+        ...series,
+        areaStyle: chartType.value === 'area' ? {} : undefined,
+        connectNulls: false,
+        itemStyle: { color: getSeriesColor(index) },
+        lineStyle: { width: 2 },
+        smooth: false,
+        type: 'line',
+      })),
       textStyle: { color: chartColors().text },
       xAxis: {
-        type: 'category',
-        data: data.labels,
         axisLine: { lineStyle: { color: chartColors().border } },
+        data: data.labels,
+        type: 'category',
       },
       yAxis: [
         {
-          type: 'value',
-          name: 'QPS (/s)',
-          min: 0,
           axisLabel: { color: chartColors().muted },
+          min: 0,
+          name: 'QPS (/s)',
           splitLine: { lineStyle: { color: chartColors().border } },
+          type: 'value',
         },
         {
-          type: 'value',
-          name: '使用率 (%)',
-          min: 0,
-          max: 100,
           axisLabel: { color: chartColors().muted },
+          max: 100,
+          min: 0,
+          name: '使用率 (%)',
           splitLine: { show: false },
+          type: 'value',
         },
       ],
-      series: data.series.map((series, index) => ({
-        ...series,
-        type: 'line',
-        connectNulls: false,
-        smooth: false,
-        areaStyle: chartType.value === 'area' ? {} : undefined,
-        lineStyle: { width: 2 },
-        itemStyle: { color: getSeriesColor(index) },
-      })),
     },
     { replaceMerge: ['series', 'yAxis'] },
   );
@@ -302,28 +304,28 @@ const updateUtilizationChart = () => {
 
   utilizationChart.setOption(
     {
+      grid: { bottom: 32, left: 48, right: 24, top: 24 },
+      series: [
+        {
+          data: ['cpu', 'memory', 'disk'].map(
+            (key) => predictionCache.value[key]?.current_value ?? null,
+          ),
+          name: '使用率',
+          type: 'bar',
+        },
+      ],
+      textStyle: { color: chartColors().text },
       tooltip: {
         trigger: 'axis',
         valueFormatter: (value: number) => `${value}%`,
       },
-      textStyle: { color: chartColors().text },
-      grid: { left: 48, right: 24, top: 24, bottom: 32 },
       xAxis: {
-        type: 'value',
-        min: 0,
-        max: 100,
         axisLabel: { formatter: '{value}%' },
+        max: 100,
+        min: 0,
+        type: 'value',
       },
-      yAxis: { type: 'category', data: ['CPU', '内存', '磁盘'] },
-      series: [
-        {
-          name: '使用率',
-          type: 'bar',
-          data: ['cpu', 'memory', 'disk'].map(
-            (key) => predictionCache.value[key]?.current_value ?? null,
-          ),
-        },
-      ],
+      yAxis: { data: ['CPU', '内存', '磁盘'], type: 'category' },
     },
     true,
   );
@@ -358,7 +360,7 @@ const refreshAllPredictions = async () => {
   const enhanced = aiEnhanced.value;
   loading.value = true;
   try {
-    const common = { prediction_hours: hours, enable_ai_insights: enhanced };
+    const common = { enable_ai_insights: enhanced, prediction_hours: hours };
     const results = await Promise.allSettled([
       predictQps({ ...common, current_qps: currentQps }),
       predictCpu({ ...common, current_cpu_percent: currentCpu }),
@@ -431,33 +433,33 @@ const initTrendChart = () => {
   trendChart = echarts.init(trendChartRef.value);
 
   const option = {
-    textStyle: { color: chartColors().text },
     backgroundColor: 'transparent',
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'cross' },
+    grid: {
+      bottom: '3%',
+      containLabel: true,
+      left: '3%',
+      right: '4%',
     },
     legend: {
       data: ['QPS', 'CPU', '内存', '磁盘'],
       textStyle: { color: chartColors().text },
     },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      containLabel: true,
+    series: [],
+    textStyle: { color: chartColors().text },
+    tooltip: {
+      axisPointer: { type: 'cross' },
+      trigger: 'axis',
     },
     xAxis: {
-      type: 'category',
-      data: [],
       axisLine: { lineStyle: { color: chartColors().border } },
+      data: [],
+      type: 'category',
     },
     yAxis: {
-      type: 'value',
       axisLine: { lineStyle: { color: chartColors().border } },
       splitLine: { lineStyle: { color: chartColors().border } },
+      type: 'value',
     },
-    series: [],
   };
 
   trendChart.setOption(option);
@@ -514,10 +516,10 @@ const onTimeRangeChange = () => {
 const resetForm = () => {
   clearPredictions();
   inputData.value = {
-    currentQps: null,
     currentCpu: null,
-    currentMemory: null,
     currentDisk: null,
+    currentMemory: null,
+    currentQps: null,
   };
 };
 
@@ -683,15 +685,15 @@ onUnmounted(() => {
 
     <a-alert
       v-if="predictionFailures.length > 0"
-      type="warning"
       :message="`以下预测未完成：${predictionFailures.join('、')}，失败项不展示旧数据。`"
-      show-icon
       class="mb-4"
+      show-icon
+      type="warning"
     />
     <!-- 关键指标卡片 -->
     <a-row :gutter="[16, 16]" class="metrics-overview">
       <a-col v-for="metric in metricCards" :key="metric.type" :lg="6" :xs="12">
-        <a-card class="metric-card" :class="[`metric-${metric.type}`]">
+        <a-card :class="[`metric-${metric.type}`]" class="metric-card">
           <div class="metric-content">
             <div class="metric-header">
               <div class="metric-icon">
@@ -718,8 +720,8 @@ onUnmounted(() => {
                 <span class="trend-label">预测趋势:</span>
                 <span
                   v-if="predictionCache[metric.type] && metric.trend !== null"
-                  class="trend-value"
                   :class="[metric.trend > 0 ? 'trend-up' : 'trend-down']"
+                  class="trend-value"
                 >
                   <component
                     :is="metric.trend > 0 ? ArrowUpOutlined : ArrowDownOutlined"
@@ -728,7 +730,7 @@ onUnmounted(() => {
                   {{
                     metric.trend === 0
                       ? '持平'
-                      : Math.abs(metric.trend).toFixed(1) + '%'
+                      : `${Math.abs(metric.trend).toFixed(1)}%`
                   }}
                 </span>
                 <span v-else-if="predictionCache[metric.type]"

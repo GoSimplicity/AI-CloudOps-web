@@ -9,8 +9,6 @@ import {
 
 import { useAccessStore } from '@vben/stores';
 
-import { usePermission } from '#/utils/permission';
-
 import { message } from 'ant-design-vue';
 
 import {
@@ -28,6 +26,7 @@ import {
   getAutoFixPlan,
   getAutoFixReady,
 } from '#/api/core/aiops/autofix';
+import { usePermission } from '#/utils/permission';
 
 import { useAiRequestScope } from '../assistant/useAiRequestScope';
 import { reportAutoFixOutcomeUncertain } from './autofix-errors';
@@ -78,14 +77,14 @@ export function useAutoFixWorkflow() {
   const currentOperationId = ref('');
   const currentPlanId = ref('');
   const operationState = ref<
+    | 'completed'
+    | 'invalidated'
     | 'none'
-    | 'unverified'
     | 'not_found'
     | 'pending'
     | 'running'
-    | 'completed'
     | 'uncertain'
-    | 'invalidated'
+    | 'unverified'
   >('none');
   const operationDetail = ref<AutoFixOperation>();
   const operationHistory = ref<AutoFixOperation[]>([]);
@@ -93,7 +92,7 @@ export function useAutoFixWorkflow() {
   const historyLoaded = ref(false);
   const recoveryLoading = ref(false);
   let retrySnapshot: AutoFixWorkflowRequest | undefined;
-  let resultSource: 'workflow' | 'confirm' | 'operation' | 'plan' | '' = '';
+  let resultSource: '' | 'confirm' | 'operation' | 'plan' | 'workflow' = '';
   const infoError = ref('');
   const resultOwner = ref('');
   const now = ref(Date.now());
@@ -514,7 +513,7 @@ export function useAutoFixWorkflow() {
     )
       return;
     selectedBlockedActionIds.value = checked
-      ? [...new Set([...selectedBlockedActionIds.value, id])]
+      ? [...new Set([id, ...selectedBlockedActionIds.value])]
       : selectedBlockedActionIds.value.filter((value) => value !== id);
   }
   async function loadServiceInfo(checkDependencies = true) {
@@ -725,12 +724,6 @@ export function useAutoFixWorkflow() {
     });
   });
   return {
-    confirmLoading,
-    infoLoading,
-    running,
-    showRawDrawer,
-    templateKey,
-    operationOwner: scope.owner,
     acknowledgeUncertain,
     applyTemplate,
     approvalIssue,
@@ -746,6 +739,7 @@ export function useAutoFixWorkflow() {
     confirmableBlockedActions,
     confirmActions,
     confirmAllActions,
+    confirmLoading,
     confirmSingleAction,
     confirmWorkflowExecution,
     currentOperationId,
@@ -755,20 +749,25 @@ export function useAutoFixWorkflow() {
     historyLoaded,
     historyLoading,
     infoError,
+    infoLoading,
     isFormValid,
     loadHistory,
     loadServiceInfo,
     openHistoryPlan,
     operationDetail,
     operationHistory,
+    operationOwner: scope.owner,
     operationState,
     readyInfo,
     recoveryError,
     recoveryLoading,
     resetForm,
+    running,
     runWorkflow,
     selectedBlockedActionIds,
     serviceInfo,
+    showRawDrawer,
+    templateKey,
     toggleBlockedAction,
     workflowError,
     workflowResult,

@@ -40,7 +40,7 @@ const sources = walk(SRC).map((path) => ({
 
 function gatedIn(key: string) {
   const pattern = new RegExp(
-    String.raw`can\(\s*['"]${key.replaceAll('.', '\\.')}['"]`,
+    String.raw`can\(\s*['"]${key.replaceAll('.', String.raw`\.`)}['"]`,
   );
   return sources
     .filter(

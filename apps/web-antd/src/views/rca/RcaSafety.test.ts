@@ -1,3 +1,5 @@
+import { nextTick, reactive } from 'vue';
+
 import {
   flushPromises,
   mount,
@@ -5,13 +7,11 @@ import {
   type VueWrapper,
 } from '@vue/test-utils';
 import Antd, { message } from 'ant-design-vue';
-import { nextTick, reactive } from 'vue';
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import RCAAnalysis from './RCAAnalysis.vue';
-import RCADiagnosis from './RCADiagnosis.vue';
 import RCACache from './RCACache.vue';
+import RCADiagnosis from './RCADiagnosis.vue';
 
 /** 必须存在的页面、DOM 或调用缺失时立即失败，保留原测试前提。 */
 function required<T>(value: null | T | undefined): T {
@@ -21,41 +21,41 @@ function required<T>(value: null | T | undefined): T {
   return value;
 }
 
-const account = vi.hoisted(() => ({ user: null as any, access: null as any }));
+const account = vi.hoisted(() => ({ access: null as any, user: null as any }));
 const api = vi.hoisted(() => ({
   analyzeRootCause: vi.fn(),
-  getAllPrometheusMetrics: vi.fn(),
-  quickDiagnosis: vi.fn(),
-  getEventPatterns: vi.fn(),
-  getErrorSummary: vi.fn(),
-  getCacheStats: vi.fn(),
   clearAllCache: vi.fn(),
   clearNamespaceCache: vi.fn(),
   clearOperationCache: vi.fn(),
+  getAllPrometheusMetrics: vi.fn(),
+  getCacheStats: vi.fn(),
+  getErrorSummary: vi.fn(),
+  getEventPatterns: vi.fn(),
+  quickDiagnosis: vi.fn(),
 }));
 vi.mock('@vben/stores', () => ({
-  useUserStore: () => account.user,
   useAccessStore: () => account.access,
+  useUserStore: () => account.user,
 }));
 vi.mock('#/api/core/aiops/rca', () => api);
 vi.mock('echarts/core', () => ({
-  use: vi.fn(),
   init: () => ({
-    setOption: vi.fn(),
     clear: vi.fn(),
-    resize: vi.fn(),
     dispose: vi.fn(),
     isDisposed: () => false,
+    resize: vi.fn(),
+    setOption: vi.fn(),
   }),
+  use: vi.fn(),
 }));
 let wrapper: undefined | VueWrapper;
 const state = () => (required(wrapper).vm as any).$.setupState;
 function render(component: any, actual = false) {
   wrapper = (actual ? mount : shallowMount)(component, {
     global: {
+      config: { warnHandler: () => {} },
       plugins: [Antd],
       stubs: { Icon: true },
-      config: { warnHandler: () => {} },
     },
   });
   return wrapper;
@@ -65,7 +65,7 @@ function deferred() {
   const promise = new Promise((yes) => {
     resolve = yes;
   });
-  return { resolve, promise };
+  return { promise, resolve };
 }
 beforeEach(() => {
   vi.clearAllMocks();
@@ -73,19 +73,19 @@ beforeEach(() => {
   account.access = reactive({ accessToken: 'offline' });
   api.getAllPrometheusMetrics.mockResolvedValue([]);
   api.getCacheStats.mockResolvedValue({
-    healthy: true,
     available: true,
-    total_keys: 0,
+    healthy: true,
     hit_rate: 0,
     timestamp: '2026-10-23T00:00:00Z',
+    total_keys: 0,
   });
   vi.spyOn(message, 'success');
   vi.spyOn(message, 'error');
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
-      matches: false,
       addListener: vi.fn(),
+      matches: false,
       removeListener: vi.fn(),
     })),
   );
@@ -121,7 +121,7 @@ describe('rCA请求与账户边界', () => {
   it('缓存读取失败清空旧健康状态并保留真实原因', async () => {
     render(RCACache);
     await flushPromises();
-    state().cacheStats = { healthy: true, available: true };
+    state().cacheStats = { available: true, healthy: true };
     api.getCacheStats.mockRejectedValueOnce(new Error('缓存连接已断开'));
     await state().refreshCacheStats();
     expect(state().cacheStats).toBeNull();
@@ -196,7 +196,7 @@ describe('rCA请求与账户边界', () => {
     state().startAutoRefresh();
     const task = state().refreshAllDiagnosis();
     account.user.userInfo = { userId: '2' };
-    old.resolve({ status: 'healthy', critical_issues: [], warnings: [] });
+    old.resolve({ critical_issues: [], status: 'healthy', warnings: [] });
     await task;
     expect(state().quickDiagnosisResult).toBeNull();
     expect(state().hasInitialData).toBe(false);
@@ -210,7 +210,7 @@ describe('rCA请求与账户边界', () => {
     state().operationHistory = [{ operation: 'private-one' }];
     state().clearAllModalVisible = true;
     account.user.userInfo = { userId: '2' };
-    old.resolve({ healthy: true, available: true, total_keys: 42 });
+    old.resolve({ available: true, healthy: true, total_keys: 42 });
     await flushPromises();
     expect(state().cacheStats).toBeNull();
     expect(state().operationHistory).toEqual([]);
@@ -224,7 +224,7 @@ describe('rCA请求与账户边界', () => {
     state().showClearAllModal();
     const task = state().confirmClearAllCache();
     account.user.userInfo = { userId: '2' };
-    old.resolve({ success: true, message: 'old-private', cleared_count: 5 });
+    old.resolve({ cleared_count: 5, message: 'old-private', success: true });
     await task;
     expect(state().operationHistory).toEqual([]);
     expect(state().cacheStats).toBeNull();
@@ -243,24 +243,24 @@ describe('rCA请求与账户边界', () => {
 
 describe('rCA采集状态', () => {
   const result = (status: string, coverage: null | number) => ({
-    status,
-    namespace: 'default',
     analysis_id: 'fixture-id',
-    timestamp: '2026-10-23T00:00:00Z',
-    time_window_hours: 2,
-    confidence_score: 0.9,
-    root_causes: [],
     anomalies: {},
-    correlations: [],
-    recommendations: [],
     collection: {
       coverage,
       sources: {
-        metrics: { status: 'success', count: 3 },
-        events: { status: 'empty', count: 0 },
-        logs: { status: 'partial', count: 1 },
+        events: { count: 0, status: 'empty' },
+        logs: { count: 1, status: 'partial' },
+        metrics: { count: 3, status: 'success' },
       },
     },
+    confidence_score: 0.9,
+    correlations: [],
+    namespace: 'default',
+    recommendations: [],
+    root_causes: [],
+    status,
+    time_window_hours: 2,
+    timestamp: '2026-10-23T00:00:00Z',
   });
   it('完成时呈现覆盖率及空数据，与采集失败区分', async () => {
     api.analyzeRootCause.mockResolvedValueOnce(result('completed', 1));

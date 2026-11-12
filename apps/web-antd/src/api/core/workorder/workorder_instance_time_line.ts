@@ -2,20 +2,20 @@ import { requestClient } from '#/api/request';
 
 // 时间线操作类型常量 - 包含所有操作记录
 export const TimelineAction = {
-  Create: 'create', // 创建工单
-  Submit: 'submit', // 提交工单
   Approve: 'approve', // 审批通过
-  Reject: 'reject', // 审批拒绝
   Assign: 'assign', // 指派处理人
+  Attach: 'attach', // 添加附件
   Cancel: 'cancel', // 取消工单
-  Complete: 'complete', // 完成工单
-  Return: 'return', // 退回工单
   Comment: 'comment', // 添加评论
+  Complete: 'complete', // 完成工单
+  Create: 'create', // 创建工单
+  Notify: 'notify', // 发送通知
+  Reject: 'reject', // 审批拒绝
+  Remind: 'remind', // 催办提醒
+  Return: 'return', // 退回工单
+  Submit: 'submit', // 提交工单
   Update: 'update', // 更新工单信息
   View: 'view', // 查看工单
-  Attach: 'attach', // 添加附件
-  Notify: 'notify', // 发送通知
-  Remind: 'remind', // 催办提醒
 } as const;
 
 // WorkorderInstanceTimeline 工单操作时间线 - 记录所有操作历史和审计日志

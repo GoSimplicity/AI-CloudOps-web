@@ -1,11 +1,6 @@
 <script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
 import { onMounted } from 'vue';
 
-import { message } from 'ant-design-vue';
-
-import { useTemplatePage } from './Template';
-import { formatDateTime, getRelativeTime } from '../shared/utils';
 import {
   CheckCircleOutlined,
   ClearOutlined,
@@ -21,103 +16,108 @@ import {
   ReloadOutlined,
   SearchOutlined,
 } from '@ant-design/icons-vue';
+import { message } from 'ant-design-vue';
 
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { usePermission } from '#/utils/permission';
+
+import { formatDateTime, getRelativeTime } from '../shared/utils';
+import { useTemplatePage } from './Template';
 
 const { can } = usePermission();
 
 const {
+  // batch operations
+  batchOperation,
+  // modal state
+  checkLoading,
+  // template operations
+  checkTemplate,
+  // operations
+  clearTemplates,
+  // YAML operations
+  clearYaml,
+  // create operations
+  closeCreateModal,
+  // detail operations
+  closeDetailModal,
+  // edit operations
+  closeEditModal,
+  // YAML operations
+  closeYamlModal,
   // state
   clusters,
   clustersError,
   clustersLoading,
+
   clustersTotal,
-  currentPage,
-  filterClusterId,
-  loadError,
-  loading,
-  pageSize,
-  searchText,
-  selectedRows,
-  total,
-
-  // modal state
-  checkLoading,
-  detailLoading,
-  isCreateModalVisible,
-  isDetailModalVisible,
-  isEditModalVisible,
-  isYamlModalVisible,
-  submitLoading,
-
-  // operation targets
-  currentOperationTemplate,
-  currentTemplateDetail,
-
   // form models
   createFormModel,
+  // form rules
+  createFormRules,
+  // operation targets
+  currentOperationTemplate,
+  currentPage,
+  currentTemplateDetail,
+  deleteTemplate,
+
+  detailLoading,
   editFormModel,
-  yamlFormModel,
 
   // form refs
   editFormRef,
-  formRef,
-
-  // form rules
-  createFormRules,
   editFormRules,
+  fetchClusters,
+
+  fetchTemplates,
+  filterClusterId,
 
   // computed
   filteredTemplates,
-  rowSelection,
+  formatEditYaml,
 
   // helpers
   formatK8sTime,
+  formatYaml,
+
+  formRef,
   getClusterName,
   getEnvText,
   getUserDisplay,
 
-  // operations
-  clearTemplates,
-  fetchClusters,
-  fetchTemplates,
-  loadMoreClusters,
-
-  // detail operations
-  closeDetailModal,
-  showTemplateDetail,
-
-  // YAML operations
-  closeYamlModal,
-  showYamlModal,
-
-  // create operations
-  closeCreateModal,
-  openCreateModal,
-  submitCreateForm,
-
-  // edit operations
-  closeEditModal,
-  openEditModal,
-  submitEditForm,
-
-  // template operations
-  checkTemplate,
-  deleteTemplate,
-
-  // batch operations
-  batchOperation,
-
   // pagination operations
   handlePageChange,
-
-  // YAML operations
-  clearYaml,
-  formatEditYaml,
-  formatYaml,
   insertYamlTemplate,
+  isCreateModalVisible,
+  isDetailModalVisible,
+
+  isEditModalVisible,
+  isYamlModalVisible,
+
+  loadError,
+  loading,
+
+  loadMoreClusters,
+  openCreateModal,
+  openEditModal,
+
+  pageSize,
+  rowSelection,
+  searchText,
+
+  selectedRows,
+  showTemplateDetail,
+
+  showYamlModal,
+
+  submitCreateForm,
+
+  submitEditForm,
+  submitLoading,
+  total,
   validateEditYaml,
   validateYaml,
+  yamlFormModel,
 } = useTemplatePage();
 
 const onSearch = () => {
@@ -170,7 +170,7 @@ const getYamlPreview = (content: string) => {
   if (!content) return '暂无内容';
   const lines = content.split('\n');
   if (lines.length <= 3) return content;
-  return lines.slice(0, 3).join('\n') + '\n...';
+  return `${lines.slice(0, 3).join('\n')}\n...`;
 };
 
 // 复制 YAML 内容
@@ -293,9 +293,9 @@ onMounted(async () => {
               </a-select-option>
               <a-select-option
                 v-if="clusters.length > 0 && clusters.length < clustersTotal"
-                value="__load_more__"
                 disabled
                 style="text-align: center; color: #999"
+                value="__load_more__"
               >
                 <a-spin :spinning="clustersLoading" size="small" />
                 <span v-if="!clustersLoading">滚动加载更多...</span>
@@ -310,7 +310,7 @@ onMounted(async () => {
               class="k8s-search-input"
               placeholder="🔍 搜索模板名称"
               @input="onSearch"
-              @pressEnter="onSearch"
+              @press-enter="onSearch"
             >
               <template #suffix>
                 <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -333,13 +333,13 @@ onMounted(async () => {
             </a-button>
 
             <a-button
-              type="primary"
-              danger
-              @click="() => batchOperation('删除')"
-              :disabled="selectedRows.length === 0"
               v-if="can('k8s.template.batchDelete') && selectedRows.length > 0"
+              :disabled="selectedRows.length === 0"
               class="k8s-toolbar-btn"
+              danger
               title="批量删除选中的模板"
+              type="primary"
+              @click="() => batchOperation('删除')"
             >
               <template #icon><DeleteOutlined aria-hidden="true" /></template>
               删除 ({{ selectedRows.length }})

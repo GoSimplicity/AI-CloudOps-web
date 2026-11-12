@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import type { WorkorderCategoryItem } from '#/api/core/workorder/workorder_category';
 
-import OpsPage from '#/components/ops/OpsPage.vue';
-
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 
-import { message, Modal } from 'ant-design-vue';
 import {
   CheckCircleOutlined,
   DownOutlined,
@@ -16,7 +13,9 @@ import {
   StopOutlined,
 } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
+import { message, Modal } from 'ant-design-vue';
 
+import { listWorkorderCategory } from '#/api/core/workorder/workorder_category';
 import {
   createWorkorderFormDesign,
   type CreateWorkorderFormDesignReq,
@@ -32,7 +31,7 @@ import {
   type UpdateWorkorderFormDesignReq,
   type WorkorderFormDesignItem,
 } from '#/api/core/workorder/workorder_form_design';
-import { listWorkorderCategory } from '#/api/core/workorder/workorder_category';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { getAvatarColor } from '#/utils/avatar-color';
 import { getOwnLookupValue } from '#/utils/own-lookup';
 import { usePermission } from '#/utils/permission';
@@ -136,9 +135,9 @@ let categorySearchTimeout: null | ReturnType<typeof setTimeout> = null;
 // 分类分页状态
 const categoryPagination = reactive({
   current: 1,
+  hasMore: false,
   pageSize: 20,
   total: 0,
-  hasMore: false,
 });
 
 // JSON相关状态
@@ -158,19 +157,19 @@ onBeforeUnmount(() => {
 const paginationConfig = reactive({
   current: 1,
   pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
   showQuickJumper: true,
+  showSizeChanger: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
   size: 'default' as const,
+  total: 0,
 });
 
 // 统计数据
 const stats = reactive({
-  total: 0,
-  published: 0,
-  draft: 0,
   archived: 0,
+  draft: 0,
+  published: 0,
+  total: 0,
 });
 
 // 对话框状态
@@ -180,17 +179,17 @@ const previewDialogVisible = ref(false);
 
 // 表单对话框数据
 const formDialog = reactive({
-  isEdit: false,
   form: {
-    id: undefined as number | undefined,
-    name: '',
-    description: '',
     category_id: undefined as number | undefined,
+    description: '',
+    fieldsJson: '',
+    id: undefined as number | undefined,
+    is_template: 2 as number,
+    name: '',
     status: FormDesignStatus.Draft as number,
     tags: [] as string[],
-    is_template: 2 as number,
-    fieldsJson: '',
   },
+  isEdit: false,
 });
 
 // 详情对话框数据
@@ -205,11 +204,11 @@ const previewDialog = reactive({
 
 // 表单验证规则
 const formRules = {
+  category_id: [{ message: '请选择分类', required: true, trigger: 'change' }],
   name: [
     { message: '请输入表单名称', required: true, trigger: 'blur' },
     { max: 50, message: '长度应为3到50个字符', min: 3, trigger: 'blur' },
   ],
-  category_id: [{ message: '请选择分类', required: true, trigger: 'change' }],
 };
 
 // 字段帮助文本
@@ -220,19 +219,19 @@ const fieldsHelpText = `支持的字段类型：text(文本), number(数字), pa
 const simpleFieldsExample = JSON.stringify(
   [
     {
-      name: 'name',
-      type: 'text',
       label: '姓名',
-      required: 1,
+      name: 'name',
       placeholder: '请输入姓名',
+      required: 1,
+      type: 'text',
     },
     {
-      name: 'gender',
-      type: 'select',
       label: '性别',
-      required: 1,
-      placeholder: '请选择性别',
+      name: 'gender',
       options: ['男', '女'],
+      placeholder: '请选择性别',
+      required: 1,
+      type: 'select',
     },
   ],
   null,
@@ -242,27 +241,27 @@ const simpleFieldsExample = JSON.stringify(
 const complexFieldsExample = JSON.stringify(
   [
     {
-      name: 'username',
-      type: 'text',
       label: '用户名',
-      required: 1,
+      name: 'username',
       placeholder: '请输入用户名',
-    },
-    {
-      name: 'age',
-      type: 'number',
-      label: '年龄',
       required: 1,
-      placeholder: '请输入年龄',
-      default: 18,
+      type: 'text',
     },
     {
-      name: 'hobbies',
-      type: 'checkbox',
-      label: '兴趣爱好',
-      required: 0,
-      options: ['读书', '运动', '音乐', '旅行'],
+      default: 18,
+      label: '年龄',
+      name: 'age',
+      placeholder: '请输入年龄',
+      required: 1,
+      type: 'number',
+    },
+    {
       default: ['读书'],
+      label: '兴趣爱好',
+      name: 'hobbies',
+      options: ['读书', '运动', '音乐', '旅行'],
+      required: 0,
+      type: 'checkbox',
     },
   ],
   null,
@@ -272,68 +271,68 @@ const complexFieldsExample = JSON.stringify(
 const allTypesFieldsExample = JSON.stringify(
   [
     {
-      name: 'text_input',
-      type: 'text',
       label: '文本字段',
-      required: 1,
+      name: 'text_input',
       placeholder: '请输入文本',
+      required: 1,
+      type: 'text',
     },
     {
-      name: 'number_input',
-      type: 'number',
       label: '数字字段',
-      required: 0,
+      name: 'number_input',
       placeholder: '请输入数字',
+      required: 0,
+      type: 'number',
     },
     {
-      name: 'password_input',
-      type: 'password',
       label: '密码字段',
-      required: 1,
+      name: 'password_input',
       placeholder: '请输入密码',
+      required: 1,
+      type: 'password',
     },
     {
-      name: 'textarea_input',
-      type: 'textarea',
       label: '多行文本',
-      required: 0,
+      name: 'textarea_input',
       placeholder: '请输入详细内容',
+      required: 0,
+      type: 'textarea',
     },
     {
-      name: 'date_input',
-      type: 'date',
       label: '日期字段',
-      required: 0,
+      name: 'date_input',
       placeholder: '请选择日期',
+      required: 0,
+      type: 'date',
     },
     {
-      name: 'select_input',
-      type: 'select',
       label: '下拉选择',
-      required: 1,
-      placeholder: '请选择',
+      name: 'select_input',
       options: ['选项1', '选项2', '选项3'],
-    },
-    {
-      name: 'radio_input',
-      type: 'radio',
-      label: '单选字段',
+      placeholder: '请选择',
       required: 1,
+      type: 'select',
+    },
+    {
+      label: '单选字段',
+      name: 'radio_input',
       options: ['是', '否'],
+      required: 1,
+      type: 'radio',
     },
     {
-      name: 'checkbox_input',
-      type: 'checkbox',
       label: '复选字段',
-      required: 0,
+      name: 'checkbox_input',
       options: ['选项A', '选项B', '选项C'],
+      required: 0,
+      type: 'checkbox',
     },
     {
-      name: 'switch_input',
-      type: 'switch',
-      label: '开关字段',
-      required: 0,
       default: false,
+      label: '开关字段',
+      name: 'switch_input',
+      required: 0,
+      type: 'switch',
     },
   ],
   null,
@@ -342,27 +341,27 @@ const allTypesFieldsExample = JSON.stringify(
 
 const getStatusColor = (status: number): string => {
   const colorMap = {
+    [FormDesignStatus.Archived]: 'default',
     [FormDesignStatus.Draft]: 'orange',
     [FormDesignStatus.Published]: 'green',
-    [FormDesignStatus.Archived]: 'default',
   };
   return colorMap[status as keyof typeof colorMap] || 'default';
 };
 
 const getStatusText = (status: number): string => {
   const textMap = {
+    [FormDesignStatus.Archived]: '已归档',
     [FormDesignStatus.Draft]: '草稿',
     [FormDesignStatus.Published]: '已发布',
-    [FormDesignStatus.Archived]: '已归档',
   };
   return textMap[status as keyof typeof textMap] || '未知';
 };
 
 const getStatusClass = (status: number): string => {
   const classMap = {
+    [FormDesignStatus.Archived]: 'status-archived',
     [FormDesignStatus.Draft]: 'status-draft',
     [FormDesignStatus.Published]: 'status-published',
-    [FormDesignStatus.Archived]: 'status-archived',
   };
   return classMap[status as keyof typeof classMap] || '';
 };
@@ -419,11 +418,11 @@ const loadFormDialogCategories = async (
   try {
     const params = {
       page: reset ? 1 : categoryPagination.current,
-      size: categoryPagination.pageSize,
       search:
         search === undefined
           ? categorySearchKeyword.value || undefined
           : search,
+      size: categoryPagination.pageSize,
     };
 
     const response = await listWorkorderCategory(params);
@@ -480,10 +479,8 @@ const handleCategorySearch = (value: string): void => {
 
 // 处理下拉框显示/隐藏
 const handleCategoryDropdownChange = (open: boolean): void => {
-  if (open) {
-    if (formDialogCategories.value.length === 0) {
-      loadFormDialogCategories(true);
-    }
+  if (open && formDialogCategories.value.length === 0) {
+    loadFormDialogCategories(true);
   }
 };
 
@@ -503,7 +500,7 @@ const handleCategoryScroll = (e: Event): void => {
   if (!target) return;
 
   const element = target as HTMLElement;
-  const { scrollTop, scrollHeight, clientHeight } = element;
+  const { clientHeight, scrollHeight, scrollTop } = element;
 
   if (
     scrollTop + clientHeight >= scrollHeight - 10 &&
@@ -564,9 +561,9 @@ const validateFieldsJson = (): void => {
 
       if (
         [
-          FormFieldType.Select,
-          FormFieldType.Radio,
           FormFieldType.Checkbox,
+          FormFieldType.Radio,
+          FormFieldType.Select,
         ].includes(field.type) &&
         (!field.options || !Array.isArray(field.options))
       ) {
@@ -636,12 +633,12 @@ const loadFormDesigns = async (): Promise<void> => {
   loadError.value = '';
   try {
     const params: ListWorkorderFormDesignReq = {
-      page: paginationConfig.current,
-      size: paginationConfig.pageSize,
-      search: searchQuery.value || undefined,
-      status: statusFilter.value,
       category_id: categoryFilter.value,
       is_template: templateFilter.value,
+      page: paginationConfig.current,
+      search: searchQuery.value || undefined,
+      size: paginationConfig.pageSize,
+      status: statusFilter.value,
     };
 
     const response = await listWorkorderFormDesign(params);
@@ -763,14 +760,14 @@ const resetCategorySelector = (): void => {
 const handleCreateForm = (): void => {
   formDialog.isEdit = false;
   formDialog.form = {
-    id: undefined,
-    name: '',
-    description: '',
     category_id: undefined,
+    description: '',
+    fieldsJson: '',
+    id: undefined,
+    is_template: 2,
+    name: '',
     status: FormDesignStatus.Draft,
     tags: [],
-    is_template: 2,
-    fieldsJson: '',
   };
   jsonValidationError.value = '';
   formDialogVisible.value = true;
@@ -788,37 +785,39 @@ const loadCategoryForEdit = async (
 
     if (
       formData.category_id &&
-      !formDialogCategories.value.find((cat) => cat.id === formData.category_id)
+      !formDialogCategories.value.find(
+        (cat) => cat.id === formData.category_id,
+      ) &&
+      formData.category &&
+      formData.category.name
     ) {
-      if (formData.category && formData.category.name) {
-        const categoryInfo: WorkorderCategoryItem = {
-          id: formData.category_id,
-          name: formData.category.name,
-          description: formData.category.description || '',
-          created_at: '',
-          updated_at: '',
-          status: 1,
-          operator_id: 0,
-          operator_name: '',
-        };
+      const categoryInfo: WorkorderCategoryItem = {
+        created_at: '',
+        description: formData.category.description || '',
+        id: formData.category_id,
+        name: formData.category.name,
+        operator_id: 0,
+        operator_name: '',
+        status: 1,
+        updated_at: '',
+      };
 
-        formDialogCategories.value = [
-          categoryInfo,
-          ...formDialogCategories.value,
-        ];
-      }
+      formDialogCategories.value = [
+        categoryInfo,
+        ...formDialogCategories.value,
+      ];
     }
   } catch {
     if (formData.category_id && formData.category?.name) {
       const categoryInfo: WorkorderCategoryItem = {
+        created_at: '',
+        description: formData.category?.description || '',
         id: formData.category_id,
         name: formData.category.name || `分类${formData.category_id}`,
-        description: formData.category?.description || '',
-        created_at: '',
-        updated_at: '',
-        status: 1,
         operator_id: 0,
         operator_name: '',
+        status: 1,
+        updated_at: '',
       };
       formDialogCategories.value = [categoryInfo];
     }
@@ -833,14 +832,14 @@ const handleEditForm = async (
     if (response) {
       formDialog.isEdit = true;
       formDialog.form = {
-        id: response.id,
-        name: response.name,
-        description: response.description,
         category_id: response.category_id,
+        description: response.description,
+        fieldsJson: JSON.stringify(response.schema.fields || [], null, 2),
+        id: response.id,
+        is_template: response.is_template,
+        name: response.name,
         status: response.status,
         tags: response.tags || [],
-        is_template: response.is_template,
-        fieldsJson: JSON.stringify(response.schema.fields || [], null, 2),
       };
       jsonValidationError.value = '';
       formDialogVisible.value = true;
@@ -872,27 +871,27 @@ const initPreviewFormData = (schema: FormSchema): void => {
 
   schema.fields.forEach((field: FormField) => {
     switch (field.type) {
-      case FormFieldType.Text:
-      case FormFieldType.Password:
-      case FormFieldType.Textarea: {
-        data[field.name] = field.default || '';
-        break;
-      }
-      case FormFieldType.Number: {
-        data[field.name] = field.default || undefined;
+      case FormFieldType.Checkbox: {
+        data[field.name] = field.default || [];
         break;
       }
       case FormFieldType.Date: {
         data[field.name] = field.default || undefined;
         break;
       }
-      case FormFieldType.Select:
-      case FormFieldType.Radio: {
+      case FormFieldType.Number: {
         data[field.name] = field.default || undefined;
         break;
       }
-      case FormFieldType.Checkbox: {
-        data[field.name] = field.default || [];
+      case FormFieldType.Password:
+      case FormFieldType.Text:
+      case FormFieldType.Textarea: {
+        data[field.name] = field.default || '';
+        break;
+      }
+      case FormFieldType.Radio:
+      case FormFieldType.Select: {
+        data[field.name] = field.default || undefined;
         break;
       }
       case FormFieldType.Switch: {
@@ -930,14 +929,14 @@ const handlePreviewForm = async (
 const publishForm = async (record: WorkorderFormDesignItem): Promise<void> => {
   try {
     const updateData: UpdateWorkorderFormDesignReq = {
-      id: record.id,
-      name: record.name,
+      category_id: record.category_id,
       description: record.description,
+      id: record.id,
+      is_template: record.is_template,
+      name: record.name,
       schema: record.schema,
       status: FormDesignStatus.Published,
-      category_id: record.category_id,
       tags: record.tags,
-      is_template: record.is_template,
     };
     await updateWorkorderFormDesign(updateData);
     message.success(`表单 "${record.name}" 已发布`);
@@ -950,14 +949,14 @@ const publishForm = async (record: WorkorderFormDesignItem): Promise<void> => {
 const archiveForm = async (record: WorkorderFormDesignItem): Promise<void> => {
   try {
     const updateData: UpdateWorkorderFormDesignReq = {
-      id: record.id,
-      name: record.name,
+      category_id: record.category_id,
       description: record.description,
+      id: record.id,
+      is_template: record.is_template,
+      name: record.name,
       schema: record.schema,
       status: FormDesignStatus.Archived,
-      category_id: record.category_id,
       tags: record.tags,
-      is_template: record.is_template,
     };
     await updateWorkorderFormDesign(updateData);
     message.success(`表单 "${record.name}" 已归档`);
@@ -972,14 +971,14 @@ const unarchiveForm = async (
 ): Promise<void> => {
   try {
     const updateData: UpdateWorkorderFormDesignReq = {
-      id: record.id,
-      name: record.name,
+      category_id: record.category_id,
       description: record.description,
+      id: record.id,
+      is_template: record.is_template,
+      name: record.name,
       schema: record.schema,
       status: FormDesignStatus.Draft,
-      category_id: record.category_id,
       tags: record.tags,
-      is_template: record.is_template,
     };
     await updateWorkorderFormDesign(updateData);
     message.success(`表单 "${record.name}" 已取消归档`);
@@ -991,11 +990,10 @@ const unarchiveForm = async (
 
 const confirmDelete = (record: WorkorderFormDesignItem): void => {
   Modal.confirm({
-    title: '警告',
+    cancelText: '取消',
     content: `确定要删除表单 "${record.name}" 吗？`,
     okText: '删除',
     okType: 'danger',
-    cancelText: '取消',
     async onOk() {
       try {
         await deleteWorkorderFormDesign({ id: record.id });
@@ -1005,6 +1003,7 @@ const confirmDelete = (record: WorkorderFormDesignItem): void => {
         if (shouldNotifyPageError(error)) message.error('删除表单失败');
       }
     },
+    title: '警告',
   });
 };
 
@@ -1063,26 +1062,26 @@ const saveForm = async (): Promise<void> => {
 
     if (formDialog.isEdit && formDialog.form.id) {
       const updateData: UpdateWorkorderFormDesignReq = {
-        id: formDialog.form.id,
-        name: formDialog.form.name,
+        category_id: formDialog.form.category_id,
         description: formDialog.form.description,
+        id: formDialog.form.id,
+        is_template: formDialog.form.is_template,
+        name: formDialog.form.name,
         schema,
         status: formDialog.form.status,
-        category_id: formDialog.form.category_id,
         tags: formDialog.form.tags,
-        is_template: formDialog.form.is_template,
       };
       await updateWorkorderFormDesign(updateData);
       message.success(`表单 "${formDialog.form.name}" 已更新`);
     } else {
       const createData: CreateWorkorderFormDesignReq = {
-        name: formDialog.form.name,
+        category_id: formDialog.form.category_id,
         description: formDialog.form.description,
+        is_template: formDialog.form.is_template,
+        name: formDialog.form.name,
         schema,
         status: formDialog.form.status,
-        category_id: formDialog.form.category_id,
         tags: formDialog.form.tags,
-        is_template: formDialog.form.is_template,
       };
       await createWorkorderFormDesign(createData);
       message.success(`表单 "${formDialog.form.name}" 已创建`);
@@ -1272,8 +1271,8 @@ onMounted(() => {
             <template v-if="column.key === 'name'">
               <div class="form-name-cell">
                 <div
-                  class="form-badge"
                   :class="getStatusClass(record.status)"
+                  class="form-badge"
                 ></div>
                 <span class="form-name-text">{{ record.name }}</span>
                 <a-tag
@@ -1310,10 +1309,10 @@ onMounted(() => {
             <template v-if="column.key === 'operator'">
               <div class="operator-info">
                 <a-avatar
-                  size="small"
                   :style="{
                     backgroundColor: getAvatarColor(record.operator_name || ''),
                   }"
+                  size="small"
                 >
                   {{ getInitials(record.operator_name) }}
                 </a-avatar>
@@ -1497,9 +1496,9 @@ onMounted(() => {
 
             <a-select-option
               v-if="categoryPagination.hasMore"
-              value="__load_more__"
               class="load-more-option"
               disabled
+              value="__load_more__"
             >
               <div class="load-more-content" @click.stop="loadMoreCategories">
                 <a-button
@@ -1579,10 +1578,10 @@ onMounted(() => {
 
             <a-textarea
               v-model:value="formDialog.form.fieldsJson"
-              placeholder="请输入表单字段JSON配置..."
+              :class="{ 'json-error': jsonValidationError }"
               :rows="12"
               class="json-editor"
-              :class="{ 'json-error': jsonValidationError }"
+              placeholder="请输入表单字段JSON配置..."
             />
 
             <div v-if="jsonValidationError" class="json-error-message">
@@ -1927,6 +1926,7 @@ onMounted(() => {
   .header-actions {
     flex-direction: column;
     align-items: stretch;
+    justify-content: center;
   }
 
   .search-filters {
@@ -1974,10 +1974,6 @@ onMounted(() => {
   .section-header {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .header-actions {
-    justify-content: center;
   }
 
   .json-editor {
@@ -2337,7 +2333,7 @@ onMounted(() => {
   font-size: 16px;
 }
 
-.header-actions {
+:is(.header-actions) {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;

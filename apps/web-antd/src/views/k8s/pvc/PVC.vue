@@ -1,12 +1,4 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-
-import {
-  formatDateTime,
-  getRelativeTime,
-  namespacedResourceKey,
-} from '../shared/utils';
-
 import { onMounted } from 'vue';
 
 import {
@@ -30,144 +22,151 @@ import {
   SearchOutlined,
 } from '@ant-design/icons-vue';
 
-import { usePVCPage } from './PVC';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { usePermission } from '#/utils/permission';
+
+import {
+  formatDateTime,
+  getRelativeTime,
+  namespacedResourceKey,
+} from '../shared/utils';
+import { usePVCPage } from './PVC';
 
 const { can } = usePermission();
 
 const {
+  // label/annotation helpers
+  addEditLabelItem,
+  addLabelItem,
+  // selector helpers
+  addSelectorItem,
   // state
   availablePVs,
+  // yaml operations
+  clearYaml,
   clusters,
   clustersError,
   clustersLoading,
   clustersTotal,
-  currentPage,
-  filterAccessMode,
-  filterClusterId,
-  filterNamespace,
-  filterStatus,
-  loadError,
-  loading,
-  namespaces,
-  namespacesError,
-  namespacesLoading,
-  namespacesTotal,
-  pageSize,
-  pvsLoading,
-  pvsTotal,
-  searchText,
-  selectedRows,
-  total,
-
+  // form models
+  createFormModel,
+  // form rules
+  createFormRules,
+  // api calls
+  createPVC,
+  createPVCByYaml,
+  createYamlFormModel,
   // form refs
   createYamlFormRef,
-  expandFormRef,
-  formRef,
-  yamlFormRef,
+  createYamlFormRules,
+  // current operation
+  currentOperationPVC,
+  currentPage,
+  currentPVCDetail,
+  currentPVCPods,
+  deleteBatchPVCs,
+  deletePVC,
 
   // modal state
   detailLoading,
-  isCreateModalVisible,
-  isCreateYamlModalVisible,
-  isDetailModalVisible,
-  isEditModalVisible,
-  isExpandModalVisible,
-  isPodsModalVisible,
-  isYamlModalVisible,
-  podsLoading,
-  submitLoading,
-
-  // current operation
-  currentOperationPVC,
-  currentPVCDetail,
-  currentPVCPods,
-
-  // form models
-  createFormModel,
-  createYamlFormModel,
   editFormModel,
   expandFormModel,
-  yamlFormModel,
+  expandFormRef,
 
-  // form rules
-  createFormRules,
-  createYamlFormRules,
   expandFormRules,
-  yamlFormRules,
-
+  expandPVC,
+  fetchClusters,
+  fetchNamespaces,
+  fetchPVCs,
+  filterAccessMode,
+  filterClusterId,
   // computed
   filteredPVCs,
-  pvOptions,
-  rowSelection,
+  filterNamespace,
+  filterStatus,
+
+  formatEditYaml,
+  formatYaml,
+  formRef,
 
   // helpers
   getAccessModeText,
   getEnvText,
   getPVCStatusColor,
   getPVCStatusText,
+  // filter handlers
+  handleClusterChange,
 
-  // api calls
-  createPVC,
-  createPVCByYaml,
-  deleteBatchPVCs,
-  deletePVC,
-  expandPVC,
-  fetchClusters,
-  fetchNamespaces,
-  fetchPVCs,
-  updatePVC,
-  updatePVCByYaml,
+  handleClusterDropdownScroll,
+  handleFilterChange,
+  insertYamlTemplate,
+  isCreateModalVisible,
 
+  isCreateYamlModalVisible,
+  isDetailModalVisible,
+  isEditModalVisible,
+
+  isExpandModalVisible,
+  isPodsModalVisible,
+  isYamlModalVisible,
+  // constants
+  K8sPVCStatus,
+
+  loadError,
+  loading,
+  loadMoreNamespaces,
+  loadMorePVs,
+  namespaces,
+  namespacesError,
+  namespacesLoading,
+  namespacesTotal,
+  newAnnotationKey,
+  newEditAnnotationKey,
+
+  newEditLabelKey,
+  newLabelKey,
+  newSelectorKey,
+  newSelectorValue,
   // modal handlers
   openCreateModal,
   openCreateYamlModal,
   openDetailModal,
+
   openEditModal,
   openExpandModal,
   openPodsModal,
   openYamlModal,
+  pageSize,
 
+  podsLoading,
+  pvOptions,
+  pvsLoading,
+  pvsTotal,
+  removeEditLabelItem,
+
+  removeLabelItem,
+  removeSelectorItem,
   // form helpers
   resetCreateForm,
   resetCreateYamlForm,
   resetEditForm,
   resetExpandForm,
   resetYamlForm,
+  rowSelection,
 
-  // filter handlers
-  handleClusterChange,
-  handleClusterDropdownScroll,
-  handleFilterChange,
-  loadMoreNamespaces,
-  loadMorePVs,
+  searchText,
+  selectedRows,
+  submitLoading,
+  total,
 
-  // label/annotation helpers
-  addEditLabelItem,
-  addLabelItem,
-  newAnnotationKey,
-  newEditAnnotationKey,
-  newEditLabelKey,
-  newLabelKey,
-  removeEditLabelItem,
-  removeLabelItem,
-
-  // selector helpers
-  addSelectorItem,
-  newSelectorKey,
-  newSelectorValue,
-  removeSelectorItem,
-
-  // yaml operations
-  clearYaml,
-  formatEditYaml,
-  formatYaml,
-  insertYamlTemplate,
+  updatePVC,
+  updatePVCByYaml,
   validateEditYaml,
   validateYaml,
+  yamlFormModel,
+  yamlFormRef,
 
-  // constants
-  K8sPVCStatus,
+  yamlFormRules,
 } = usePVCPage();
 
 const columns = [
@@ -301,10 +300,12 @@ const handleTableChange = (pagination: {
 // PV 下拉框滚动处理
 const handlePVDropdownScroll = (e: Event) => {
   const target = e.target as HTMLElement;
-  if (target.scrollTop + target.offsetHeight === target.scrollHeight) {
-    if (availablePVs.value.length < pvsTotal.value && !pvsLoading.value) {
-      loadMorePVs();
-    }
+  if (
+    target.scrollTop + target.offsetHeight === target.scrollHeight &&
+    availablePVs.value.length < pvsTotal.value &&
+    !pvsLoading.value
+  ) {
+    loadMorePVs();
   }
 };
 
@@ -477,7 +478,7 @@ onMounted(async () => {
               class="k8s-search-input"
               placeholder="搜索 PVC 名称"
               @input="onSearch"
-              @pressEnter="onSearch"
+              @press-enter="onSearch"
             >
               <template #suffix>
                 <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -516,13 +517,13 @@ onMounted(async () => {
             </a-button>
 
             <a-button
-              type="primary"
-              danger
-              @click="deleteBatchPVCs"
-              :disabled="selectedRows.length === 0"
               v-if="can('k8s.pvc.batchDelete') && selectedRows.length > 0"
+              :disabled="selectedRows.length === 0"
               class="k8s-toolbar-btn"
+              danger
               title="批量删除选中的 PVC"
+              type="primary"
+              @click="deleteBatchPVCs"
             >
               <template #icon><DeleteOutlined aria-hidden="true" /></template>
               删除 ({{ selectedRows.length }})
@@ -1199,9 +1200,9 @@ onMounted(async () => {
                 @press-enter="addSelectorItem"
               />
               <a-button
+                :disabled="!newSelectorKey.trim()"
                 type="primary"
                 @click="addSelectorItem"
-                :disabled="!newSelectorKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1269,9 +1270,9 @@ onMounted(async () => {
                   @press-enter="addLabelItem('labels')"
                 />
                 <a-button
+                  :disabled="!newLabelKey.trim()"
                   type="primary"
                   @click="addLabelItem('labels')"
-                  :disabled="!newLabelKey.trim()"
                 >
                   <template #icon><PlusOutlined aria-hidden="true" /></template>
                   添加标签
@@ -1335,9 +1336,9 @@ onMounted(async () => {
                   @press-enter="addLabelItem('annotations')"
                 />
                 <a-button
+                  :disabled="!newAnnotationKey.trim()"
                   type="primary"
                   @click="addLabelItem('annotations')"
-                  :disabled="!newAnnotationKey.trim()"
                 >
                   <template #icon><PlusOutlined aria-hidden="true" /></template>
                   添加注解
@@ -1581,9 +1582,9 @@ onMounted(async () => {
                 @press-enter="addEditLabelItem('labels')"
               />
               <a-button
+                :disabled="!newEditLabelKey.trim()"
                 type="primary"
                 @click="addEditLabelItem('labels')"
-                :disabled="!newEditLabelKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加标签
@@ -1639,9 +1640,9 @@ onMounted(async () => {
                 @press-enter="addEditLabelItem('annotations')"
               />
               <a-button
+                :disabled="!newEditAnnotationKey.trim()"
                 type="primary"
                 @click="addEditLabelItem('annotations')"
-                :disabled="!newEditAnnotationKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加注解
@@ -1745,13 +1746,13 @@ onMounted(async () => {
         </a-card>
 
         <a-card
-          title="选择器"
-          size="small"
-          class="k8s-detail-card"
           v-if="
             currentPVCDetail.selector &&
             Object.keys(currentPVCDetail.selector).length > 0
           "
+          class="k8s-detail-card"
+          size="small"
+          title="选择器"
         >
           <div
             v-for="(value, key) in currentPVCDetail.selector"

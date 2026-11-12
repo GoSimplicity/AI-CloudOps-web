@@ -2,11 +2,11 @@ import { requestClient } from '#/api/request';
 
 // 节点状态枚举
 export enum NodeStatus {
-  Ready = 1, // 就绪
+  Error = 5, // 异常
   NotReady = 2, // 未就绪
+  Ready = 1, // 就绪
   SchedulingDisabled = 3, // 调度禁用
   Unknown = 4, // 未知
-  Error = 5, // 异常
 }
 
 // 节点条件接口
@@ -144,7 +144,7 @@ export const getK8sNodeDetail = (params: GetK8sNodeDetailReq) => {
 
 // 更新节点标签（完全覆盖）
 export const updateK8sNodeLabels = (params: UpdateNodeLabelsReq) => {
-  const { cluster_id, node_name, labels } = params;
+  const { cluster_id, labels, node_name } = params;
   return requestClient.post(
     `/k8s/node/${cluster_id}/${node_name}/labels/update`,
     { labels },

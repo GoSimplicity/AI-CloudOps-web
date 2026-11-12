@@ -2,8 +2,8 @@ import { requestClient } from '#/api/request';
 
 // 服务发现类型枚举
 export enum ServiceDiscoveryType {
-  K8s = 1,
   Http = 2,
+  K8s = 1,
   Static = 3,
 }
 

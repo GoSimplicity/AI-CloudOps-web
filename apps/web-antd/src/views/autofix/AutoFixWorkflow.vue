@@ -6,16 +6,14 @@ import type {
 
 import { computed } from 'vue';
 
+import { Icon } from '@iconify/vue';
 import { Modal } from 'ant-design-vue';
 
 import OpsPage from '#/components/ops/OpsPage.vue';
+import { getOwnLookupValue } from '#/utils/own-lookup';
+import { usePermission } from '#/utils/permission';
 
-import WorkflowInput from './WorkflowInput.vue';
 import ApprovalPanel from './ApprovalPanel.vue';
-import { useAutoFixWorkflow } from './useAutoFixWorkflow';
-
-import { Icon } from '@iconify/vue';
-
 import {
   formatBoolean,
   getActionIcon,
@@ -30,8 +28,8 @@ import {
   getStatusTagColor,
   normalizeWorkflowResult,
 } from './autofix-format';
-import { getOwnLookupValue } from '#/utils/own-lookup';
-import { usePermission } from '#/utils/permission';
+import { useAutoFixWorkflow } from './useAutoFixWorkflow';
+import WorkflowInput from './WorkflowInput.vue';
 
 const { can } = usePermission();
 
@@ -247,11 +245,11 @@ const actionColumns = [
         </a-button>
         <a-button
           v-if="can('aiops.autofix.run')"
+          :disabled="!isFormValid || !canStartWorkflow || busy"
+          :loading="running"
           class="tool-button tool-button-primary"
           type="primary"
           @click="runWorkflow"
-          :loading="running"
-          :disabled="!isFormValid || !canStartWorkflow || busy"
         >
           执行工作流
         </a-button>
@@ -364,8 +362,8 @@ const actionColumns = [
             ><br /><code>{{ item.operation_id || item.plan_id }}</code>
           </div>
           <a-button
-            size="small"
             :disabled="!canOpenHistory(item)"
+            size="small"
             @click="openHistoryPlan(item)"
           >
             查看计划
@@ -377,15 +375,15 @@ const actionColumns = [
     <a-row :gutter="[24, 24]">
       <a-col :lg="7" :xs="24">
         <WorkflowInput
-          v-model:namespace="formData.namespace"
           v-model:deployment="formData.deployment"
-          v-model:event="formData.event"
           v-model:description="formData.problem_description"
+          v-model:event="formData.event"
+          v-model:namespace="formData.namespace"
           v-model:template-key="templateKey"
           :busy="busy"
           :valid="isFormValid && canStartWorkflow"
-          @run="runWorkflow"
           @reset="resetForm"
+          @run="runWorkflow"
           @template-change="applyTemplate"
         />
 
@@ -891,10 +889,6 @@ const actionColumns = [
   color: var(--ops-accent);
 }
 
-.summary-value {
-  overflow-wrap: anywhere;
-}
-
 .summary-value :deep(.ant-tag) {
   margin: 0;
   white-space: normal;
@@ -907,6 +901,7 @@ const actionColumns = [
 }
 
 .summary-value {
+  overflow-wrap: anywhere;
   color: var(--ops-ink);
   font-size: 18px;
   font-weight: 600;

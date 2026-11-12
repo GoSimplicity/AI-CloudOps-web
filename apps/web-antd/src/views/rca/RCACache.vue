@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-
-import { useRcaCache } from './useRcaCache';
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -9,7 +6,10 @@ import {
 } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { usePermission } from '#/utils/permission';
+
+import { useRcaCache } from './useRcaCache';
 
 const { can } = usePermission();
 const {
@@ -153,8 +153,8 @@ const formatStatusMessage = (message?: string) => {
         <div class="card-content">
           <div class="card-title">缓存状态</div>
           <div
-            class="card-value"
             :class="cacheStats.healthy ? 'healthy' : 'unhealthy'"
+            class="card-value"
           >
             {{
               !cacheStats.available
@@ -221,10 +221,10 @@ const formatStatusMessage = (message?: string) => {
             />
             <a-button
               v-if="can('aiops.rca.clearNamespace')"
+              :disabled="!clearNamespaceForm.namespace.trim()"
+              :loading="clearingCache"
               type="primary"
               @click="handleClearNamespaceCache"
-              :loading="clearingCache"
-              :disabled="!clearNamespaceForm.namespace.trim()"
             >
               清除缓存
             </a-button>
@@ -253,10 +253,10 @@ const formatStatusMessage = (message?: string) => {
             </a-select>
             <a-button
               v-if="can('aiops.rca.clearOperation')"
+              :disabled="!clearOperationForm.operation"
+              :loading="clearingCache"
               type="primary"
               @click="handleClearOperationCache"
-              :loading="clearingCache"
-              :disabled="!clearOperationForm.operation"
             >
               清除缓存
             </a-button>
@@ -273,11 +273,11 @@ const formatStatusMessage = (message?: string) => {
             <a-space direction="vertical" style="width: 100%">
               <a-button
                 v-if="can('aiops.rca.clearAll')"
-                type="primary"
-                danger
-                @click="showClearAllModal"
                 :loading="clearingCache"
                 block
+                danger
+                type="primary"
+                @click="showClearAllModal"
               >
                 清除所有缓存
               </a-button>
@@ -344,8 +344,8 @@ const formatStatusMessage = (message?: string) => {
                   cacheStats.hit_rate <= 100
                 "
                 :percent="getHitRatePercent(cacheStats.hit_rate)"
-                :stroke-color="getHitRateColor(cacheStats.hit_rate)"
                 :show-info="false"
+                :stroke-color="getHitRateColor(cacheStats.hit_rate)"
               />
               <span style="margin-left: 8px">{{
                 formatHitRate(cacheStats.hit_rate)

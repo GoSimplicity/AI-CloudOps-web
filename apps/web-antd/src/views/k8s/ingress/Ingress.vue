@@ -1,18 +1,6 @@
 <script lang="ts" setup>
-import OpsPage from '#/components/ops/OpsPage.vue';
-
-import {
-  formatDateTime,
-  getRelativeTime,
-  namespacedResourceKey,
-} from '../shared/utils';
 import { onMounted, ref } from 'vue';
 
-import { message, Modal } from 'ant-design-vue';
-
-import { useIngressPage } from './Ingress';
-
-import yaml from 'js-yaml';
 import {
   AppstoreOutlined,
   CheckCircleOutlined,
@@ -31,142 +19,152 @@ import {
   SearchOutlined,
   TagsOutlined,
 } from '@ant-design/icons-vue';
+import { message, Modal } from 'ant-design-vue';
+import yaml from 'js-yaml';
 
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { usePermission } from '#/utils/permission';
+
+import {
+  formatDateTime,
+  getRelativeTime,
+  namespacedResourceKey,
+} from '../shared/utils';
+import { useIngressPage } from './Ingress';
 
 const { can } = usePermission();
 
 const {
+  // edit form field operations
+  addEditRuleField,
+  addEditTlsField,
+  // filter operations
+  addFilterLabel,
+  addNewEditAnnotation,
+  addNewEditLabel,
+  // form field operations
+  addRuleField,
+  addTlsField,
+  // batch operations
+  batchOperation,
+  clearFilterLabels,
+  // operations
+  clearIngresses,
+  clearNamespaces,
+  // create operations
+  closeCreateModal,
+  closeCreateYamlModal,
+  // detail operations
+  closeDetailModal,
+  // edit operations
+  closeEditModal,
+  // YAML operations
+  closeYamlModal,
   // state
   clusters,
   clustersError,
   clustersLoading,
+
   clustersTotal,
-  currentPage,
-  filterClusterId,
-  filterLabels,
-  filterNamespace,
-  filterStatus,
-  loadError,
-  loading,
-  namespaces,
-  namespacesError,
-  namespacesLoading,
-  namespacesTotal,
-  pageSize,
-  searchText,
-  selectedRows,
-  total,
-
-  // modal state
-  detailLoading,
-  isCreateModalVisible,
-  isCreateYamlModalVisible,
-  isDetailModalVisible,
-  isEditModalVisible,
-  isYamlModalVisible,
-  submitLoading,
-
-  // operation targets
-  currentIngressDetail,
-  currentOperationIngress,
-
   // form models
   createFormModel,
-  createYamlFormModel,
-  editFormModel,
-  yamlFormModel,
-
-  // form refs
-  createYamlFormRef,
-  editFormRef,
-  formRef,
-  yamlFormRef,
-
   // form rules
   createFormRules,
+  createYamlFormModel,
+  // form refs
+  createYamlFormRef,
   createYamlFormRules,
-  editFormRules,
-  yamlFormRules,
+  // operation targets
+  currentIngressDetail,
 
+  currentOperationIngress,
+  currentPage,
+
+  // ingress operations
+  deleteIngress,
+  // modal state
+  detailLoading,
+  editFormModel,
+  editFormRef,
+
+  editFormRules,
+  fetchClusters,
+  fetchIngresses,
+  fetchNamespaces,
+
+  filterClusterId,
   // computed
   filteredIngresses,
-  rowSelection,
+  filterLabels,
+  filterNamespace,
+
+  filterStatus,
+  formRef,
 
   // helpers
   getEnvText,
   getStatusColor,
   getStatusText,
 
-  // operations
-  clearIngresses,
-  clearNamespaces,
-  fetchClusters,
-  fetchIngresses,
-  fetchNamespaces,
-  loadMoreClusters,
-  loadMoreNamespaces,
-
-  // detail operations
-  closeDetailModal,
-  showIngressDetail,
-
-  // YAML operations
-  closeYamlModal,
-  showYamlModal,
-  submitYamlForm,
-
-  // create operations
-  closeCreateModal,
-  closeCreateYamlModal,
-  openCreateModal,
-  openCreateYamlModal,
-  submitCreateForm,
-  submitCreateYamlForm,
-
-  // edit operations
-  closeEditModal,
-  openEditModal,
-  submitEditForm,
-
-  // ingress operations
-  deleteIngress,
-
-  // filter operations
-  addFilterLabel,
-  clearFilterLabels,
-  removeFilterLabel,
-
-  // batch operations
-  batchOperation,
-
   // pagination operations
   handlePageChange,
+  isCreateModalVisible,
+  isCreateYamlModalVisible,
+  isDetailModalVisible,
+  isEditModalVisible,
+  isYamlModalVisible,
+  // constants
+  K8sIngressStatus,
 
-  // form field operations
-  addRuleField,
-  addTlsField,
-  removeAnnotationField,
-  removeLabelField,
-  removeRuleField,
-  removeTlsField,
+  loadError,
+  loading,
 
-  // edit form field operations
-  addEditRuleField,
-  addEditTlsField,
-  addNewEditAnnotation,
-  addNewEditLabel,
-  removeEditAnnotationField,
-  removeEditLabelField,
-  removeEditRuleField,
-  removeEditTlsField,
+  loadMoreClusters,
+  loadMoreNamespaces,
+  namespaces,
 
+  namespacesError,
+  namespacesLoading,
+  namespacesTotal,
   // edit form helper variables
   newEditAnnotationKey,
   newEditLabelKey,
+  openCreateModal,
 
-  // constants
-  K8sIngressStatus,
+  openCreateYamlModal,
+  openEditModal,
+  pageSize,
+
+  removeAnnotationField,
+
+  removeEditAnnotationField,
+  removeEditLabelField,
+  removeEditRuleField,
+
+  removeEditTlsField,
+
+  removeFilterLabel,
+
+  removeLabelField,
+  removeRuleField,
+  removeTlsField,
+  rowSelection,
+  searchText,
+  selectedRows,
+
+  showIngressDetail,
+  showYamlModal,
+  submitCreateForm,
+  submitCreateYamlForm,
+  submitEditForm,
+  submitLoading,
+  submitYamlForm,
+  total,
+
+  yamlFormModel,
+  yamlFormRef,
+
+  yamlFormRules,
 } = useIngressPage();
 
 // 添加新标签/注解的方法
@@ -446,20 +444,20 @@ const validateYaml = () => {
 
     if (issues.length > 0) {
       Modal.warning({
-        title: 'YAML 格式检查警告',
-        content: '发现以下问题：\n' + issues.join('\n'),
-        width: 500,
         centered: true,
+        content: `发现以下问题：\n${issues.join('\n')}`,
+        title: 'YAML 格式检查警告',
+        width: 500,
       });
     } else {
       message.success('YAML 格式检查通过');
     }
   } catch (error: any) {
     Modal.error({
-      title: 'YAML 格式检查失败',
-      content: `语法错误：${error.message || '未知错误'}`,
-      width: 600,
       centered: true,
+      content: `语法错误：${error.message || '未知错误'}`,
+      title: 'YAML 格式检查失败',
+      width: 600,
     });
   }
 };
@@ -668,7 +666,7 @@ onMounted(async () => {
               class="k8s-search-input"
               placeholder="搜索 Ingress 名称"
               @input="onSearch"
-              @pressEnter="onSearch"
+              @press-enter="onSearch"
             >
               <template #suffix>
                 <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -681,7 +679,6 @@ onMounted(async () => {
         <div class="k8s-toolbar-actions">
           <div class="k8s-action-buttons">
             <a-button
-              @click="resetFilters"
               :disabled="
                 !filterStatus &&
                 !searchText &&
@@ -691,6 +688,7 @@ onMounted(async () => {
               "
               class="k8s-toolbar-btn"
               title="重置所有筛选条件"
+              @click="resetFilters"
             >
               <template #icon><DeleteOutlined aria-hidden="true" /></template>
               重置筛选
@@ -707,13 +705,13 @@ onMounted(async () => {
             </a-button>
 
             <a-button
-              type="primary"
-              danger
-              @click="() => batchOperation('删除')"
-              :disabled="selectedRows.length === 0"
               v-if="can('k8s.ingress.batchDelete') && selectedRows.length > 0"
+              :disabled="selectedRows.length === 0"
               class="k8s-toolbar-btn"
+              danger
               title="批量删除选中的 Ingress"
+              type="primary"
+              @click="() => batchOperation('删除')"
             >
               <template #icon><DeleteOutlined aria-hidden="true" /></template>
               删除 ({{ selectedRows.length }})
@@ -1281,9 +1279,9 @@ onMounted(async () => {
                 @press-enter="addNewLabel"
               />
               <a-button
+                :disabled="!newLabelKey.trim()"
                 type="primary"
                 @click="addNewLabel"
-                :disabled="!newLabelKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1338,9 +1336,9 @@ onMounted(async () => {
                 @press-enter="addNewAnnotation"
               />
               <a-button
+                :disabled="!newAnnotationKey.trim()"
                 type="primary"
                 @click="addNewAnnotation"
-                :disabled="!newAnnotationKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1570,9 +1568,9 @@ onMounted(async () => {
                 @press-enter="addNewEditLabel"
               />
               <a-button
+                :disabled="!newEditLabelKey.trim()"
                 type="primary"
                 @click="addNewEditLabel"
-                :disabled="!newEditLabelKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -1627,9 +1625,9 @@ onMounted(async () => {
                 @press-enter="addNewEditAnnotation"
               />
               <a-button
+                :disabled="!newEditAnnotationKey.trim()"
                 type="primary"
                 @click="addNewEditAnnotation"
-                :disabled="!newEditAnnotationKey.trim()"
               >
                 <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
@@ -2000,8 +1998,8 @@ onMounted(async () => {
     >
       <div class="labels-filter-form">
         <div
-          class="current-filters"
           v-if="Object.keys(filterLabels).length > 0"
+          class="current-filters"
         >
           <h4>当前过滤条件：</h4>
           <div class="filter-tags">
@@ -2040,10 +2038,10 @@ onMounted(async () => {
               style="flex: 1"
             />
             <a-button
-              type="primary"
-              @click="addNewFilterLabel"
               :disabled="!newFilterKey.trim()"
               size="small"
+              type="primary"
+              @click="addNewFilterLabel"
             >
               <template #icon><PlusOutlined aria-hidden="true" /></template>
             </a-button>

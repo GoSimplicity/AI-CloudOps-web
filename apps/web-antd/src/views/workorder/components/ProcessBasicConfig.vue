@@ -4,11 +4,6 @@ import { computed, onMounted, ref } from 'vue';
 import { InfoCircleOutlined } from '@ant-design/icons-vue';
 
 import {
-  createDefaultProcessDefinition,
-  type CreateWorkorderProcessReq,
-  ProcessStatus,
-} from '#/api/core/workorder/workorder_process';
-import {
   listWorkorderCategory,
   type WorkorderCategoryItem,
 } from '#/api/core/workorder/workorder_category';
@@ -17,6 +12,11 @@ import {
   listWorkorderFormDesign,
   type WorkorderFormDesignItem,
 } from '#/api/core/workorder/workorder_form_design';
+import {
+  createDefaultProcessDefinition,
+  type CreateWorkorderProcessReq,
+  ProcessStatus,
+} from '#/api/core/workorder/workorder_process';
 
 // Props
 interface Props {
@@ -53,14 +53,14 @@ const jsonError = ref<string>('');
 const formData = computed<Partial<CreateWorkorderProcessReq>>({
   get: () =>
     props.modelValue || {
-      name: '',
+      category_id: undefined,
+      definition: createDefaultProcessDefinition(),
       description: '',
       form_design_id: 0,
-      category_id: undefined,
+      is_default: 2,
+      name: '',
       status: ProcessStatus.Draft,
       tags: [],
-      is_default: 2,
-      definition: createDefaultProcessDefinition(),
     },
   set: (value) => {
     emit('update:modelValue', value);
@@ -102,23 +102,23 @@ const definitionJsonString = computed<string>({
 
 // 表单验证规则
 const formRules = {
-  name: [
-    { message: '请输入流程名称', required: true, trigger: 'blur' },
-    { max: 50, message: '长度应为3到50个字符', min: 3, trigger: 'blur' },
-  ],
-  form_design_id: [
-    { message: '请选择关联表单', required: true, trigger: 'change' },
-  ],
   definition: [
     {
+      trigger: 'change',
       validator: (_rule: any, _value: any) => {
         if (jsonError.value) {
           return Promise.reject(new Error(jsonError.value));
         }
         return Promise.resolve();
       },
-      trigger: 'change',
     },
+  ],
+  form_design_id: [
+    { message: '请选择关联表单', required: true, trigger: 'change' },
+  ],
+  name: [
+    { message: '请输入流程名称', required: true, trigger: 'blur' },
+    { max: 50, message: '长度应为3到50个字符', min: 3, trigger: 'blur' },
   ],
 };
 
@@ -130,8 +130,8 @@ const loadForms = async (search?: string): Promise<void> => {
   try {
     const params = {
       page: 1,
-      size: 50,
       search: search || formSearchText.value || undefined,
+      size: 50,
       status: FormDesignStatus.Published, // 只获取已发布的表单
     };
 
@@ -154,8 +154,8 @@ const loadCategories = async (search?: string): Promise<void> => {
   try {
     const params = {
       page: 1,
-      size: 50,
       search: search || categorySearchText.value || undefined,
+      size: 50,
     };
 
     const res = (await listWorkorderCategory(params)) as any;
@@ -218,8 +218,8 @@ const resetFields = (): void => {
 
 // 暴露方法给父组件
 defineExpose({
-  validate,
   resetFields,
+  validate,
 });
 
 // 初始化

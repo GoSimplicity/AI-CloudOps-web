@@ -13,14 +13,14 @@ import {
 import { validManagedOperation } from './managed-operation-contract';
 
 const props = defineProps<{
-  marker: ManagedOperationMarker;
-  scope: ManagedCloudScope;
-  owner: string;
-  canRead: boolean;
-  canReview: boolean;
-  operationOwner?: number;
   allowCrossOwner?: boolean;
   authorize: () => Promise<boolean>;
+  canRead: boolean;
+  canReview: boolean;
+  marker: ManagedOperationMarker;
+  operationOwner?: number;
+  owner: string;
+  scope: ManagedCloudScope;
 }>();
 const emit = defineEmits<{ acknowledged: [string, number]; busy: [boolean] }>();
 const initialOwner = props.owner;
@@ -157,9 +157,9 @@ async function submit() {
       return;
     await reviewManagedOperation(props.marker.operation_id, {
       ...props.scope,
+      reason: trimmed,
       resource_ids: [...props.marker.resource_ids],
       resources_verified: true,
-      reason: trimmed,
       ...(ownerParameter() === undefined ? {} : { owner_id: ownerParameter() }),
     });
     if (

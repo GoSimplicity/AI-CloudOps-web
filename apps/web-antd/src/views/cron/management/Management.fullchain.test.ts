@@ -15,9 +15,9 @@ import { BUSINESS_ERROR_MESSAGE_KEY_PREFIX } from '#/utils/permission/business-e
  */
 const notices = vi.hoisted(() => ({
   error: vi.fn(),
-  warning: vi.fn(),
-  success: vi.fn(),
   info: vi.fn(),
+  success: vi.fn(),
+  warning: vi.fn(),
 }));
 const confirm = vi.hoisted(() => vi.fn());
 vi.mock('ant-design-vue', () => ({ message: notices, Modal: { confirm } }));
@@ -53,7 +53,7 @@ const DISABLED_MESSAGE =
   '本地命令/脚本任务已停用（cron.allow_local_exec=false），请改用 HTTP 或 SSH 任务';
 
 type Route = (config: any) => { data: unknown; status: number };
-let route: Route = () => ({ status: 200, data: { code: 0, data: null } });
+let route: Route = () => ({ data: { code: 0, data: null }, status: 200 });
 const requests: string[] = [];
 // 写请求在传输层失败（没有 response）：网络错误 / 超时
 let transportError: ((config: any) => AxiosError) | null = null;
@@ -72,7 +72,7 @@ const adapter: AxiosAdapter = async (config) => {
     throw listTransportError(config);
   if (sshTransportError && config.url === '/tree/local/list')
     throw sshTransportError(config);
-  const { status, data } = route(config);
+  const { data, status } = route(config);
   const response = {
     config,
     data,
@@ -102,11 +102,11 @@ const { HTTP_ERROR_MESSAGE_KEY_PREFIX, requestClient } =
 const job = (id: number, job_type: number) =>
   ({
     id,
-    name: `job-${id}`,
-    max_retry: 0,
-    status: 1,
     job_type,
+    max_retry: 0,
+    name: `job-${id}`,
     schedule: '@every 1h',
+    status: 1,
   }) as any;
 
 function passValidation(page: ReturnType<typeof useCronJobPage>) {
@@ -120,16 +120,16 @@ function rejectWrites(text = DISABLED_MESSAGE) {
     if (config.method === 'get') {
       const url: string = config.url ?? '';
       if (/\/cron\/job\/\d+\/detail/.test(url) || /\/cron\/job\/\d+$/.test(url))
-        return { status: 200, data: { code: 0, data: job(9, 3) } };
+        return { data: { code: 0, data: job(9, 3) }, status: 200 };
       return {
-        status: 200,
         data: {
           code: 0,
-          data: { items: [], total: 0, allow_local_exec: false },
+          data: { allow_local_exec: false, total: 0, items: [] },
         },
+        status: 200,
       };
     }
-    return { status: 200, data: { code: 1, data: null, message: text } };
+    return { data: { code: 1, data: null, message: text }, status: 200 };
   };
 }
 
@@ -139,7 +139,7 @@ function failWritesWithHttp(status: number, text: string) {
   route = (config) =>
     config.method === 'get'
       ? base(config)
-      : { status, data: { code: status, data: null, message: text } };
+      : { data: { code: status, data: null, message: text }, status };
 }
 
 function expectSingleBackendNotice(text = DISABLED_MESSAGE) {
@@ -444,8 +444,8 @@ describe('列表加载失败只提示一次（真实请求链路）', () => {
     '列表加载返回 HTTP %s：只弹请求层一条，页面保留错误状态',
     async (status, backendMessage, key, pageError) => {
       route = () => ({
-        status,
         data: { code: status, data: null, message: backendMessage },
+        status,
       });
       const page = useCronJobPage();
       await page.fetchCronJobs();
@@ -457,8 +457,8 @@ describe('列表加载失败只提示一次（真实请求链路）', () => {
   it('incr3 P2-2：列表加载返回 HTTP 400 且带后端 message：请求层只弹该 message 一条，页面保留错误状态', async () => {
     const text = 'page_size 不能超过 100';
     route = () => ({
-      status: 400,
       data: { code: 400, data: null, message: text },
+      status: 400,
     });
     const page = useCronJobPage();
     await page.fetchCronJobs();
@@ -473,8 +473,8 @@ describe('列表加载失败只提示一次（真实请求链路）', () => {
 
   it('列表加载返回 HTTP 401：页面不再叠加「登录已过期」警告', async () => {
     route = () => ({
-      status: 401,
       data: { code: 401, data: null, message: 'x' },
+      status: 401,
     });
     const page = useCronJobPage();
     await page.fetchCronJobs();
@@ -485,8 +485,8 @@ describe('列表加载失败只提示一次（真实请求链路）', () => {
   it('业务错误（HTTP 200 + code≠0）处理不变：只弹后端原文一条，页面保留错误状态', async () => {
     const text = '列表查询失败：参数非法';
     route = () => ({
-      status: 200,
       data: { code: 1, data: null, message: text },
+      status: 200,
     });
     const page = useCronJobPage();
     await page.fetchCronJobs();
@@ -538,8 +538,8 @@ describe('列表加载：其他 4xx、ETIMEDOUT 只提示一次，取消类静�
     '列表加载返回 HTTP %s：只弹请求层一条，页面保留错误状态',
     async (status, key) => {
       route = () => ({
-        status,
         data: { code: status, data: null, message: 'x' },
+        status,
       });
       const page = useCronJobPage();
       await page.fetchCronJobs();
@@ -587,8 +587,8 @@ describe('列表加载：其他 4xx、ETIMEDOUT 只提示一次，取消类静�
       // 请求发出后账户切换：响应拦截器 ownerScope.response 抛 RequestOwnerChangedError
       owner.generation = 2;
       return {
+        data: { code: 0, data: { total: 1, items: [job(1, 3)] } },
         status: 200,
-        data: { code: 0, data: { items: [job(1, 3)], total: 1 } },
       };
     };
     const page = useCronJobPage();
@@ -630,8 +630,8 @@ describe('sSH 资源列表加载失败只提示一次（真实请求链路）', 
 
   it('sSH 资源列表返回 HTTP 500：只弹请求层一条', async () => {
     route = () => ({
-      status: 500,
       data: { code: 500, data: null, message: 'x' },
+      status: 500,
     });
     const page = useCronJobPage();
     await page.fetchSshResources();
@@ -654,8 +654,8 @@ describe('sSH 资源列表加载失败只提示一次（真实请求链路）', 
   it('sSH 资源列表业务错误（HTTP 200 + code≠0）：只弹后端原文一条', async () => {
     const text = 'SSH 资源查询失败：树节点不存在';
     route = () => ({
-      status: 200,
       data: { code: 1, data: null, message: text },
+      status: 200,
     });
     const page = useCronJobPage();
     await page.fetchSshResources();
@@ -780,7 +780,7 @@ describe('fE-02b：其余操作 catch 统一口径（真实请求链路）', () 
       const base = route;
       route = (config) =>
         match.test(config.url ?? '')
-          ? { status: 500, data: { code: 500, data: null, message: 'x' } }
+          ? { data: { code: 500, data: null, message: 'x' }, status: 500 }
           : base(config);
       const page = useCronJobPage();
       await run(page);
@@ -838,7 +838,7 @@ describe('fE-02b：其余操作 catch 统一口径（真实请求链路）', () 
       const base = route;
       route = (config) =>
         match.test(config.url ?? '')
-          ? { status: 200, data: { code: 1, data: null, message: text } }
+          ? { data: { code: 1, data: null, message: text }, status: 200 }
           : base(config);
       const page = useCronJobPage();
       await run(page);

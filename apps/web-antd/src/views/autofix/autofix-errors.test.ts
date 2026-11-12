@@ -5,11 +5,11 @@ import {
   markHttpErrorNotified,
   resetHttpErrorNoticeTracking,
 } from '#/api/http-error-notice';
+import { HTTP_CONFLICT_MESSAGE } from '#/constants/http-error-messages';
 import {
   createBusinessError,
   notifyBusinessError,
 } from '#/utils/permission/business-error';
-import { HTTP_CONFLICT_MESSAGE } from '#/constants/http-error-messages';
 import { PERMISSION_DENIED_MESSAGE } from '#/utils/permission/forbidden';
 
 import {
@@ -22,7 +22,7 @@ import {
 /** SEC-25/26 规则 3/4：autofix 错误只按 HTTP 状态分类，不依赖 error_code */
 const httpError = (status: number, body: Record<string, unknown> = {}) =>
   Object.assign(new Error('后端原文不应出现在界面'), {
-    response: { status, data: body },
+    response: { data: body, status },
   });
 
 beforeEach(() => {

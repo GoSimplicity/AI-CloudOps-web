@@ -103,7 +103,7 @@ export function formatBoolean(value?: boolean | null) {
 
 export function normalizeWorkflowResult(
   raw: Partial<AutoFixWorkflowResponse>,
-): AutoFixWorkflowResponse & { fault_type: string } {
+): { fault_type: string } & AutoFixWorkflowResponse {
   const plan = raw.plan || {};
   const execution = raw.execution || {};
   const review = raw.review || {};
@@ -118,8 +118,8 @@ export function normalizeWorkflowResult(
     [];
 
   return {
-    approval: raw.approval,
     agents_used: raw.agents_used || [],
+    approval: raw.approval,
     blocked_actions: blockedActions,
     candidate_actions: candidateActions,
     diagnosis: raw.diagnosis || {},

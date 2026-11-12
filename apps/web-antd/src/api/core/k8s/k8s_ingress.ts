@@ -2,9 +2,9 @@ import { requestClient } from '#/api/request';
 
 // K8s Ingress状态枚举
 export enum K8sIngressStatus {
-  RUNNING = 1, // 运行中
-  PENDING = 2, // 等待中
   FAILED = 3, // 失败
+  PENDING = 2, // 等待中
+  RUNNING = 1, // 运行中
 }
 
 // Ingress端口状态

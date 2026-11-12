@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
+import type { TreeNode } from '#/api/core/tree/tree_local';
 
-import CloudManagedResources from './CloudManagedResources.vue';
 import {
   computed,
   onBeforeUnmount,
@@ -12,7 +11,6 @@ import {
 } from 'vue';
 import { useRouter } from 'vue-router';
 
-import { Empty, message, Modal } from 'ant-design-vue';
 import {
   ApartmentOutlined,
   ArrowLeftOutlined,
@@ -60,9 +58,20 @@ import {
   TagsOutlined,
   UserOutlined,
 } from '@ant-design/icons-vue';
+import { Empty, message, Modal } from 'ant-design-vue';
 
+import {
+  type CloudAccount,
+  type CloudAccountRegion,
+  CloudAccountStatus,
+  CloudProvider,
+  getCloudAccountDetailApi,
+  getCloudAccountListApi,
+} from '#/api/core/tree/tree_account';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { downloadCsv } from '#/utils/export-csv';
 
+import CloudManagedResources from './CloudManagedResources.vue';
 // API 导入
 import {
   AuthMode,
@@ -89,19 +98,7 @@ import {
   updateTreeCloudResourceApi,
   type UpdateTreeCloudResourceReq,
 } from '#/api/core/tree/tree_cloud';
-import {
-  type CloudAccount,
-  type CloudAccountRegion,
-  CloudAccountStatus,
-  CloudProvider,
-  getCloudAccountDetailApi,
-  getCloudAccountListApi,
-} from '#/api/core/tree/tree_account';
 import { getTreeList } from '#/api/core/tree/tree_node';
-
-import { isSupportedAccountProvider } from './cloudaccountmanagement/provider';
-import type { TreeNode } from '#/api/core/tree/tree_local';
-
 import { getOwnLookupValue } from '#/utils/own-lookup';
 import { usePermission } from '#/utils/permission';
 import {
@@ -110,15 +107,17 @@ import {
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
 
+import { isSupportedAccountProvider } from './cloudaccountmanagement/provider';
+
 const { can, hasPerm } = usePermission();
 const resourcePermissions = {
-  sync: '/api/tree/cloud/sync',
-  accountList: '/api/tree/cloud/account/list',
   accountDetail: '/api/tree/cloud/account/:id/detail',
-  update: '/api/tree/cloud/:id/update',
+  accountList: '/api/tree/cloud/account/list',
   bind: '/api/tree/cloud/:id/bind',
-  unbind: '/api/tree/cloud/:id/unbind',
   status: '/api/tree/cloud/:id/status',
+  sync: '/api/tree/cloud/sync',
+  unbind: '/api/tree/cloud/:id/unbind',
+  update: '/api/tree/cloud/:id/update',
 } as const;
 const canSync = computed(
   () =>
@@ -180,25 +179,25 @@ const currentDetail = ref<null | TreeCloudResource>(null);
 
 // 表单数据
 const editForm = reactive<UpdateTreeCloudResourceReq>({
-  id: 0,
-  environment: undefined,
-  description: undefined,
-  tags: [],
-  port: undefined,
-  username: undefined,
-  password: undefined,
-  key: undefined,
   auth_mode: undefined,
+  description: undefined,
+  environment: undefined,
+  id: 0,
+  key: undefined,
+  password: undefined,
+  port: undefined,
+  tags: [],
+  username: undefined,
 });
 
 const syncForm = reactive<SyncTreeCloudResourceReq>({
-  cloud_account_id: 0,
-  resource_types: [CloudResourceType.ECS],
-  cloud_account_region_ids: [],
-  instance_ids: [],
-  sync_mode: SyncMode.INCREMENTAL,
   auto_bind: false,
   bind_node_id: undefined,
+  cloud_account_id: 0,
+  cloud_account_region_ids: [],
+  instance_ids: [],
+  resource_types: [CloudResourceType.ECS],
+  sync_mode: SyncMode.INCREMENTAL,
 });
 
 watch(canSync, (allowed) => {
@@ -221,13 +220,13 @@ const selectedUnbindNodeIds = ref<number[]>([]);
 
 // 过滤表单
 const filterForm = reactive<GetTreeCloudResourceListReq>({
-  page: 1,
-  size: 10,
-  search: undefined,
   cloud_account_id: undefined,
-  resource_type: undefined,
-  status: undefined,
   environment: undefined,
+  page: 1,
+  resource_type: undefined,
+  search: undefined,
+  size: 10,
+  status: undefined,
 });
 
 // 分页配置
@@ -240,21 +239,21 @@ const pagination = reactive({
 const syncHistoryPagination = reactive({
   current: 1,
   pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
-  showQuickJumper: true,
-  showTotal: (total: number) => `共 ${total} 条记录`,
   pageSizeOptions: ['10', '20', '50', '100'],
+  showQuickJumper: true,
+  showSizeChanger: true,
+  showTotal: (total: number) => `共 ${total} 条记录`,
+  total: 0,
 });
 
 const changeLogPagination = reactive({
   current: 1,
   pageSize: 10,
-  total: 0,
-  showSizeChanger: true,
-  showQuickJumper: true,
-  showTotal: (total: number) => `共 ${total} 条记录`,
   pageSizeOptions: ['10', '20', '50', '100'],
+  showQuickJumper: true,
+  showSizeChanger: true,
+  showTotal: (total: number) => `共 ${total} 条记录`,
+  total: 0,
 });
 
 // ========== 计算属性 ==========
@@ -270,18 +269,18 @@ const stats = computed(() => {
   const bound = resources.value.filter(
     (r) => r.tree_nodes && r.tree_nodes.length > 0,
   ).length;
-  return { total, running, ecs, bound };
+  return { bound, ecs, running, total };
 });
 
 // 分页配置
 const paginationConfig = computed(() => ({
   current: pagination.current,
   pageSize: pagination.pageSize,
-  total: pagination.total,
-  showSizeChanger: true,
-  showQuickJumper: true,
-  showTotal: (total: number) => `共 ${total} 条记录`,
   pageSizeOptions: ['10', '20', '50', '100'],
+  showQuickJumper: true,
+  showSizeChanger: true,
+  showTotal: (total: number) => `共 ${total} 条记录`,
+  total: pagination.total,
 }));
 
 // 表格列定义
@@ -345,11 +344,11 @@ const changeLogColumns = [
 const getResourceTypeColor = (type: CloudResourceType): string => {
   const colors: Record<CloudResourceType, string> = {
     [CloudResourceType.ECS]: '#1890ff',
+    [CloudResourceType.OSS]: '#722ed1',
+    [CloudResourceType.OTHER]: '#8c8c8c',
     [CloudResourceType.RDS]: '#52c41a',
     [CloudResourceType.SLB]: '#fa8c16',
-    [CloudResourceType.OSS]: '#722ed1',
     [CloudResourceType.VPC]: '#13c2c2',
-    [CloudResourceType.OTHER]: '#8c8c8c',
   };
   return colors[type] || '#d9d9d9';
 };
@@ -357,11 +356,11 @@ const getResourceTypeColor = (type: CloudResourceType): string => {
 const getResourceTypeText = (type: CloudResourceType): string => {
   const texts: Record<CloudResourceType, string> = {
     [CloudResourceType.ECS]: '云服务器',
+    [CloudResourceType.OSS]: '对象存储',
+    [CloudResourceType.OTHER]: '其他',
     [CloudResourceType.RDS]: '云数据库',
     [CloudResourceType.SLB]: '负载均衡',
-    [CloudResourceType.OSS]: '对象存储',
     [CloudResourceType.VPC]: '虚拟私有云',
-    [CloudResourceType.OTHER]: '其他',
   };
   return texts[type] || '未知';
 };
@@ -369,11 +368,11 @@ const getResourceTypeText = (type: CloudResourceType): string => {
 const getResourceTypeIcon = (type: CloudResourceType) => {
   const icons: Record<CloudResourceType, any> = {
     [CloudResourceType.ECS]: DesktopOutlined,
+    [CloudResourceType.OSS]: CloudUploadOutlined,
+    [CloudResourceType.OTHER]: CloudOutlined,
     [CloudResourceType.RDS]: DatabaseOutlined,
     [CloudResourceType.SLB]: ClusterOutlined,
-    [CloudResourceType.OSS]: CloudUploadOutlined,
     [CloudResourceType.VPC]: GlobalOutlined,
-    [CloudResourceType.OTHER]: CloudOutlined,
   };
   return icons[type] || CloudOutlined;
 };
@@ -402,11 +401,11 @@ const getStatusBadgeType = (
   status: CloudResourceStatus,
 ): 'default' | 'error' | 'processing' | 'success' | 'warning' => {
   const types: Record<CloudResourceStatus, any> = {
-    [CloudResourceStatus.RUNNING]: 'success',
-    [CloudResourceStatus.STOPPED]: 'error',
-    [CloudResourceStatus.STARTING]: 'processing',
-    [CloudResourceStatus.STOPPING]: 'warning',
     [CloudResourceStatus.DELETED]: 'default',
+    [CloudResourceStatus.RUNNING]: 'success',
+    [CloudResourceStatus.STARTING]: 'processing',
+    [CloudResourceStatus.STOPPED]: 'error',
+    [CloudResourceStatus.STOPPING]: 'warning',
     [CloudResourceStatus.UNKNOWN]: 'default',
   };
   return types[status] || 'default';
@@ -414,11 +413,11 @@ const getStatusBadgeType = (
 
 const getStatusText = (status: CloudResourceStatus): string => {
   const texts: Record<CloudResourceStatus, string> = {
-    [CloudResourceStatus.RUNNING]: '运行中',
-    [CloudResourceStatus.STOPPED]: '已停止',
-    [CloudResourceStatus.STARTING]: '启动中',
-    [CloudResourceStatus.STOPPING]: '停止中',
     [CloudResourceStatus.DELETED]: '已删除',
+    [CloudResourceStatus.RUNNING]: '运行中',
+    [CloudResourceStatus.STARTING]: '启动中',
+    [CloudResourceStatus.STOPPED]: '已停止',
+    [CloudResourceStatus.STOPPING]: '停止中',
     [CloudResourceStatus.UNKNOWN]: '未知',
   };
   return texts[status] || '未知';
@@ -469,11 +468,11 @@ const formatDateTime = (dateTime?: string): string => {
   if (!dateTime) return '-';
   try {
     return new Date(dateTime).toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
     });
   } catch {
     return dateTime;
@@ -486,7 +485,7 @@ const formatCost = (cost: number): string => {
 
 const truncateText = (text: string, maxLength: number): string => {
   if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength) + '...';
+  return `${text.slice(0, maxLength)}...`;
 };
 
 const fetchTreeData = async (): Promise<void> => {
@@ -550,13 +549,13 @@ const fetchResources = async (): Promise<void> => {
   loading.value = true;
   try {
     const params: GetTreeCloudResourceListReq = {
-      page: pagination.current,
-      size: pagination.pageSize,
-      search: filterForm.search,
       cloud_account_id: filterForm.cloud_account_id,
-      resource_type: filterForm.resource_type,
-      status: filterForm.status,
       environment: filterForm.environment,
+      page: pagination.current,
+      resource_type: filterForm.resource_type,
+      search: filterForm.search,
+      size: pagination.pageSize,
+      status: filterForm.status,
     };
 
     const response = await getTreeCloudResourceListApi(params);
@@ -564,8 +563,8 @@ const fetchResources = async (): Promise<void> => {
     const data = response as any;
     resources.value = (data.items || []).map((item: TreeCloudResource) => ({
       ...item,
-      tree_nodes: item.tree_nodes || [],
       tags: item.tags || [],
+      tree_nodes: item.tree_nodes || [],
     }));
     pagination.total = data.total || 0;
   } catch (error) {
@@ -634,13 +633,13 @@ const handleRefresh = (): void => {
 
 const resetFilter = (): void => {
   Object.assign(filterForm, {
-    page: 1,
-    size: pagination.pageSize, // 使用当前的分页大小
-    search: undefined,
     cloud_account_id: undefined,
-    resource_type: undefined,
-    status: undefined,
     environment: undefined,
+    page: 1,
+    resource_type: undefined,
+    search: undefined,
+    size: pagination.pageSize, // 使用当前的分页大小
+    status: undefined,
   });
   pagination.current = 1;
   fetchResources();
@@ -746,13 +745,13 @@ const showSyncModal = (): void => {
     return;
   }
   Object.assign(syncForm, {
-    cloud_account_id: account.id,
-    resource_types: [CloudResourceType.ECS],
-    cloud_account_region_ids: [],
-    sync_mode: SyncMode.INCREMENTAL,
-    instance_ids: [],
     auto_bind: false,
     bind_node_id: undefined,
+    cloud_account_id: account.id,
+    cloud_account_region_ids: [],
+    instance_ids: [],
+    resource_types: [CloudResourceType.ECS],
+    sync_mode: SyncMode.INCREMENTAL,
   });
   syncModalVisible.value = true;
   void loadSyncRegions(account.id);
@@ -773,15 +772,15 @@ const handleEdit = (record: TreeCloudResource): void => {
   if (!requireSupportedResource(record)) return;
   currentResource.value = record;
   Object.assign(editForm, {
-    id: record.id,
-    environment: record.environment,
-    description: record.description,
-    tags: Array.isArray(record.tags) ? [...record.tags] : [],
-    port: record.port,
-    username: record.username,
-    password: undefined,
-    key: undefined,
     auth_mode: record.auth_mode,
+    description: record.description,
+    environment: record.environment,
+    id: record.id,
+    key: undefined,
+    password: undefined,
+    port: record.port,
+    tags: Array.isArray(record.tags) ? [...record.tags] : [],
+    username: record.username,
   });
   editModalVisible.value = true;
   if (detailVisible.value) {
@@ -931,13 +930,13 @@ const handleSync = async (): Promise<void> => {
     return;
   }
   const payload: SyncTreeCloudResourceReq = {
-    cloud_account_id: syncForm.cloud_account_id,
-    cloud_account_region_ids: regionIds,
-    resource_types: [CloudResourceType.ECS],
-    sync_mode: syncForm.sync_mode,
-    instance_ids: ids.length > 0 ? ids : undefined,
     auto_bind: syncForm.auto_bind,
     bind_node_id: syncForm.auto_bind ? syncForm.bind_node_id : undefined,
+    cloud_account_id: syncForm.cloud_account_id,
+    cloud_account_region_ids: regionIds,
+    instance_ids: ids.length > 0 ? ids : undefined,
+    resource_types: [CloudResourceType.ECS],
+    sync_mode: syncForm.sync_mode,
   };
   const ticket = ++syncOperationRequest;
   syncRegionResults.value = [];
@@ -1143,11 +1142,10 @@ const handleDelete = async (record: TreeCloudResource): Promise<void> => {
   if (!can('tree.cloudResource.delete') || !requireSupportedResource(record))
     return;
   Modal.confirm({
-    title: '确认删除',
+    cancelText: '取消',
     content: `确定要删除资源 "${record.name}" 吗？此操作不可恢复。`,
     okText: '确定删除',
     okType: 'danger',
-    cancelText: '取消',
     onOk: async () => {
       if (!can('tree.cloudResource.delete')) return;
       try {
@@ -1163,6 +1161,7 @@ const handleDelete = async (record: TreeCloudResource): Promise<void> => {
         if (shouldNotifyPageError(error)) message.error('删除失败');
       }
     },
+    title: '确认删除',
   });
 };
 
@@ -1174,37 +1173,37 @@ const exportToExcel = (data: TreeCloudResource[]) => {
 
   // 准备导出数据
   const exportData = data.map((item) => ({
-    资源名称: item.name,
-    资源类型: getResourceTypeText(item.resource_type),
+    CPU核数: item.cpu || '未知',
     云账户: item.cloud_account?.name || '-',
+    公网IP: item.public_ip || '-',
+    '内存(GB)': item.memory || '未知',
+    创建人: item.create_user_name || '-',
+    创建时间: formatDateTime(item.created_at),
+    到期时间: item.expire_time ? formatDateTime(item.expire_time) : '-',
+    可用区: item.zone_id || '-',
+    地域: item.region || '-',
     实例ID: item.instance_id || '-',
     实例类型: item.instance_type || '-',
+    描述: item.description || '-',
+    操作系统: item.os_name || '-',
+    更新时间: formatDateTime(item.updated_at),
+    月成本:
+      item.monthly_cost > 0
+        ? `${item.monthly_cost} ${item.currency || '币种未知'}`
+        : '未知',
+    服务树节点: item.tree_nodes?.map((n) => n.name).join(', ') || '-',
     状态: getStatusText(item.status),
     环境: item.environment ? getEnvironmentText(item.environment) : '-',
-    地域: item.region || '-',
-    可用区: item.zone_id || '-',
-    CPU核数: item.cpu || '未知',
-    '内存(GB)': item.memory || '未知',
     '磁盘(GB)': item.disk || '未知',
-    公网IP: item.public_ip || '-',
     私网IP: item.private_ip || '-',
-    操作系统: item.os_name || '-',
     计费方式:
       item.charge_type === ChargeType.PRE_PAID
         ? '包年包月'
         : item.charge_type === ChargeType.POST_PAID
           ? '按量付费'
           : '未知',
-    月成本:
-      item.monthly_cost > 0
-        ? `${item.monthly_cost} ${item.currency || '币种未知'}`
-        : '未知',
-    到期时间: item.expire_time ? formatDateTime(item.expire_time) : '-',
-    服务树节点: item.tree_nodes?.map((n) => n.name).join(', ') || '-',
-    创建人: item.create_user_name || '-',
-    创建时间: formatDateTime(item.created_at),
-    更新时间: formatDateTime(item.updated_at),
-    描述: item.description || '-',
+    资源名称: item.name,
+    资源类型: getResourceTypeText(item.resource_type),
   }));
 
   // 导出文件
@@ -1370,7 +1369,7 @@ const closeDetails = () => {
             allow-clear
             placeholder="搜索资源名称/实例ID/IP地址"
             style="width: 280px"
-            @pressEnter="handleSearch"
+            @press-enter="handleSearch"
           >
             <template #prefix><SearchOutlined /></template>
           </a-input>
@@ -1491,8 +1490,8 @@ const closeDetails = () => {
                 <a-tag
                   v-if="record.environment"
                   :color="getEnvironmentColor(record.environment)"
-                  size="small"
                   class="env-tag"
+                  size="small"
                 >
                   {{ getEnvironmentText(record.environment) }}
                 </a-tag>
@@ -1600,11 +1599,11 @@ const closeDetails = () => {
             <!-- 状态列 -->
             <template v-else-if="column.key === 'status'">
               <a-dropdown
-                :trigger="['click']"
                 :disabled="
                   !supportsResource(record) ||
                   !hasPerm(resourcePermissions.status)
                 "
+                :trigger="['click']"
               >
                 <a-badge
                   :status="getStatusBadgeType(record.status)"
@@ -1651,8 +1650,8 @@ const closeDetails = () => {
                   <a-tag
                     v-for="node in record.tree_nodes.slice(0, 2)"
                     :key="node.id"
-                    color="blue"
                     class="node-tag"
+                    color="blue"
                   >
                     <ApartmentOutlined class="tag-icon" />
                     {{ node.name }}
@@ -1706,9 +1705,9 @@ const closeDetails = () => {
                   title="编辑"
                 >
                   <a-button
-                    type="text"
-                    size="small"
                     :disabled="!supportsResource(record)"
+                    size="small"
+                    type="text"
                     @click="handleEdit(record)"
                   >
                     <EditOutlined />
@@ -1719,9 +1718,9 @@ const closeDetails = () => {
                   title="绑定服务树"
                 >
                   <a-button
-                    type="text"
-                    size="small"
                     :disabled="!supportsResource(record)"
+                    size="small"
+                    type="text"
                     @click="showBindModal(record)"
                   >
                     <ApartmentOutlined />
@@ -1735,9 +1734,9 @@ const closeDetails = () => {
                   title="连接终端"
                 >
                   <a-button
-                    type="text"
-                    size="small"
                     :disabled="!supportsResource(record)"
+                    size="small"
+                    type="text"
                     @click="handleConnectTerminal(record)"
                   >
                     <CodeOutlined />
@@ -1750,14 +1749,14 @@ const closeDetails = () => {
                   <template #overlay>
                     <a-menu>
                       <a-menu-item
-                        key="unbind"
                         v-if="hasPerm(resourcePermissions.unbind)"
-                        @click="showUnbindModal(record)"
+                        key="unbind"
                         :disabled="
                           !supportsResource(record) ||
                           !record.tree_nodes ||
                           record.tree_nodes.length === 0
                         "
+                        @click="showUnbindModal(record)"
                       >
                         <DisconnectOutlined /> 解绑节点
                       </a-menu-item>
@@ -1765,8 +1764,8 @@ const closeDetails = () => {
                       <a-menu-item
                         v-if="can('tree.cloudResource.delete')"
                         key="delete"
-                        danger
                         :disabled="!supportsResource(record)"
+                        danger
                         @click="handleDelete(record)"
                       >
                         <DeleteOutlined /> 删除资源
@@ -1930,7 +1929,7 @@ const closeDetails = () => {
               v-model:value="newTagValue"
               placeholder="标签Value"
               style="width: 200px"
-              @pressEnter="addTag"
+              @press-enter="addTag"
             />
             <a-button type="dashed" @click="addTag">
               <PlusOutlined /> 添加标签
@@ -1997,7 +1996,6 @@ const closeDetails = () => {
           <a-select
             id="cloud-sync-regions"
             v-model:value="syncForm.cloud_account_region_ids"
-            mode="multiple"
             :disabled="syncLoading || syncRegionsLoading || !!syncRegionError"
             :loading="syncRegionsLoading"
             :options="
@@ -2008,6 +2006,7 @@ const closeDetails = () => {
                   : region.region,
               }))
             "
+            mode="multiple"
             placeholder="不选择则同步此账户全部已启用地域"
           />
           <a-alert
@@ -2114,8 +2113,8 @@ const closeDetails = () => {
             size="large"
           >
             <a-radio
-              :value="SyncMode.FULL"
               :disabled="requiresInstanceIds(syncAccount?.provider)"
+              :value="SyncMode.FULL"
               class="sync-mode-radio"
             >
               <div class="radio-content">
@@ -2179,11 +2178,11 @@ const closeDetails = () => {
           <a-tree-select
             v-model:value="selectedTreeNodeIds"
             :field-names="{ children: 'children', label: 'name', value: 'id' }"
-            show-checked-strategy="SHOW_PARENT"
             :tree-data="treeData"
             allow-clear
             multiple
             placeholder="请选择要绑定的节点（支持多选）"
+            show-checked-strategy="SHOW_PARENT"
             size="large"
             style="width: 100%"
             tree-checkable
@@ -2367,8 +2366,8 @@ const closeDetails = () => {
           </template>
           <template v-else-if="column.key === 'operator'">
             <a-avatar
-              size="small"
               :style="{ backgroundColor: getAvatarColor(record.operator_name) }"
+              size="small"
             >
               {{ getInitials(record.operator_name) }}
             </a-avatar>
@@ -2469,15 +2468,15 @@ const closeDetails = () => {
                 {{ currentDetail.instance_type || '-' }}
               </a-descriptions-item>
               <a-descriptions-item :span="1" label="CPU">
-                {{ currentDetail.cpu ? currentDetail.cpu + ' 核' : '-' }}
+                {{ currentDetail.cpu ? `${currentDetail.cpu} 核` : '-' }}
               </a-descriptions-item>
               <a-descriptions-item :span="1" label="内存">
                 <HddOutlined />
-                {{ currentDetail.memory ? currentDetail.memory + ' GB' : '-' }}
+                {{ currentDetail.memory ? `${currentDetail.memory} GB` : '-' }}
               </a-descriptions-item>
               <a-descriptions-item :span="2" label="磁盘">
                 <DatabaseOutlined />
-                {{ currentDetail.disk ? currentDetail.disk + ' GB' : '-' }}
+                {{ currentDetail.disk ? `${currentDetail.disk} GB` : '-' }}
               </a-descriptions-item>
             </a-descriptions>
 
@@ -2645,9 +2644,9 @@ const closeDetails = () => {
               <a-button-group>
                 <a-button
                   v-if="can('tree.cloudResource.terminal')"
+                  :disabled="!supportsResource(currentDetail)"
                   type="primary"
                   @click="handleConnectTerminal(currentDetail)"
-                  :disabled="!supportsResource(currentDetail)"
                 >
                   <CodeOutlined /> 连接终端
                 </a-button>
@@ -2668,8 +2667,8 @@ const closeDetails = () => {
               </a-button-group>
               <a-button
                 v-if="can('tree.cloudResource.delete')"
-                danger
                 :disabled="!supportsResource(currentDetail)"
+                danger
                 @click="handleDelete(currentDetail)"
               >
                 <DeleteOutlined /> 删除

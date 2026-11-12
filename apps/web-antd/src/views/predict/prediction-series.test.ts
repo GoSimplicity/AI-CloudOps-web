@@ -12,8 +12,8 @@ import {
 const response = (points: any[]): PredictionResponse =>
   ({ current_value: 0, predicted_data: points }) as PredictionResponse;
 const point = (timestamp: string, predicted_value = 0) => ({
-  timestamp,
   predicted_value,
+  timestamp,
 });
 
 describe('预测数据展示契约', () => {
@@ -48,9 +48,9 @@ describe('预测数据展示契约', () => {
   });
   it('空序列不制造时间点或零值', () => {
     expect(alignForecasts({ cpu: response([]) })).toEqual({
-      timeline: [],
       labels: [],
       series: [],
+      timeline: [],
     });
   });
   it('缺失置信区间不是零，真实零不是缺失', () => {
