@@ -250,7 +250,7 @@ describe('autofix 错误提示 · 共用 key 不串改', () => {
   async function otherRequestFails() {
     await requestClient
       .get('/k8s/fake-other', { adapter: adapterOf(500, ERROR_BODY('X')) })
-      .catch(() => undefined);
+      .catch(() => {});
   }
 
   function autofixContents() {

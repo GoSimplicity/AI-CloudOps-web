@@ -113,12 +113,16 @@ const getStatusText = (status?: string) => {
 
 // 获取模式颜色
 const getModeColor = (mode?: number) => {
-  return mode === 1 ? 'blue' : mode === 2 ? 'purple' : 'default';
+  if (mode === 1) return 'blue';
+  if (mode === 2) return 'purple';
+  return 'default';
 };
 
 // 获取模式文本
 const getModeText = (mode?: number) => {
-  return mode === 1 ? 'RAG模式' : mode === 2 ? 'MCP模式' : '未知模式';
+  if (mode === 1) return 'RAG模式';
+  if (mode === 2) return 'MCP模式';
+  return '未知模式';
 };
 
 // 格式化时间
@@ -247,9 +251,9 @@ const exportSession = () => {
   const a = document.createElement('a');
   a.href = url;
   a.download = `session-${currentSession.session_id}-${new Date().toISOString().split('T')[0]}.json`;
-  document.body.appendChild(a);
+  document.body.append(a);
   a.click();
-  document.body.removeChild(a);
+  a.remove();
   URL.revokeObjectURL(url);
 
   message.success('会话导出成功');
@@ -275,9 +279,9 @@ const exportAllSessions = () => {
   const a = document.createElement('a');
   a.href = url;
   a.download = `all-sessions-${new Date().toISOString().split('T')[0]}.json`;
-  document.body.appendChild(a);
+  document.body.append(a);
   a.click();
-  document.body.removeChild(a);
+  a.remove();
   URL.revokeObjectURL(url);
 
   message.success('所有会话导出成功');

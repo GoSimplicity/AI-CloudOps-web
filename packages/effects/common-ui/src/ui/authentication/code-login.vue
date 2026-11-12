@@ -94,7 +94,7 @@ async function handleSendCode() {
     return;
   }
   countdown.value = 60;
-  // TODO: 调用发送验证码接口
+  // 验证码发送接口尚未接入
   startCountdown();
 }
 

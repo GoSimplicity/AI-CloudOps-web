@@ -479,11 +479,11 @@ const copyJson = async () => {
     textarea.value = text;
     textarea.style.position = 'fixed';
     textarea.style.opacity = '0';
-    document.body.appendChild(textarea);
+    document.body.append(textarea);
     textarea.focus();
     textarea.select();
     const successful = document.execCommand('copy');
-    document.body.removeChild(textarea);
+    textarea.remove();
     if (successful) {
       message.success('配置已复制到剪贴板');
     } else {
@@ -514,7 +514,7 @@ const importConfig = (file: File) => {
   }
   const ticket = ++importRequest;
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.addEventListener('load', (e) => {
     if (ticket !== importRequest) return;
     try {
       const config = JSON.parse(e.target?.result as string);
@@ -528,10 +528,10 @@ const importConfig = (file: File) => {
     } catch {
       message.error('文件解析失败');
     }
-  };
-  reader.onerror = () => {
+  });
+  reader.addEventListener('error', () => {
     if (ticket === importRequest) message.error('读取配置文件失败');
-  };
+  });
   reader.readAsText(file);
   return false;
 };

@@ -167,7 +167,7 @@ const selectedStepConnections = computed({
     );
     const newConns = newTargetIds.map((targetId) => ({
       from: currentStepId,
-      id: `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `conn_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
       to: targetId,
     }));
     connections.value = [...otherConnections, ...newConns];
@@ -752,10 +752,10 @@ const copyProcessJson = async (): Promise<void> => {
       },
     };
     textArea.value = JSON.stringify(processData, null, 2);
-    document.body.appendChild(textArea);
+    document.body.append(textArea);
     textArea.select();
     const copied = document.execCommand('copy');
-    document.body.removeChild(textArea);
+    textArea.remove();
     if (copied) message.success('流程JSON已复制到剪贴板');
     else if (shouldNotifyPageError(error))
       message.error('复制失败，请手动复制JSON');

@@ -334,13 +334,9 @@ export function useDeploymentPage() {
 
     // 如果是数组格式，进行转换
     if (Array.isArray(data)) {
-      return data.reduce(
-        (acc, { key, value }) => {
-          acc[key] = value;
-          return acc;
-        },
-        {} as Record<string, string>,
-      );
+      const record: Record<string, string> = {};
+      for (const { key, value } of data) record[key] = value;
+      return record;
     }
 
     return {};
@@ -1018,7 +1014,7 @@ export function useDeploymentPage() {
   };
 
   const removeFilterLabel = (key: string) => {
-    delete filterLabels.value[key];
+    Reflect.deleteProperty(filterLabels.value, key);
     currentPage.value = 1;
     fetchDeployments();
   };
@@ -1119,7 +1115,7 @@ export function useDeploymentPage() {
   };
 
   const removeLabelField = (key: string) => {
-    delete createFormModel.value.labels[key];
+    Reflect.deleteProperty(createFormModel.value.labels, key);
   };
 
   const addAnnotationField = () => {
@@ -1127,7 +1123,7 @@ export function useDeploymentPage() {
   };
 
   const removeAnnotationField = (key: string) => {
-    delete createFormModel.value.annotations[key];
+    Reflect.deleteProperty(createFormModel.value.annotations, key);
   };
 
   // YAML 操作辅助函数

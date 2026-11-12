@@ -153,16 +153,14 @@ describe('工单实例真实控件', () => {
   it('旧成功不能覆盖新筛选', async () => {
     await flushPromises();
     const pending = createDeferred<any>();
-    client.get.mockImplementation((url, options) =>
-      isMain(url, options)
-        ? options.params.search === 'old'
-          ? pending.promise
-          : Promise.resolve({
-              total: 1,
-              items: [{ ...row, title: '当前查询' }],
-            })
-        : response(url, options),
-    );
+    client.get.mockImplementation((url, options) => {
+      if (!isMain(url, options)) return response(url, options);
+      if (options.params.search === 'old') return pending.promise;
+      return Promise.resolve({
+        total: 1,
+        items: [{ ...row, title: '当前查询' }],
+      });
+    });
     await query('old');
     await query('new');
     pending.resolve({ total: 91, items: [{ ...row, title: '旧查询' }] });
@@ -172,16 +170,14 @@ describe('工单实例真实控件', () => {
   it('旧失败不能清除新筛选', async () => {
     await flushPromises();
     const pending = createDeferred<any>();
-    client.get.mockImplementation((url, options) =>
-      isMain(url, options)
-        ? options.params.search === 'old'
-          ? pending.promise
-          : Promise.resolve({
-              total: 1,
-              items: [{ ...row, title: '当前查询' }],
-            })
-        : response(url, options),
-    );
+    client.get.mockImplementation((url, options) => {
+      if (!isMain(url, options)) return response(url, options);
+      if (options.params.search === 'old') return pending.promise;
+      return Promise.resolve({
+        total: 1,
+        items: [{ ...row, title: '当前查询' }],
+      });
+    });
     await query('old');
     await query('new');
     pending.reject(new Error('old failed'));
@@ -209,7 +205,7 @@ describe('工单实例真实控件', () => {
       await query('two');
       const view = wrapper
         .findAll('.action-buttons button')
-        .filter((button) => button.text().replace(/\s/g, '') === '查看');
+        .filter((button) => button.text().replaceAll(/\s/g, '') === '查看');
       await required(view[0]).trigger('click');
       await flushPromises();
       await required(view[1]).trigger('click');
@@ -302,7 +298,7 @@ describe('工单实例真实控件', () => {
     await required(
       wrapper
         .findAll('button')
-        .find((button) => button.text().replace(/\s/g, '') === '创建工单'),
+        .find((button) => button.text().replaceAll(/\s/g, '') === '创建工单'),
     ).trigger('click');
     await flushPromises();
     pending.resolve({ ...row, status: 1, title: '旧编辑内容' });
@@ -337,7 +333,7 @@ describe('工单实例真实控件', () => {
       await required(
         wrapper
           .findAll('button')
-          .find((button) => button.text().replace(/\s/g, '') === '创建工单'),
+          .find((button) => button.text().replaceAll(/\s/g, '') === '创建工单'),
       ).trigger('click');
       await flushPromises();
       const select = required(
@@ -375,7 +371,7 @@ describe('工单实例真实控件', () => {
     await required(
       wrapper
         .findAll('button')
-        .find((button) => button.text().replace(/\s/g, '') === '从模板创建'),
+        .find((button) => button.text().replaceAll(/\s/g, '') === '从模板创建'),
     ).trigger('click');
     await flushPromises();
     const select = required(
@@ -449,7 +445,7 @@ describe('工单实例真实控件', () => {
     await required(
       wrapper
         .findAll('.action-buttons button')
-        .find((button) => button.text().replace(/\s/g, '') === '查看'),
+        .find((button) => button.text().replaceAll(/\s/g, '') === '查看'),
     ).trigger('click');
     await flushPromises();
     const approve = [
@@ -469,7 +465,7 @@ describe('工单实例真实控件', () => {
     await flushPromises();
     required(
       [...wrapper.findAll('button')].find(
-        (button) => button.text().replace(/\s/g, '') === '创建工单',
+        (button) => button.text().replaceAll(/\s/g, '') === '创建工单',
       ),
     ).trigger('click');
     await flushPromises();
@@ -482,7 +478,7 @@ describe('工单实例真实控件', () => {
           '.ant-modal-footer button',
         ),
       ].find((button) =>
-        /^(取消|Cancel)$/.test(button.textContent?.replace(/\s/g, '') || ''),
+        /^(?:取消|Cancel)$/.test(button.textContent?.replace(/\s/g, '') || ''),
       ),
     ).click();
     await flushPromises();
@@ -545,7 +541,7 @@ describe('列表按需读取当前用户可用动作', () => {
     await required(
       wrapper
         .findAll('.action-buttons button')
-        .find((button) => button.text().replace(/\s/g, '') === '查看'),
+        .find((button) => button.text().replaceAll(/\s/g, '') === '查看'),
     ).trigger('click');
     await flushPromises();
     const detail = document.querySelector('.detail-dialog');
@@ -565,7 +561,7 @@ describe('列表按需读取当前用户可用动作', () => {
     await required(
       wrapper
         .findAll('.action-buttons button')
-        .find((button) => button.text().replace(/\s/g, '') === '查看'),
+        .find((button) => button.text().replaceAll(/\s/g, '') === '查看'),
     ).trigger('click');
     await flushPromises();
     expect(
@@ -594,7 +590,7 @@ describe('列表按需读取当前用户可用动作', () => {
     await required(
       wrapper
         .findAll('.action-buttons button')
-        .find((button) => button.text().replace(/\s/g, '') === '查看'),
+        .find((button) => button.text().replaceAll(/\s/g, '') === '查看'),
     ).trigger('click');
     await flushPromises();
     expect(document.querySelector('.detail-dialog')?.textContent).not.toContain(
@@ -642,7 +638,7 @@ describe('列表按需读取当前用户可用动作', () => {
       required(
         wrapper
           .findAll('.action-buttons button')
-          .find((button) => button.text().replace(/\s/g, '') === '查看'),
+          .find((button) => button.text().replaceAll(/\s/g, '') === '查看'),
       );
     await view().trigger('click');
     await flushPromises();

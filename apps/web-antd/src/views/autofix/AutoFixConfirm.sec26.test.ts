@@ -146,7 +146,7 @@ async function startAndRun() {
 function buttons(text: string) {
   return required(wrapper)
     .findAll('button')
-    .filter((item) => item.text().replace(/\s/g, '').includes(text));
+    .filter((item) => item.text().replaceAll(/\s/g, '').includes(text));
 }
 function button(text: string) {
   return buttons(text)[0];

@@ -57,7 +57,7 @@ export function markRequestLayerNotice(error: unknown, key: string): void {
 }
 
 /** 请求层弹过的 http-error 提示的 key；没弹过返回 undefined */
-export function getRequestLayerNoticeKey(error: unknown): string | undefined {
+export function getRequestLayerNoticeKey(error?: unknown): string | undefined {
   if (!error || typeof error !== 'object') return undefined;
   const key = (error as Record<symbol, unknown>)[HTTP_ERROR_NOTICE_KEY];
   return typeof key === 'string' ? key : undefined;

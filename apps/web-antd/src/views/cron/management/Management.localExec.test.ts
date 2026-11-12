@@ -89,7 +89,7 @@ async function openJobTypeOptions() {
   const create = required(
     required(wrapper)
       .findAll('button')
-      .find((item) => item.text().replace(/\s/g, '').includes('创建任务')),
+      .find((item) => item.text().replaceAll(/\s/g, '').includes('创建任务')),
   );
   await create.trigger('click');
   await flushPromises();

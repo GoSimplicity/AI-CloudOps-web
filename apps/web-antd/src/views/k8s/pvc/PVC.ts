@@ -1065,9 +1065,9 @@ export function usePVCPage() {
 
   const removeLabelItem = (key: string, type: 'annotations' | 'labels') => {
     if (type === 'labels') {
-      delete createFormModel.value.labels[key];
+      Reflect.deleteProperty(createFormModel.value.labels, key);
     } else {
-      delete createFormModel.value.annotations[key];
+      Reflect.deleteProperty(createFormModel.value.annotations, key);
     }
   };
 
@@ -1098,9 +1098,9 @@ export function usePVCPage() {
 
   const removeEditLabelItem = (key: string, type: 'annotations' | 'labels') => {
     if (type === 'labels') {
-      delete editFormModel.value.labels[key];
+      Reflect.deleteProperty(editFormModel.value.labels, key);
     } else {
-      delete editFormModel.value.annotations[key];
+      Reflect.deleteProperty(editFormModel.value.annotations, key);
     }
   };
 
@@ -1123,7 +1123,7 @@ export function usePVCPage() {
   };
 
   const removeSelectorItem = (key: string) => {
-    delete createFormModel.value.spec.selector[key];
+    Reflect.deleteProperty(createFormModel.value.spec.selector, key);
   };
 
   const insertYamlTemplate = () => {

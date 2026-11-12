@@ -136,21 +136,16 @@ beforeEach(() => {
     if (path.startsWith('/tree/cloud/account/') && path.endsWith('/detail')) {
       const id = Number(path.split('/').at(-2));
       const value = account(id);
+      let provider = 1;
+      if (id === 8) provider = 2;
+      else if (id === 11 || id === 15) provider = 3;
+      else if (id === 12) provider = 5;
+      else if (id === 13) provider = 4;
+      else if (id === 14) provider = 6;
       return Promise.resolve({
         ...value,
         credential_type: id === 15 ? 'temporary' : 'long_term',
-        provider:
-          id === 8
-            ? 2
-            : id === 11 || id === 15
-              ? 3
-              : id === 12
-                ? 5
-                : id === 13
-                  ? 4
-                  : id === 14
-                    ? 6
-                    : 1,
+        provider,
         regions:
           id === 13
             ? value.regions.map((region) => ({
@@ -627,7 +622,7 @@ describe('云资源真实控件合同', () => {
     await button('重试读取地域');
     await new DOMWrapper(
       required(
-        required(document.getElementById('cloud-sync-regions')).closest(
+        required(document.querySelector('#cloud-sync-regions')).closest(
           '.ant-select',
         ),
       ),
@@ -756,7 +751,7 @@ describe('云资源真实控件合同', () => {
     ).toBeGreaterThanOrEqual(2);
     await new DOMWrapper(
       required(
-        required(document.getElementById('cloud-sync-account')).closest(
+        required(document.querySelector('#cloud-sync-account')).closest(
           '.ant-select',
         ),
       ),
@@ -794,7 +789,7 @@ describe('云资源真实控件合同', () => {
     fail = false;
     await button('重试读取账户');
     await button('同步资源');
-    expect(document.getElementById('cloud-sync-regions')).not.toBeNull();
+    expect(document.querySelector('#cloud-sync-regions')).not.toBeNull();
     expect(client.post).not.toHaveBeenCalled();
   });
 });

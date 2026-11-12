@@ -3,8 +3,8 @@ import type {
   ManagedCloudSyncResult,
 } from '#/api/core/tree/tree_cloud';
 
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const resourceID = /^[\dA-Za-z][\dA-Za-z-]{1,99}$/;
+const uuid = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/;
+const resourceID = /^[\da-z][\da-z-]{1,99}$/i;
 const positive = (value: unknown): value is number =>
   typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
 export function validManagedResult(

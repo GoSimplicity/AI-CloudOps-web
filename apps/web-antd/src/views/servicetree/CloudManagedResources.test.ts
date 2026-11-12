@@ -274,7 +274,7 @@ it('只同步指定ID并在提交前复核精确权限与历史', async () => {
     cloud_account_id: 7,
     cloud_account_region_id: 11,
     kind: 'rds',
-    operation_id: expect.stringMatching(/^[a-f0-9-]{36}$/),
+    operation_id: expect.stringMatching(/^[\da-f-]{36}$/),
     resource_ids: ['rm-one', 'rm-two'],
   });
 });
@@ -938,7 +938,7 @@ it('超管核对其他owner同UUID操作不清除本人的本地指针', async (
   await required(
     list
       .findAll('button')
-      .find((b) => b.text().replace(/\s/g, '') === '查询本次操作'),
+      .find((b) => b.text().replaceAll(/\s/g, '') === '查询本次操作'),
   ).trigger('click');
   await flushPromises();
   await click('核对并阻断旧请求');

@@ -286,11 +286,11 @@ const formatAge = (age?: string) => {
     const minuteMatch = age.match(/(\d+)m/);
     const secondMatch = age.match(/(\d+(?:\.\d+)?)s/);
 
-    const hours = hourMatch && hourMatch[1] ? parseInt(hourMatch[1]) : 0;
+    const hours = hourMatch && hourMatch[1] ? Number.parseInt(hourMatch[1]) : 0;
     const minutes =
-      minuteMatch && minuteMatch[1] ? parseInt(minuteMatch[1]) : 0;
+      minuteMatch && minuteMatch[1] ? Number.parseInt(minuteMatch[1]) : 0;
     const seconds =
-      secondMatch && secondMatch[1] ? parseFloat(secondMatch[1]) : 0;
+      secondMatch && secondMatch[1] ? Number.parseFloat(secondMatch[1]) : 0;
 
     // 转换为天、小时、分钟
     const days = Math.floor(hours / 24);

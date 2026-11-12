@@ -9,11 +9,11 @@ import { requireFixtureValue } from '../../internal/test-utils/required-fixture-
 function password() {
   if (process.env.CLOUDOPS_TEST_PASSWORD)
     return process.env.CLOUDOPS_TEST_PASSWORD;
-  if (!process.env.CLOUDOPS_TEST_ENV_FILE) return undefined;
+  if (!process.env.CLOUDOPS_TEST_ENV_FILE) return;
   return readFileSync(process.env.CLOUDOPS_TEST_ENV_FILE, 'utf8')
     .match(/^BOOTSTRAP_ADMIN_PASSWORD=(.*)$/m)?.[1]
     ?.trim()
-    .replace(/^['"]|['"]$/g, '');
+    .replaceAll(/^["']|["']$/g, '');
 }
 const route = (path: string) =>
   process.env.CLOUDOPS_ROUTER_HISTORY === 'hash' ? `/#${path}` : path;
@@ -130,7 +130,9 @@ test('workorder local form and process design save round-trip and cancel', async
         '/api/workorder/form-design/create',
     );
     await page.getByRole('button', { exact: true, name: '保存设计' }).click();
-    expect((await (await savedForm).json()).code).toBe(0);
+    const resolvedSavedForm = await savedForm;
+    const resolvedSavedFormJson = await resolvedSavedForm.json();
+    expect(resolvedSavedFormJson.code).toBe(0);
     const formsResponse = await api(
       `/workorder/form-design/list?page=1&size=10&search=${nonce}`,
     );
@@ -231,7 +233,9 @@ test('workorder local form and process design save round-trip and cancel', async
         new URL(response.url()).pathname === '/api/workorder/process/create',
     );
     await page.getByRole('button', { exact: true, name: '保存流程' }).click();
-    expect((await (await savedProcess).json()).code).toBe(0);
+    const resolvedSavedProcess = await savedProcess;
+    const resolvedSavedProcessJson = await resolvedSavedProcess.json();
+    expect(resolvedSavedProcessJson.code).toBe(0);
     const processesResponse = await api(
       `/workorder/process/list?page=1&size=10&search=${nonce}`,
     );
@@ -244,7 +248,7 @@ test('workorder local form and process design save round-trip and cancel', async
     expect(processDetail.form_design_id).toBe(formId);
     expect(processDetail.status).toBe(2);
     expect(processDetail.definition.steps).toEqual(
-      definition.steps.map(({ actions, ...step }) =>
+      definition.steps.map(({ actions: _actions, ...step }) =>
         expect.objectContaining(step),
       ),
     );
@@ -281,17 +285,17 @@ test('workorder local form and process design save round-trip and cancel', async
           undefined,
           'DELETE',
         );
+      const apiResult = await api(
+        `/workorder/process/list?page=1&size=100&search=${nonce}`,
+      );
       expect(
-        (
-          await api(`/workorder/process/list?page=1&size=100&search=${nonce}`)
-        ).items.some((item: { name: string }) => item.name === nonce),
+        apiResult.items.some((item: { name: string }) => item.name === nonce),
       ).toBe(false);
+      const apiResult2 = await api(
+        `/workorder/form-design/list?page=1&size=100&search=${nonce}`,
+      );
       expect(
-        (
-          await api(
-            `/workorder/form-design/list?page=1&size=100&search=${nonce}`,
-          )
-        ).items.some((item: { name: string }) => item.name === nonce),
+        apiResult2.items.some((item: { name: string }) => item.name === nonce),
       ).toBe(false);
       await api('/user/logout', {}, 'POST');
     }

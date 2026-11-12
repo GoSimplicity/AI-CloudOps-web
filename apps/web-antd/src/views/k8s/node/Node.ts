@@ -487,11 +487,9 @@ export function useNodePage() {
         node_name: record.name,
       };
       const res = await getK8sNodeTaints(params);
-      const taints = Array.isArray(res?.taints)
-        ? res.taints
-        : Array.isArray(record.taints)
-          ? record.taints
-          : [];
+      let taints: any[] = [];
+      if (Array.isArray(res?.taints)) taints = res.taints;
+      else if (Array.isArray(record.taints)) taints = record.taints;
 
       resetTaintForm(taints);
       isTaintModalVisible.value = true;
@@ -821,7 +819,7 @@ export function useNodePage() {
 
   const removeLabelField = (key: string) => {
     // 覆盖式更新：直接从当前标签中删除即可，提交时会完全覆盖
-    delete labelFormModel.value.labels[key];
+    Reflect.deleteProperty(labelFormModel.value.labels, key);
   };
 
   // 批量操作
@@ -850,9 +848,10 @@ export function useNodePage() {
         // 已禁用调度的节点跳过，不发请求，在汇总里列出（复审 P3-5）
         const targets = selected.filter((record) => record.schedulable === 1);
         const skipped = selected.filter((record) => record.schedulable !== 1);
-        const skippedText = skipped.length
-          ? `，跳过 ${skipped.length} 个已禁用调度的节点（${skipped.map((record) => record.name).join('、')}）`
-          : '';
+        const skippedText =
+          skipped.length > 0
+            ? `，跳过 ${skipped.length} 个已禁用调度的节点（${skipped.map((record) => record.name).join('、')}）`
+            : '';
         if (targets.length === 0) {
           message.info(
             `选中的 ${selected.length} 个节点均已禁用调度，无需操作`,

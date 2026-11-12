@@ -114,7 +114,7 @@ const rowButtons = (title: string) =>
   all(`.ant-table-tbody button[title="${title}"]`);
 const buttonsByText = (text: string, scope = 'body') =>
   all(`${scope} button`).filter((button) =>
-    (button.textContent ?? '').replace(/\s/g, '').includes(text),
+    (button.textContent ?? '').replaceAll(/\s/g, '').includes(text),
   );
 
 /** 真实点击表格第一行的勾选框 */

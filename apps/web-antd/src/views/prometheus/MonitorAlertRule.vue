@@ -228,7 +228,7 @@ const formRules = {
       validator: () => {
         const form = isEditModalVisible.value ? editForm : addForm;
         if (!form.ip || !form.port) {
-          return Promise.reject('请输入IP地址和端口');
+          return Promise.reject(new Error('请输入IP地址和端口'));
         }
         return Promise.resolve();
       },

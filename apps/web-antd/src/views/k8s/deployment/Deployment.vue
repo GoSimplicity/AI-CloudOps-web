@@ -257,7 +257,7 @@ const formatDateTime = (dateStr: string) => {
 // 相对时间函数
 const getRelativeTime = (dateStr: string) => {
   if (!dateStr) return '';
-  const now = new Date().getTime();
+  const now = Date.now();
   const past = new Date(dateStr).getTime();
   const diff = now - past;
 

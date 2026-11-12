@@ -71,7 +71,7 @@ for (const file of routeFiles.filter((file) => file.endsWith('.ts'))) {
           resolve(root, 'apps/web-antd/src/views', view),
         );
         const { descriptor, errors } = parseSfc(content);
-        if (errors.length || !descriptor.template)
+        if (errors.length > 0 || !descriptor.template)
           throw new Error(`Invalid route view: ${view}`);
         // 清单只统计真实模板节点，注释中的旧标记不会计入迁移覆盖
         let sharedPage = false;
@@ -118,6 +118,6 @@ if (process.argv.includes('--check')) {
 } else {
   writeFileSync(target, inventory);
 }
-console.log(
-  `${entries.length} routes, ${entries.filter((entry) => entry.sharedPage).length} shared page shells`,
+process.stdout.write(
+  `${entries.length} routes, ${entries.filter((entry) => entry.sharedPage).length} shared page shells\n`,
 );

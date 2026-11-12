@@ -289,13 +289,9 @@ export function useDaemonSetPage() {
 
     // 如果是数组格式，进行转换
     if (Array.isArray(data)) {
-      return data.reduce(
-        (acc, { key, value }) => {
-          acc[key] = value;
-          return acc;
-        },
-        {} as Record<string, string>,
-      );
+      const record: Record<string, string> = {};
+      for (const { key, value } of data) record[key] = value;
+      return record;
     }
 
     return {};
@@ -913,7 +909,7 @@ export function useDaemonSetPage() {
   };
 
   const removeFilterLabel = (key: string) => {
-    delete filterLabels.value[key];
+    Reflect.deleteProperty(filterLabels.value, key);
     currentPage.value = 1;
     fetchDaemonSets();
   };
@@ -1016,20 +1012,20 @@ export function useDaemonSetPage() {
   };
 
   const removeLabelField = (key: string) => {
-    delete createFormModel.value.labels[key];
+    Reflect.deleteProperty(createFormModel.value.labels, key);
   };
 
   const removeAnnotationField = (key: string) => {
-    delete createFormModel.value.annotations[key];
+    Reflect.deleteProperty(createFormModel.value.annotations, key);
   };
 
   // 编辑模态框专用的移除方法
   const removeEditLabelField = (key: string) => {
-    delete editFormModel.value.labels[key];
+    Reflect.deleteProperty(editFormModel.value.labels, key);
   };
 
   const removeEditAnnotationField = (key: string) => {
-    delete editFormModel.value.annotations[key];
+    Reflect.deleteProperty(editFormModel.value.annotations, key);
   };
 
   // YAML 操作辅助函数

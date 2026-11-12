@@ -217,11 +217,9 @@ function formatUptime(seconds: unknown): string {
   const days = Math.floor(value / 86_400);
   const hours = Math.floor((value % 86_400) / 3600);
   const minutes = Math.floor((value % 3600) / 60);
-  return days
-    ? `${days}天 ${hours}小时`
-    : hours
-      ? `${hours}小时 ${minutes}分钟`
-      : `${minutes}分钟`;
+  if (days) return `${days}天 ${hours}小时`;
+  if (hours) return `${hours}小时 ${minutes}分钟`;
+  return `${minutes}分钟`;
 }
 function pair(used: unknown, total: unknown, multiplier: number) {
   const left = finite(used);

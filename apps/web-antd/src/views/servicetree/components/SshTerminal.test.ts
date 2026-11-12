@@ -88,7 +88,7 @@ function reconnect() {
   return required(
     required(wrapper)
       .findAll('button')
-      .find((button) => button.text().replace(/\s/g, '') === '重新连接'),
+      .find((button) => button.text().replaceAll(/\s/g, '') === '重新连接'),
   );
 }
 beforeEach(() => {
@@ -178,9 +178,9 @@ describe('sSH PTY交互合同', () => {
     });
     const bytes = new TextEncoder().encode('真实字节\r\n');
     socket.onmessage?.({ data: bytes.buffer });
-    expect(Array.from(terminal.write.mock.calls[0][0] as Uint8Array)).toEqual(
-      Array.from(bytes),
-    );
+    expect([...(terminal.write.mock.calls[0][0] as Uint8Array)]).toEqual([
+      ...bytes,
+    ]);
   });
 
   it('重连读取最新令牌，旧socket迟到事件不影响新会话', async () => {

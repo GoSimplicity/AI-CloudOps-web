@@ -78,7 +78,7 @@ describe('独立助手页面账户隔离', () => {
     expect(
       wrapper
         .findAll('button')
-        .map((button) => button.text().replace(/\s+/g, '')),
+        .map((button) => button.text().replaceAll(/\s+/g, '')),
     ).toContain('发送');
     wrapper.unmount();
     mountScreen(AssistantSession);

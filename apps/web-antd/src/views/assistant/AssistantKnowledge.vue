@@ -170,7 +170,7 @@ const addDocument = async () => {
     return;
   }
 
-  if (!/\.(md|txt)$/i.test(documentForm.file_name.trim())) {
+  if (!/\.(?:md|txt)$/i.test(documentForm.file_name.trim())) {
     message.warning('文件名仅支持 .md 与 .txt');
     return;
   }

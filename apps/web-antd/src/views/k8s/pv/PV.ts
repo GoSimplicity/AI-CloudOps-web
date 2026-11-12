@@ -961,7 +961,7 @@ export function usePVPage() {
   };
 
   const removeLabelField = (key: string) => {
-    delete createFormModel.value.labels[key];
+    Reflect.deleteProperty(createFormModel.value.labels, key);
   };
 
   const addNewAnnotation = () => {
@@ -978,7 +978,7 @@ export function usePVPage() {
   };
 
   const removeAnnotationField = (key: string) => {
-    delete createFormModel.value.annotations[key];
+    Reflect.deleteProperty(createFormModel.value.annotations, key);
   };
 
   // label/annotation helpers for edit form
@@ -999,7 +999,7 @@ export function usePVPage() {
   };
 
   const removeEditLabelField = (key: string) => {
-    delete editFormModel.value.labels[key];
+    Reflect.deleteProperty(editFormModel.value.labels, key);
   };
 
   const addNewEditAnnotation = () => {
@@ -1016,7 +1016,7 @@ export function usePVPage() {
   };
 
   const removeEditAnnotationField = (key: string) => {
-    delete editFormModel.value.annotations[key];
+    Reflect.deleteProperty(editFormModel.value.annotations, key);
   };
 
   // volume source helpers for create form
@@ -1041,7 +1041,7 @@ export function usePVPage() {
   };
 
   const removeVolumeSourceField = (key: string) => {
-    delete createFormModel.value.volume_source[key];
+    Reflect.deleteProperty(createFormModel.value.volume_source, key);
   };
 
   // volume source helpers for edit form
@@ -1066,7 +1066,7 @@ export function usePVPage() {
   };
 
   const removeEditVolumeSourceField = (key: string) => {
-    delete editFormModel.value.volume_source[key];
+    Reflect.deleteProperty(editFormModel.value.volume_source, key);
   };
 
   // YAML 操作

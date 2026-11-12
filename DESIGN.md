@@ -1,17 +1,6 @@
 # AI-CloudOps 1.0 界面约定
 
-TASTE CONTRACT — AI-CloudOps
-Map: Instrument
-Stack: Vue 3.5.42 / Vben 5.2.2 / Ant Design Vue 4.2.3
-Type: 中文使用本机 PingFang SC / Microsoft YaHei；数据使用 SFMono-Regular / Consolas，等宽数字。离线部署不依赖字体CDN。
-Ground: 日间 #f2f4f6 / #ffffff，正文 #18232f；夜间沿用 Vben 深色背景变量。
-Accent: hsl(205 84% 39%)，沿用控制台蓝色品牌，成功/警告/危险各自独立。
-Density: 4px基准，正文14px，表格紧凑，页面间距16px。
-Shape: 控件与面板2px圆角，1px边界，面板不使用投影。
-Motion: 120ms状态变化；尊重 prefers-reduced-motion。
-Signature: 表格行悬停扫描线；系统指标仅显示采集值，缺少历史留空。
-Copy: 中文运维操作语气，明确动作、范围、结果；禁止虚构成功状态。
-Never: 渐变背景、玻璃面板、装饰性入场、随机指标、用0代替未知。
+TASTE CONTRACT — AI-CloudOps Map: Instrument Stack: Vue 3.5.42 / Vben 5.2.2 / Ant Design Vue 4.2.3 Type: 中文使用本机 PingFang SC / Microsoft YaHei；数据使用 SFMono-Regular / Consolas，等宽数字。离线部署不依赖字体CDN。Ground: 日间 #f2f4f6 / #ffffff，正文 #18232f；夜间沿用 Vben 深色背景变量。Accent: hsl(205 84% 39%)，沿用控制台蓝色品牌，成功/警告/危险各自独立。Density: 4px基准，正文14px，表格紧凑，页面间距16px。Shape: 控件与面板2px圆角，1px边界，面板不使用投影。Motion: 120ms状态变化；尊重 prefers-reduced-motion。Signature: 表格行悬停扫描线；系统指标仅显示采集值，缺少历史留空。Copy: 中文运维操作语气，明确动作、范围、结果；禁止虚构成功状态。Never: 渐变背景、玻璃面板、装饰性入场、随机指标、用0代替未知。
 
 ## 实现
 

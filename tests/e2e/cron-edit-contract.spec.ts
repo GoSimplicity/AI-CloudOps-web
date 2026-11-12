@@ -16,7 +16,7 @@ function password() {
       ? readFileSync(process.env.CLOUDOPS_TEST_ENV_FILE, 'utf8')
           .match(/^BOOTSTRAP_ADMIN_PASSWORD=(.*)$/m)?.[1]
           ?.trim()
-          .replace(/^['"]|['"]$/g, '')
+          .replaceAll(/^["']|["']$/g, '')
       : undefined)
   );
 }
@@ -153,7 +153,8 @@ test('disabled HTTP cron persists create and execution-field edits without runni
         .click();
       const response = await created;
       expect(response.request().postDataJSON().status).toBe(2);
-      expect((await response.json()).code).toBe(0);
+      const responseJson = await response.json();
+      expect(responseJson.code).toBe(0);
       await expect(dialog).not.toBeVisible();
       const rows = await ownRows();
       expect(rows.length).toBe(1);
@@ -200,7 +201,9 @@ test('disabled HTTP cron persists create and execution-field edits without runni
       await dialog
         .getByRole('button', { exact: true, name: '保存修改' })
         .click();
-      expect((await (await updated).json()).code).toBe(0);
+      const resolvedUpdated = await updated;
+      const resolvedUpdatedJson = await resolvedUpdated.json();
+      expect(resolvedUpdatedJson.code).toBe(0);
       await expect(dialog).not.toBeVisible();
       const detail = await api(`/cron/job/${id}/detail`);
       expect(detail).toMatchObject({
@@ -231,9 +234,12 @@ test('disabled HTTP cron persists create and execution-field edits without runni
       await confirmation
         .getByRole('button', { exact: true, name: '确认删除' })
         .click();
-      expect((await (await removed).json()).code).toBe(0);
+      const resolvedRemoved = await removed;
+      const resolvedRemovedJson = await resolvedRemoved.json();
+      expect(resolvedRemovedJson.code).toBe(0);
       await expect(row).toHaveCount(0);
-      expect((await ownRows()).length).toBe(0);
+      const ownRowsResult = await ownRows();
+      expect(ownRowsResult.length).toBe(0);
       expect(forbidden).toEqual([]);
       expect(errors).toEqual([]);
     },

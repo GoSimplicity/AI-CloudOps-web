@@ -54,6 +54,6 @@ fs.writeFileSync(
   path.join(root, 'docs/release/layout-inventory.json'),
   `${JSON.stringify(report, null, 2)}\n`,
 );
-console.log(
-  `${report.routes} routed components; ${report.migratedShells} consume OpsPage. This counts structure, not business acceptance.`,
+process.stdout.write(
+  `${report.routes} routed components; ${report.migratedShells} consume OpsPage. This counts structure, not business acceptance.\n`,
 );

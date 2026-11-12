@@ -22,7 +22,7 @@ test('local resource metadata preserves credentials and persists structured tags
       ? readFileSync(process.env.CLOUDOPS_TEST_ENV_FILE, 'utf8')
           .match(/^BOOTSTRAP_ADMIN_PASSWORD=(.*)$/m)?.[1]
           ?.trim()
-          .replace(/^['"]|['"]$/g, '')
+          .replaceAll(/^["']|["']$/g, '')
       : undefined);
   test.skip(!password, 'Requires isolated local administrator configuration');
   const route = (path: string) =>
@@ -117,7 +117,8 @@ test('local resource metadata preserves credentials and persists structured tags
       await dialog.getByRole('button', { name: /^更\s*新$/ }).click();
       const updated = await update;
       expect(updated.request().postDataJSON()).not.toHaveProperty('key');
-      expect((await updated.json()).code).toBe(0);
+      const updatedJson = await updated.json();
+      expect(updatedJson.code).toBe(0);
       await expect(dialog).not.toBeVisible();
       const detail = await api(`/tree/local/detail/${id}`);
       expect(detail.username).toBe('operator');
@@ -141,7 +142,9 @@ test('local resource metadata preserves credentials and persists structured tags
           new URL(response.url()).pathname === `/api/tree/local/update/${id}`,
       );
       await dialog.getByRole('button', { name: /^更\s*新$/ }).click();
-      expect((await (await clear).json()).code).toBe(0);
+      const resolvedClear = await clear;
+      const resolvedClearJson = await resolvedClear.json();
+      expect(resolvedClearJson.code).toBe(0);
       const cleared = await api(`/tree/local/detail/${id}`);
       expect(cleared.description).toBe('');
       expect(cleared.tags).toEqual([]);
@@ -169,9 +172,10 @@ test('local resource metadata preserves credentials and persists structured tags
             'Owned local resource identity changed; refusing cleanup',
           );
         await api(`/tree/local/delete/${id}`, { id }, 'DELETE');
-        expect(
-          (await api(`/tree/local/list?page=1&size=10&search=${nonce}`)).items,
-        ).toEqual([]);
+        const apiResult = await api(
+          `/tree/local/list?page=1&size=10&search=${nonce}`,
+        );
+        expect(apiResult.items).toEqual([]);
       }
       if (token) await api('/user/logout', {}, 'POST');
     },

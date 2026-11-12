@@ -84,7 +84,7 @@ function button(text: string) {
   return required(
     required(wrapper)
       .findAll('button')
-      .find((item) => item.text().replace(/\s/g, '').includes(text)),
+      .find((item) => item.text().replaceAll(/\s/g, '').includes(text)),
   );
 }
 async function upload(file: File) {

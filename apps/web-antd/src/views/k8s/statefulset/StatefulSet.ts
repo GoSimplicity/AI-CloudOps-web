@@ -413,13 +413,9 @@ export function useStatefulSetPage() {
 
     // 如果是数组格式，进行转换
     if (Array.isArray(data)) {
-      return data.reduce(
-        (acc, { key, value }) => {
-          acc[key] = value;
-          return acc;
-        },
-        {} as Record<string, string>,
-      );
+      const record: Record<string, string> = {};
+      for (const { key, value } of data) record[key] = value;
+      return record;
     }
 
     return {};
@@ -1121,7 +1117,7 @@ export function useStatefulSetPage() {
   };
 
   const removeFilterLabel = (key: string) => {
-    delete filterLabels.value[key];
+    Reflect.deleteProperty(filterLabels.value, key);
     currentPage.value = 1;
     fetchStatefulSets();
   };
@@ -1234,11 +1230,11 @@ export function useStatefulSetPage() {
   };
 
   const removeLabelField = (key: string) => {
-    delete createFormModel.value.labels[key];
+    Reflect.deleteProperty(createFormModel.value.labels, key);
   };
 
   const removeAnnotationField = (key: string) => {
-    delete createFormModel.value.annotations[key];
+    Reflect.deleteProperty(createFormModel.value.annotations, key);
   };
 
   const removeEditLabelField = (key: string) => {

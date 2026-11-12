@@ -14,12 +14,12 @@ function routePath(path: string) {
 function adminPassword() {
   if (process.env.CLOUDOPS_TEST_PASSWORD)
     return process.env.CLOUDOPS_TEST_PASSWORD;
-  if (!process.env.CLOUDOPS_TEST_ENV_FILE) return undefined;
+  if (!process.env.CLOUDOPS_TEST_ENV_FILE) return;
   const content = readFileSync(process.env.CLOUDOPS_TEST_ENV_FILE, 'utf8');
   return content
     .match(/^BOOTSTRAP_ADMIN_PASSWORD=(.*)$/m)?.[1]
     ?.trim()
-    .replace(/^['"]|['"]$/g, '');
+    .replaceAll(/^["']|["']$/g, '');
 }
 
 async function expectUncovered(control: Locator) {
@@ -176,7 +176,7 @@ test('authenticated navigation renders every standalone business route', async (
     visit(source);
   }
   const routeExpect = expect.configure({ soft: true });
-  for (const route of [...new Set(routes)]) {
+  for (const route of new Set(routes)) {
     await page.goto(routePath(route));
     await page.waitForTimeout(700);
     if (route === '/system_welcome') {
@@ -263,7 +263,9 @@ test('system list layouts preserve responsive filters and role creation controls
     const input = document.querySelector<HTMLInputElement>('#password');
     if (input) input.value = '';
   });
-  expect((await (await loginResponse).json()).code, 'login API code').toBe(0);
+  const resolvedLoginResponse = await loginResponse;
+  const resolvedLoginResponseJson = await resolvedLoginResponse.json();
+  expect(resolvedLoginResponseJson.code, 'login API code').toBe(0);
   await expect(page).not.toHaveURL(/auth\/login/, { timeout: 30_000 });
 
   const routes = [
@@ -922,7 +924,8 @@ test('assistant clears an invalid owned session and permits a fresh question', a
   );
   await page.locator('.ai-float-window textarea').fill('检查失效会话');
   await page.locator('.ai-float-window .send-button').click();
-  expect((await invalidResponse).status()).toBe(404);
+  const resolvedInvalidResponse = await invalidResponse;
+  expect(resolvedInvalidResponse.status()).toBe(404);
   await expect(page.locator('.ai-float-window')).toContainText('会话已失效');
   await expect(page.locator('.ai-float-window')).not.toContainText(
     'INVALID_OWNED_CACHE_SENTINEL',
@@ -1136,7 +1139,8 @@ test('Prometheus lists preserve real empty queries, cancellation and mobile cont
     await expect(page.locator('.ops-page h1')).toHaveText(
       requireFixtureValue(title),
     );
-    expect((await initial).status()).toBe(200);
+    const resolvedInitial = await initial;
+    expect(resolvedInitial.status()).toBe(200);
     const search = page.locator('.ops-page__filters input').first();
     const searched = page.waitForResponse(
       (response) =>
@@ -1145,7 +1149,8 @@ test('Prometheus lists preserve real empty queries, cancellation and mobile cont
     );
     await search.fill('ui-no-match');
     await search.press('Enter');
-    expect((await searched).status()).toBe(200);
+    const resolvedSearched = await searched;
+    expect(resolvedSearched.status()).toBe(200);
     const reset = page
       .locator('.ops-page__filters')
       .getByRole('button', { name: /^重\s*置$/ });
@@ -1155,7 +1160,8 @@ test('Prometheus lists preserve real empty queries, cancellation and mobile cont
         !new URL(response.url()).searchParams.get('search'),
     );
     await reset.click();
-    expect((await resetResponse).status()).toBe(200);
+    const resolvedResetResponse = await resetResponse;
+    expect(resolvedResetResponse.status()).toBe(200);
     await expect(search).toHaveValue('');
     const create = page.locator('.ops-page__actions .btn-create');
     if (await create.count()) {
@@ -1223,7 +1229,8 @@ test('cron default retry budget and responsive cancellation use real API', async
   );
   await page.goto(routePath('/cron/management'));
   await expect(page.locator('.ops-page h1')).toHaveText('定时任务管理');
-  expect((await list).status()).toBe(200);
+  const resolvedList = await list;
+  expect(resolvedList.status()).toBe(200);
   const create = page
     .locator('.ops-page__actions')
     .getByRole('button', { name: /创建任务/ });
@@ -1306,7 +1313,8 @@ test('on-duty calendar reads an isolated real group and supports month navigatio
       },
     );
     expect(created.status()).toBe(200);
-    expect((await created.json()).code).toBe(0);
+    const createdJson = await created.json();
+    expect(createdJson.code).toBe(0);
     const listed = await page.request.get('/api/monitor/onduty_groups/list', {
       headers,
       params: { page: 1, search: name, size: 10 },
@@ -1324,7 +1332,8 @@ test('on-duty calendar reads an isolated real group and supports month navigatio
     );
     await page.goto(routePath(`/monitor_onduty_group_table?id=${groupId}`));
     await expect(page.locator('.ops-page h1')).toHaveText(name);
-    expect((await future).status()).toBe(200);
+    const resolvedFuture = await future;
+    expect(resolvedFuture.status()).toBe(200);
     await expect(page.locator('.calendar-day').first()).toBeVisible();
     const title = page.locator('.calendar-title h2');
     const initial = await title.textContent();
@@ -1343,7 +1352,8 @@ test('on-duty calendar reads an isolated real group and supports month navigatio
     );
     await page.getByPlaceholder('搜索值班历史...').fill('ui-no-history');
     await page.getByPlaceholder('搜索值班历史...').press('Enter');
-    expect((await history).status()).toBe(200);
+    const resolvedHistory = await history;
+    expect(resolvedHistory.status()).toBe(200);
     await page.getByLabel('深色', { exact: true }).click();
     await page.setViewportSize({ height: 844, width: 390 });
     await expectUncovered(
@@ -1367,7 +1377,8 @@ test('on-duty calendar reads an isolated real group and supports month navigatio
         { headers },
       );
       expect(deleted.status()).toBe(200);
-      expect((await deleted.json()).code).toBe(0);
+      const deletedJson = await deleted.json();
+      expect(deletedJson.code).toBe(0);
     }
   }
 });
@@ -1421,7 +1432,8 @@ test('remaining Kubernetes resource lists preserve real kind scopes and safe can
     await expect(page.locator('.k8s-cluster-selector')).toContainText(
       requireFixtureValue(clusterName),
     );
-    expect((await initial).status()).toBe(200);
+    const resolvedInitial2 = await initial;
+    expect(resolvedInitial2.status()).toBe(200);
     if (namespaced)
       await selectAcceptanceNamespace(page, requireFixtureValue(namespace));
     await expect(page.locator('.ops-page .ant-alert-error')).toHaveCount(0);
@@ -1538,7 +1550,8 @@ test('YAML templates and tasks complete a real isolated dry-run without creating
     await dialog.getByRole('button', { name: /^创\s*建$/ }).click();
     const templateResponse = await createdTemplate;
     expect(templateResponse.status()).toBe(200);
-    templateCreated = (await templateResponse.json()).code === 0;
+    const templateResponseJson = await templateResponse.json();
+    templateCreated = templateResponseJson.code === 0;
     expect(templateCreated).toBe(true);
     await expect(dialog).not.toBeVisible();
     templateId = await ownId('yaml_template', templateName);
@@ -1566,7 +1579,8 @@ test('YAML templates and tasks complete a real isolated dry-run without creating
     await dialog.getByRole('button', { name: /^创\s*建$/ }).click();
     const taskResponse = await createdTask;
     expect(taskResponse.status()).toBe(200);
-    taskCreated = (await taskResponse.json()).code === 0;
+    const taskResponseJson = await taskResponse.json();
+    taskCreated = taskResponseJson.code === 0;
     expect(taskCreated).toBe(true);
     await expect(dialog).not.toBeVisible();
     taskId = await ownId('yaml_task', taskName);
@@ -1589,8 +1603,10 @@ test('YAML templates and tasks complete a real isolated dry-run without creating
         `/api/k8s/yaml_task/1/${taskId}/apply`,
     );
     await dialog.getByRole('button', { name: /^执\s*行$/ }).click();
-    expect((await applyRequest).postDataJSON().dry_run).toBe(true);
-    expect((await applyResponse).status()).toBe(200);
+    const resolvedApplyRequest = await applyRequest;
+    expect(resolvedApplyRequest.postDataJSON().dry_run).toBe(true);
+    const resolvedApplyResponse = await applyResponse;
+    expect(resolvedApplyResponse.status()).toBe(200);
     await expect(dialog).not.toBeVisible();
     const objects = await page.request.get('/api/k8s/configmap/1/list', {
       headers,
@@ -1602,8 +1618,9 @@ test('YAML templates and tasks complete a real isolated dry-run without creating
       },
     });
     expect(objects.status()).toBe(200);
+    const objectsJson = await objects.json();
     expect(
-      (await objects.json()).data.items.filter(
+      objectsJson.data.items.filter(
         (item: { name: string }) => item.name === resourceName,
       ),
     ).toHaveLength(0);
@@ -1629,23 +1646,22 @@ test('YAML templates and tasks complete a real isolated dry-run without creating
     if (taskCreated) taskId ||= await ownId('yaml_task', taskName);
     if (templateCreated)
       templateId ||= await ownId('yaml_template', templateName);
-    if (taskId > 0)
-      expect(
-        (
-          await page.request.delete(`/api/k8s/yaml_task/1/${taskId}/delete`, {
-            headers,
-          })
-        ).status(),
-      ).toBe(200);
-    if (templateId > 0)
-      expect(
-        (
-          await page.request.delete(
-            `/api/k8s/yaml_template/1/${templateId}/delete`,
-            { headers },
-          )
-        ).status(),
-      ).toBe(200);
+    if (taskId > 0) {
+      const deleteResult = await page.request.delete(
+        `/api/k8s/yaml_task/1/${taskId}/delete`,
+        {
+          headers,
+        },
+      );
+      expect(deleteResult.status()).toBe(200);
+    }
+    if (templateId > 0) {
+      const deleteResult2 = await page.request.delete(
+        `/api/k8s/yaml_template/1/${templateId}/delete`,
+        { headers },
+      );
+      expect(deleteResult2.status()).toBe(200);
+    }
     const objects = await page.request.get('/api/k8s/configmap/1/list', {
       headers,
       params: {
@@ -1655,17 +1671,17 @@ test('YAML templates and tasks complete a real isolated dry-run without creating
         size: 10,
       },
     });
-    if (objects.ok())
-      for (const item of (await objects.json()).data.items)
-        if (item.name === resourceName && item.namespace === namespace)
-          expect(
-            (
-              await page.request.delete(
-                `/api/k8s/configmap/1/${namespace}/${resourceName}/delete`,
-                { headers },
-              )
-            ).status(),
-          ).toBe(200);
+    if (objects.ok()) {
+      const objectsJson2 = await objects.json();
+      for (const item of objectsJson2.data.items)
+        if (item.name === resourceName && item.namespace === namespace) {
+          const deleteResult3 = await page.request.delete(
+            `/api/k8s/configmap/1/${namespace}/${resourceName}/delete`,
+            { headers },
+          );
+          expect(deleteResult3.status()).toBe(200);
+        }
+    }
   }
 });
 
@@ -1749,8 +1765,10 @@ test('expired login preserves its dialog and rebuilds current route permissions'
     ))
       input.value = '';
   });
-  expect((await profile).status()).toBe(200);
-  expect((await list).status()).toBe(200);
+  const resolvedProfile = await profile;
+  expect(resolvedProfile.status()).toBe(200);
+  const resolvedList2 = await list;
+  expect(resolvedList2.status()).toBe(200);
   await expect(dialog).not.toBeVisible();
   await expect(page).toHaveURL(/system_user/);
   await expect(page.locator('.ops-page h1')).toHaveText('用户管理');
@@ -1833,7 +1851,8 @@ test('notification configuration uses real pagination, logs and safe responsive 
     );
     await search.fill(nonce);
     await search.press('Enter');
-    const requestURL = new URL((await searched).url());
+    const resolvedSearched2 = await searched;
+    const requestURL = new URL(resolvedSearched2.url());
     expect(requestURL.searchParams.get('page_size')).toBe('10');
     expect(requestURL.searchParams.has('size')).toBe(false);
     await expect(page.locator('.name-text')).toHaveCount(2);
@@ -1853,7 +1872,8 @@ test('notification configuration uses real pagination, logs and safe responsive 
         .locator('.ant-select-dropdown:visible')
         .getByText('邮件', { exact: true })
         .click();
-      expect((await filtered).status()).toBe(200);
+      const resolvedFiltered = await filtered;
+      expect(resolvedFiltered.status()).toBe(200);
       await expect(page.locator('.name-text')).toHaveCount(1);
       await expect(page.locator('.name-text')).toHaveText(
         requireFixtureValue(names[0]),
@@ -2202,7 +2222,8 @@ test('workorder instance completes a real template draft submit and approval lif
     ]);
     expect(approved.status()).toBe(200);
     await expect(row).toContainText('已完成');
-    expect((await api(`instance/detail/${instance.id}`)).status).toBe(4);
+    const apiResult = await api(`instance/detail/${instance.id}`);
+    expect(apiResult.status).toBe(4);
     await page
       .getByRole('dialog')
       .filter({ hasText: '工单详情' })

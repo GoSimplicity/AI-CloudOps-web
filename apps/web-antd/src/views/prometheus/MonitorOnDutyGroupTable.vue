@@ -634,7 +634,7 @@ const fetchDutyGroups = async (): Promise<void> => {
 
 // 初始化函数
 const initializeData = async (): Promise<void> => {
-  const id = parseInt(route.query.id as string) || 0;
+  const id = Number.parseInt(route.query.id as string) || 0;
 
   if (id) {
     dutyGroupId.value = id;

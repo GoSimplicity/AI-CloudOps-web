@@ -4,9 +4,7 @@
 
 The web console for **AI-CloudOps**, an open-source, AI-assisted cloud-native operations platform. It provides the user interface for Kubernetes management, the service tree / CMDB, Prometheus monitoring and alerting, ticketing, scheduled jobs, RBAC, and the AIOps features (root cause analysis, load prediction, operations assistant and auto-remediation).
 
-[![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js&logoColor=white)](https://vuejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js&logoColor=white)](https://vuejs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/) [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## Local demonstration
 

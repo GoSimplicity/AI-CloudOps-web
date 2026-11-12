@@ -776,9 +776,7 @@ const handleEditScrapeJob = (record: MonitorScrapeJob): void => {
     tls_ca_content: record.tls_ca_content || '',
     tls_ca_file_path: record.tls_ca_file_path || '',
     tree_node_ids: Array.isArray(record.tree_node_ids)
-      ? record.tree_node_ids
-          .map((id: any) => Number(id))
-          .filter((n: any) => !Number.isNaN(n))
+      ? record.tree_node_ids.map(Number).filter((n: any) => !Number.isNaN(n))
       : [],
   };
 
@@ -1044,7 +1042,7 @@ const saveScrapeJob = async (): Promise<void> => {
       enable: enableSwitch ? 1 : 2,
       pool_id: poolId,
       tags: [...draft.tags],
-      tree_node_ids: draft.tree_node_ids.map((value) => String(value)),
+      tree_node_ids: draft.tree_node_ids.map(String),
     };
     if (editing) {
       if (!validPositiveId(id)) return;
@@ -1122,7 +1120,7 @@ const validateYaml = (): void => {
       // 检查是否是列表项
       if (line.startsWith('-')) {
         // 验证列表项格式
-        const itemContent = line.substring(1).trim();
+        const itemContent = line.slice(1).trim();
         if (itemContent === '') {
           isValid = false;
           errorMessage = `第 ${i + 1} 行：列表项不能为空`;
@@ -1356,9 +1354,7 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
     }
   };
   dfs(treeData.value || []);
-  const idNums = ids
-    .map((id: any) => Number(id))
-    .filter((n: any) => !Number.isNaN(n));
+  const idNums = ids.map(Number).filter((n: any) => !Number.isNaN(n));
   return idNums.map((id: number) => idToName.get(id) || String(id));
 };
 </script>

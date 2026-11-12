@@ -162,7 +162,7 @@ const row = (name: string) => ({
 function button(text: string) {
   const target = required(wrapper)
     .findAll('button')
-    .find((item) => item.text().replace(/\s/g, '').includes(text));
+    .find((item) => item.text().replaceAll(/\s/g, '').includes(text));
   expect(target, `button ${text}`).toBeDefined();
   return required(target);
 }
@@ -253,7 +253,7 @@ describe.each(pages)('$title 页面真实控件', (page) => {
           '.ant-modal-footer button',
         ),
       ].find((item) =>
-        /^(取消|Cancel)$/.test(item.textContent?.replace(/\s/g, '') || ''),
+        /^(?:取消|Cancel)$/.test(item.textContent?.replace(/\s/g, '') || ''),
       );
       expect(cancel).toBeDefined();
       expect(document.querySelector('.ant-modal-title')?.textContent).toContain(

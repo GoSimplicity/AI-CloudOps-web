@@ -1677,7 +1677,7 @@ const handleTemplateSubmit = async () => {
 const ensureCurrentAssigneeInList = async (): Promise<void> => {
   const currentAssigneeId = instanceDialog.form.assignee_id;
 
-  if (currentAssigneeId == null) {
+  if (currentAssigneeId === null || currentAssigneeId === undefined) {
     return;
   }
 
@@ -1732,7 +1732,10 @@ const handleEditInstance = async (row: WorkorderInstanceItem) => {
     if (request !== formRequest) return;
     if (res) {
       instanceDialog.form = {
-        assignee_id: res.assignee_id == null ? undefined : res.assignee_id,
+        assignee_id:
+          res.assignee_id === null || res.assignee_id === undefined
+            ? undefined
+            : res.assignee_id,
         description: res.description,
         due_date: res.due_date ? new Date(res.due_date) : undefined,
         form_data: res.form_data,
@@ -2502,7 +2505,8 @@ const saveInstance = async () => {
         process_id: instanceDialog.form.process_id,
         status: InstanceStatus.Draft,
         title: instanceDialog.form.title,
-        ...(instanceDialog.form.assignee_id == null
+        ...(instanceDialog.form.assignee_id === null ||
+        instanceDialog.form.assignee_id === undefined
           ? {}
           : { assignee_id: Number(instanceDialog.form.assignee_id) }),
         description: instanceDialog.form.description,

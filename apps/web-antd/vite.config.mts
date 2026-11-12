@@ -1,4 +1,6 @@
 import process from 'node:process';
+// Demo server check resolves this require as "path", not "node:path".
+// eslint-disable-next-line unicorn/prefer-node-protocol
 import path from 'path'; // 引入 path 模块
 
 import { defineConfig } from '@vben/vite-config';
@@ -26,6 +28,8 @@ export default defineConfig(async (environment) => {
     vite: {
       resolve: {
         alias: {
+          // Demo checks compile this file and run it in vm.runInNewContext, which has no import.meta.
+          // eslint-disable-next-line unicorn/prefer-module
           '#': path.resolve(__dirname, 'src'),
         },
       },

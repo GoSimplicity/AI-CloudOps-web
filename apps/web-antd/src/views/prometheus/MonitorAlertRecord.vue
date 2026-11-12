@@ -273,19 +273,21 @@ const formRules = {
         }
         // 支持 IP:PORT 格式，如 192.168.1.100:9090 或 localhost:9090
         const ipPortPattern =
-          /^(([\dA-Za-z]|[\dA-Za-z][\dA-Za-z\-]*[\dA-Za-z])\.)*([\dA-Za-z]|[\dA-Za-z][\dA-Za-z\-]*[\dA-Za-z])(:\d+)?$/;
+          /^(?:(?:[\da-z]|[\da-z][\da-z-]*[\da-z])\.)*(?:[\da-z]|[\da-z][\da-z-]*[\da-z])(?::\d+)?$/i;
         if (!ipPortPattern.test(value)) {
           return Promise.reject(
-            '请输入有效的IP地址，如 192.168.1.100:9090 或 localhost:9090',
+            new Error(
+              '请输入有效的IP地址，如 192.168.1.100:9090 或 localhost:9090',
+            ),
           );
         }
         // 如果包含端口，验证端口范围
         if (value.includes(':')) {
           const portStr = value.split(':')[1];
           if (portStr) {
-            const port = parseInt(portStr);
+            const port = Number.parseInt(portStr);
             if (port < 1 || port > 65_535) {
-              return Promise.reject('端口必须在1-65535之间');
+              return Promise.reject(new Error('端口必须在1-65535之间'));
             }
           }
         }
@@ -339,7 +341,9 @@ const formatFullDateTime = (timestamp: string): string => {
 
 const truncateText = (text: string, maxLength: number): string => {
   if (!text) return '';
-  return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+  return text.length > maxLength
+    ? `${text.slice(0, Math.max(0, maxLength))}...`
+    : text;
 };
 
 // 更新统计数据

@@ -54,13 +54,10 @@ export const HTTP_BAD_REQUEST_DETAIL_MAX_LENGTH = 200;
 
 /** 后端 400 原文：取 data.message（兼容 data.error.message），去换行、截断；没有可用原文返回空串 */
 function readBadRequestDetail(data: any): string {
-  const raw =
-    typeof data?.message === 'string'
-      ? data.message
-      : typeof data?.error?.message === 'string'
-        ? data.error.message
-        : '';
-  const text = raw.replace(/\s*[\n\r]+\s*/g, ' ').trim();
+  let raw = '';
+  if (typeof data?.message === 'string') raw = data.message;
+  else if (typeof data?.error?.message === 'string') raw = data.error.message;
+  const text = raw.replaceAll(/\s*[\n\r]+\s*/g, ' ').trim();
   return [...text].slice(0, HTTP_BAD_REQUEST_DETAIL_MAX_LENGTH).join('');
 }
 
@@ -385,11 +382,10 @@ function createRequestClient(baseURL: string) {
         );
       }
       // 其它业务错误打上标记，由下方通用错误拦截器弹后端原文并标记已提示
-      const safeMessage = eventRequest
-        ? '通知事件操作未完成，请先核对当前状态'
-        : managedRequest
-          ? '托管资源操作未完成，请先核对当前状态'
-          : msg;
+      let safeMessage = msg;
+      if (eventRequest) safeMessage = '通知事件操作未完成，请先核对当前状态';
+      else if (managedRequest)
+        safeMessage = '托管资源操作未完成，请先核对当前状态';
       throw createBusinessError(status, safeMessage);
     },
   });

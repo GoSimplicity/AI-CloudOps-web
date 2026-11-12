@@ -4,7 +4,8 @@ export function encodeCsv(rows: unknown[][]): string {
     .map((row) =>
       row
         .map((value) => {
-          const text = value == null ? '' : String(value);
+          const text =
+            value === null || value === undefined ? '' : String(value);
           const safe = /^[\s\u0000-\u001F]*[+=@-]/.test(text)
             ? `'${text}`
             : text;

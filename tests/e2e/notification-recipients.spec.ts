@@ -8,11 +8,11 @@ import { requireFixtureValue } from '../../internal/test-utils/required-fixture-
 function password() {
   if (process.env.CLOUDOPS_TEST_PASSWORD)
     return process.env.CLOUDOPS_TEST_PASSWORD;
-  if (!process.env.CLOUDOPS_TEST_ENV_FILE) return undefined;
+  if (!process.env.CLOUDOPS_TEST_ENV_FILE) return;
   return readFileSync(process.env.CLOUDOPS_TEST_ENV_FILE, 'utf8')
     .match(/^BOOTSTRAP_ADMIN_PASSWORD=(.*)$/m)?.[1]
     ?.trim()
-    .replace(/^['"]|['"]$/g, '');
+    .replaceAll(/^["']|["']$/g, '');
 }
 const routePath = (path: string) =>
   process.env.CLOUDOPS_ROUTER_HISTORY === 'hash' ? `/#${path}` : path;
@@ -33,7 +33,7 @@ test('notification department and explicit addresses persist disabled and preser
   page.on('pageerror', (error) => runtimeErrors.push(error.message));
   page.on('request', (request) => {
     const path = new URL(request.url()).pathname;
-    if (/^\/api\/workorder\/notification\/(test\/send|send)$/.test(path))
+    if (/^\/api\/workorder\/notification\/(?:test\/send|send)$/.test(path))
       sends.push(path);
   });
   // A regression must not create an enabled rule during acceptance
@@ -73,12 +73,14 @@ test('notification department and explicit addresses persist disabled and preser
     expect(result.code, path.split('?')[0]).toBe(0);
     return result.data;
   };
-  const findNotifications = async () =>
-    (
-      await api(
-        `workorder/notification/list?page=1&page_size=100&name=${nonce}`,
-      )
-    ).items.filter((item: { name: string }) => names.includes(item.name));
+  const findNotifications = async () => {
+    const apiResult = await api(
+      `workorder/notification/list?page=1&page_size=100&name=${nonce}`,
+    );
+    return apiResult.items.filter((item: { name: string }) =>
+      names.includes(item.name),
+    );
+  };
   const save = async (page: Page, method: string, endpoint: string) => {
     const dialog = page.getByRole('dialog', {
       exact: true,
@@ -94,7 +96,8 @@ test('notification department and explicit addresses persist disabled and preser
     ]);
     expect(response.request().postDataJSON().status).toBe(2);
     expect(response.status()).toBe(200);
-    expect((await response.json()).code).toBe(0);
+    const responseJson = await response.json();
+    expect(responseJson.code).toBe(0);
     await expect(dialog).not.toBeVisible();
   };
   let departmentId: number | undefined;
@@ -238,7 +241,7 @@ test('notification department and explicit addresses persist disabled and preser
       .evaluate((element) => {
         const bounds = element.getBoundingClientRect();
         return {
-          controls: Array.from(element.children)
+          controls: [...element.children]
             .filter((child) => child.tagName !== 'LEGEND')
             .map((child) => {
               const rect = child.getBoundingClientRect();
@@ -289,7 +292,8 @@ test('notification department and explicit addresses persist disabled and preser
           headers: { Authorization: `Bearer ${token}` },
         },
       );
-      expect((await unsupported.json()).code).not.toBe(0);
+      const unsupportedJson = await unsupported.json();
+      expect(unsupportedJson.code).not.toBe(0);
       const unchanged = await api(`workorder/notification/detail/${custom.id}`);
       expect(unchanged.trigger_type).toBe('immediate');
       expect(unchanged.status).toBe(2);

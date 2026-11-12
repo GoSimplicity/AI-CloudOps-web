@@ -140,7 +140,7 @@ describe('rCA请求与账户边界', () => {
     await flushPromises();
     state().showClearAllModal();
     await nextTick();
-    const cancel = Array.from(document.querySelectorAll('button')).find(
+    const cancel = [...document.querySelectorAll('button')].find(
       (button) => button.textContent?.replace(/\s/g, '') === '取消',
     );
     expect(cancel).toBeTruthy();

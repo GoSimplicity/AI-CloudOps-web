@@ -395,8 +395,11 @@ it('重复点击提交只创建一次，错误保留表单便于重试', async (
 it.each([2, 3, 4])('已支持的云厂商 %i 可读取并编辑账户', async (provider) => {
   selectedProvider = provider;
   await start();
+  let providerName = '华为云';
+  if (provider === 2) providerName = '腾讯云';
+  else if (provider === 3) providerName = 'AWS';
   expect(required(wrapper).find('.account-table').text()).toContain(
-    provider === 2 ? '腾讯云' : provider === 3 ? 'AWS' : '华为云',
+    providerName,
   );
   const button = required(wrapper)
     .find('[aria-label="edit"]')

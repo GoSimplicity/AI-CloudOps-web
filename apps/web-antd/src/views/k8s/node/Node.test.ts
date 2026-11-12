@@ -78,7 +78,7 @@ async function mountPage() {
 
 function bodyButton(text: string) {
   return [...document.body.querySelectorAll('button')].find((button) =>
-    (button.textContent ?? '').replace(/\s/g, '').includes(text),
+    (button.textContent ?? '').replaceAll(/\s/g, '').includes(text),
   ) as HTMLButtonElement | undefined;
 }
 
@@ -101,7 +101,7 @@ function modalRoot() {
 
 function saveButton() {
   return [...(modalRoot()?.querySelectorAll('button') ?? [])].find((button) =>
-    (button.textContent ?? '').replace(/\s/g, '').includes('保存更改'),
+    (button.textContent ?? '').replaceAll(/\s/g, '').includes('保存更改'),
   ) as HTMLButtonElement | undefined;
 }
 

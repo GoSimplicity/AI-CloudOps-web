@@ -747,7 +747,7 @@ export function useClusterRoleBindingPage() {
   };
 
   const removeFilterLabel = (key: string) => {
-    delete filterLabels.value[key];
+    Reflect.deleteProperty(filterLabels.value, key);
     currentPage.value = 1;
     fetchClusterRoleBindings();
   };
@@ -836,11 +836,11 @@ export function useClusterRoleBindingPage() {
   };
 
   const removeLabelField = (key: string) => {
-    delete createFormModel.value.labels[key];
+    Reflect.deleteProperty(createFormModel.value.labels, key);
   };
 
   const removeAnnotationField = (key: string) => {
-    delete createFormModel.value.annotations[key];
+    Reflect.deleteProperty(createFormModel.value.annotations, key);
   };
 
   // 编辑表单字段操作
@@ -859,11 +859,11 @@ export function useClusterRoleBindingPage() {
   };
 
   const removeEditLabelField = (key: string) => {
-    delete editFormModel.value.labels[key];
+    Reflect.deleteProperty(editFormModel.value.labels, key);
   };
 
   const removeEditAnnotationField = (key: string) => {
-    delete editFormModel.value.annotations[key];
+    Reflect.deleteProperty(editFormModel.value.annotations, key);
   };
 
   // YAML 操作辅助函数

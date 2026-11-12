@@ -105,7 +105,10 @@ function createYamlPage(text: string) {
   return page;
 }
 
-const secretVueSource = readFileSync(resolve(__dirname, 'Secret.vue'), 'utf8');
+const secretVueSource = readFileSync(
+  resolve(import.meta.dirname, 'Secret.vue'),
+  'utf8',
+);
 const fold7 = (text: string, indent: string) =>
   required(text.match(/.{1,7}/g))
     .map((part) => `${indent}${part}`)

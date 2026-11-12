@@ -47,7 +47,7 @@ describe('isNotifiedByRequestLayer（复审 P3-3）', () => {
 
   it('未经请求层提示的错误、非对象：返回 false', () => {
     expect(isNotifiedByRequestLayer(new Error('local'))).toBe(false);
-    expect(isNotifiedByRequestLayer(undefined)).toBe(false);
+    expect(isNotifiedByRequestLayer()).toBe(false);
     expect(isNotifiedByRequestLayer('x')).toBe(false);
     expect(getHttpErrorNoticeKey('x')).toBeUndefined();
   });

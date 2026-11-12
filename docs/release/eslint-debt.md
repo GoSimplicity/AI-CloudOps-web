@@ -26,18 +26,18 @@
 
 最终剩余主要规则：
 
-| 规则 | 数量 |
-| --- | ---: |
-| `perfectionist/sort-objects` | 7253 |
-| `perfectionist/sort-vue-attributes` | 5384 |
-| `perfectionist/sort-named-imports` | 952 |
-| `@typescript-eslint/no-non-null-assertion` | 857 |
-| `perfectionist/sort-imports` | 748 |
-| `vue/attribute-hyphenation` | 531 |
-| `no-use-before-define` | 338 |
-| `vue/html-closing-bracket-newline` | 275 |
-| `perfectionist/sort-union-types` | 249 |
-| `unicorn/catch-error-name` | 178 |
+| 规则                                       | 数量 |
+| ------------------------------------------ | ---: |
+| `perfectionist/sort-objects`               | 7253 |
+| `perfectionist/sort-vue-attributes`        | 5384 |
+| `perfectionist/sort-named-imports`         |  952 |
+| `@typescript-eslint/no-non-null-assertion` |  857 |
+| `perfectionist/sort-imports`               |  748 |
+| `vue/attribute-hyphenation`                |  531 |
+| `no-use-before-define`                     |  338 |
+| `vue/html-closing-bracket-newline`         |  275 |
+| `perfectionist/sort-union-types`           |  249 |
+| `unicorn/catch-error-name`                 |  178 |
 
 后续优先处理可明确证明保持行为的声明/属性排序，再处理类型与运行逻辑告警。不能对含调用、spread、计算属性和依赖的对象盲目重排求值顺序；只有全仓实际零 error/零 warning 后才接入严格门禁。本轮未访问生产或真实云/模型/通知服务，没有部署。
 
@@ -146,7 +146,6 @@
 - 重新执行完整 ESLint 扫描：**12254 errors、5 warnings**，退出码1；`no-empty` 已为0。仍未宣称全仓 lint 通过。
 - 前一运行逻辑阶段的完整2153项测试和11项构建保留原范围，本次采用模块复验，没有把它们伪写为本次重跑结果。没有执行真实Kubernetes或生产操作。
 
-
 ## 阶段八：统一Vue闭合换行的格式校验职责
 
 真实根配置可复现：Prettier已格式化的inline链接有2条Vue闭合换行错误，却没有Prettier错误；应用Vue规则提供的fix后，Prettier重新恢复原格式。Vue实际SSR渲染确认原始/格式化内容的inline文本及空白相同。该布局用于保留inline whitespace，不能靠反复改产品模板解决两个formatter的回摆。
@@ -168,7 +167,6 @@
 
 最后完整扫描为11968 errors、5 warnings；主要剩余对象排序7234、模块导入排序685、非空断言354、Vue属性连字符531、复杂Vue属性排序516、定义前使用338、union排序193、对象类型排序126等。5条warning均为HTML渲染相关。对象插入顺序、模块加载顺序、Vue类型宏及复杂表达式具有实际语义，仍需逐模块验证；不能盲目重排或降低语义/安全校验来清计数。已实证的重复格式职责仅按阶段八指定范围去重。没有宣称全仓ESLint清零、真实Kubernetes已验或已上线。
 
-
 ## 阶段九：去除测试中无效的类型标记
 
 TypeScript 检查确认 `SshTerminal.test.ts` 的6处断言作用于既有 any 值，不产生类型收窄。仅删除这些 `!`，没有新增 any、as、缺失值回退或运行时 helper；编译 JavaScript 保持不变，随后一处正常排版调整的运行 AST 也保持相同。
@@ -177,7 +175,6 @@ TypeScript 检查确认 `SshTerminal.test.ts` 的6处断言作用于既有 any �
 - 完整 ESLint 实扫为**11962 errors、5 warnings**；相对上一阶段只减少6条非空断言，逐规则未增加其它诊断，非空断言354→348。
 - 本次没有重跑前述2160项全套或产品构建，不偷换其验证范围；没有真实SSH/云操作或上线。
 
-
 ## 阶段十：测试前置条件显式检查（2026-11-03）
 
 10个自动修复、Cron、CMDB、SSH与Secret测试文件消除124处非空断言。Secret测试直接使用真实模块类型，去掉宽泛兼容cast；其余使用局部必需值检查，前置条件缺失仍立即失败，不删除或放宽原业务断言。
@@ -185,7 +182,6 @@ TypeScript 检查确认 `SshTerminal.test.ts` 的6处断言作用于既有 any �
 - 10文件188项定向测试、应用类型检查通过。
 - 定向ESLint逐规则比对仅减少124处非空断言，其它诊断不变；仍未全仓lint通过。
 - 本阶段没有修改产品代码、共享规则或外部服务。
-
 
 ## 阶段十一：SFC结构与组件命名（2026-11-03）
 
@@ -203,7 +199,6 @@ TypeScript 检查确认 `SshTerminal.test.ts` 的6处断言作用于既有 any �
 - 新helper及测试定向ESLint为0 errors/0 warnings；no-unsafe-finally消除7处，仍保留其它既有E2E lint债。
 - 工单4文件的8个NodeJS.Timeout改为ReturnType<typeof setTimeout>；真实Vue脚本编译的JavaScript逐字相同，模板/样式不变；应用类型检查通过。
 - Playwright仅执行`--list`，收集29项成功；四个修改后的浏览器场景需后续固定三仓CI实际验收，不能将收集成功说成业务验收通过。未访问生产或真实云。
-
 
 ## 阶段十三：应用测试非空断言收尾（2026-11-03）
 
@@ -239,7 +234,6 @@ TypeScript 检查确认 `SshTerminal.test.ts` 的6处断言作用于既有 any �
 - 整合全量139文件2191项单元测试通过。此前11项产品构建证据保持原范围，本阶段只修改工具、CI及回归。
 - **覆盖边界**：现有JS/TS配置关闭no-undef，需各自类型/运行检查补充；SFC尚未启用TS非空断言规则。额外TS AST盘点发现33个Vue脚本仍106处NonNullExpression，此门禁不代表全代码不存在该语法，下一阶段按模块修复后再统一SFC规则。
 
-
 ## 阶段十七：声明式组件属性拼写统一（2026-11-03）
 
 28个非Prometheus SFC的473处属性规范为连字符，仅选择应用实际注册的AntD组件且真实声明的14种props。跳过v-model、onX处理器、未知或局部遮蔽组件、无声明props的TableColumn占位组件及过期位置；没有调整模板求值次序。脚本/样式字节相同，模板AST只允许目标prop拼写差异，真实模板重新编译无错。
@@ -264,12 +258,11 @@ TypeScript 检查确认 `SshTerminal.test.ts` 的6处断言作用于既有 any �
 - 四文件真实ESLint逐规则计数与HEAD完全相同，没有新增诊断或规则调整。这13处属于SFC语法盲点收敛，不能记作现有lint诊断下降。
 - 未对全量或产品构建做重复声明；下一次整合冻结后统一执行。没有真实模型/RCA服务访问。
 
-
 ## 阶段二十：有界静态表格列配置排序（2026-11-03）
 
 28页266个纯标量列对象按现有规则排序，列数组次序和值保持不变。仅接const直接数组、脚本没有其它引用、模板直接绑定真实a-table且现有slot只读column.key/dataIndex的白名单；排除Prometheus、三个回滚页面、含sorter函数的ClusterRoleBinding及其它动态/外逸配置。
 
-- 安装AntD4.2.6会把原列对象通过__originColumn__交给slot，因此对象键次序并非普遍无语义。逐页确认当前slot不枚举键；实际28页原/新真实列、代表行及当前完整slot的SSR HTML相同，Object.keys负对照确实产生差异。页面helper/权限为隔离fixture，没有初始化外部API，不当作业务端到端。
+- 安装AntD4.2.6会把原列对象通过**originColumn**交给slot，因此对象键次序并非普遍无语义。逐页确认当前slot不枚举键；实际28页原/新真实列、代表行及当前完整slot的SSR HTML相同，Object.keys负对照确实产生差异。页面helper/权限为隔离fixture，没有初始化外部API，不当作业务端到端。
 - 主代理再次运行源码及SFC编译AST证明，只有选定对象属性排列差异；模板与样式字节相同。真实ESLint减少426条sort-objects，其余逐文件规则计数完全不变。
 - 13相关文件356项测试和应用类型检查通过；SSR原/新均出现4条已有fixed-left列警告，保留数组次序而未顺带改列布局。没有宣称本阶段全量或浏览器已复跑。
 
@@ -403,7 +396,6 @@ Process清除7处不安全ID，编辑缺ID不能退回create。真实BasicConfig
 
 - 相关值班表/列表/公共颜色3文件50项及应用类型检查通过；6色盘新旧2010个Unicode/长字符串比较相同。
 - 该阶段采用模块验证，前一3069全量及11构建保留原范围，没有伪写为本次重跑。未做真实排班或告警池写入。
-
 
 ## 阶段三十四：澄清注释中的完成态示例
 
@@ -677,9 +669,9 @@ Instance、Notification和WorkorderComments三个SFC搬移46段完整const-arrow
 
 ## 阶段六十七：自有映射值查询与局部字典排序
 
-16个源文件的24处局部字典读取改为共享`getOwnLookupValue`，只返回自有字段，未知的constructor、__proto__、toString和继承getter不再越过原fallback。调用者原`|| fallback`保持，已知值、0/false/空串及key求值时机不变；这是明确的未知键硬化，不把它描述为所有JavaScript环境下完全没有行为变化。
+16个源文件的24处局部字典读取改为共享`getOwnLookupValue`，只返回自有字段，未知的constructor、**proto**、toString和继承getter不再越过原fallback。调用者原`|| fallback`保持，已知值、0/false/空串及key求值时机不变；这是明确的未知键硬化，不把它描述为所有JavaScript环境下完全没有行为变化。
 
-- 使用ES2015已有的hasOwnProperty.call，不引入Object.hasOwn运行时要求。对本批只读、不逃逸、无type反射、无computed/duplicate/__proto__/spread/getter/method且值为primitive的24个对象，建立自有读取后再安全排序151个字段。不对任意对象、列配置、样式或有副作用值机械排序；不承诺Proxy、own accessor或不符合number|string合同的对象key无副作用。
+- 使用ES2015已有的hasOwnProperty.call，不引入Object.hasOwn运行时要求。对本批只读、不逃逸、无type反射、无computed/duplicate/**proto**/spread/getter/method且值为primitive的24个对象，建立自有读取后再安全排序151个字段。不对任意对象、列配置、样式或有副作用值机械排序；不承诺Proxy、own accessor或不符合number|string合同的对象key无副作用。
 - 仅24处读取、选定字段顺序及16个纯helper导入变化，旧导入声明原文顺序保持。独立TS AST还原排序和guard后，各实际函数与原文相同；已知151键与原函数相同，未知/原型键fallback及24个继承getter零调用通过，ES2015编译验证通过。
 - 16源文件定向1372→1307净减65：选中sort-objects减少64，RCA仅新导入位置同时减少1条旧sort-imports，其余逐文件规则不增；helper与测试lint0。Instance和WorkorderComments不在本批，未与阶段66写入交叉。
 - 206项关联测试和最终应用类型通过，Root统一全量166文件3619测试、11构建任务通过。新增helper测试直接验证未知键、惰性fallback、同名遮蔽和继承getter，未新增镜像测试。没有改变规则、ignore或调用真实服务，未上线。
@@ -775,7 +767,7 @@ SystemRole、Secret、MonitorOnDutyGroup和MonitorScrapeJob四个SFC各搬移一
 
 ## 阶段七十八：AntD Modal具名配置的静态属性顺序
 
-19个文件（6个SFC、13个TS）仅整理73个直接Modal.confirm/warning/error配置的属性顺序，净减149条sort-objects。TypeScript真实scope/symbol确认Modal来自ant-design-vue命名导入，配置只含title/content/centered/width/okText/cancelText/onOk/okType/onCancel九种已声明字段；值仅为primitive、无插值template或完整函数表达式，排除member读取、call、spread、computed/getter、赋值、重复字段及__proto__。
+19个文件（6个SFC、13个TS）仅整理73个直接Modal.confirm/warning/error配置的属性顺序，净减149条sort-objects。TypeScript真实scope/symbol确认Modal来自ant-design-vue命名导入，配置只含title/content/centered/width/okText/cancelText/onOk/okType/onCancel九种已声明字段；值仅为primitive、无插值template或完整函数表达式，排除member读取、call、spread、computed/getter、赋值、重复字段及**proto**。
 
 - 已安装AntD4.2.6的index/confirm/ConfirmDialog/ActionButton链先复制配置，再按固定具名props读取和调用content、onOk/onCancel。排序改变输入字典的插入序，九个具名字段映射和消费者回调位置保持，不把该结论泛化到其它对象。所有完整property及函数体原文multiset保持，数组、业务调用与其它AST顺序不变；73配置无property外部注释归属歧义或directive，回调内部注释随完整原文保持。
 - 落盘前在两个独立fresh JS process/JSDOM及库module graph中，以九字段原序/排序各运行10个实际Modal DOM场景，包含每次content render的完整trace一致。标题、正文、按钮文字、危险类型、宽度、居中、ok/cancel/程序关闭，以及Promise resolve关闭和reject保留窗口的行为保持；拒绝路径仅按精确Fake Error身份记录SDK预期事件，未知错误仍使探针失败。使用Fake回调，不执行业务API。
@@ -784,12 +776,12 @@ SystemRole、Secret、MonitorOnDutyGroup和MonitorScrapeJob四个SFC各搬移一
 
 ## 阶段七十九：未知显示键的own lookup修复
 
-AutoFix六个公开formatter及NotificationEvents的eventsNames、states共八个字典、十处读取复用既有getOwnLookupValue。此前string输入constructor、__proto__或toString会命中继承属性，返回function/object而绕过原fallback；继承getter还可能执行并观察字典插入序。现在仅返回owned值，非own键走原fallback，不读取继承getter；这是明确的显示行为修复，不冒称纯重排等价。
+AutoFix六个公开formatter及NotificationEvents的eventsNames、states共八个字典、十处读取复用既有getOwnLookupValue。此前string输入constructor、**proto**或toString会命中继承属性，返回function/object而绕过原fallback；继承getter还可能执行并观察字典插入序。现在仅返回owned值，非own键走原fallback，不读取继承getter；这是明确的显示行为修复，不冒称纯重排等价。
 
 - formatter保留原有||链、空输入和普通future key的原文本/默认颜色/图标合同；事件名称与列表状态、详情标题、投递状态均保留??及原“其他事件”/“未知状态”fallback。合法owned值保持，既有helper的0/false/空串合同由原测试继续覆盖，未改helper或换fallback运算符。
 - 只有守卫后的eventsNames顶层keys排序；states声明及Object.entries→eventStates原文和下拉顺序保持，所有按钮closed状态检查原字节保持。PV配置、其它闭集状态map及其它索引表未混改，未知状态显示不会授权取消/重试/投递动作。
 - 两个现有测试文件新增30项必要回归，保留全部旧statement、断言及fixture。最终HEAD原生产代码加载下26项新增用例失败、24项通过（含四项普通future键正向）；修复后50项全部通过。六formatter覆盖合法/空/未知键与继承getter；真实AntD挂载和Fake API覆盖事件名称、列表状态、详情标题、投递行的constructor/proto/toString/future及局部字典canary getter，验证回退渲染且无写请求。
-- getter测试不扩写Object.prototype：formatter对既有__proto__ accessor经真实descriptor类型guard后spy并finally恢复，通知在局部字典设置私有prototype并finally恢复。fixture使用unknown和明确对象guard，没有用any或强制断言绕过类型检查，也没有规则豁免；不以修改旧期望掩盖原错误。
+- getter测试不扩写Object.prototype：formatter对既有**proto** accessor经真实descriptor类型guard后spy并finally恢复，通知在局部字典设置私有prototype并finally恢复。fixture使用unknown和明确对象guard，没有用any或强制断言绕过类型检查，也没有规则豁免；不以修改旧期望掩盖原错误。
 - 生产AST复核仅有十处guard调用、必要import和单个eventsNames排序，原控制流及fallback运算符保持；模板仅四处读取替换，原binding及style保持。四文件lint77→71 errors，各规则无新增，净减6条sort-objects；六formatter与状态读取改动是功能修复而非计数成果。
 - 最终源码全Web166文件3649项测试及应用类型检查通过，包含30项新增回归。没有改CI、规则、ignore或lock，没有新增镜像测试或重复构建；没有真实模型、通知、云、集群或外部API操作，未上线。
 
@@ -852,11 +844,11 @@ MonitorConfig的Name统一为1..255、InstanceKey（历史API字段instance_ip�
 
 ## 阶段八十六：本地同步hook门面的分组解构绑定顺序
 
-18个K8s页面仅整理从对应本地use*Page同步函数返回值中解构的绑定，不修改hook提供方或任何业务表达式。1515个字段的目标诊断原上界为769；所有列表均有语义分组注释，本阶段只在原组内排序，保持标题原序及每组完整绑定集合，实际净减471条sort-objects，跨组的298条不为清数强行移动。CSS候选另行只读量化后仅有一个字面量对象的2条诊断，未混入本阶段。
+18个K8s页面仅整理从对应本地use\*Page同步函数返回值中解构的绑定，不修改hook提供方或任何业务表达式。1515个字段的目标诊断原上界为769；所有列表均有语义分组注释，本阶段只在原组内排序，保持标题原序及每组完整绑定集合，实际净减471条sort-objects，跨组的298条不为清数强行移动。CSS候选另行只读量化后仅有一个字面量对象的2条诊断，未混入本阶段。
 
 - TypeScript真实词法symbol确认18个调用均绑定到对应相对路径的named import，提供方是直接export、非async/generator的同步function，导出binding无其它本地引用、写入或eval。每个函数根层return均是完整shorthand自有数据属性的原生对象字面量，选中字段全部存在；没有getter、Proxy、spread、动态fallback、默认值、rest、computed或嵌套binding。提供方源码SHA前后保持。
 - 只改变这18个const声明内部的BindingElement次序，完整元素raw、alias、同声明其它内容、RHS调用与所有其它源码逐字保持。私有语言消费探针对原/新真实binding片段使用同一个plain own-data facade，1515个值均以触达属性即抛错的Proxy检查：绑定引用一致，没有读取ref.value或其它值成员；这是own-data解构合同证明，不冒称执行了18个实际hook或真实集群请求。
-- Vue绑定分类及生产DOM/SSR模板输出逐字一致，模板/style和所有其它语句原文保持。编译后全script AST仅选中解构pattern及对应__returned__的私有shorthand次序变化；不能宣称内部对象的键顺序不变。18个页面均默认空__expose，实际Vue3.5.42运行时不将__isScriptSetup绑定暴露到普通ctx；当前生产代码和业务测试无setupState/__returned__反射或整map消费。现有业务无该内部次序观察，开发工具显示的内部绑定排列可不同，未以泛化的“对象无序”作为依据。
+- Vue绑定分类及生产DOM/SSR模板输出逐字一致，模板/style和所有其它语句原文保持。编译后全script AST仅选中解构pattern及对应**returned**的私有shorthand次序变化；不能宣称内部对象的键顺序不变。18个页面均默认空**expose，实际Vue3.5.42运行时不将**isScriptSetup绑定暴露到普通ctx；当前生产代码和业务测试无setupState/**returned**反射或整map消费。现有业务无该内部次序观察，开发工具显示的内部绑定排列可不同，未以泛化的“对象无序”作为依据。
 - 落盘源码精确匹配提案，分组标题、每组raw绑定集合及其它全AST通过核对。18文件实际lint1224→753 errors，0 warnings，逐文件各规则无新增；未重新扫描全仓，不以目标减法宣称新的全局基线。全Web现有167文件3692项单元测试和应用类型检查通过；对改动文件执行只读界面检测，无发现，未改变视觉设计。
 - 没有修改测试逻辑、CI、规则、ignore、lock、共享helper或backend，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。
 
@@ -901,8 +893,8 @@ MonitorConfig的Name统一为1..255、InstanceKey（历史API字段instance_ip�
 - 真实TS符号确认caller绑定到直接export的本地同步函数，返回门面为已完成构造的plain own-data对象；每个所用key均保证为最终自有数据字段。3个修改provider的生产runtime入口只有对应3个页面的flat解构，另有WorkflowInput对AutoFixTemplateKey的类型导入；没有生产namespace/reexport/dynamic入口、整门面传递或枚举观察。JSX/JS及测试调用方亦已盘点，没有把未知消费者作为安全依据。
 - provider只排序原注释组、空行组内连续已初始化的shorthand段。Cron的...toRefs(state)、AutoFix的operationOwner:scope.owner及任何非shorthand都保持原位，barrier前后字段集合不变；显式字段与展开字段无覆盖、duplicate为0。所有声明、initializer、watch/call、同statement的其它内容、RHS求值及其它源码原样保持，不跨spread改变覆盖结果或getter/call时点。
 - Cron的state是reactive直传的25个唯一own-data字段；实际TS symbol追踪147处引用，唯一bare escape是toRefs(state)，其它均为既有字段直接访问，无顶层delete、未知key或别名逃逸。实际Vue3.5.42 toRefs按现有key产生ref数据字段，完整return spread完成后形成新对象的自有数据属性。私有探针只运行源状态initializer/两个初始model构造器（enum使用Fake常量）及实际reactive/toRefs，核对25字段×前后两次共50个ref写入联动；未运行完整业务factory或请求。
-- 其余探针对160个解构字段使用触达value成员即抛错的opaque引用，确认只复制相同引用、不解ref.value；3个实际return片段的own descriptor和值关联相同，scope.owner与toRefs各保持原一次barrier轨迹。对象键插入顺序会变化，依据是当前消费者只按名读取；不是对任意对象无序或恶意全局prototype修改的泛化保证。13个SFC默认空expose，当前无setupState/__returned__反射或整map业务消费；开发工具内部显示次序可不同。
-- 完整source/编译script AST只允许上述段内次序及对应私有__returned__ shorthand次序变化，所有非位置semantic节点、固定barrier、alias raw、分组、语句顺序、模板/style和binding分类保持。全354个SFC的dev/prod共708组比较使用已保存before overlay与实际after磁盘、清transitive缓存，运行JS AST/DOM/SSR均0差异、两侧0错误。14个编辑文件被实际读取，其中13是本身SFC，另1是经WorkflowInput宏读取的AutoFix类型模块；Cron和RCA缓存两个TS当前无SFC宏consumer，不冒称全部provider均被宏使用。
+- 其余探针对160个解构字段使用触达value成员即抛错的opaque引用，确认只复制相同引用、不解ref.value；3个实际return片段的own descriptor和值关联相同，scope.owner与toRefs各保持原一次barrier轨迹。对象键插入顺序会变化，依据是当前消费者只按名读取；不是对任意对象无序或恶意全局prototype修改的泛化保证。13个SFC默认空expose，当前无setupState/**returned**反射或整map业务消费；开发工具内部显示次序可不同。
+- 完整source/编译script AST只允许上述段内次序及对应私有**returned** shorthand次序变化，所有非位置semantic节点、固定barrier、alias raw、分组、语句顺序、模板/style和binding分类保持。全354个SFC的dev/prod共708组比较使用已保存before overlay与实际after磁盘、清transitive缓存，运行JS AST/DOM/SSR均0差异、两侧0错误。14个编辑文件被实际读取，其中13是本身SFC，另1是经WorkflowInput宏读取的AutoFix类型模块；Cron和RCA缓存两个TS当前无SFC宏consumer，不冒称全部provider均被宏使用。
 - 本阶段的危险Boolean/String control检出临时AST证明脚本直接把Array.push结果返回给ts.forEachChild会提前停止遍历的问题。先暂停源码落盘，完整审查56个相关脚本/63个调用，在新/tmp complete副本修正7个历史写法及本阶段此前两处写法，保留旧冻结日志和expected。历史7个canonicalizer及本阶段新版均能检出非首个第三statement语义mutation与真实导入Boolean/String运行时构造顺序变化；18个相关历史/当前重放最终全部通过。对应Git提交与保存快照212组逐字核对，历史受影响证明已重新完整验证，未发现未解释的semantic差异；首轮3个重放因runner漏传--after的输入断言失败亦保留记录，补参数后独立通过。没有用旧aggregate exit0代替实际收据，业务源没有因此修改。
 - 16文件实际lint743→642 errors，0 warnings，逐文件各规则无新增；全Web现有167文件3692项单元测试及应用类型检查通过。本阶段不以101减法宣称新的全仓总量，仍区分最后完整实扫与目标复扫。
 - 未修改测试逻辑、CI、规则、ignore、lock、MonitorConfig、全局helper或backend，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。
@@ -922,7 +914,7 @@ MonitorConfig的Name统一为1..255、InstanceKey（历史API字段instance_ip�
 
 ## 阶段九十二：保留fresh全局正则的String方法名替换
 
-6个生产文件仅将13处replace方法名改为replaceAll，原RegExp literal、g/gm flags、capture/backreference、replacement及其它字节保持。64条规则命中中44条测试/spec不纳；20个生产命中排除receiver为any的request一处，以及两个共享ENCODER_*正则变量。其余17处中，4个单字符pattern若只改方法名仍被规则要求转为字符串，故保留原文，未接受整体fix的匹配策略或source变化。
+6个生产文件仅将13处replace方法名改为replaceAll，原RegExp literal、g/gm flags、capture/backreference、replacement及其它字节保持。64条规则命中中44条测试/spec不纳；20个生产命中排除receiver为any的request一处，以及两个共享ENCODER\_\*正则变量。其余17处中，4个单字符pattern若只改方法名仍被规则要求转为字符串，故保留原文，未接受整体fix的匹配策略或source变化。
 
 - 实际Vue虚拟TS/Volar源映射和TypeScript checker确认primitive string receiver及builtin String.replace库签名；只纳恰好2个普通参数、无optional/spread、首参数为fresh native且原flags含g的literal。最终replacement为12个原StringLiteral和1个原ArrowFunction，参数创建只取原值或分配闭包，没有在创建阶段调用业务代码。没有为纳入request的any强化或改写现有业务校验。
 - 正常未覆盖String/RegExp intrinsics的realm中，replaceAll对这个fresh literal校验g后，委托与原replace相同的native RegExp@@replace；不会把正则改为字符串，也不改变捕获/$编号、matching策略或callback参数。该合同不泛化到自定义receiver、共享/改写过的正则或任意prototype monkeypatch；非g、覆写共享regex.flags getter及非string自定义方法的反例已明确验证并排除。
@@ -965,7 +957,7 @@ MonitorConfig的Name统一为1..255、InstanceKey（历史API字段instance_ip�
 - 标准Array.prototype.includes下，dense自有primitive数据元素的布尔结果是从0开始按SameValueZero判断存在性，成员raw多重集恒等即全域membership结果恒等，不涉及对搜索值的coercion或元素getter。808组私有补充对照记录guard、至多一次search求值、抛错及true/false分支轨迹，hostile搜索对象无coerce。NaN、+0/-0及重复值控制符合SameValueZero；非零fromIndex、accessor、holes/spread/副作用和保存数组join次序等不在纳入合同，不能泛化为任意数组无序。
 - before与actualHEAD 93393935逐字核对后按exact proposal落盘。固定范围外bytes不变，原/新全部literal raw多重集相同，search和短路上下文保持；完整source及实际SFC编译script AST仅允许这些已审fresh includes数组排列，所有string union类型节点原样。forEachChild callback均void，非首个第三statement语义mutation必须检出。
 - 全354个SFC的dev/prod共708组before快照/实际after磁盘对照无额外差异、两侧0错误，真实Boolean/String危险control检出。scoped canonical只接受选中文件对应的fresh primitive.includes literal预期排列，不忽略任意数组、RuntimeCtorArray或emits事件数组的顺序；4个编辑SFC本身与AutoFix类型模块实际被读取，另2个当前无宏消费，未扩大为全部类型都被宏使用。binding、模板/style和DOM/SSR保持。
-- actual7文件lint322→303 errors，0 warnings，逐文件各规则无新增；相关Autofix、Cloud管理、SystemRole、Notification、CMDB现有回归30文件687项通过，全Web167文件3692项单元测试、app及node配置类型检查通过。首次target CLI因不存在的Workorder*.test.ts触发zsh NOMATCH、测试未开始，单独保留命令失败收据；改用确有目录筛选后实际exit0，没有改断言或snapshot消红。
+- actual7文件lint322→303 errors，0 warnings，逐文件各规则无新增；相关Autofix、Cloud管理、SystemRole、Notification、CMDB现有回归30文件687项通过，全Web167文件3692项单元测试、app及node配置类型检查通过。首次target CLI因不存在的Workorder\*.test.ts触发zsh NOMATCH、测试未开始，单独保留命令失败收据；改用确有目录筛选后实际exit0，没有改断言或snapshot消红。
 - 未修改CI/workflow、规则、依赖、lock、MonitorConfig、backend或其它string union，没有新增镜像测试或构建；未操作preview、数据库、凭据、真实集群或业务API，未上线。只报告目标复扫，不用19减法宣称新的全仓实扫总量。
 
 ## 阶段九十六：Node-only Playwright模块显式process singleton

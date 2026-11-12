@@ -127,7 +127,7 @@ function render(component: Component) {
 function button(text: string) {
   const found = required(wrapper)
     .findAll('button')
-    .find((button) => button.text().replace(/\s/g, '') === text);
+    .find((button) => button.text().replaceAll(/\s/g, '') === text);
   if (!found) throw new Error(`Missing visible action: ${text}`);
   return found;
 }

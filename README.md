@@ -82,12 +82,12 @@ bash scripts/setup-git-hooks.sh
 
 应用配置位于 `apps/web-antd/.env*`，开发环境默认通过 Vite 代理连接 `http://localhost:8889` 的 Go 后端
 
-| 变量 | 默认值 | 用途 |
-| --- | --- | --- |
-| `VITE_PORT` | `5666` | 开发服务器端口 |
-| `VITE_GLOB_API_URL` | `/api` | Go 后端接口地址 |
-| `VITE_GLOB_AIOPS_URL` | `/api/v1` | 经 Go 网关转发的 AIOps 接口地址 |
-| `VITE_ROUTER_HISTORY` | `hash`（生产环境） | 路由模式 |
+| 变量                  | 默认值             | 用途                            |
+| --------------------- | ------------------ | ------------------------------- |
+| `VITE_PORT`           | `5666`             | 开发服务器端口                  |
+| `VITE_GLOB_API_URL`   | `/api`             | Go 后端接口地址                 |
+| `VITE_GLOB_AIOPS_URL` | `/api/v1`          | 经 Go 网关转发的 AIOps 接口地址 |
+| `VITE_ROUTER_HISTORY` | `hash`（生产环境） | 路由模式                        |
 
 `VITE_*` 配置会发送至浏览器，不能存放服务端密钥，参见 [SECURITY.md](SECURITY.md)
 
@@ -162,7 +162,6 @@ docker build -t cloudops-web .
 - Email: [wzijian62@gmail.com](mailto:wzijian62@gmail.com)
 - 微信：GoSimplicity（加我后可邀请进微信群交流）
 - ![image](https://github.com/user-attachments/assets/e925e26b-82ce-4ef7-8455-859320cb2633)
-
 
 ## 致谢
 

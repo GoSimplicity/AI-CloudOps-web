@@ -121,7 +121,7 @@ const getUniqueTargetTypes = computed(() => {
       types.add(log.target_type);
     }
   });
-  return Array.from(types);
+  return [...types];
 });
 
 // 工具函数

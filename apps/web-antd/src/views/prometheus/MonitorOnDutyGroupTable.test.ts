@@ -60,7 +60,7 @@ function button(text: string) {
   return required(
     required(wrapper)
       .findAll('button')
-      .find((item) => item.text().replace(/\s/g, '').includes(text)),
+      .find((item) => item.text().replaceAll(/\s/g, '').includes(text)),
   );
 }
 
@@ -126,7 +126,7 @@ describe('值班日历页面真实控件', () => {
           '.ant-modal-footer button',
         ),
       ].find((item) =>
-        /^(取消|Cancel)$/.test(item.textContent?.replace(/\s/g, '') || ''),
+        /^(?:取消|Cancel)$/.test(item.textContent?.replace(/\s/g, '') || ''),
       ),
     );
     expect(cancel).toBeDefined();

@@ -4,8 +4,8 @@ export interface ManagedOperationMarker {
   operation_id: string;
   resource_ids: string[];
 }
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const resourceID = /^[\dA-Za-z][\dA-Za-z-]{1,99}$/;
+const uuid = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/;
+const resourceID = /^[\da-z][\da-z-]{1,99}$/i;
 export function parseManagedMarker(
   raw: null | string,
 ): ManagedOperationMarker | null {
@@ -17,7 +17,7 @@ export function parseManagedMarker(
       typeof value.operation_id !== 'string' ||
       !uuid.test(value.operation_id) ||
       !Array.isArray(value.resource_ids) ||
-      !value.resource_ids.length ||
+      value.resource_ids.length === 0 ||
       value.resource_ids.length > 100 ||
       value.resource_ids.some(
         (id: unknown) => typeof id !== 'string' || !resourceID.test(id),

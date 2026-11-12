@@ -48,7 +48,9 @@ function render(superAdmin = false) {
 }
 async function click(name: string) {
   await required(
-    wrapper.findAll('button').find((b) => b.text().replace(/\s/g, '') === name),
+    wrapper
+      .findAll('button')
+      .find((b) => b.text().replaceAll(/\s/g, '') === name),
   ).trigger('click');
   await flushPromises();
 }
@@ -148,7 +150,7 @@ it('超管显式选择所有用户，同UUID按owner区分查询与核对', asyn
   await required(
     wrapper
       .findAll('button')
-      .filter((b) => b.text().replace(/\s/g, '') === '查看或核对')[1],
+      .filter((b) => b.text().replaceAll(/\s/g, '') === '查看或核对')[1],
   ).trigger('click');
   await flushPromises();
   api.getManagedOperation.mockResolvedValue(row(8));

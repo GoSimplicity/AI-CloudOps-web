@@ -133,7 +133,7 @@ describe('工单流程列表交互', () => {
           '.ant-modal-footer button',
         ),
       ].find((button) =>
-        /^(取消|Cancel)$/.test(button.textContent?.replace(/\s/g, '') || ''),
+        /^(?:取消|Cancel)$/.test(button.textContent?.replace(/\s/g, '') || ''),
       ),
     );
     cancel.click();

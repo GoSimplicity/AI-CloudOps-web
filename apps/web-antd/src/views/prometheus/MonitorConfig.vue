@@ -294,7 +294,7 @@ const formatDate = (input: number | string): string => {
   if (!input) return '';
   const date =
     typeof input === 'number' ? new Date(input * 1000) : new Date(input);
-  if (isNaN(date.getTime())) return '';
+  if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleDateString('zh-CN');
 };
 
@@ -302,7 +302,7 @@ const formatTime = (input: number | string): string => {
   if (!input) return '';
   const date =
     typeof input === 'number' ? new Date(input * 1000) : new Date(input);
-  if (isNaN(date.getTime())) return '';
+  if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleTimeString('zh-CN', {
     hour: '2-digit',
     minute: '2-digit',
@@ -313,7 +313,7 @@ const formatFullDateTime = (input: number | string): string => {
   if (!input) return '';
   const date =
     typeof input === 'number' ? new Date(input * 1000) : new Date(input);
-  if (isNaN(date.getTime())) return '';
+  if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleString('zh-CN');
 };
 
@@ -395,7 +395,7 @@ const loadPoolOptions = async (): Promise<void> => {
 
       if (!isCurrent()) return;
       if (res?.items && res.items.length > 0) {
-        allPools = allPools.concat(res.items);
+        allPools = [...allPools, ...res.items];
 
         // 检查是否还有更多数据
         hasMore =

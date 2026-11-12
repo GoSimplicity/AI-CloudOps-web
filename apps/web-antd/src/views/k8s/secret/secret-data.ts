@@ -37,7 +37,7 @@ export const YAML_BLOCK_REDACTED_MESSAGE = `YAML 中有写在块标量（| 或 >
 export const BINARY_VALUE_NOTICE = '（二进制内容，无法以文本显示或复制）';
 
 /** K8s Secret 键名规则：字母数字、-、_、. */
-const SECRET_KEY_PATTERN = /^[-._a-zA-Z0-9]+$/;
+const SECRET_KEY_PATTERN = /^[\w.-]+$/;
 
 export interface SecretDataRow {
   id: number;
@@ -145,7 +145,7 @@ export function validateDataRows(
 export function encodeUtf8ToBase64(text: string) {
   const bytes = new TextEncoder().encode(text);
   let binary = '';
-  for (const byte of bytes) binary += String.fromCharCode(byte);
+  for (const byte of bytes) binary += String.fromCodePoint(byte);
   return btoa(binary);
 }
 
@@ -181,14 +181,14 @@ function decodeBase64Text(value: string): string | undefined {
 
 /** incr9 P3-C：字节按 UTF-8 转文本（非法序列为 U+FFFD，与 Go 一致不算空白） */
 function utf8Text(bytes: Uint8Array) {
-  return new TextDecoder('utf-8').decode(bytes);
+  return new TextDecoder('utf8').decode(bytes);
 }
 
 /** incr9 P3-C：base64 解码后按 UTF-8 转文本（atob 给的是 Latin-1，NBSP / U+3000 的多字节去不掉） */
 function decodeBase64Utf8(value: string): string | undefined {
   const binary = decodeBase64Text(value);
   if (binary === undefined) return undefined;
-  return utf8Text(Uint8Array.from(binary, (char) => char.charCodeAt(0)));
+  return utf8Text(Uint8Array.from(binary, (char) => char.codePointAt(0) ?? 0));
 }
 
 /**
@@ -327,9 +327,9 @@ export function readRevealedValue(
   if (typeof encoded === 'string') {
     const binary = decodeBase64Text(encoded);
     if (binary === undefined) return BINARY_VALUE_NOTICE;
-    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    const bytes = Uint8Array.from(binary, (char) => char.codePointAt(0) ?? 0);
     try {
-      return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+      return new TextDecoder('utf8', { fatal: true }).decode(bytes);
     } catch {
       return BINARY_VALUE_NOTICE;
     }
@@ -400,8 +400,8 @@ const decodeBase64ToUtf8 = (base64Str: string): string | undefined => {
   const binary = decodeBase64Text(base64Str);
   if (binary === undefined) return undefined;
   try {
-    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    const bytes = Uint8Array.from(binary, (char) => char.codePointAt(0) ?? 0);
+    return new TextDecoder('utf8', { fatal: true }).decode(bytes);
   } catch {
     return undefined;
   }
@@ -413,7 +413,7 @@ const UNSAFE_DISPLAY_CHAR_PATTERN =
 
 /** 展示用双引号转义：先 `\` 再 `"`；编码器只还原这两种（`\\` → `\`，`\"` → `"`），两边对称 */
 const escapeDisplayQuoted = (value: string) =>
-  value.replace(/\\/g, '\\\\').replace(/"/g, String.raw`\"`);
+  value.replaceAll('\\', '\\\\').replaceAll('"', String.raw`\"`);
 
 // 处理 Secret YAML 中的 base64 编码数据（展示用：data 下的值解成明文）
 export const processSecretYaml = (yamlContent: string): string => {
@@ -423,7 +423,7 @@ export const processSecretYaml = (yamlContent: string): string => {
     const inData = createDataSectionLocator(yamlContent);
     // incr7：缩进只认 [ \t]*（原来 ^(\s*) 跨行吞空行，60k 空行约 3.4s，平方级）；冒号后至少一个空格（与编码器同口径）
     return yamlContent.replaceAll(
-      /^([ \t]*)([\w\-.]+):[ \t]+([A-Za-z0-9+/]+=*)[ \t]*$/gm,
+      /^([\t ]*)([\w.-]+):[\t ]+([\d+/a-z]+=*)[\t ]*$/gim,
       (match, indent: string, key: string, value: string, offset: number) => {
         if (!inData(offset)) return match;
         const decodedValue = decodeBase64ToUtf8(value);
@@ -459,7 +459,7 @@ export const processSecretYaml = (yamlContent: string): string => {
  * 并进块内容一起编码掉。
  */
 const ENCODER_BLOCK_PATTERN =
-  /^([ \t]*)([\w\-.]+):[ \t]+\|[ \t]*\n((?:[ \t]*\n|\1[ \t]+\S.*\n?)*)/gm;
+  /^([\t ]*)([\w.-]+):[\t ]+\|[\t ]*\n((?:[\t ]*\n|\1[\t ]+\S.*\n?)*)/gm;
 
 /**
  * 同一行的双引号值：内容为「非引号、非反斜杠、非换行的字符」或「反斜杠 + 任一字符」，两支首字符互斥，线性时间
@@ -467,7 +467,7 @@ const ENCODER_BLOCK_PATTERN =
  * 引号后只允许空白与行尾注释（保留原样）。
  */
 const ENCODER_QUOTED_PATTERN =
-  /^([ \t]*)([\w\-.]+):[ \t]+"((?:[^"\\\n]|\\.)*)"([ \t]+#.*|[ \t]*)$/gm;
+  /^([\t ]*)([\w.-]+):[\t ]+"((?:[^\n"\\]|\\.)*)"([\t ]+#.*|[\t ]*)$/gm;
 
 /** | 块内容 → 原值：缩进按第一个非空行算（YAML 语义），中间空行保留，末尾空行不计入值（与展示一致） */
 function decodeLiteralBlock(content: string) {
@@ -488,7 +488,7 @@ function decodeLiteralBlock(content: string) {
   const width = first ? leadingWidth(first) : 0;
   for (const line of body) {
     // 非空行缩进比首行浅：YAML 本身就不合法，不编码，原样交给格式检查 / 兜底
-    if (line.trim() !== '' && leadingWidth(line) < width) return undefined;
+    if (line.trim() !== '' && leadingWidth(line) < width) return;
   }
   return {
     endsWithNewline,
@@ -503,7 +503,7 @@ export const encodeSecretYamlForSubmission = (yamlContent: string): string => {
 
   try {
     const blockInData = createDataSectionLocator(yamlContent);
-    let processedYaml = yamlContent.replace(
+    let processedYaml = yamlContent.replaceAll(
       ENCODER_BLOCK_PATTERN,
       (match, indent: string, key: string, content: string, offset: number) => {
         if (!blockInData(offset)) return match;
@@ -520,7 +520,7 @@ export const encodeSecretYamlForSubmission = (yamlContent: string): string => {
     );
 
     const quotedInData = createDataSectionLocator(processedYaml);
-    processedYaml = processedYaml.replace(
+    processedYaml = processedYaml.replaceAll(
       ENCODER_QUOTED_PATTERN,
       (
         match,
@@ -614,14 +614,12 @@ const TOP_LEVEL_KEY_PATTERN =
 const YAML_LINE_BREAK_CHAR_PATTERN = /[\u0085\u2028\u2029]/;
 
 function hasYamlLineBreakChar(text: string) {
-  return (
-    YAML_LINE_BREAK_CHAR_PATTERN.test(text) || text.indexOf('\uFEFF', 1) !== -1
-  );
+  return YAML_LINE_BREAK_CHAR_PATTERN.test(text) || text.includes('\uFEFF', 1);
 }
 
 /** 严格 base64（标准字母表、长度为 4 的倍数、末尾最多两个 =） */
 const STRICT_BASE64_PATTERN =
-  /^(?:[\d+/A-Za-z]{4})*(?:[\d+/A-Za-z]{2}==|[\d+/A-Za-z]{3}=)?$/;
+  /^(?:[\d+/a-z]{4})*(?:[\d+/a-z]{2}==|[\d+/a-z]{3}=)?$/i;
 
 /** 双引号值：只允许 \" 与 \\ 转义，引号后只允许行尾注释（value 已去掉首尾空白） */
 const SUPPORTED_QUOTED_VALUE_PATTERN =
@@ -629,7 +627,7 @@ const SUPPORTED_QUOTED_VALUE_PATTERN =
 
 /** 顶格 `data:` 头后允许的同行内容：空、行尾注释、空映射 / null */
 const DATA_HEADER_INLINE_OK_PATTERN =
-  /^(?:[ \t]*(?:#.*)?|[ \t]+(?:\{\}|~|null|Null|NULL)[ \t]*(?:#.*)?)$/;
+  /^(?:[\t ]*(?:#.*)?|[\t ]+(?:\{\}|~|null|Null|NULL)[\t ]*(?:#.*)?)$/;
 
 /**
  * incr7 P2-A / P3-C：YAML **更新**提交前，按编码器能处理的写法检查 data 段（只看 data，stringData 等不管）。
@@ -814,7 +812,7 @@ function hasMergeKey(root: unknown) {
 }
 
 /** 可能是 base64 的片段（主体 ≥8 个字符；`<redacted>` 的 base64 为 14 个字符 + `==`） */
-const BASE64_TOKEN_PATTERN = /[\d+/A-Za-z]{8,}={0,2}/g;
+const BASE64_TOKEN_PATTERN = /[\d+/a-z]{8,}={0,2}/gi;
 
 /**
  * incr7 P2-A 兜底：YAML 编码之后、发请求之前（更新）或直接对原文（新建），检查最终要发出的内容：

@@ -10,11 +10,11 @@ import { requireFixtureValue } from '../../internal/test-utils/required-fixture-
 function password() {
   if (process.env.CLOUDOPS_TEST_PASSWORD)
     return process.env.CLOUDOPS_TEST_PASSWORD;
-  if (!process.env.CLOUDOPS_TEST_ENV_FILE) return undefined;
+  if (!process.env.CLOUDOPS_TEST_ENV_FILE) return;
   return readFileSync(process.env.CLOUDOPS_TEST_ENV_FILE, 'utf8')
     .match(/^BOOTSTRAP_ADMIN_PASSWORD=(.*)$/m)?.[1]
     ?.trim()
-    .replace(/^['"]|['"]$/g, '');
+    .replaceAll(/^["']|["']$/g, '');
 }
 const routePath = (path: string) =>
   process.env.CLOUDOPS_ROUTER_HISTORY === 'hash' ? `/#${path}` : path;
@@ -186,7 +186,8 @@ test('cloud account local CRUD preserves regions and never auto-verifies', async
         await dialog.getByRole('button', { name: /^添\s*加$/ }).click();
         const createResponse = await created;
         expect(createResponse.request().postDataJSON().status).toBe(2);
-        expect((await createResponse.json()).code).toBe(0);
+        const createResponseJson = await createResponse.json();
+        expect(createResponseJson.code).toBe(0);
         await expect(dialog).not.toBeVisible();
         const rowsResponse = await api(
           `/tree/cloud/account/list?page=1&size=100&search=${name}`,
@@ -227,7 +228,8 @@ test('cloud account local CRUD preserves regions and never auto-verifies', async
         expect(updateData).not.toHaveProperty('regions');
         expect(updateData).not.toHaveProperty('access_key');
         expect(updateData).not.toHaveProperty('secret_key');
-        expect((await updateResponse.json()).code).toBe(0);
+        const updateResponseJson = await updateResponse.json();
+        expect(updateResponseJson.code).toBe(0);
         await expect(dialog).not.toBeVisible();
         const detail = await api(`/tree/cloud/account/${item.id}/detail`);
         expect(detail.name).toBe(item.updated);
@@ -271,13 +273,10 @@ test('cloud account local CRUD preserves regions and never auto-verifies', async
             await api(`/tree/cloud/account/${account.id}/delete`, 'DELETE');
           }
         }
-        expect(
-          (
-            await api(
-              `/tree/cloud/account/list?page=1&size=100&search=${prefix}`,
-            )
-          ).items.length,
-        ).toBe(0);
+        const apiResult = await api(
+          `/tree/cloud/account/list?page=1&size=100&search=${prefix}`,
+        );
+        expect(apiResult.items.length).toBe(0);
         await api('/user/logout', 'POST', {});
       }
     },

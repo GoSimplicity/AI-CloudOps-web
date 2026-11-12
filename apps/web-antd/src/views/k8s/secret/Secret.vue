@@ -211,10 +211,10 @@ const copyToClipboard = async (text: string) => {
       textArea.value = text;
       textArea.style.position = 'fixed';
       textArea.style.opacity = '0';
-      document.body.appendChild(textArea);
+      document.body.append(textArea);
       textArea.select();
       document.execCommand('copy');
-      document.body.removeChild(textArea);
+      textArea.remove();
       message.success('内容已复制到剪贴板');
     }
   } catch (error) {
@@ -1747,7 +1747,10 @@ onMounted(async () => {
                     >
                   </span>
                 </div>
-                <div v-if="currentSecretDetail.size" class="k8s-detail-item">
+                <div
+                  v-if="currentSecretDetail.size > 0"
+                  class="k8s-detail-item"
+                >
                   <span class="k8s-detail-label">数据大小:</span>
                   <span class="k8s-detail-value">
                     <span class="secret-size-display">{{

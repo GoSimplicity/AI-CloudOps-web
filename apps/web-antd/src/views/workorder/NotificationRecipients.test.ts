@@ -89,7 +89,7 @@ const edit = async (record: object) => {
   await required(
     wrapper
       .findAll('.action-buttons button')
-      .find((button) => button.text().replace(/\s/g, '') === '编辑'),
+      .find((button) => button.text().replaceAll(/\s/g, '') === '编辑'),
   ).trigger('click');
   await flushPromises();
 };

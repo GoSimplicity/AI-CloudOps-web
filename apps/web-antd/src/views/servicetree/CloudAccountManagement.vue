@@ -293,8 +293,7 @@ function buildProviderCredentials(
       !subscription_id
     )
       return undefined;
-    const uuid =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const uuid = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
     if (
       ![tenant_id, client_id, subscription_id].every((value) =>
         uuid.test(value),
@@ -424,9 +423,7 @@ const formRules = computed(() => ({
         if (
           changedRegions &&
           formData.value.provider === CloudProvider.GCP &&
-          value.some(
-            (item) => !/^[a-z][a-z0-9-]{1,48}-[a-z]$/.test(item.region),
-          )
+          value.some((item) => !/^[a-z][\da-z-]{1,48}-[a-z]$/.test(item.region))
         )
           throw new Error('GCP 需要填写可用区，例如 us-central1-a');
         if (
@@ -434,15 +431,11 @@ const formRules = computed(() => ({
           (!isEdit.value || regionSignature(value) !== originalRegions)
         ) {
           if (
-            value.some(
-              (item) => !/^[a-z0-9]+(?:-[a-z0-9]+)+$/.test(item.region),
-            )
+            value.some((item) => !/^[\da-z]+(?:-[\da-z]+)+$/.test(item.region))
           )
             throw new Error('华为云地域代码格式无效');
           if (
-            value.some(
-              (item) => !/^[a-zA-Z0-9_-]{1,64}$/.test(item.project_id ?? ''),
-            )
+            value.some((item) => !/^[\w-]{1,64}$/.test(item.project_id ?? ''))
           )
             throw new Error('华为云每个地域必须填写有效的项目 ID');
         }
@@ -1171,7 +1164,7 @@ const exportToExcel = (data: CloudAccount[]) => {
   const timestamp = new Date()
     .toISOString()
     .replaceAll(/[.:]/g, '-')
-    .substring(0, 19);
+    .slice(0, 19);
   const filename = `云账户列表_${timestamp}.csv`;
   const firstRow = exportData[0];
   if (!firstRow) return;

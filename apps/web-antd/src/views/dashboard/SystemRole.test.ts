@@ -76,7 +76,7 @@ function button(text: string) {
   return required(
     wrapper
       .findAll('button')
-      .find((button) => button.text().replace(/\s/g, '').includes(text)),
+      .find((button) => button.text().replaceAll(/\s/g, '').includes(text)),
   );
 }
 
@@ -109,7 +109,7 @@ describe('角色列表真实控件交互', () => {
           '.ant-modal-footer button',
         ),
       ].find((button) =>
-        /^(取消|Cancel)$/.test(button.textContent?.replace(/\s/g, '') || ''),
+        /^(?:取消|Cancel)$/.test(button.textContent?.replace(/\s/g, '') || ''),
       ),
     );
     cancel.click();

@@ -25,7 +25,7 @@ function required<T>(value: null | T | undefined): T {
  *   - 已守卫写入按文件计数快照（GUARDED_SNAPSHOT），逐文件精确相等，防止「总数不变、分布挪动」；
  *   - 未守卫写入只允许白名单（NOT_REQUEST_CATCH，逐条说明），计数精确相等。
  */
-const VIEWS_DIR = resolve(__dirname, '../../views');
+const VIEWS_DIR = resolve(import.meta.dirname, '../../views');
 const NOTICE_IMPORT = "from '#/utils/permission/request-notice'";
 
 function walk(dir: string): string[] {
@@ -35,7 +35,7 @@ function walk(dir: string): string[] {
     if (statSync(full).isDirectory()) {
       if (relative(VIEWS_DIR, full) === join('k8s', 'cluster')) continue;
       files.push(...walk(full));
-    } else if (/\.(ts|vue)$/.test(name) && !/\.test\.ts$/.test(name)) {
+    } else if (/\.(?:ts|vue)$/.test(name) && !/\.test\.ts$/.test(name)) {
       files.push(full);
     }
   }
@@ -45,7 +45,7 @@ function walk(dir: string): string[] {
 /** .vue 只保留 <script> 内容，其余替换为空行（保留行号）；.ts 原样 */
 export function scriptOf(file: string, text: string): string {
   if (!file.endsWith('.vue')) return text;
-  const blank = (s: string) => s.replace(/[^\n]/g, ' ');
+  const blank = (s: string) => s.replaceAll(/[^\n]/g, ' ');
   let out = '';
   let last = 0;
   for (const m of text.matchAll(/(<script\b[^>]*>)([\s\S]*?)(<\/script>)/g)) {
@@ -117,7 +117,7 @@ interface CatchBody {
 export function findCatchBodies(text: string): CatchBody[] {
   const bodies: CatchBody[] = [];
   for (const m of text.matchAll(
-    /(?<![.\w$])catch\s*(?:\(\s*(\w+)[^)]*\))?\s*\{/g,
+    /(?<![\w$.])catch\s*(?:\(\s*(\w+)[^)]*\))?\s*\{/g,
   )) {
     const open = m.index + m[0].length - 1;
     bodies.push({
@@ -154,7 +154,7 @@ const LOCAL_MESSAGE_VARS = new Set([
   'errorMsg',
   'msg',
 ]);
-const EMPTY_VALUE = /^(?:''|""|null|undefined|false|\[\])\s*[;)]*\s*$/;
+const EMPTY_VALUE = /^(?:''|""|null|undefined|false|\[\])\s*[);]*\s*$/;
 
 /** 写入是否为 `if (… && shouldRecordPageError(param) && …) lhs = …` 结构（不允许 ||、不允许取反） */
 export function isGuardedWrite(
@@ -332,7 +332,7 @@ export function scanErrorStateWrites(
         ts.isBinaryExpression(node) &&
         node.operatorToken.kind === ts.SyntaxKind.EqualsToken
       ) {
-        const lhs = node.left.getText(source).replace(/\s+/g, '');
+        const lhs = node.left.getText(source).replaceAll(/\s+/g, '');
         const value = node.right.getText(source);
         if (
           /^(?:state\.|\w+\.)?\w*(?:[Ee]rror|Err)\w*(?:\.value)?$/.test(lhs) &&
