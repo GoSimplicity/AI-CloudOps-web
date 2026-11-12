@@ -30,6 +30,12 @@ vi.mock('#/utils/permission', () => ({
   usePermission: () => ({ can: () => true, hasPerm: () => true }),
 }));
 
+// 真实 Ant Design 表单（realForm）的渲染是 CPU 工作。默认 testTimeout 5s
+// 在工人与其他测试抢核时会被墙钟掐断；单独重跑断言全部成立。
+// FormItem 只用 0–10ms 的 setTimeout 展示错误（useDebounce），vi.waitFor
+// 在加压下仍能在默认 1s 内等到错误节点，所以这里只放宽本文件的 testTimeout。
+vi.setConfig({ testTimeout: 20_000 });
+
 function required<T>(value: null | T | undefined): T {
   if (value === null || value === undefined)
     throw new Error('Required form test fixture is unavailable');

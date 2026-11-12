@@ -57,6 +57,11 @@ vi.mock('#/api/core/tree/tree_cloud', async (original) => ({
 }));
 const http = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock('#/api/request', () => ({ requestClient: http }));
+
+// 每条用例挂载完整托管资源页（真实 Select / Table / Modal）。渲染是 CPU 工作，
+// 默认 testTimeout 5s 在工人与其他测试抢核时会被墙钟掐断。失败只表现为
+// “Test timed out in 5000ms”，单独重跑断言成立，因此只放宽本文件的 testTimeout。
+vi.setConfig({ testTimeout: 20_000 });
 const codes = [
   'GET /api/tree/cloud/account/list',
   'GET /api/tree/cloud/account/:id/detail',

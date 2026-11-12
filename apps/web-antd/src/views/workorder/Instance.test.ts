@@ -51,6 +51,12 @@ const client = vi.hoisted(() => ({
   delete: vi.fn(),
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
+
+// 每条用例挂载完整 Instance.vue（真实 Table / Select / Modal / Dropdown）。
+// 渲染是 CPU 工作，默认 testTimeout 5s 在工人被其他测试挤占时会被墙钟掐断。
+// 下拉层只延迟一个 0ms 的 setTimeout（vc-trigger PopupInner），现有 vi.waitFor
+// 在加压下仍能于 1s 内等到节点，因此只放宽本文件的 testTimeout，不改断言。
+vi.setConfig({ testTimeout: 20_000 });
 const row = {
   id: 7,
   title: '待处理变更',

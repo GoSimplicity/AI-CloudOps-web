@@ -57,6 +57,12 @@ const client = vi.hoisted(() => ({
   delete: vi.fn(),
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
+
+// 每条用例挂载完整云账户页（真实 Form / Select / Modal）。渲染是 CPU 工作，
+// 默认 testTimeout 5s 在工人与其他测试抢核时会被墙钟掐断（失败信息只有
+// “Test timed out in 5000ms”，没有断言不一致）。单独重跑时这些断言都成立，
+// 所以只放宽本文件的 testTimeout，不改断言，也不改业务代码。
+vi.setConfig({ testTimeout: 20_000 });
 let wrapper: undefined | VueWrapper;
 let selectedProvider = 1;
 const record = () => ({
