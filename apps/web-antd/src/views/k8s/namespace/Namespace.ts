@@ -491,14 +491,8 @@ export function useNamespacePage() {
       const params: UpdateNamespaceReq = {
         cluster_id: currentOperationNamespace.value.cluster_id,
         name: currentOperationNamespace.value.name,
-        labels:
-          Object.keys(labelFormModel.value.labels).length > 0
-            ? recordToKeyValueList(labelFormModel.value.labels)
-            : undefined,
-        annotations:
-          Object.keys(labelFormModel.value.annotations).length > 0
-            ? recordToKeyValueList(labelFormModel.value.annotations)
-            : undefined,
+        labels: recordToKeyValueList(labelFormModel.value.labels),
+        annotations: recordToKeyValueList(labelFormModel.value.annotations),
       };
 
       await updateNamespaceApi(

@@ -9,10 +9,19 @@ import { markRequestLayerTrace } from '#/utils/permission/request-notice';
 import { createDeferred } from '../../../../../../internal/test-utils/deferred';
 import { useNamespacePage } from './Namespace';
 
-const client = vi.hoisted(() => ({ get: vi.fn() }));
+const client = vi.hoisted(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  put: vi.fn(),
+}));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 vi.mock('ant-design-vue', () => ({
-  message: { error: vi.fn(), warning: vi.fn(), info: vi.fn() },
+  message: {
+    error: vi.fn(),
+    info: vi.fn(),
+    success: vi.fn(),
+    warning: vi.fn(),
+  },
   Modal: { confirm: vi.fn() },
 }));
 
@@ -122,6 +131,77 @@ describe('命名空间查询作用域', () => {
     await page.fetchNamespaces();
     expect(page.loadError.value).toBe('');
     expect(message.error).not.toHaveBeenCalled();
+  });
+});
+
+describe('命名空间标签与注解请求体', () => {
+  const namespace = { cluster_id: 7, name: 'demo' };
+
+  it('编辑删光标签和注解时请求体发送空数组', async () => {
+    const page = useNamespacePage();
+    page.labelFormRef.value = {} as NonNullable<
+      (typeof page.labelFormRef)['value']
+    >;
+    page.currentOperationNamespace.value = namespace;
+    page.labelFormModel.value = { annotations: {}, labels: {} };
+    client.put.mockResolvedValueOnce({});
+    await page.submitLabelForm();
+    expect(client.put).toHaveBeenCalledWith(
+      '/k8s/clusters/7/namespace/demo/update',
+      {
+        annotations: [],
+        cluster_id: 7,
+        labels: [],
+        name: 'demo',
+      },
+    );
+  });
+
+  it('编辑标签和注解有值时请求体发送 KeyValueList', async () => {
+    const page = useNamespacePage();
+    page.labelFormRef.value = {} as NonNullable<
+      (typeof page.labelFormRef)['value']
+    >;
+    page.currentOperationNamespace.value = namespace;
+    page.labelFormModel.value = {
+      annotations: { note: 'keep' },
+      labels: { app: 'web' },
+    };
+    client.put.mockResolvedValueOnce({});
+    await page.submitLabelForm();
+    expect(client.put).toHaveBeenCalledWith(
+      '/k8s/clusters/7/namespace/demo/update',
+      {
+        annotations: [{ key: 'note', value: 'keep' }],
+        cluster_id: 7,
+        labels: [{ key: 'app', value: 'web' }],
+        name: 'demo',
+      },
+    );
+  });
+
+  it('创建未填写标签和注解时不传这两个字段', async () => {
+    const page = useNamespacePage();
+    page.filterClusterId.value = 7;
+    page.createFormRef.value = {
+      validate: vi.fn().mockResolvedValue(undefined),
+    } as unknown as NonNullable<(typeof page.createFormRef)['value']>;
+    page.createFormModel.value = {
+      annotations: {},
+      labels: {},
+      name: 'demo',
+    };
+    client.post.mockResolvedValueOnce({});
+    await page.submitCreateForm();
+    expect(client.post).toHaveBeenCalledWith(
+      '/k8s/clusters/7/namespace/create',
+      {
+        annotations: undefined,
+        cluster_id: 7,
+        labels: undefined,
+        name: 'demo',
+      },
+    );
   });
 });
 
