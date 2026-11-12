@@ -268,42 +268,50 @@ const handleApiError = (error, context = '') => {
   const errorData = error?.response?.data;
   const errorMsg = errorData?.message || error?.message || '未知错误';
 
-  if (status === 429) {
-    showError('请求频率过高，请稍后再试', 3000);
-    return 'rate_limit';
-  } else if (status === 403 || status === 404) {
-    accountScope.invalidate();
-    abortController.value?.abort();
-    abortController.value = null;
-    sending.value = false;
-    sessionId.value = '';
-    lastFailedQuestion.value = '';
-    chatHistory.value = [];
-    isConnected.value = false;
-    initChatMessages();
-    persistState();
-    showError(
-      status === 403
-        ? '无权访问该会话，已清除本地内容，请新建会话'
-        : '会话已失效，请重新提问以新建会话',
-    );
-    return 'invalid_session';
-  } else if (status === 401) {
-    showError('认证失败，正在重新建立连接...');
-    // 清除会话状态
-    sessionId.value = '';
-    chatHistory.value = [];
-    isConnected.value = false;
-    return 'auth_error';
-  } else if (status >= 500) {
-    showError(`服务器错误: ${errorMsg}`);
-    return 'server_error';
-  } else if (error.code === 'NETWORK_ERROR' || !status) {
-    showError('网络连接错误，请检查网络状态');
-    return 'network_error';
-  } else {
-    showError(`${context}: ${errorMsg}`);
-    return 'unknown_error';
+  switch (status) {
+    case 401: {
+      showError('认证失败，正在重新建立连接...');
+      // 清除会话状态
+      sessionId.value = '';
+      chatHistory.value = [];
+      isConnected.value = false;
+      return 'auth_error';
+    }
+    case 403:
+    case 404: {
+      accountScope.invalidate();
+      abortController.value?.abort();
+      abortController.value = null;
+      sending.value = false;
+      sessionId.value = '';
+      lastFailedQuestion.value = '';
+      chatHistory.value = [];
+      isConnected.value = false;
+      initChatMessages();
+      persistState();
+      showError(
+        status === 403
+          ? '无权访问该会话，已清除本地内容，请新建会话'
+          : '会话已失效，请重新提问以新建会话',
+      );
+      return 'invalid_session';
+    }
+    case 429: {
+      showError('请求频率过高，请稍后再试', 3000);
+      return 'rate_limit';
+    }
+    default: {
+      if (status >= 500) {
+        showError(`服务器错误: ${errorMsg}`);
+        return 'server_error';
+      } else if (error.code === 'NETWORK_ERROR' || !status) {
+        showError('网络连接错误，请检查网络状态');
+        return 'network_error';
+      } else {
+        showError(`${context}: ${errorMsg}`);
+        return 'unknown_error';
+      }
+    }
   }
 };
 
