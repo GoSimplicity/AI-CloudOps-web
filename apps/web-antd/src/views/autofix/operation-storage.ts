@@ -1,6 +1,6 @@
 /** Only the opaque operation ID is persisted; request text and credentials stay in memory. */
 const prefix = 'cloudops-autofix-operation:v1:';
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const uuid = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
 
 function key(owner: string) {
   return `${prefix}${encodeURIComponent(owner)}`;

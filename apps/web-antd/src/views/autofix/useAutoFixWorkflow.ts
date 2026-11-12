@@ -605,12 +605,11 @@ export function useAutoFixWorkflow() {
       }
       workflowResult.value = response;
       currentPlanId.value = response.plan?.plan_id || '';
-      operationState.value =
-        response.status === 'needs_human_confirmation'
-          ? 'pending'
-          : ['completed', 'planned'].includes(response.status)
-            ? 'completed'
-            : 'uncertain';
+      if (response.status === 'needs_human_confirmation')
+        operationState.value = 'pending';
+      else if (['completed', 'planned'].includes(response.status))
+        operationState.value = 'completed';
+      else operationState.value = 'uncertain';
       resultOwner.value = ticket.owner;
       resultSource = 'workflow';
       now.value = Date.now();
@@ -662,12 +661,11 @@ export function useAutoFixWorkflow() {
       }
       workflowResult.value = response;
       currentPlanId.value = response.plan?.plan_id || planId;
-      operationState.value =
-        response.status === 'needs_human_confirmation'
-          ? 'pending'
-          : response.status === 'completed'
-            ? 'completed'
-            : 'uncertain';
+      if (response.status === 'needs_human_confirmation')
+        operationState.value = 'pending';
+      else if (response.status === 'completed')
+        operationState.value = 'completed';
+      else operationState.value = 'uncertain';
       resultOwner.value = ticket.owner;
       resultSource = 'confirm';
       selectedBlockedActionIds.value = [];

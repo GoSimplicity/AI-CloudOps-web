@@ -620,7 +620,7 @@ export function useRolePage() {
             .map((resource) =>
               typeof resource === 'string' ? resource.trim() : '',
             )
-            .filter((resource) => resource);
+            .filter(Boolean);
 
           return {
             api_groups: cleanedApiGroups,
@@ -746,7 +746,7 @@ export function useRolePage() {
             .map((resource) =>
               typeof resource === 'string' ? resource.trim() : '',
             )
-            .filter((resource) => resource);
+            .filter(Boolean);
 
           return {
             api_groups: cleanedApiGroups,
@@ -867,7 +867,7 @@ export function useRolePage() {
   };
 
   const removeFilterLabel = (key: string) => {
-    delete filterLabels.value[key];
+    Reflect.deleteProperty(filterLabels.value, key);
     currentPage.value = 1;
     fetchRoles();
   };
@@ -1007,12 +1007,12 @@ export function useRolePage() {
 
   const removeLabelField = (key: string) => {
     const formModel = getCurrentFormModel();
-    delete formModel.labels[key];
+    Reflect.deleteProperty(formModel.labels, key);
   };
 
   const removeAnnotationField = (key: string) => {
     const formModel = getCurrentFormModel();
-    delete formModel.annotations[key];
+    Reflect.deleteProperty(formModel.annotations, key);
   };
 
   // YAML 操作辅助函数

@@ -71,7 +71,9 @@ const render = () => {
 };
 const button = (name: string) =>
   required(
-    wrapper.findAll('button').find((b) => b.text().replace(/\s/g, '') === name),
+    wrapper
+      .findAll('button')
+      .find((b) => b.text().replaceAll(/\s/g, '') === name),
   );
 async function click(name: string) {
   await button(name).trigger('click');

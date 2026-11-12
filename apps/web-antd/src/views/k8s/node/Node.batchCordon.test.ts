@@ -111,7 +111,7 @@ const cordonUrl = (name: string) => `/k8s/node/7/${name}/cordon`;
 const cordonRequests = () =>
   requests.filter((request) => request.url.endsWith('/cordon'));
 const scheduleRequests = () =>
-  requests.filter((request) => /\/(un)?cordon$/.test(request.url));
+  requests.filter((request) => /\/(?:un)?cordon$/.test(request.url));
 async function settle() {
   await vi.waitFor(() => expect(inFlight).toBe(0));
   for (let i = 0; i < 5; i += 1) {
@@ -185,7 +185,7 @@ function batchButton() {
 
 function bodyButton(text: string) {
   return [...document.body.querySelectorAll('button')].find((button) =>
-    (button.textContent ?? '').replace(/\s/g, '').includes(text),
+    (button.textContent ?? '').replaceAll(/\s/g, '').includes(text),
   ) as HTMLButtonElement | undefined;
 }
 

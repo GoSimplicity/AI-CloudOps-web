@@ -46,7 +46,7 @@ const action = (id: string) => ({
 });
 function pending(
   blocked: string[],
-  pendingIds: string[] | undefined,
+  pendingIds?: string[] | undefined,
 ): Record<string, any> {
   const items = blocked.map((id) => action(id));
   const approval: Record<string, unknown> = {
@@ -139,7 +139,7 @@ describe('confirmActions 直接调用（复审 P3-1 / M3b / M3d）', () => {
   });
 
   it('p3-1：approval 缺 pending_action_ids：没有可确认动作，直接调用也不发请求', async () => {
-    const vm = await setup(pending(['a1', 'a2'], undefined));
+    const vm = await setup(pending(['a1', 'a2']));
     expect(vm.confirmableBlockedActions).toEqual([]);
     expect(vm.canConfirmAll).toBe(false);
     await vm.confirmActions(['a1']);

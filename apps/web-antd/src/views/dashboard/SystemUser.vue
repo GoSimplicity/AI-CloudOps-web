@@ -260,7 +260,7 @@ const formRules = computed(() => {
         trigger: 'blur',
         validator: (_rule: any, value: string) => {
           if (value && value !== formData.password) {
-            return Promise.reject('两次输入的密码不一致');
+            return Promise.reject(new Error('两次输入的密码不一致'));
           }
           return Promise.resolve();
         },
@@ -293,7 +293,7 @@ const formChangPwdRules = computed(() => {
         trigger: 'blur',
         validator: (_rule: any, value: string) => {
           if (value && value !== formData.newPassword) {
-            return Promise.reject('两次输入的密码不一致');
+            return Promise.reject(new Error('两次输入的密码不一致'));
           }
           return Promise.resolve();
         },
@@ -334,7 +334,7 @@ const handleAvatarError = (event: Event) => {
 const handleAvatarUploadLocal = (file: File) => {
   avatarUploading.value = true;
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.addEventListener('load', (e) => {
     setTimeout(() => {
       if (e.target?.result) {
         formData.avatar = e.target.result as string;
@@ -342,7 +342,7 @@ const handleAvatarUploadLocal = (file: File) => {
       }
       avatarUploading.value = false;
     }, 1000);
-  };
+  });
   reader.readAsDataURL(file);
 };
 

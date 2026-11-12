@@ -1,5 +1,5 @@
+import path from 'node:path'; // 引入 path 模块
 import process from 'node:process';
-import path from 'path'; // 引入 path 模块
 
 import { defineConfig } from '@vben/vite-config';
 
@@ -26,7 +26,7 @@ export default defineConfig(async (environment) => {
     vite: {
       resolve: {
         alias: {
-          '#': path.resolve(__dirname, 'src'),
+          '#': path.resolve(import.meta.dirname, 'src'),
         },
       },
       server: {

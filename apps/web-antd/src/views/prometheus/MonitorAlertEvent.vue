@@ -626,7 +626,7 @@ onMounted(() => {
                   {{ label }}
                 </a-tag>
                 <span
-                  v-if="!(record.labels && record.labels.length)"
+                  v-if="!(record.labels && record.labels.length > 0)"
                   class="empty-text"
                   >无标签</span
                 >
@@ -775,7 +775,10 @@ onMounted(() => {
               </a-tag>
               <span
                 v-if="
-                  !(detailDialog.form.labels && detailDialog.form.labels.length)
+                  !(
+                    detailDialog.form.labels &&
+                    detailDialog.form.labels.length > 0
+                  )
                 "
                 class="empty-text"
                 >无标签</span

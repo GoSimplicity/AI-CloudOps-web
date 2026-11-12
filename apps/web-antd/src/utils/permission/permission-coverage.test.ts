@@ -14,7 +14,7 @@ import {
  * 静态核对：清单 v4 S1（主表 #1–#77）和 S1b（#84 / #85 / #87）的每个 key 都在页面源码里以 can('<key>') 门禁。
  * views/k8s/cluster/** 不在本轮可改范围（W3），集群补充码单独列出。
  */
-const SRC = resolve(__dirname, '../..');
+const SRC = resolve(import.meta.dirname, '../..');
 const EXCLUDED = [join(SRC, 'views/k8s/cluster')];
 
 function walk(dir: string, out: string[] = []): string[] {
@@ -27,7 +27,7 @@ function walk(dir: string, out: string[] = []): string[] {
     )
       continue;
     if (statSync(path).isDirectory()) walk(path, out);
-    else if (/\.(vue|ts)$/.test(name) && !/\.test\.ts$/.test(name))
+    else if (/\.(?:vue|ts)$/.test(name) && !/\.test\.ts$/.test(name))
       out.push(path);
   }
   return out;

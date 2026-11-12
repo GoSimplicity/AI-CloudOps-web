@@ -10,14 +10,10 @@ export function utf8Chunks(input: string, maxBytes = 64 * 1024): string[] {
   for (const character of input) {
     const codePoint = character.codePointAt(0);
     if (codePoint === undefined) throw new RangeError('无法确定输入码点');
-    const length =
-      codePoint <= 127
-        ? 1
-        : codePoint <= 2047
-          ? 2
-          : codePoint <= 65_535
-            ? 3
-            : 4;
+    let length = 4;
+    if (codePoint <= 127) length = 1;
+    else if (codePoint <= 2047) length = 2;
+    else if (codePoint <= 65_535) length = 3;
     if (length > maxBytes) throw new RangeError('单个码点超过输入分片大小');
     if (bytes + length > maxBytes) {
       chunks.push(input.slice(start, offset));

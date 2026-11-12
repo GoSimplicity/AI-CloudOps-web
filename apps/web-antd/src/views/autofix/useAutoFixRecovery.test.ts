@@ -140,7 +140,7 @@ describe('自动修复跨刷新恢复', () => {
     vm.formData.event = 'private-event-canary';
     await vm.runWorkflow();
     const sent = required(api.executeAutoFixWorkflow.mock.calls[0])[0];
-    expect(sent.operation_id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(sent.operation_id).toMatch(/^[\da-f-]{36}$/);
     expect(vm.operationState).toBe('unverified');
     expect(vm.canStartWorkflow).toBe(false);
     const stored = JSON.stringify(sessionStorage);

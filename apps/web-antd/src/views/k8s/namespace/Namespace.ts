@@ -203,13 +203,9 @@ export function useNamespacePage() {
 
     // 如果是数组格式，进行转换
     if (Array.isArray(data)) {
-      return data.reduce(
-        (acc, { key, value }) => {
-          acc[key] = value;
-          return acc;
-        },
-        {} as Record<string, string>,
-      );
+      const record: Record<string, string> = {};
+      for (const { key, value } of data) record[key] = value;
+      return record;
     }
 
     return {};
@@ -587,19 +583,19 @@ export function useNamespacePage() {
   };
 
   const removeLabelField = (key: string) => {
-    delete labelFormModel.value.labels[key];
+    Reflect.deleteProperty(labelFormModel.value.labels, key);
   };
 
   const removeAnnotationField = (key: string) => {
-    delete labelFormModel.value.annotations[key];
+    Reflect.deleteProperty(labelFormModel.value.annotations, key);
   };
 
   const removeCreateLabelField = (key: string) => {
-    delete createFormModel.value.labels[key];
+    Reflect.deleteProperty(createFormModel.value.labels, key);
   };
 
   const removeCreateAnnotationField = (key: string) => {
-    delete createFormModel.value.annotations[key];
+    Reflect.deleteProperty(createFormModel.value.annotations, key);
   };
 
   // 标签过滤管理
@@ -612,7 +608,7 @@ export function useNamespacePage() {
   };
 
   const removeFilterLabel = (key: string) => {
-    delete filterLabels.value[key];
+    Reflect.deleteProperty(filterLabels.value, key);
     currentPage.value = 1;
     fetchNamespaces();
   };

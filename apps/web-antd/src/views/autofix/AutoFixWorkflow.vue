@@ -334,7 +334,10 @@ const actionColumns = [
       >
         暂无操作记录。
       </p>
-      <p v-if="operationHistory.length && !canReadPlan" class="operation-hint">
+      <p
+        v-if="operationHistory.length > 0 && !canReadPlan"
+        class="operation-hint"
+      >
         没有计划详情查询权限，请联系管理员。
       </p>
       <a-alert

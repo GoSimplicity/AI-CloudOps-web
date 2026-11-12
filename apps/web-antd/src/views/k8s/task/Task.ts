@@ -130,7 +130,7 @@ export function useTaskPage() {
       { message: '请输入任务名称', required: true, trigger: 'blur' },
       {
         message: '任务名称只能包含中英文、数字、下划线和连字符',
-        pattern: /^[a-zA-Z0-9-_\u4E00-\u9FA5]+$/,
+        pattern: /^[\w\u4E00-\u9FA5-]+$/,
         trigger: 'blur',
       },
       { max: 50, message: '任务名称长度不能超过50个字符', trigger: 'blur' },
@@ -143,7 +143,7 @@ export function useTaskPage() {
       { message: '请输入任务名称', required: true, trigger: 'blur' },
       {
         message: '任务名称只能包含中英文、数字、下划线和连字符',
-        pattern: /^[a-zA-Z0-9-_\u4E00-\u9FA5]+$/,
+        pattern: /^[\w\u4E00-\u9FA5-]+$/,
         trigger: 'blur',
       },
       { max: 255, message: '任务名称长度不能超过255个字符', trigger: 'blur' },
@@ -197,7 +197,7 @@ export function useTaskPage() {
 
   const getEnvText = (env?: Env | string) => {
     if (env === undefined || env === null) return '未知环境';
-    const value = typeof env === 'string' ? parseInt(env) : env;
+    const value = typeof env === 'string' ? Number.parseInt(env) : env;
     const map: Record<number, string> = {
       [Env.Dev]: '开发',
       [Env.Press]: '灰度',

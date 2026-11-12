@@ -9,11 +9,11 @@ function administratorPassword() {
   if (process.env.CLOUDOPS_TEST_PASSWORD)
     return process.env.CLOUDOPS_TEST_PASSWORD;
   const path = process.env.CLOUDOPS_TEST_ENV_FILE;
-  if (!path) return undefined;
+  if (!path) return;
   return readFileSync(path, 'utf8')
     .match(/^BOOTSTRAP_ADMIN_PASSWORD=(.*)$/m)?.[1]
     ?.trim()
-    .replace(/^['"]|['"]$/g, '');
+    .replaceAll(/^["']|["']$/g, '');
 }
 function route(path: string) {
   return process.env.CLOUDOPS_ROUTER_HISTORY === 'hash' ? `/#${path}` : path;

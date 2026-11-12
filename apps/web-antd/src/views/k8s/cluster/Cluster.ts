@@ -81,7 +81,9 @@ export function useClusterPage() {
           const urlPattern = /^https?:\/\/.+:\d+$/;
           if (!urlPattern.test(value)) {
             return Promise.reject(
-              'API Server地址格式不正确，应为 https://host:port 格式',
+              new Error(
+                'API Server地址格式不正确，应为 https://host:port 格式',
+              ),
             );
           }
           return Promise.resolve();
@@ -98,10 +100,12 @@ export function useClusterPage() {
           if (!content) {
             return isEdit.value
               ? Promise.resolve()
-              : Promise.reject('请输入 KubeConfig 内容');
+              : Promise.reject(new Error('请输入 KubeConfig 内容'));
           }
           if (content.length < 100) {
-            return Promise.reject('KubeConfig 内容过短，请检查是否完整');
+            return Promise.reject(
+              new Error('KubeConfig 内容过短，请检查是否完整'),
+            );
           }
           return Promise.resolve();
         },
@@ -117,7 +121,7 @@ export function useClusterPage() {
       },
       {
         message: '集群名称只能包含字母、数字、中文、下划线和横线',
-        pattern: /^[a-zA-Z0-9\u4E00-\u9FA5_-]+$/,
+        pattern: /^[\w\u4E00-\u9FA5-]+$/,
         trigger: 'blur',
       },
     ],
@@ -139,7 +143,7 @@ export function useClusterPage() {
   // helpers
   const getEnvText = (env?: Env | string) => {
     if (env === undefined || env === null) return '未知';
-    const value = typeof env === 'string' ? parseInt(env) : env;
+    const value = typeof env === 'string' ? Number.parseInt(env) : env;
     const map: Record<number, string> = {
       [Env.Dev]: '开发',
       [Env.Press]: '灰度',
@@ -152,7 +156,7 @@ export function useClusterPage() {
 
   const getEnvColor = (env?: Env | string) => {
     if (env === undefined || env === null) return 'default';
-    const value = typeof env === 'string' ? parseInt(env) : env;
+    const value = typeof env === 'string' ? Number.parseInt(env) : env;
     const map: Record<number, string> = {
       [Env.Dev]: 'blue',
       [Env.Press]: 'purple',

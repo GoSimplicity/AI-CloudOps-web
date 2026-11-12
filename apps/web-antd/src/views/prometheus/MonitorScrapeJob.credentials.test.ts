@@ -96,7 +96,7 @@ async function start(edit = true) {
     await required(
       wrapper
         .findAll('button')
-        .find((item) => item.text().replace(/\s/g, '') === '编辑'),
+        .find((item) => item.text().replaceAll(/\s/g, '') === '编辑'),
     ).trigger('click');
     await flushPromises();
   }
@@ -199,7 +199,7 @@ describe('采集任务凭据更新合同', () => {
     await required(
       required(wrapper)
         .findAll('button')
-        .find((item) => item.text().replace(/\s/g, '') === '查看'),
+        .find((item) => item.text().replaceAll(/\s/g, '') === '查看'),
     ).trigger('click');
     await flushPromises();
     expect(document.querySelector('.ant-modal-body')?.textContent).toContain(

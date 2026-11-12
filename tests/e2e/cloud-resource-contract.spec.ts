@@ -10,11 +10,11 @@ import { requireFixtureValue } from '../../internal/test-utils/required-fixture-
 function password() {
   if (process.env.CLOUDOPS_TEST_PASSWORD)
     return process.env.CLOUDOPS_TEST_PASSWORD;
-  if (!process.env.CLOUDOPS_TEST_ENV_FILE) return undefined;
+  if (!process.env.CLOUDOPS_TEST_ENV_FILE) return;
   return readFileSync(process.env.CLOUDOPS_TEST_ENV_FILE, 'utf8')
     .match(/^BOOTSTRAP_ADMIN_PASSWORD=(.*)$/m)?.[1]
     ?.trim()
-    .replace(/^['"]|['"]$/g, '');
+    .replaceAll(/^["']|["']$/g, '');
 }
 const route = (path: string) =>
   process.env.CLOUDOPS_ROUTER_HISTORY === 'hash' ? `/#${path}` : path;
@@ -124,7 +124,9 @@ test('cloud resource sync selection uses local regions and cancellation never ca
         )
         .filter({ hasText: nonce })
         .click();
-      expect((await (await loaded).json()).code).toBe(0);
+      const resolvedLoaded = await loaded;
+      const resolvedLoadedJson = await resolvedLoaded.json();
+      expect(resolvedLoadedJson.code).toBe(0);
       await expect(
         dialog.getByRole('button', { exact: true, name: '开始同步' }),
       ).toBeEnabled();

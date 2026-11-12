@@ -294,13 +294,9 @@ export function useServicePage() {
 
     // 如果是数组格式，进行转换
     if (Array.isArray(data)) {
-      return data.reduce(
-        (acc, { key, value }) => {
-          acc[key] = value;
-          return acc;
-        },
-        {} as Record<string, string>,
-      );
+      const record: Record<string, string> = {};
+      for (const { key, value } of data) record[key] = value;
+      return record;
     }
 
     return {};
@@ -835,7 +831,7 @@ export function useServicePage() {
   };
 
   const removeFilterLabel = (key: string) => {
-    delete filterLabels.value[key];
+    Reflect.deleteProperty(filterLabels.value, key);
     currentPage.value = 1;
     fetchServices();
   };
@@ -1006,7 +1002,7 @@ export function useServicePage() {
 
   const removeEditLabelField = (key: string) => {
     if (editFormModel.value.labels) {
-      delete editFormModel.value.labels[key];
+      Reflect.deleteProperty(editFormModel.value.labels, key);
     }
   };
 
@@ -1022,7 +1018,7 @@ export function useServicePage() {
 
   const removeEditSelectorField = (key: string) => {
     if (editFormModel.value.selector) {
-      delete editFormModel.value.selector[key];
+      Reflect.deleteProperty(editFormModel.value.selector, key);
     }
   };
 
@@ -1038,7 +1034,7 @@ export function useServicePage() {
 
   const removeEditAnnotationField = (key: string) => {
     if (editFormModel.value.annotations) {
-      delete editFormModel.value.annotations[key];
+      Reflect.deleteProperty(editFormModel.value.annotations, key);
     }
   };
 
@@ -1047,7 +1043,7 @@ export function useServicePage() {
   };
 
   const removeLabelField = (key: string) => {
-    delete createFormModel.value.labels[key];
+    Reflect.deleteProperty(createFormModel.value.labels, key);
   };
 
   const addAnnotationField = () => {
@@ -1055,7 +1051,7 @@ export function useServicePage() {
   };
 
   const removeAnnotationField = (key: string) => {
-    delete createFormModel.value.annotations[key];
+    Reflect.deleteProperty(createFormModel.value.annotations, key);
   };
 
   const addSelectorField = () => {
@@ -1063,7 +1059,7 @@ export function useServicePage() {
   };
 
   const removeSelectorField = (key: string) => {
-    delete createFormModel.value.selector[key];
+    Reflect.deleteProperty(createFormModel.value.selector, key);
   };
 
   return {

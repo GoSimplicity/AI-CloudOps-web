@@ -107,8 +107,9 @@ describe('buildSecretDataPayload', () => {
     required(current[0]).value = '测试假值';
     required(current[0]).modified = true;
     const payload = required(buildSecretDataPayload(['a'], current));
-    const bytes = Uint8Array.from(atob(required(payload.a)), (c) =>
-      c.charCodeAt(0),
+    const bytes = Uint8Array.from(
+      atob(required(payload.a)),
+      (c) => c.codePointAt(0) ?? 0,
     );
     expect(new TextDecoder().decode(bytes)).toBe('测试假值');
   });
@@ -383,7 +384,7 @@ describe('incr6 P3-2：块标量头匹配不再随行长平方增长', () => {
 
 describe('readRevealedValue', () => {
   const res = {
-    data: { a: FAKE_B64, bin: btoa(String.fromCharCode(255, 254)) },
+    data: { a: FAKE_B64, bin: btoa(String.fromCodePoint(255, 254)) },
     keys: ['a', 's', 'bin'],
     string_data: { s: FAKE },
   };

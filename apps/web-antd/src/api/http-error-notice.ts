@@ -114,7 +114,7 @@ export function getHttpErrorNoticeKey(error: unknown): string | undefined {
  * 覆盖 403 / 已弹后端原文的业务错误（isPermissionDeniedError），以及通用 http-error 提示（含网络错误）。
  * 返回 true 时页面不要再弹自己的失败提示。
  */
-export function isNotifiedByRequestLayer(error: unknown): boolean {
+export function isNotifiedByRequestLayer(error?: unknown): boolean {
   return (
     isPermissionDeniedError(error) || getHttpErrorNoticeKey(error) !== undefined
   );

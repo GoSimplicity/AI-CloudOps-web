@@ -115,8 +115,8 @@ function expectSafeSentData(text: string) {
   for (const value of Object.values(data)) {
     if (value === null || value === REDACTED_PLACEHOLDER) continue;
     expect(typeof value).toBe('string');
-    const raw = (value as string).replaceAll(/[\r\n]/g, '');
-    expect(raw).toMatch(/^[A-Za-z0-9+/]*={0,2}$/);
+    const raw = (value as string).replaceAll(/[\n\r]/g, '');
+    expect(raw).toMatch(/^[\d+/a-z]*={0,2}$/i);
     expect(atob(raw).trim()).not.toBe(REDACTED_PLACEHOLDER);
   }
   expect(text).not.toContain(FAKE);

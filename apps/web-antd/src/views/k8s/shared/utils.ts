@@ -14,7 +14,7 @@ export const formatK8sTime = (timeStr?: null | string): string => {
     const date = new Date(timeStr);
 
     // 检查日期是否有效
-    if (isNaN(date.getTime())) {
+    if (Number.isNaN(date.getTime())) {
       return timeStr;
     }
 
@@ -97,7 +97,7 @@ export const formatDateTime = (dateStr: string): string => {
  */
 export const getRelativeTime = (dateStr: string): string => {
   if (!dateStr) return '';
-  const now = new Date().getTime();
+  const now = Date.now();
   const past = new Date(dateStr).getTime();
   const diff = now - past;
 

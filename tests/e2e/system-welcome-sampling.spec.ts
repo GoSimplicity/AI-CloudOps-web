@@ -12,7 +12,7 @@ function password() {
     ? readFileSync(process.env.CLOUDOPS_TEST_ENV_FILE, 'utf8')
         .match(/^BOOTSTRAP_ADMIN_PASSWORD=(.*)$/m)?.[1]
         ?.trim()
-        .replace(/^['"]|['"]$/g, '')
+        .replaceAll(/^["']|["']$/g, '')
     : undefined;
 }
 const route = (path: string) =>
@@ -83,7 +83,8 @@ test('welcome displays local metrics, read-only refresh and compact themed mobil
       result.request().method() === 'GET',
   );
   await page.getByRole('button', { exact: true, name: '刷新采样' }).click();
-  expect((await refresh).status()).toBe(200);
+  const resolvedRefresh = await refresh;
+  expect(resolvedRefresh.status()).toBe(200);
   await expect(page.locator('.sample-status')).not.toHaveText('正在读取采样');
   if (
     await page

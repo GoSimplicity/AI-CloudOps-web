@@ -100,8 +100,9 @@ describe('并发请求的令牌刷新', () => {
     await vi.waitFor(() => expect(mock.history.get).toHaveLength(2));
     refresh.resolve('fresh');
 
+    const resolvedResults = await results;
     expect(
-      (await results).every((result) => result.status === 'rejected'),
+      resolvedResults.every((result) => result.status === 'rejected'),
     ).toBe(true);
     expect(doRefreshToken).toHaveBeenCalledTimes(1);
     expect(mock.history.get).toHaveLength(4);

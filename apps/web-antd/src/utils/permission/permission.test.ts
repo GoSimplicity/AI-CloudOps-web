@@ -246,7 +246,7 @@ describe('checkPermission 纯函数', () => {
     expect(isSuperAdmin({ roles: ['ops'] })).toBe(false);
     expect(isSuperAdmin({ username: 'admin' })).toBe(true);
     expect(isSuperAdmin({ username: 'Admin' })).toBe(false);
-    expect(isSuperAdmin(undefined)).toBe(false);
+    expect(isSuperAdmin()).toBe(false);
     expect(checkPermission({ codes: [], roles: ['admin'] }, POD_DELETE)).toBe(
       true,
     );

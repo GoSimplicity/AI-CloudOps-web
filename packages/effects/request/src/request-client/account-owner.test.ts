@@ -66,7 +66,8 @@ beforeEach(async () => {
     },
   };
   mock = new MockAdapter(axios);
-  client = (await import('#/api/request')).requestClient;
+  const awaited = await import('#/api/request');
+  client = awaited.requestClient;
 });
 afterEach(() => {
   mock.restore();

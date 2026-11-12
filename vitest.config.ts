@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [Vue(), VueJsx()],
   resolve: {
     alias: {
-      '#': path.resolve(__dirname, './apps/web-antd/src'),
+      '#': path.resolve(import.meta.dirname, './apps/web-antd/src'),
     },
   },
   test: {

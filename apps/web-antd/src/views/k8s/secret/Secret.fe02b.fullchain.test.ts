@@ -88,33 +88,33 @@ const adapter: AxiosAdapter = async (config) => {
   if (mode === 'network')
     throw new AxiosError('Network Error', AxiosError.ERR_NETWORK, config, {});
   if (mode === 'canceled') throw new axios.CanceledError(undefined, config, {});
-  const [status, data] =
-    mode === 'server'
-      ? [502, { code: 502, data: null, message: 'upstream 原文' }]
-      : mode === 'badRequest'
-        ? [
-            400,
-            {
-              code: 400,
-              data: null,
-              error: { message: RAW_ECHO },
-              message: RAW_ECHO,
-            },
-          ]
-        : mode === 'unprocessable'
-          ? [
-              422,
-              {
-                code: 422,
-                data: null,
-                error: { message: RAW_ECHO },
-                message: RAW_ECHO,
-              },
-            ]
-          : [
-              200,
-              { code: 1, data: null, message: 'Secret 已存在（后端原文）' },
-            ];
+  let status = 200;
+  let data: {
+    code: number;
+    data: null;
+    error?: { message: string };
+    message: string;
+  } = { code: 1, data: null, message: 'Secret 已存在（后端原文）' };
+  if (mode === 'server') {
+    status = 502;
+    data = { code: 502, data: null, message: 'upstream 原文' };
+  } else if (mode === 'badRequest') {
+    status = 400;
+    data = {
+      code: 400,
+      data: null,
+      error: { message: RAW_ECHO },
+      message: RAW_ECHO,
+    };
+  } else if (mode === 'unprocessable') {
+    status = 422;
+    data = {
+      code: 422,
+      data: null,
+      error: { message: RAW_ECHO },
+      message: RAW_ECHO,
+    };
+  }
   const response = {
     config,
     data,

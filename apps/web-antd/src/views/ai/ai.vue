@@ -353,19 +353,6 @@ const toggleWindowSize = () => {
   isExpanded.value = !isExpanded.value;
 };
 
-const resetWindow = () => {
-  isMinimized.value = false;
-  isExpanded.value = false;
-  sending.value = false;
-  sessionId.value = '';
-  errorMessage.value = '';
-  showAdvancedOptions.value = false;
-  currentMode.value = 1; // 重置为默认RAG模式
-  chatHistory.value = [];
-  isConnected.value = false;
-  initChatMessages();
-};
-
 const onDrag = (e) => {
   if (!isDragging.value) return;
 
@@ -449,8 +436,14 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const simulateStreamResponse = async (messageObj, fullText, ticket) => {
   if (!fullText) return;
   const total = fullText.length;
-  const step = total > 2000 ? 60 : total > 1000 ? 40 : total > 300 ? 20 : 8;
-  const delay = total > 2000 ? 8 : total > 1000 ? 12 : total > 300 ? 16 : 22;
+  let step = 8;
+  if (total > 2000) step = 60;
+  else if (total > 1000) step = 40;
+  else if (total > 300) step = 20;
+  let delay = 22;
+  if (total > 2000) delay = 8;
+  else if (total > 1000) delay = 12;
+  else if (total > 300) delay = 16;
   let index = 0;
   while (index < total) {
     if (!sending.value || !accountScope.current(ticket)) break;
@@ -1337,7 +1330,7 @@ const renderMarkdown = (content) => {
     });
   } catch {
     // 如果解析失败，返回原始内容（转义HTML）
-    return escapeHtml(content).replace(/\n/g, '<br>');
+    return escapeHtml(content).replaceAll('\n', '<br>');
   }
 };
 

@@ -303,7 +303,7 @@ describe('incr8 P3-4：杀掉存活变异体', () => {
 
   it('m28（:181）findRedactedPlaceholder：data 里的 Uint8Array 字节是占位符（含首尾空白）→ 返回 data.键', () => {
     const bytes = (text: string) =>
-      Uint8Array.from(text, (ch) => ch.charCodeAt(0));
+      Uint8Array.from(text, (ch) => ch.codePointAt(0) ?? 0);
     expect(findRedactedPlaceholder({ data: { k: bytes(PH) } })).toBe('data.k');
     expect(findRedactedPlaceholder({ data: { k: bytes(` ${PH}\n`) } })).toBe(
       'data.k',

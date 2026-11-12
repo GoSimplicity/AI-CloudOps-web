@@ -1830,7 +1830,7 @@ onMounted(async () => {
                               {{ verb }}
                             </a-tag>
                             <span
-                              v-if="!(rule.verbs || []).length"
+                              v-if="(rule.verbs || []).length === 0"
                               class="k8s-no-data"
                               >-</span
                             >
@@ -1848,7 +1848,7 @@ onMounted(async () => {
                               {{ apiGroup || '"" (core)' }}
                             </a-tag>
                             <span
-                              v-if="!(rule.apiGroups || []).length"
+                              v-if="(rule.apiGroups || []).length === 0"
                               class="k8s-no-data"
                               >-</span
                             >
@@ -1866,7 +1866,7 @@ onMounted(async () => {
                               {{ resource }}
                             </a-tag>
                             <span
-                              v-if="!(rule.resources || []).length"
+                              v-if="(rule.resources || []).length === 0"
                               class="k8s-no-data"
                               >-</span
                             >

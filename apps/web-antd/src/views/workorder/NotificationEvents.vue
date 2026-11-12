@@ -109,12 +109,12 @@ const masked = (channel: unknown, value: unknown) => {
   if (typeof value !== 'string') return '暂无脱敏标识';
   if (
     channel === 'email' &&
-    /^(?:[\p{L}\p{N}]|\*)\*{3}@(?:[\p{L}\p{N}]|\*)\*{3}$/u.test(value)
+    /^[\p{L}\p{N}*]\*{3}@[\p{L}\p{N}*]\*{3}$/u.test(value)
   )
     return value;
   if (
     channel === 'feishu' &&
-    /^(ou_|on_|oc_)\*{3}(?:[\dA-Za-z]{4})?$/.test(value)
+    /^(?:ou_|on_|oc_)\*{3}(?:[\dA-Za-z]{4})?$/.test(value)
   )
     return value;
   if (channel === 'in_app' && /^用户\*{3}(?:\d{4})?$/.test(value)) return value;
@@ -256,12 +256,9 @@ function openAction(
   event: NotificationEvent,
   delivery?: NotificationDelivery,
 ) {
-  const code =
-    kind === 'cancel'
-      ? codes.cancel
-      : kind === 'retry'
-        ? codes.retry
-        : codes.resolve;
+  let code: (typeof codes)[keyof typeof codes] = codes.resolve;
+  if (kind === 'cancel') code = codes.cancel;
+  else if (kind === 'retry') code = codes.retry;
   if (!allowed(code) || !safeId(event.id) || submitting.value) return;
   if (
     kind === 'cancel' &&
@@ -297,10 +294,7 @@ async function submitAction() {
   const delivery = actionDelivery.value;
   const text = reason.value.trim();
   if (!kind || !target || submitting.value || !safeId(target.id)) return;
-  if (
-    Array.from(text).length < 5 ||
-    new TextEncoder().encode(text).length > 500
-  ) {
+  if ([...text].length < 5 || new TextEncoder().encode(text).length > 500) {
     message.error('请填写 5 至 500 字节的核对原因');
     return;
   }
@@ -314,12 +308,9 @@ async function submitAction() {
       ticket !== actionGeneration
     )
       return;
-    const code =
-      kind === 'cancel'
-        ? codes.cancel
-        : kind === 'retry'
-          ? codes.retry
-          : codes.resolve;
+    let code: (typeof codes)[keyof typeof codes] = codes.resolve;
+    if (kind === 'cancel') code = codes.cancel;
+    else if (kind === 'retry') code = codes.retry;
     if (!allowed(code)) {
       message.error('当前用户没有该操作的精确权限');
       return;

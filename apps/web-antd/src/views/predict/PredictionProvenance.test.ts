@@ -60,7 +60,7 @@ describe('预测来源展示', () => {
   it('真实零保留，缺失、非有限及超范围值显示未知', () => {
     expect(formatProbability(0)).toBe('0.0%');
     expect(formatProbability(0.8)).toBe('80.0%');
-    for (const value of [null, undefined, NaN, Infinity, -0.1, 1.1])
+    for (const value of [null, undefined, Number.NaN, Infinity, -0.1, 1.1])
       expect(formatProbability(value)).toBe('未知');
   });
 });

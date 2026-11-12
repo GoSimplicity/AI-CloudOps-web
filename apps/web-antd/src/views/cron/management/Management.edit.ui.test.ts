@@ -98,7 +98,7 @@ describe('定时任务编辑完整交互', () => {
     const open = required(
       wrapper
         .findAll('button')
-        .find((button) => button.text().replace(/\s/g, '') === '创建任务'),
+        .find((button) => button.text().replaceAll(/\s/g, '') === '创建任务'),
     );
     await open.trigger('click');
     await flushPromises();
@@ -143,7 +143,7 @@ describe('定时任务编辑完整交互', () => {
       }),
     );
     expect(
-      client.post.mock.calls.some(([path]) => /\/(run|enable)$/.test(path)),
+      client.post.mock.calls.some(([path]) => /\/(?:run|enable)$/.test(path)),
     ).toBe(false);
     await open.trigger('click');
     await flushPromises();

@@ -4,7 +4,7 @@ import type {
 } from '#/api/core/aiops/predict';
 
 function explicitTimezone(value: string) {
-  return /T.*(?:Z|[+-]\d{2}:\d{2})$/i.test(value);
+  return /t.*(?:z|[+-]\d{2}:\d{2})$/i.test(value);
 }
 
 export function formatPredictionTime(timestamp: Date | string, chart = false) {

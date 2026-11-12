@@ -461,7 +461,7 @@ const formatQuotedContent = (comment: WorkorderInstanceCommentItem): string => {
   let content = comment.content || '';
   const maxLength = 100;
   if (content.length > maxLength) {
-    content = `${content.substring(0, maxLength)}...`;
+    content = `${content.slice(0, Math.max(0, maxLength))}...`;
   }
 
   // 处理多行内容，每行都加上引用符号
@@ -566,7 +566,7 @@ const clearQuote = () => {
 const truncateText = (text: string, maxLength: number): string => {
   if (!text) return '';
   if (text.length <= maxLength) return text;
-  return `${text.substring(0, maxLength)}...`;
+  return `${text.slice(0, Math.max(0, maxLength))}...`;
 };
 
 const copyComment = async (content: string) => {

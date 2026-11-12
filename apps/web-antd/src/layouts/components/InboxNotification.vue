@@ -173,12 +173,9 @@ async function perform(kind: 'delete' | 'read' | 'readAll', id?: number) {
   if (busy.value || !authenticated() || (kind !== 'readAll' && !safeId(id)))
     return;
   const epoch = generation;
-  const code =
-    kind === 'read'
-      ? codes.read
-      : kind === 'readAll'
-        ? codes.readAll
-        : codes.delete;
+  let code: (typeof codes)[keyof typeof codes] = codes.delete;
+  if (kind === 'read') code = codes.read;
+  else if (kind === 'readAll') code = codes.readAll;
   busy.value = true;
   actionError.value = '';
   try {

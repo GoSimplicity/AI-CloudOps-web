@@ -210,8 +210,8 @@ const originalTriggerVersion = ref<number | undefined>();
 const isLegacyAdvancedTrigger = (record: Notification): boolean =>
   record.trigger_version !== 1 &&
   (record.trigger_type !== NotificationTrigger.IMMEDIATE ||
-    record.repeat_interval != null ||
-    record.repeat_count != null);
+    (record.repeat_interval !== null && record.repeat_interval !== undefined) ||
+    (record.repeat_count !== null && record.repeat_count !== undefined));
 let formEpoch = 0;
 let formOwner: string | undefined;
 let formValidationEpoch: number | undefined;
@@ -1568,7 +1568,7 @@ const saveNotification = async (): Promise<void> => {
       const invalid = formData.channels.includes(address.channel)
         ? addressError(address.channel, address.address)
         : '接收地址渠道必须包含在已选择的通知渠道中';
-      if (invalid || Array.from(address.name).length > 100) {
+      if (invalid || [...address.name].length > 100) {
         recipientError.value = invalid || '接收人名称不能超过100字符';
         return;
       }
@@ -2378,7 +2378,8 @@ onMounted(() => {
             originalTriggerVersion !== 1 &&
             (notificationDialog.form.triggerType !==
               NotificationTrigger.IMMEDIATE ||
-              notificationDialog.form.repeatInterval != null)
+              (notificationDialog.form.repeatInterval !== null &&
+                notificationDialog.form.repeatInterval !== undefined))
           "
           message="历史高级规则尚未验证，不会自动执行。请重新设置触发参数，或停用后重新启用。"
           show-icon

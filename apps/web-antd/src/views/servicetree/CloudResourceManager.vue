@@ -908,9 +908,7 @@ const handleSync = async (): Promise<void> => {
       account.provider === CloudProvider.GCP
         ? /^[1-9]\d{0,19}$/.test(id) &&
           (id.length < 20 || id <= '18446744073709551615')
-        : /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-            id,
-          );
+        : /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i.test(id);
     if (
       syncForm.sync_mode === SyncMode.FULL ||
       regionIds.length !== 1 ||
@@ -1172,48 +1170,48 @@ const exportToExcel = (data: TreeCloudResource[]) => {
   }
 
   // 准备导出数据
-  const exportData = data.map((item) => ({
-    // Object.keys order is the CSV column order.
-    /* eslint-disable perfectionist/sort-objects */
-    资源名称: item.name,
-    资源类型: getResourceTypeText(item.resource_type),
-    云账户: item.cloud_account?.name || '-',
-    实例ID: item.instance_id || '-',
-    实例类型: item.instance_type || '-',
-    状态: getStatusText(item.status),
-    环境: item.environment ? getEnvironmentText(item.environment) : '-',
-    地域: item.region || '-',
-    可用区: item.zone_id || '-',
-    CPU核数: item.cpu || '未知',
-    '内存(GB)': item.memory || '未知',
-    '磁盘(GB)': item.disk || '未知',
-    公网IP: item.public_ip || '-',
-    私网IP: item.private_ip || '-',
-    操作系统: item.os_name || '-',
-    计费方式:
-      item.charge_type === ChargeType.PRE_PAID
-        ? '包年包月'
-        : item.charge_type === ChargeType.POST_PAID
-          ? '按量付费'
+  const exportData = data.map((item) => {
+    let chargeText = '未知';
+    if (item.charge_type === ChargeType.PRE_PAID) chargeText = '包年包月';
+    else if (item.charge_type === ChargeType.POST_PAID) chargeText = '按量付费';
+    return {
+      // Object.keys order is the CSV column order.
+      /* eslint-disable perfectionist/sort-objects */
+      资源名称: item.name,
+      资源类型: getResourceTypeText(item.resource_type),
+      云账户: item.cloud_account?.name || '-',
+      实例ID: item.instance_id || '-',
+      实例类型: item.instance_type || '-',
+      状态: getStatusText(item.status),
+      环境: item.environment ? getEnvironmentText(item.environment) : '-',
+      地域: item.region || '-',
+      可用区: item.zone_id || '-',
+      CPU核数: item.cpu || '未知',
+      '内存(GB)': item.memory || '未知',
+      '磁盘(GB)': item.disk || '未知',
+      公网IP: item.public_ip || '-',
+      私网IP: item.private_ip || '-',
+      操作系统: item.os_name || '-',
+      计费方式: chargeText,
+      月成本:
+        item.monthly_cost > 0
+          ? `${item.monthly_cost} ${item.currency || '币种未知'}`
           : '未知',
-    月成本:
-      item.monthly_cost > 0
-        ? `${item.monthly_cost} ${item.currency || '币种未知'}`
-        : '未知',
-    到期时间: item.expire_time ? formatDateTime(item.expire_time) : '-',
-    服务树节点: item.tree_nodes?.map((n) => n.name).join(', ') || '-',
-    创建人: item.create_user_name || '-',
-    创建时间: formatDateTime(item.created_at),
-    更新时间: formatDateTime(item.updated_at),
-    描述: item.description || '-',
-    /* eslint-enable perfectionist/sort-objects */
-  }));
+      到期时间: item.expire_time ? formatDateTime(item.expire_time) : '-',
+      服务树节点: item.tree_nodes?.map((n) => n.name).join(', ') || '-',
+      创建人: item.create_user_name || '-',
+      创建时间: formatDateTime(item.created_at),
+      更新时间: formatDateTime(item.updated_at),
+      描述: item.description || '-',
+      /* eslint-enable perfectionist/sort-objects */
+    };
+  });
 
   // 导出文件
   const timestamp = new Date()
     .toISOString()
     .replaceAll(/[.:]/g, '-')
-    .substring(0, 19);
+    .slice(0, 19);
   const filename = `云资源列表_${timestamp}.csv`;
   const firstRow = exportData[0];
   if (!firstRow) return;

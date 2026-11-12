@@ -341,13 +341,9 @@ export function useIngressPage() {
 
     // 如果是数组格式，进行转换
     if (Array.isArray(data)) {
-      return data.reduce(
-        (acc, { key, value }) => {
-          acc[key] = value;
-          return acc;
-        },
-        {} as Record<string, string>,
-      );
+      const record: Record<string, string> = {};
+      for (const { key, value } of data) record[key] = value;
+      return record;
     }
 
     return {};
@@ -921,7 +917,7 @@ export function useIngressPage() {
   };
 
   const removeFilterLabel = (key: string) => {
-    delete filterLabels.value[key];
+    Reflect.deleteProperty(filterLabels.value, key);
     currentPage.value = 1;
     fetchIngresses();
   };
@@ -1096,7 +1092,7 @@ export function useIngressPage() {
 
   const removeEditLabelField = (key: string) => {
     if (editFormModel.value.labels) {
-      delete editFormModel.value.labels[key];
+      Reflect.deleteProperty(editFormModel.value.labels, key);
     }
   };
 
@@ -1112,16 +1108,16 @@ export function useIngressPage() {
 
   const removeEditAnnotationField = (key: string) => {
     if (editFormModel.value.annotations) {
-      delete editFormModel.value.annotations[key];
+      Reflect.deleteProperty(editFormModel.value.annotations, key);
     }
   };
 
   const removeLabelField = (key: string) => {
-    delete createFormModel.value.labels[key];
+    Reflect.deleteProperty(createFormModel.value.labels, key);
   };
 
   const removeAnnotationField = (key: string) => {
-    delete createFormModel.value.annotations[key];
+    Reflect.deleteProperty(createFormModel.value.annotations, key);
   };
 
   return {

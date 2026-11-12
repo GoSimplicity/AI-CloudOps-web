@@ -250,13 +250,9 @@ export function useConfigMapPage() {
     }
 
     if (Array.isArray(data)) {
-      return data.reduce(
-        (acc, { key, value }) => {
-          acc[key] = value;
-          return acc;
-        },
-        {} as Record<string, string>,
-      );
+      const record: Record<string, string> = {};
+      for (const { key, value } of data) record[key] = value;
+      return record;
     }
 
     return {};
@@ -677,7 +673,7 @@ export function useConfigMapPage() {
           result[key] = '';
         } else {
           const cleanValue = trimmedValue.replaceAll(/\s/g, '');
-          if (/^[\d+/A-Za-z]*={0,2}$/.test(cleanValue)) {
+          if (/^[\d+/a-z]*={0,2}$/i.test(cleanValue)) {
             if (cleanValue.length % 4 === 0) {
               result[key] = cleanValue;
             } else {
@@ -884,7 +880,7 @@ export function useConfigMapPage() {
   };
 
   const removeFilterLabel = (key: string) => {
-    delete filterLabels.value[key];
+    Reflect.deleteProperty(filterLabels.value, key);
     currentPage.value = 1;
     fetchConfigMaps();
   };
@@ -966,35 +962,35 @@ export function useConfigMapPage() {
   };
 
   const removeDataField = (key: string) => {
-    delete createFormModel.value.data[key];
+    Reflect.deleteProperty(createFormModel.value.data, key);
   };
 
   const removeEditDataField = (key: string) => {
-    delete editFormModel.value.data[key];
+    Reflect.deleteProperty(editFormModel.value.data, key);
   };
 
   const removeBinaryDataField = (key: string) => {
-    delete createFormModel.value.binary_data[key];
+    Reflect.deleteProperty(createFormModel.value.binary_data, key);
   };
 
   const removeEditBinaryDataField = (key: string) => {
-    delete editFormModel.value.binary_data[key];
+    Reflect.deleteProperty(editFormModel.value.binary_data, key);
   };
 
   const removeLabelField = (key: string) => {
-    delete createFormModel.value.labels[key];
+    Reflect.deleteProperty(createFormModel.value.labels, key);
   };
 
   const removeEditLabelField = (key: string) => {
-    delete editFormModel.value.labels[key];
+    Reflect.deleteProperty(editFormModel.value.labels, key);
   };
 
   const removeAnnotationField = (key: string) => {
-    delete createFormModel.value.annotations[key];
+    Reflect.deleteProperty(createFormModel.value.annotations, key);
   };
 
   const removeEditAnnotationField = (key: string) => {
-    delete editFormModel.value.annotations[key];
+    Reflect.deleteProperty(editFormModel.value.annotations, key);
   };
 
   // YAML 操作辅助函数

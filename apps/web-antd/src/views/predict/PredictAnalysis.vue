@@ -154,6 +154,7 @@ const initTrendChart = () => {
   const data = forecastPoints(predictionResult.value).map((item) => item.point);
   const xAxisData = data.map((point) => formatTimeForChart(point.timestamp));
   const predictedData = data.map((point) => point.predicted_value);
+  const currentValue = predictionResult.value.current_value;
 
   const option = {
     backgroundColor: 'transparent',
@@ -177,9 +178,7 @@ const initTrendChart = () => {
         type: 'line',
       },
       {
-        data: Array(xAxisData.length).fill(
-          predictionResult.value.current_value,
-        ),
+        data: Array.from({ length: xAxisData.length }, () => currentValue),
         lineStyle: { color: '#ff4d4f', type: 'dashed' },
         name: '当前值',
         type: 'line',

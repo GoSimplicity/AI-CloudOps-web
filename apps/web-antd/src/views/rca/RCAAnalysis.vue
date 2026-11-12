@@ -167,7 +167,7 @@ const hasAnomalies = computed(() => {
 const truncateText = (text: string, maxLength: number) => {
   if (!text) return '';
   if (text.length <= maxLength) return text;
-  return `${text.substring(0, maxLength)}...`;
+  return `${text.slice(0, Math.max(0, maxLength))}...`;
 };
 
 // 加载可用指标
@@ -203,7 +203,7 @@ const filterMetrics = (input: string, option: any) => {
 const formatShortTime = (timestamp?: string) => {
   if (!timestamp) return '-';
   const date = new Date(timestamp);
-  if (isNaN(date.getTime())) return timestamp;
+  if (Number.isNaN(date.getTime())) return timestamp;
 
   return date.toLocaleString('zh-CN', {
     day: '2-digit',

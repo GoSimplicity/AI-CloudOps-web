@@ -50,7 +50,7 @@ async function screen() {
 function clearButton() {
   return required(wrapper)
     .findAll('button')
-    .find((button) => button.text().replace(/\s/g, '') === '清除服务缓存');
+    .find((button) => button.text().replaceAll(/\s/g, '') === '清除服务缓存');
 }
 beforeEach(() => {
   vi.clearAllMocks();

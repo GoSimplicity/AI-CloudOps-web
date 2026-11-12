@@ -222,13 +222,12 @@ const updateMetricData = (type: string, response: PredictionResponse) => {
       const lastPoint = predicted[predicted.length - 1];
       if (lastPoint) {
         const lastValue = lastPoint.predicted_value;
-        metric.trend =
-          response.current_value === 0
-            ? lastValue === 0
-              ? 0
-              : null
-            : ((lastValue - response.current_value) / response.current_value) *
-              100;
+        if (response.current_value === 0)
+          metric.trend = lastValue === 0 ? 0 : null;
+        else
+          metric.trend =
+            ((lastValue - response.current_value) / response.current_value) *
+            100;
       }
     }
   }

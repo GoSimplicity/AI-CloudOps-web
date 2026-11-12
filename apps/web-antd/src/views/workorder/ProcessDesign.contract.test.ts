@@ -194,16 +194,14 @@ describe('流程设计真实控件合同', () => {
     const original = required(client.get.getMockImplementation());
     const late = createDeferred<unknown>();
     let requests = 0;
-    client.get.mockImplementation((path: string, ...rest: unknown[]) =>
-      path === '/user/list'
-        ? ++requests === 1
-          ? late.promise
-          : Promise.resolve({
-              total: 1,
-              items: [{ id: 88, username: '当前步骤用户' }],
-            })
-        : original(path, ...rest),
-    );
+    client.get.mockImplementation((path: string, ...rest: unknown[]) => {
+      if (path !== '/user/list') return original(path, ...rest);
+      if (++requests === 1) return late.promise;
+      return Promise.resolve({
+        total: 1,
+        items: [{ id: 88, username: '当前步骤用户' }],
+      });
+    });
     await start();
     await tab('可视化设计');
     await required(required(wrapper).findAll('.process-step')[0]).trigger(

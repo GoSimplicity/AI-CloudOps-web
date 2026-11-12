@@ -14,7 +14,10 @@ function required<T>(value: null | T | undefined): T {
  * 复审 P3-5：注释要紧挨着它描述的声明（第二轮插入 SECRET_DETAIL_PERMISSION_CODE 时把
  * 「全部按钮 key → 权限码」的注释挤到了别的声明上面）。
  */
-const source = readFileSync(resolve(__dirname, 'permission-codes.ts'), 'utf8');
+const source = readFileSync(
+  resolve(import.meta.dirname, 'permission-codes.ts'),
+  'utf8',
+);
 const lines = source.split('\n');
 
 function lineBefore(declaration: string) {

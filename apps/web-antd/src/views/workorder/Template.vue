@@ -1646,7 +1646,8 @@ onMounted(async () => {
           <a-descriptions-item :span="2" label="标签">
             <template
               v-if="
-                detailDialog.template.tags && detailDialog.template.tags.length
+                detailDialog.template.tags &&
+                detailDialog.template.tags.length > 0
               "
             >
               <a-tag

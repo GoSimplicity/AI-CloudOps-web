@@ -49,7 +49,7 @@ export interface PermissionSubject {
 }
 
 export function isSuperAdmin(
-  subject: null | Pick<PermissionSubject, 'roles' | 'username'> | undefined,
+  subject?: null | Pick<PermissionSubject, 'roles' | 'username'> | undefined,
 ) {
   if (!subject) return false;
   const roles = Array.isArray(subject.roles) ? subject.roles : [];

@@ -448,13 +448,9 @@ export function usePodPage() {
 
     // 如果是数组格式，进行转换
     if (Array.isArray(data)) {
-      return data.reduce(
-        (acc, { key, value }) => {
-          acc[key] = value;
-          return acc;
-        },
-        {} as Record<string, string>,
-      );
+      const record: Record<string, string> = {};
+      for (const { key, value } of data) record[key] = value;
+      return record;
     }
 
     return {};
@@ -1537,12 +1533,12 @@ export function usePodPage() {
             const trimmedLine = line.trim();
 
             if (trimmedLine.startsWith('event:')) {
-              currentEvent = trimmedLine.substring(6).trim();
+              currentEvent = trimmedLine.slice(6).trim();
               continue;
             }
 
             if (trimmedLine.startsWith('data:')) {
-              const data = trimmedLine.substring(5).trim();
+              const data = trimmedLine.slice(5).trim();
 
               if (data === '[DONE]') {
                 onClose?.();
@@ -1804,7 +1800,9 @@ export function usePodPage() {
       // 等待DOM更新
       await nextTick();
 
-      const terminalElement = document.getElementById('terminal-container');
+      const terminalElement = document.querySelector<HTMLElement>(
+        '#terminal-container',
+      );
       if (!terminalElement) {
         throw new Error('终端容器元素未找到');
       }
@@ -2476,12 +2474,12 @@ export function usePodPage() {
       link.setAttribute('download', fileName);
 
       // 添加到DOM并触发下载
-      document.body.appendChild(link);
+      document.body.append(link);
       link.click();
 
       // 清理
       setTimeout(() => {
-        document.body.removeChild(link);
+        link.remove();
         window.URL.revokeObjectURL(url);
       }, 100);
 
@@ -2551,7 +2549,7 @@ export function usePodPage() {
   };
 
   const removeFilterLabel = (key: string) => {
-    delete filterLabels.value[key];
+    Reflect.deleteProperty(filterLabels.value, key);
     currentPage.value = 1;
     fetchPods();
   };
@@ -2763,7 +2761,7 @@ export function usePodPage() {
   };
 
   const removeLabelField = (key: string) => {
-    delete createFormModel.value.labels[key];
+    Reflect.deleteProperty(createFormModel.value.labels, key);
   };
 
   const addAnnotationField = () => {
@@ -2771,7 +2769,7 @@ export function usePodPage() {
   };
 
   const removeAnnotationField = (key: string) => {
-    delete createFormModel.value.annotations[key];
+    Reflect.deleteProperty(createFormModel.value.annotations, key);
   };
 
   const addNodeSelectorField = () => {
@@ -2779,7 +2777,7 @@ export function usePodPage() {
   };
 
   const removeNodeSelectorField = (key: string) => {
-    delete createFormModel.value.node_selector[key];
+    Reflect.deleteProperty(createFormModel.value.node_selector, key);
   };
 
   if (getCurrentScope()) {

@@ -137,7 +137,7 @@ export function useTemplatePage() {
       { message: '请输入模板名称', required: true, trigger: 'blur' },
       {
         message: '模板名称只能包含中英文、数字、下划线和连字符',
-        pattern: /^[a-zA-Z0-9-_\u4E00-\u9FA5]+$/,
+        pattern: /^[\w\u4E00-\u9FA5-]+$/,
         trigger: 'blur',
       },
       { max: 50, message: '模板名称长度不能超过50个字符', trigger: 'blur' },
@@ -153,7 +153,7 @@ export function useTemplatePage() {
       { message: '请输入模板名称', required: true, trigger: 'blur' },
       {
         message: '模板名称只能包含中英文、数字、下划线和连字符',
-        pattern: /^[a-zA-Z0-9-_\u4E00-\u9FA5]+$/,
+        pattern: /^[\w\u4E00-\u9FA5-]+$/,
         trigger: 'blur',
       },
       { max: 50, message: '模板名称长度不能超过50个字符', trigger: 'blur' },

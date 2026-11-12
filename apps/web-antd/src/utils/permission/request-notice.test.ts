@@ -157,7 +157,7 @@ describe('request-notice：页面 catch 是否还需要自己提示', () => {
     // 标记不可枚举，不影响序列化 / 展开
     expect(Object.keys(marked)).toEqual(['message']);
     expect(getRequestLayerNoticeKey(new Error('x'))).toBeUndefined();
-    expect(getRequestLayerNoticeKey(undefined)).toBeUndefined();
+    expect(getRequestLayerNoticeKey()).toBeUndefined();
     // 冻结对象打不上标记：不抛错，按未提示处理
     const frozen = Object.freeze({ response: { status: 500 } });
     expect(() => markRequestLayerNotice(frozen, 'k')).not.toThrow();
@@ -191,7 +191,7 @@ describe('request-notice：页面 catch 是否还需要自己提示', () => {
       () => new AxiosError('bad option', AxiosError.ERR_BAD_OPTION),
     ],
     ['表单校验错误', () => ({ errorFields: [{ name: ['name'] }] })],
-    ['undefined', () => undefined],
+    ['undefined', () => {}],
   ])('%s：页面自己弹一条（经过请求层也一样）', (_label, make) => {
     for (const error of [make(), viaRequestLayer(make())]) {
       expect(looksNotifiedByRequestLayer(error)).toBe(false);
@@ -234,7 +234,7 @@ describe('request-notice：页面 catch 是否写错误状态（FE-02b 拍板 3�
       },
     ],
     ['普通 Error', () => new Error('boom')],
-    ['undefined', () => undefined],
+    ['undefined', () => {}],
   ])('%s：真实失败照常写错误状态', (_label, make) => {
     expect(shouldRecordPageError(make())).toBe(true);
   });

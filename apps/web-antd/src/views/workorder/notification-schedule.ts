@@ -75,9 +75,17 @@ export function buildNotificationSchedule(
   } else if (trigger !== NotificationTrigger.IMMEDIATE) {
     throw new Error('不支持的触发类型');
   }
-  if ((form.repeatInterval == null) !== (form.repeatCount == null))
+  if (
+    (form.repeatInterval === null || form.repeatInterval === undefined) !==
+    (form.repeatCount === null || form.repeatCount === undefined)
+  )
     throw new Error('重复间隔与总次数须同时设置');
-  if (form.repeatInterval != null && form.repeatCount != null) {
+  if (
+    form.repeatInterval !== null &&
+    form.repeatInterval !== undefined &&
+    form.repeatCount !== null &&
+    form.repeatCount !== undefined
+  ) {
     if (
       !Number.isInteger(form.repeatInterval) ||
       form.repeatInterval < 1 ||

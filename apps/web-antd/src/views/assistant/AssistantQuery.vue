@@ -280,9 +280,9 @@ const exportSession = () => {
   const a = document.createElement('a');
   a.href = url;
   a.download = `chat-session-${currentSessionId.value || 'new'}-${new Date().toISOString().split('T')[0]}.json`;
-  document.body.appendChild(a);
+  document.body.append(a);
   a.click();
-  document.body.removeChild(a);
+  a.remove();
   URL.revokeObjectURL(url);
 
   message.success('会话导出成功');
@@ -332,7 +332,8 @@ const restoreSession = async () => {
     )
       throw new Error('invalid session');
     if (
-      info.conversation_history != null &&
+      info.conversation_history !== null &&
+      info.conversation_history !== undefined &&
       (!Array.isArray(info.conversation_history) ||
         info.conversation_history.length > 25 ||
         info.conversation_history.some(

@@ -48,7 +48,7 @@ describe('悬浮助手持久会话恢复', () => {
     await setup().sendMessage('private-question-canary');
     const first = required(api.assistantQuery.mock.calls[0])[0];
     expect(first.session_id).toBe('session-one');
-    expect(first.turn_id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(first.turn_id).toMatch(/^[\da-f-]{36}$/);
     expect(setup().pendingTurn.turnId).toBe(first.turn_id);
     expect(JSON.stringify(localStorage)).not.toContain(
       'private-question-canary',

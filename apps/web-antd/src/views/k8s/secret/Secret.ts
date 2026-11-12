@@ -305,13 +305,9 @@ export function useSecretPage() {
 
     // 如果是数组格式，进行转换
     if (Array.isArray(data)) {
-      return data.reduce(
-        (acc, { key, value }) => {
-          acc[key] = value;
-          return acc;
-        },
-        {} as Record<string, string>,
-      );
+      const record: Record<string, string> = {};
+      for (const { key, value } of data) record[key] = value;
+      return record;
     }
 
     return {};
@@ -1115,7 +1111,7 @@ export function useSecretPage() {
   };
 
   const removeFilterLabel = (key: string) => {
-    delete filterLabels.value[key];
+    Reflect.deleteProperty(filterLabels.value, key);
     currentPage.value = 1;
     fetchSecrets();
   };
@@ -1198,38 +1194,38 @@ export function useSecretPage() {
 
   // 表单字段操作 - 数据字段
   const removeDataField = (key: string) => {
-    delete createFormModel.value.data[key];
+    Reflect.deleteProperty(createFormModel.value.data, key);
   };
 
   const removeEditDataField = (key: string) => {
-    delete editFormModel.value.data[key];
+    Reflect.deleteProperty(editFormModel.value.data, key);
   };
 
   // 表单字段操作 - 字符串数据字段
   const removeStringDataField = (key: string) => {
-    delete createFormModel.value.string_data[key];
+    Reflect.deleteProperty(createFormModel.value.string_data, key);
   };
 
   const removeEditStringDataField = (key: string) => {
-    delete editFormModel.value.string_data[key];
+    Reflect.deleteProperty(editFormModel.value.string_data, key);
   };
 
   // 表单字段操作 - 标签字段
   const removeLabelField = (key: string) => {
-    delete createFormModel.value.labels[key];
+    Reflect.deleteProperty(createFormModel.value.labels, key);
   };
 
   const removeEditLabelField = (key: string) => {
-    delete editFormModel.value.labels[key];
+    Reflect.deleteProperty(editFormModel.value.labels, key);
   };
 
   // 表单字段操作 - 注解字段
   const removeAnnotationField = (key: string) => {
-    delete createFormModel.value.annotations[key];
+    Reflect.deleteProperty(createFormModel.value.annotations, key);
   };
 
   const removeEditAnnotationField = (key: string) => {
-    delete editFormModel.value.annotations[key];
+    Reflect.deleteProperty(editFormModel.value.annotations, key);
   };
 
   // YAML 操作辅助函数

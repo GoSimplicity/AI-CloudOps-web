@@ -28,7 +28,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>();
 
 const formRef = ref<FormInstance>();
-const localData = ref<Record<string, any>>({ ...(props.data || {}) });
+const localData = ref<Record<string, any>>({ ...props.data });
 
 let isUpdatingFromProps = false;
 let isUpdatingFromLocal = false;
