@@ -30,6 +30,7 @@ jobs:
         continue-on-error: true
         run: pnpm audit --audit-level=critical
       - run: pnpm check:layout
+      - run: pnpm exec stylelint "**/*.{vue,css,less,scss}" --cache
       - run: pnpm check:eslint-boundaries
       - run: pnpm -F @vben/eslint-config typecheck
       - name: Typecheck web-antd

@@ -32,6 +32,14 @@ export default defineConfig(async (environment) => {
       server: {
         host: '127.0.0.1',
         proxy: {
+          // Vite matches these prefixes in insertion order.
+          /* eslint-disable perfectionist/sort-objects */
+          '/api/v1': {
+            changeOrigin: true,
+            configure: configureHttpProxy,
+            target: proxyTarget,
+            ws: true,
+          },
           '/api': {
             changeOrigin: true,
             configure: configureHttpProxy,
@@ -39,12 +47,7 @@ export default defineConfig(async (environment) => {
             target: `${proxyTarget}/api`,
             ws: true,
           },
-          '/api/v1': {
-            changeOrigin: true,
-            configure: configureHttpProxy,
-            target: proxyTarget,
-            ws: true,
-          },
+          /* eslint-enable perfectionist/sort-objects */
         },
       },
     },
