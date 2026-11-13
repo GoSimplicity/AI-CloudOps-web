@@ -110,6 +110,13 @@ async function closeView() {
 function content() {
   return required(document.querySelector('.comments-content'));
 }
+function commentsLoading() {
+  return (
+    required(wrapper).vm as unknown as {
+      commentsLoading: boolean;
+    }
+  ).commentsLoading;
+}
 async function open(id: number) {
   await required(wrapper).vm.showCommentsView(id);
   await flushPromises();
@@ -186,12 +193,23 @@ it('旧读取失败/finally不报错、不结束仍在加载的新实例', async
   const old = required(wrapper).vm.showCommentsView(42);
   await flushPromises();
   await closeView();
+  await vi.waitFor(() =>
+    expect(document.querySelector('.ant-spin-spinning')).toBeNull(),
+  );
   const current = required(wrapper).vm.showCommentsView(43);
-  await flushPromises();
+  await Promise.resolve();
+  expect(commentsLoading()).toBe(true);
+  // Ant Design Spin 用未指定 delay 的 debounce 在定时器里改 ant-spin-spinning。
+  // flushPromises 只排到 setImmediate，类名可能还停在关闭后的旧值。
+  await vi.waitFor(() =>
+    expect(content().querySelector('.ant-spin-spinning')).not.toBeNull(),
+  );
+  expect(commentsLoading()).toBe(true);
   a.reject(new Error('旧实例失败'));
   await old;
   await flushPromises();
   expect(message.error).not.toHaveBeenCalled();
+  expect(commentsLoading()).toBe(true);
   expect(content().querySelector('.ant-spin-spinning')).not.toBeNull();
   b.resolve([comment(430, 43)]);
   await current;
