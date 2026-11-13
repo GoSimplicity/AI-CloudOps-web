@@ -319,4 +319,35 @@ describe('预测置信度与降级边界', () => {
     expect(state().aiInsights).not.toContain('QPS：private-one');
     expect(message.success).not.toHaveBeenCalled();
   });
+  it('看板对缺字段、null、显式 0 和未估价资源分别展示', async () => {
+    render(PredictDashboard, true);
+    state().predictionCache = {
+      disk: {
+        cost_analysis: {
+          cost_savings_potential: null,
+          current_hourly_cost: null,
+          predicted_hourly_cost: 0,
+          price_source: 'configured_price',
+          priced_components: ['disk'],
+          unpriced_components: ['network'],
+        },
+      },
+      qps: {
+        cost_analysis: {
+          cost_savings_potential: 1,
+          current_hourly_cost: 2,
+          predicted_hourly_cost: 3,
+        },
+      },
+    };
+    await flushPromises();
+    const text = required(wrapper).text();
+    expect(text).toContain('不完整估算');
+    expect(text).toContain('未估价资源：network');
+    expect(text).toContain('价格来源：配置单价');
+    expect(text).toContain('价格来源：未标明');
+    expect(text).toContain('0.00');
+    expect(text).not.toContain('实测');
+    expect(text).not.toContain('完整账单');
+  });
 });

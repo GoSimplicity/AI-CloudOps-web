@@ -18,6 +18,7 @@ describe('预测来源展示', () => {
           ai_enhanced: false,
           ai_fallback_reason: 'AI分析未完成',
           analysis_failures: ['成本分析失败'],
+          fallback_code: 'MODEL_HISTORY_INSUFFICIENT',
           fallback_mode: true,
           fallback_reason: '预测模型不可用',
           method: 'rule_based',
