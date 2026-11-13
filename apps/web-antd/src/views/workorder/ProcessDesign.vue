@@ -42,6 +42,7 @@ import {
   ProcessStatus,
   ProcessStepType,
 } from '#/api/core/workorder/workorder_process';
+import { copyPlainSnapshot } from '#/utils/copy-plain-snapshot';
 import { getOwnLookupValue } from '#/utils/own-lookup';
 import {
   shouldNotifyPageError,
@@ -220,8 +221,8 @@ watch(
     )
       return;
     selectedStepIndex.value = null;
-    processSteps.value = JSON.parse(JSON.stringify(newValue.steps || []));
-    connections.value = JSON.parse(JSON.stringify(newValue.connections || []));
+    processSteps.value = copyPlainSnapshot(newValue.steps || []);
+    connections.value = copyPlainSnapshot(newValue.connections || []);
 
     definitionJsonString.value = JSON.stringify(newValue, null, 2);
   },
@@ -236,7 +237,7 @@ watch(
       steps: processSteps.value,
     };
     if (JSON.stringify(definition) !== JSON.stringify(props.modelValue)) {
-      emit('update:modelValue', JSON.parse(JSON.stringify(definition)));
+      emit('update:modelValue', copyPlainSnapshot(definition));
     }
     definitionJsonString.value = JSON.stringify(definition, null, 2);
   },
@@ -691,8 +692,8 @@ const saveProcess = async (): Promise<void> => {
     const createData: CreateWorkorderProcessReq = {
       category_id: processBasicInfo.value.category_id,
       definition: {
-        connections: JSON.parse(JSON.stringify(connections.value)),
-        steps: JSON.parse(JSON.stringify(processSteps.value)),
+        connections: copyPlainSnapshot(connections.value),
+        steps: copyPlainSnapshot(processSteps.value),
       },
       description: processBasicInfo.value.description || '',
       form_design_id: processBasicInfo.value.form_design_id,

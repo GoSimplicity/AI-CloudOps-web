@@ -32,6 +32,7 @@ import {
   type FormSchema,
 } from '#/api/core/workorder/workorder_form_design';
 import OpsPage from '#/components/ops/OpsPage.vue';
+import { copyPlainSnapshot } from '#/utils/copy-plain-snapshot';
 import {
   shouldNotifyPageError,
   shouldRecordPageError,
@@ -273,7 +274,7 @@ const addFieldType = (type: string) => {
 const updateField = (index: number, updatedField: FormField) => {
   if (saving.value) return;
   importRequest++;
-  formSchema.fields[index] = JSON.parse(JSON.stringify(updatedField));
+  formSchema.fields[index] = copyPlainSnapshot(updatedField);
 };
 
 // 移除字段
@@ -430,7 +431,7 @@ const saveFormDesign = async () => {
       description: formMeta.description,
       is_template: isTemplate.value ? 1 : 2,
       name: formMeta.name.trim(),
-      schema: JSON.parse(JSON.stringify(formSchema)),
+      schema: copyPlainSnapshot(formSchema),
       status: formMeta.status,
       tags: [...formMeta.tags],
     };

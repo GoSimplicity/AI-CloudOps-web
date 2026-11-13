@@ -7,6 +7,8 @@ import { ref, watch } from 'vue';
 
 import { FormOutlined, ReloadOutlined } from '@ant-design/icons-vue';
 
+import { copyPlainSnapshot } from '#/utils/copy-plain-snapshot';
+
 interface Props {
   fields: FormField[];
   data?: Record<string, any>;
@@ -39,7 +41,7 @@ watch(
   (newData) => {
     if (!isUpdatingFromProps) {
       isUpdatingFromLocal = true;
-      emit('update:data', JSON.parse(JSON.stringify(newData)));
+      emit('update:data', copyPlainSnapshot(newData));
       setTimeout(() => {
         isUpdatingFromLocal = false;
       }, 0);
@@ -57,7 +59,7 @@ watch(
       JSON.stringify(localData.value) !== JSON.stringify(newData)
     ) {
       isUpdatingFromProps = true;
-      localData.value = JSON.parse(JSON.stringify(newData || {}));
+      localData.value = copyPlainSnapshot(newData || {});
       setTimeout(() => {
         isUpdatingFromProps = false;
       }, 0);
