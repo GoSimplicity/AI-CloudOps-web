@@ -8,6 +8,7 @@ import {
   LOGIN_EXPIRED_MESSAGE_KEY,
   requestClient,
 } from '#/api/request';
+import { BrowserSocket } from '#/testing/browser-socket';
 
 import {
   STREAM_MAX_RECONNECT_ATTEMPTS,
@@ -119,34 +120,15 @@ function stubFetch(respond: (authorization: string) => Response) {
   return { authorizations, fetchMock };
 }
 
-class FakeWebSocket {
-  static CLOSED = 3;
+class FakeWebSocket extends BrowserSocket {
   static instances: FakeWebSocket[] = [];
-  static OPEN = 1;
-  readyState = 0;
-  close = vi.fn(() => {
-    this.readyState = FakeWebSocket.CLOSED;
+  override close = vi.fn((code?: number, reason?: string) => {
+    this.noteClose(code, reason);
   });
-  onclose: ((event: any) => void) | null = null;
-  onerror: ((event: any) => void) | null = null;
-  onmessage: ((event: any) => void) | null = null;
-  onopen: ((event: any) => void) | null = null;
   send = vi.fn();
-  constructor(
-    public url: string,
-    public protocols: string[],
-  ) {
+  constructor(url: string, protocols?: string | string[]) {
+    super(url, protocols);
     FakeWebSocket.instances.push(this);
-  }
-  /** 握手失败：浏览器只给 error + 1006，拿不到 HTTP 状态 */
-  fail(code = 1006) {
-    this.readyState = FakeWebSocket.CLOSED;
-    this.onerror?.(new Event('error'));
-    this.onclose?.({ code, wasClean: false });
-  }
-  open() {
-    this.readyState = FakeWebSocket.OPEN;
-    this.onopen?.(new Event('open'));
   }
 }
 
@@ -365,7 +347,7 @@ describe('pod 终端 exec WS：令牌刷新与重连', () => {
     const conn = execK8sPodWebSocket(EXEC_PARAMS, vi.fn());
     lastSocket().open();
     access.accessToken = 'rotated-token';
-    lastSocket().onclose?.({ code: 1006, wasClean: false });
+    lastSocket().emitClose(1006, false);
     await flush(1000);
 
     expect(refreshTokenApi).not.toHaveBeenCalled();
@@ -436,7 +418,7 @@ describe('pod 终端 exec WS：令牌刷新与重连', () => {
       if (socket.readyState !== 0) break;
       socket.open();
       socket.readyState = FakeWebSocket.CLOSED;
-      socket.onclose?.({ code: 4401, wasClean: true });
+      socket.emitClose(4401, true);
       await flush(30_000);
     }
 
@@ -460,7 +442,7 @@ describe('pod 终端 exec WS：令牌刷新与重连', () => {
       cb.onClose,
     );
     lastSocket().open();
-    lastSocket().onclose?.({ code: 4401, wasClean: true });
+    lastSocket().emitClose(4401, true);
     await flush(60_000);
 
     expect(refreshTokenApi).toHaveBeenCalledTimes(1);
@@ -483,7 +465,7 @@ describe('pod 终端 exec WS：令牌刷新与重连', () => {
         cb.onClose,
       );
       lastSocket().open();
-      lastSocket().onclose?.({ code: 4401, wasClean: true });
+      lastSocket().emitClose(4401, true);
       await flush();
       expect(refreshTokenApi).toHaveBeenCalledTimes(1);
       expect(FakeWebSocket.instances).toHaveLength(2);
@@ -498,7 +480,7 @@ describe('pod 终端 exec WS：令牌刷新与重连', () => {
     it('a) 重连后保持 2 小时再收到 4401：再刷新一次（共 2 次），不提示登录过期', async () => {
       const { cb, conn } = await openThen4401ThenReconnect();
       await flush(2 * 60 * 60 * 1000);
-      lastSocket().onclose?.({ code: 4401, wasClean: true });
+      lastSocket().emitClose(4401, true);
       await flush();
 
       expect(refreshTokenApi).toHaveBeenCalledTimes(2);
@@ -516,7 +498,7 @@ describe('pod 终端 exec WS：令牌刷新与重连', () => {
     it('b) 重连后不到 5 分钟（4 分 59 秒）又收到 4401：停止，刷新只 1 次，登录过期提示 1 条', async () => {
       const { cb } = await openThen4401ThenReconnect();
       await flush(STREAM_UNAUTHORIZED_REFRESH_RESET_MS - 1000);
-      lastSocket().onclose?.({ code: 4401, wasClean: true });
+      lastSocket().emitClose(4401, true);
       await flush(60_000);
 
       expect(refreshTokenApi).toHaveBeenCalledTimes(1);
@@ -531,12 +513,12 @@ describe('pod 终端 exec WS：令牌刷新与重连', () => {
     it('b2) 「稳定」要求连续：4 分钟时断开重连，再过 4 分钟收到 4401 仍停止', async () => {
       const { cb } = await openThen4401ThenReconnect();
       await flush(4 * 60 * 1000);
-      lastSocket().onclose?.({ code: 1006, wasClean: false });
+      lastSocket().emitClose(1006, false);
       await flush(1000);
       expect(FakeWebSocket.instances).toHaveLength(3);
       lastSocket().open();
       await flush(4 * 60 * 1000);
-      lastSocket().onclose?.({ code: 4401, wasClean: true });
+      lastSocket().emitClose(4401, true);
       await flush(60_000);
 
       expect(refreshTokenApi).toHaveBeenCalledTimes(1);
@@ -555,7 +537,7 @@ describe('pod 终端 exec WS：令牌刷新与重连', () => {
     it('c) 服务端正常关闭（onclose）后没有残留计时器', async () => {
       const { cb } = await openThen4401ThenReconnect();
       expect(vi.getTimerCount()).toBe(1);
-      lastSocket().onclose?.({ code: 1000, wasClean: true });
+      lastSocket().emitClose(1000, true);
       expect(cb.onClose).toHaveBeenCalledTimes(1);
       expect(vi.getTimerCount()).toBe(0);
     });
@@ -568,7 +550,7 @@ describe('pod 终端 exec WS：令牌刷新与重连', () => {
         vi.fn(),
       );
       lastSocket().open();
-      lastSocket().onclose?.({ code: 4401, wasClean: true });
+      lastSocket().emitClose(4401, true);
       await flush();
       expect(refreshTokenApi).toHaveBeenCalledTimes(1);
       lastSocket().open();
@@ -580,7 +562,7 @@ describe('pod 终端 exec WS：令牌刷新与重连', () => {
     describe('fE-02b：5 分钟边界与多轮重置', () => {
       /** 当前连接收到 4401 后等刷新、重连完成 */
       async function receive4401() {
-        lastSocket().onclose?.({ code: 4401, wasClean: true });
+        lastSocket().emitClose(4401, true);
         await flush();
       }
 
@@ -604,7 +586,7 @@ describe('pod 终端 exec WS：令牌刷新与重连', () => {
         const { cb } = await openThen4401ThenReconnect();
         await flush(STREAM_UNAUTHORIZED_REFRESH_RESET_MS - 1);
         expect(vi.getTimerCount()).toBe(1);
-        lastSocket().onclose?.({ code: 4401, wasClean: true });
+        lastSocket().emitClose(4401, true);
         await flush(60_000);
 
         expect(refreshTokenApi).toHaveBeenCalledTimes(1);
@@ -642,7 +624,7 @@ describe('pod 终端 exec WS：令牌刷新与重连', () => {
         expect(refreshTokenApi).toHaveBeenCalledTimes(2);
         lastSocket().open();
         await flush(STREAM_UNAUTHORIZED_REFRESH_RESET_MS - 1);
-        lastSocket().onclose?.({ code: 4401, wasClean: true });
+        lastSocket().emitClose(4401, true);
         await flush(60_000);
 
         expect(refreshTokenApi).toHaveBeenCalledTimes(2);
@@ -656,7 +638,7 @@ describe('pod 终端 exec WS：令牌刷新与重连', () => {
       it('d5) 多轮中途断线：满 5:00 前断线重连，计时从新连接 open 重新算；新连接满 5:00 后 4401 仍可刷新', async () => {
         const { cb, conn } = await openThen4401ThenReconnect();
         await flush(STREAM_UNAUTHORIZED_REFRESH_RESET_MS - 1);
-        lastSocket().onclose?.({ code: 1006, wasClean: false });
+        lastSocket().emitClose(1006, false);
         await flush(1000);
         expect(FakeWebSocket.instances).toHaveLength(3);
         lastSocket().open();

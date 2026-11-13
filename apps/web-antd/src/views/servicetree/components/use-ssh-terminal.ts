@@ -6,6 +6,7 @@ import { useAccessStore } from '@vben/stores';
 import { type IDisposable, Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 
+import { bindSocketEvents } from '#/utils/socket-events';
 import { websocketProtocols, websocketUrl } from '#/utils/websocket-url';
 
 export type SshConnectionState =
@@ -27,6 +28,7 @@ export function useSshTerminal(
   let terminal: Terminal | undefined;
   let fitAddon: FitAddon | undefined;
   let socket: undefined | WebSocket;
+  let detachActive: (() => void) | undefined;
   let connectionTimer: number | undefined;
   let inputSubscription: IDisposable | undefined;
   let sizeSubscription: IDisposable | undefined;
@@ -45,13 +47,12 @@ export function useSshTerminal(
   function releaseSocket() {
     clearTimer();
     const previous = socket;
+    const detach = detachActive;
     socket = undefined;
+    detachActive = undefined;
     if (!previous) return;
-    previous.onopen =
-      previous.onclose =
-      previous.onerror =
-      previous.onmessage =
-        null;
+    // 与原来先把 on* 置空再 close 相同：close 之后排队的事件不再进入本会话。
+    detach?.();
     if (
       previous.readyState === WebSocket.OPEN ||
       previous.readyState === WebSocket.CONNECTING
@@ -192,45 +193,52 @@ export function useSshTerminal(
         error.value = '终端连接超时，请确认资源状态和登录状态后重试';
         releaseSocket();
       }, 20_000);
-      candidate.onopen = () => {
-        if (!current()) return;
-        clearTimer();
-        state.value = 'connected';
-        resize();
-        terminal?.focus();
-      };
-      candidate.onmessage = (event) => {
-        if (!current()) return;
-        if (typeof event.data === 'string') terminal?.write(event.data);
-        else if (
-          Object.prototype.toString.call(event.data) === '[object ArrayBuffer]'
-        )
-          terminal?.write(new Uint8Array(event.data as ArrayBuffer));
-        else if (ArrayBuffer.isView(event.data)) {
-          terminal?.write(
-            new Uint8Array(
-              event.data.buffer,
-              event.data.byteOffset,
-              event.data.byteLength,
-            ),
-          );
-        }
-      };
-      candidate.onerror = () => {
-        if (!current()) return;
-        state.value = 'error';
-        error.value = '终端连接失败，请确认资源的 SSH 配置、网络和登录状态';
-        releaseSocket();
-      };
-      candidate.onclose = () => {
-        if (!current()) return;
-        clearTimer();
-        socket = undefined;
-        if (state.value === 'connecting') {
+      let detachSelf = () => {};
+      detachSelf = bindSocketEvents(candidate, {
+        close: () => {
+          if (!current()) return;
+          detachSelf();
+          if (detachActive === detachSelf) detachActive = undefined;
+          clearTimer();
+          socket = undefined;
+          if (state.value === 'connecting') {
+            state.value = 'error';
+            error.value = '终端未能建立，请检查资源配置后重试';
+          } else if (state.value !== 'error') state.value = 'disconnected';
+        },
+        error: () => {
+          if (!current()) return;
           state.value = 'error';
-          error.value = '终端未能建立，请检查资源配置后重试';
-        } else if (state.value !== 'error') state.value = 'disconnected';
-      };
+          error.value = '终端连接失败，请确认资源的 SSH 配置、网络和登录状态';
+          releaseSocket();
+        },
+        message: (event) => {
+          if (!current()) return;
+          if (typeof event.data === 'string') terminal?.write(event.data);
+          else if (
+            Object.prototype.toString.call(event.data) ===
+            '[object ArrayBuffer]'
+          )
+            terminal?.write(new Uint8Array(event.data as ArrayBuffer));
+          else if (ArrayBuffer.isView(event.data)) {
+            terminal?.write(
+              new Uint8Array(
+                event.data.buffer,
+                event.data.byteOffset,
+                event.data.byteLength,
+              ),
+            );
+          }
+        },
+        open: () => {
+          if (!current()) return;
+          clearTimer();
+          state.value = 'connected';
+          resize();
+          terminal?.focus();
+        },
+      });
+      detachActive = detachSelf;
     } catch {
       releaseSocket();
       state.value = 'error';

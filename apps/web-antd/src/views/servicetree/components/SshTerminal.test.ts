@@ -3,6 +3,8 @@ import { reactive } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { BrowserSocket } from '#/testing/browser-socket';
+
 import SshTerminal from './SshTerminal.vue';
 
 function required<T>(value: null | T | undefined): T {
@@ -52,26 +54,14 @@ vi.mock('xterm-addon-fit', () => ({
     fit = vi.fn();
   },
 }));
-class Socket {
-  static CLOSED = 3;
-  static CONNECTING = 0;
-  static OPEN = 1;
-  binaryType = '';
-  readyState = 0;
-  close = vi.fn(() => {
-    this.readyState = Socket.CLOSED;
+class Socket extends BrowserSocket {
+  override close = vi.fn((code?: number, reason?: string) => {
+    this.noteClose(code, reason);
   });
-  onclose: (() => void) | null = null;
-  onerror: (() => void) | null = null;
-  onmessage: ((event: { data: unknown }) => void) | null = null;
-  onopen: (() => void) | null = null;
   send = vi.fn();
   constructor(url: string, protocols: string[]) {
+    super(url, protocols);
     transport.connections(url, protocols, this);
-  }
-  open() {
-    this.readyState = Socket.OPEN;
-    this.onopen?.();
   }
 }
 let wrapper: undefined | VueWrapper;
@@ -177,24 +167,38 @@ describe('sSH PTY交互合同', () => {
       row_size: 42,
     });
     const bytes = new TextEncoder().encode('真实字节\r\n');
-    socket.onmessage?.({ data: bytes.buffer });
+    socket.dispatchEvent(new MessageEvent('message', { data: bytes.buffer }));
     expect([...(terminal.write.mock.calls[0][0] as Uint8Array)]).toEqual([
       ...bytes,
     ]);
   });
 
-  it('重连读取最新令牌，旧socket迟到事件不影响新会话', async () => {
+  it('重连先卸下旧监听再 close，旧连接迟到事件不影响新会话', async () => {
     render();
     const first = latest();
     first.open();
-    const lateClose = required(first.onclose);
-    const lateMessage = required(first.onmessage);
+    expect(first.listenerSnapshot()).toEqual({
+      close: 1,
+      error: 1,
+      message: 1,
+      open: 1,
+    });
     access.accessToken = 'fresh.token.signature';
     await reconnect().trigger('click');
+    expect(first.close).toHaveBeenCalledWith(1000, '关闭终端会话');
+    expect(first.closeInvocations[0]?.listenerCount).toBe(0);
+    expect(first.listenerSnapshot()).toEqual({
+      close: 0,
+      error: 0,
+      message: 0,
+      open: 0,
+    });
     const second = latest();
     second.open();
-    lateClose();
-    lateMessage({ data: 'OLD-OUTPUT' });
+    first.dispatchEvent(new MessageEvent('message', { data: 'OLD-OUTPUT' }));
+    first.dispatchEvent(new CloseEvent('close'));
+    first.dispatchEvent(new Event('error'));
+    first.dispatchEvent(new Event('open'));
     await flushPromises();
     expect(required(transport.connections.mock.calls.at(-1))[1]).toContain(
       'cloudops-auth.fresh.token.signature',
@@ -203,7 +207,12 @@ describe('sSH PTY交互合同', () => {
       '连接已建立',
     );
     expect(transport.terminals[0].write).not.toHaveBeenCalledWith('OLD-OUTPUT');
-    expect(first.close).toHaveBeenCalled();
+    expect(second.listenerSnapshot()).toEqual({
+      close: 1,
+      error: 1,
+      message: 1,
+      open: 1,
+    });
   });
 
   it('退出立即关闭并清空显示，卸载释放输入订阅与终端', async () => {
@@ -236,6 +245,45 @@ describe('sSH PTY交互合同', () => {
     vi.advanceTimersByTime(60_000);
     await flushPromises();
     expect(second.close).not.toHaveBeenCalled();
+  });
+
+  it('连接失败先卸监听再 close，随后的 close 不改写失败原因', async () => {
+    render();
+    const socket = latest();
+    socket.dispatchEvent(new Event('error'));
+    await flushPromises();
+    expect(socket.close).toHaveBeenCalledWith(1000, '关闭终端会话');
+    expect(socket.closeInvocations[0]?.listenerCount).toBe(0);
+    expect(socket.listenerSnapshot()).toEqual({
+      close: 0,
+      error: 0,
+      message: 0,
+      open: 0,
+    });
+    socket.dispatchEvent(
+      new CloseEvent('close', { code: 1006, wasClean: false }),
+    );
+    expect(required(wrapper).text()).toContain('终端连接失败');
+    expect(required(wrapper).text()).not.toContain('终端未能建立');
+  });
+
+  it('卸载后旧连接不再接收输出', async () => {
+    render();
+    const socket = latest();
+    socket.open();
+    const terminal = transport.terminals[0];
+    required(wrapper).unmount();
+    wrapper = undefined;
+    expect(socket.listenerSnapshot()).toEqual({
+      close: 0,
+      error: 0,
+      message: 0,
+      open: 0,
+    });
+    socket.dispatchEvent(
+      new MessageEvent('message', { data: 'after-unmount' }),
+    );
+    expect(terminal.write).not.toHaveBeenCalledWith('after-unmount');
   });
 
   it('非法资源ID或无凭证不会创建连接', () => {

@@ -5,6 +5,7 @@ import { effectScope } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { BrowserSocket } from '#/testing/browser-socket';
 import { usePodPage } from '#/views/k8s/pod/Pod';
 import TerminalConnect from '#/views/servicetree/TerminalConnect.vue';
 import WebTerminal from '#/views/servicetree/WebTerminal.vue';
@@ -51,14 +52,13 @@ vi.mock('xterm-addon-fit', () => ({
 }));
 vi.mock('xterm-addon-web-links', () => ({ WebLinksAddon: class {} }));
 
-class TestSocket {
-  static CLOSED = 3;
-  static CONNECTING = 0;
-  static OPEN = 1;
-  close = vi.fn();
-  readyState = TestSocket.CONNECTING;
+class TestSocket extends BrowserSocket {
+  override close = vi.fn((code?: number, reason?: string) => {
+    this.noteClose(code, reason);
+  });
   send = vi.fn();
   constructor(url: string, protocols: string[]) {
+    super(url, protocols);
     connections(url, protocols, this);
   }
 }
@@ -158,16 +158,17 @@ describe('三个终端客户端的握手契约', () => {
       '/api/k8s/pod/1/example/web-pod/containers/main/exec',
       '?shell=sh',
     );
-    const socket = required(connections.mock.calls[0])[2];
-    socket.readyState = WebSocket.OPEN;
-    socket.onopen();
-    expect(JSON.parse(socket.send.mock.calls[0][0])).toEqual({
+    const socket = required(connections.mock.calls[0])[2] as TestSocket;
+    socket.open();
+    expect(JSON.parse(String(required(socket.send.mock.calls[0])[0]))).toEqual({
       col_size: 120,
       op: 'resize',
       row_size: 30,
     });
     page.terminalConnection.value?.sendCommand('echo safe');
-    expect(JSON.parse(socket.send.mock.calls.at(-1)[0])).toEqual({
+    expect(
+      JSON.parse(String(required(socket.send.mock.calls.at(-1))[0])),
+    ).toEqual({
       data: 'echo safe',
       op: 'stdin',
     });
@@ -179,7 +180,7 @@ describe('三个终端客户端的握手契约', () => {
     onData(longPaste);
     const frames = socket.send.mock.calls
       .slice(beforePaste)
-      .map(([frame]: [string]) => JSON.parse(frame));
+      .map((call) => JSON.parse(String(call[0])));
     expect(frames.length).toBeGreaterThan(1);
     expect(
       frames.every(
@@ -194,7 +195,7 @@ describe('三个终端客户端的握手契约', () => {
     const firstInput = required(
       vi.mocked(required(page.terminal.value).onData).mock.results[0],
     ).value;
-    socket.onclose({ code: 1006, wasClean: false });
+    socket.emitClose(1006, false);
     expect(page.isTerminalConnected.value).toBe(false);
     expect(page.terminalLoading.value).toBe(true);
     access.accessToken = 'fresh.jwt.signature';
@@ -204,11 +205,10 @@ describe('三个终端客户端的握手契约', () => {
       'cloudops-v1',
       'cloudops-auth.fresh.jwt.signature',
     ]);
-    const reconnected = latest[2];
-    reconnected.readyState = WebSocket.OPEN;
-    reconnected.onopen();
+    const reconnected = latest[2] as TestSocket;
+    reconnected.open();
     expect(firstInput.dispose).toHaveBeenCalledTimes(1);
-    socket.onclose({ code: 1000, wasClean: true });
+    socket.emitClose(1000, true);
     expect(page.isTerminalConnected.value).toBe(true);
     page.disconnectTerminal();
   });

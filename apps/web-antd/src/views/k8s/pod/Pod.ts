@@ -75,6 +75,7 @@ import {
   shouldNotifyPageError,
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
+import { bindSocketEvents } from '#/utils/socket-events';
 import { utf8Chunks } from '#/utils/terminal-input';
 import { websocketProtocols, websocketUrl } from '#/utils/websocket-url';
 
@@ -1945,8 +1946,16 @@ export function usePodPage() {
         unauthorizedRefreshResetTimeoutId = null;
       }
     };
-    // 握手阶段的 onerror 先暂存，等刷新结果出来再决定要不要报给调用方（刷新失败只提示登录过期）
+    // 握手阶段的 error 先暂存，等刷新结果出来再决定要不要报给调用方（刷新失败只提示登录过期）
     let pendingHandshakeError: Event | null = null;
+    // 每个 socket 自己的卸监听函数。关闭、被新连接替换、或 close 事件开始处理时调用。
+    const detachOwnedSocket = new WeakMap<WebSocket, () => void>();
+    const releaseOwnedSocket = (target: WebSocket) => {
+      const detach = detachOwnedSocket.get(target);
+      if (!detach) return;
+      detachOwnedSocket.delete(target);
+      detach();
+    };
 
     const stopReconnect = (reason?: StreamCloseReason) => {
       isManualClose = true;
@@ -2041,10 +2050,13 @@ export function usePodPage() {
     function connect() {
       clearUnauthorizedRefreshResetTimer();
       try {
-        // 清理之前的连接
+        // 先丢掉当前引用并卸监听，再 close。浏览器的 close/error 是后续任务，
+        // 不能让旧连接的迟到事件再走重连或输出。
         if (socket) {
-          socket.close();
+          const previous = socket;
           socket = null;
+          releaseOwnedSocket(previous);
+          previous.close();
         }
 
         // 创建WebSocket连接（每次重连都读最新的令牌）
@@ -2060,101 +2072,108 @@ export function usePodPage() {
 
         const ownedSocket = socket;
         let opened = false;
-        socket.onopen = () => {
-          if (socket !== ownedSocket) return;
-          opened = true;
-          reconnectAttempts = 0; // 重置重连计数
-          tokenRefreshed = false;
-          // 复审 P3-A：4401 刷新后重连上：稳定满 5 分钟才清零，期间断开会清掉计时器
-          clearUnauthorizedRefreshResetTimer();
-          if (unauthorizedAfterOpenRefreshed) {
-            unauthorizedRefreshResetTimeoutId = setTimeout(() => {
-              unauthorizedRefreshResetTimeoutId = null;
-              if (socket === ownedSocket && !isManualClose) {
-                unauthorizedAfterOpenRefreshed = false;
+        detachOwnedSocket.set(
+          ownedSocket,
+          bindSocketEvents(ownedSocket, {
+            close: (event) => {
+              if (socket !== ownedSocket) return;
+              // 先卸掉本连接的监听，同一次关闭再分发也不会重复重连或提示。
+              releaseOwnedSocket(ownedSocket);
+              clearUnauthorizedRefreshResetTimer();
+              completeTerminalCleanup(() => resizeSubscription?.dispose());
+              resizeSubscription = undefined;
+              socket = null;
+
+              if (isManualClose) {
+                pendingHandshakeError = null;
+                onClose?.();
+              } else if (!opened) {
+                // 握手失败（含握手阶段的 4401）：先刷新令牌再重连，见 recoverFromHandshakeFailure 的说明（P3-5）
+                void recoverFromHandshakeFailure(event.code);
+              } else if (event.code === 4401) {
+                // 连上之后令牌失效（P2-C）
+                void recoverFromUnauthorizedAfterOpen();
+              } else if (event.wasClean) {
+                onClose?.();
+              } else {
+                // 非正常关闭且不是手动关闭，尝试重连
+                scheduleReconnect();
               }
-            }, STREAM_UNAUTHORIZED_REFRESH_RESET_MS);
-          }
-
-          const sendResize = (cols: number, rows: number) => {
-            if (
-              socket === ownedSocket &&
-              ownedSocket.readyState === WebSocket.OPEN
-            ) {
-              ownedSocket.send(
-                JSON.stringify({
-                  col_size: cols,
-                  op: 'resize',
-                  row_size: rows,
-                }),
-              );
-            }
-          };
-          resizeSubscription?.dispose();
-          sendResize(terminal.value?.cols || 120, terminal.value?.rows || 30);
-          resizeSubscription = terminal.value?.onResize(({ cols, rows }) =>
-            sendResize(cols, rows),
-          );
-
-          onOpen?.();
-        };
-
-        socket.onmessage = (event) => {
-          if (socket !== ownedSocket) return;
-          try {
-            const data = event.data;
-            if (typeof data === 'string') {
-              // 尝试解析JSON格式的响应
+            },
+            error: (error) => {
+              if (socket !== ownedSocket) return;
+              if (!opened) {
+                // 握手失败：close 里先刷新令牌，再决定是否报错。error 与 close 是先后两个事件。
+                pendingHandshakeError = error;
+                return;
+              }
+              onError?.(error);
+            },
+            message: (event) => {
+              if (socket !== ownedSocket) return;
               try {
-                const parsed = JSON.parse(data);
-                // 如果是标准的终端输出格式
-                if (parsed.op === 'stdout' && parsed.data) {
-                  onMessage(parsed.data);
-                } else {
-                  // 如果不是标准格式，直接传递原始数据
-                  onMessage(data);
+                const data = event.data;
+                if (typeof data === 'string') {
+                  // 尝试解析JSON格式的响应
+                  try {
+                    const parsed = JSON.parse(data);
+                    // 如果是标准的终端输出格式
+                    if (parsed.op === 'stdout' && parsed.data) {
+                      onMessage(parsed.data);
+                    } else {
+                      // 如果不是标准格式，直接传递原始数据
+                      onMessage(data);
+                    }
+                  } catch {
+                    // 如果不是JSON格式，直接传递原始数据
+                    onMessage(data);
+                  }
                 }
-              } catch {
-                // 如果不是JSON格式，直接传递原始数据
-                onMessage(data);
+              } catch {}
+            },
+            open: () => {
+              if (socket !== ownedSocket) return;
+              opened = true;
+              reconnectAttempts = 0; // 重置重连计数
+              tokenRefreshed = false;
+              // 复审 P3-A：4401 刷新后重连上：稳定满 5 分钟才清零，期间断开会清掉计时器
+              clearUnauthorizedRefreshResetTimer();
+              if (unauthorizedAfterOpenRefreshed) {
+                unauthorizedRefreshResetTimeoutId = setTimeout(() => {
+                  unauthorizedRefreshResetTimeoutId = null;
+                  if (socket === ownedSocket && !isManualClose) {
+                    unauthorizedAfterOpenRefreshed = false;
+                  }
+                }, STREAM_UNAUTHORIZED_REFRESH_RESET_MS);
               }
-            }
-          } catch {}
-        };
 
-        socket.onerror = (error) => {
-          if (socket !== ownedSocket) return;
-          if (!opened) {
-            // 握手失败：onclose 里先刷新令牌，再决定是否报错
-            pendingHandshakeError = error;
-            return;
-          }
-          onError?.(error);
-        };
+              const sendResize = (cols: number, rows: number) => {
+                if (
+                  socket === ownedSocket &&
+                  ownedSocket.readyState === WebSocket.OPEN
+                ) {
+                  ownedSocket.send(
+                    JSON.stringify({
+                      col_size: cols,
+                      op: 'resize',
+                      row_size: rows,
+                    }),
+                  );
+                }
+              };
+              resizeSubscription?.dispose();
+              sendResize(
+                terminal.value?.cols || 120,
+                terminal.value?.rows || 30,
+              );
+              resizeSubscription = terminal.value?.onResize(({ cols, rows }) =>
+                sendResize(cols, rows),
+              );
 
-        socket.onclose = (event) => {
-          if (socket !== ownedSocket) return;
-          clearUnauthorizedRefreshResetTimer();
-          completeTerminalCleanup(() => resizeSubscription?.dispose());
-          resizeSubscription = undefined;
-          socket = null;
-
-          if (isManualClose) {
-            pendingHandshakeError = null;
-            onClose?.();
-          } else if (!opened) {
-            // 握手失败（含握手阶段的 4401）：先刷新令牌再重连，见 recoverFromHandshakeFailure 的说明（P3-5）
-            void recoverFromHandshakeFailure(event.code);
-          } else if (event.code === 4401) {
-            // 连上之后令牌失效（P2-C）
-            void recoverFromUnauthorizedAfterOpen();
-          } else if (event.wasClean) {
-            onClose?.();
-          } else {
-            // 非正常关闭且不是手动关闭，尝试重连
-            scheduleReconnect();
-          }
-        };
+              onOpen?.();
+            },
+          }),
+        );
       } catch {
         onError?.(new Event('connection_failed'));
       }
@@ -2182,10 +2201,12 @@ export function usePodPage() {
         reconnectTimeoutId = null;
       }
 
-      // 关闭WebSocket连接
+      // 先卸监听再 close，浏览器稍后派发的 close 不再提示「终端连接已断开」或重连。
       if (socket) {
-        completeTerminalCleanup(() => socket?.close());
+        const current = socket;
         socket = null;
+        releaseOwnedSocket(current);
+        completeTerminalCleanup(() => current.close());
       }
     };
 
