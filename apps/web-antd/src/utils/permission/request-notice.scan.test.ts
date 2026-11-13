@@ -117,7 +117,7 @@ interface CatchBody {
 export function findCatchBodies(text: string): CatchBody[] {
   const bodies: CatchBody[] = [];
   for (const m of text.matchAll(
-    /(?<![\w$.])catch\s*(?:\(\s*(\w+)[^)]*\)\s*)?\{/g,
+    /(?<![\w$.])catch\s*(?:\(\s*(\w+)\b[^)]*\)\s*)?\{/g,
   )) {
     const open = m.index + m[0].length - 1;
     bodies.push({
@@ -132,10 +132,12 @@ export function findCatchBodies(text: string): CatchBody[] {
     const close = matchClose(text, open, '()');
     const arg = text.slice(open + 1, close);
     const fn =
-      /^\s*(?:async\s+)?(?:\(\s*(\w*)\s*(?::[^)]*)?\)|(\w+))\s*=>\s*/.exec(
+      /^\s*(?:async\s+)?(?:\(\s*(?:(\w+)\s*(?::[^)]*)?)?\)|(\w+))\s*=>\s*/.exec(
         arg,
       ) ??
-      /^\s*(?:async\s+)?function\s*(?:\w+\s*)?\(\s*(\w*)[^)]*\)\s*/.exec(arg);
+      /^\s*(?:async\s+)?function(?:\s+\w+)?\s*\((?:\s*(\w+)\b[^)]*|\s*[^\s\w)][^)]*|\s*)\)\s*/.exec(
+        arg,
+      );
     if (!fn) continue; // `.catch(handler)` 这类引用：正文在别处（handler 自身的 catch 写法另行扫描）
     const param = fn[1] || fn[2] || '';
     let start = open + 1 + fn[0].length;
@@ -838,5 +840,57 @@ describe('incr3 P3-7：扫描器变异夹具', () => {
     const writes = scanErrorStateWrites('demo/Demo.vue', vue);
     expect(writes).toHaveLength(1);
     expect(writes[0]).toMatchObject({ guarded: true, line: 10 });
+  });
+});
+
+describe('catch 扫描的匹配与长输入', () => {
+  const bodies = (text: string) =>
+    findCatchBodies(text).map((body) => ({
+      kind: body.kind,
+      param: body.param,
+      source: text.slice(body.start, body.end),
+    }));
+
+  it('保留 catch、箭头回调和 function 回调的参数捕获', () => {
+    expect(
+      bodies(
+        'try { run(); } catch { oops(); } catch (err) { a(); } catch (error: unknown) { b(); }',
+      ),
+    ).toEqual([
+      { kind: 'catch', param: '', source: ' oops(); ' },
+      { kind: 'catch', param: 'err', source: ' a(); ' },
+      { kind: 'catch', param: 'error', source: ' b(); ' },
+    ]);
+    expect(bodies('foo.catch { x(); } .catch { y(); }')).toEqual([]);
+    expect(bodies('catch () { z(); } catch ( ) { z(); }')).toEqual([]);
+    expect(
+      bodies(
+        'run().catch((err) => { e1(); }).catch(err => { e2(); }).catch(() => { e3(); })',
+      ),
+    ).toEqual([
+      { kind: '.catch', param: 'err', source: ' e1(); ' },
+      { kind: '.catch', param: 'err', source: ' e2(); ' },
+      { kind: '.catch', param: '', source: ' e3(); ' },
+    ]);
+    expect(
+      bodies(
+        'run().catch(async (error: unknown) => e4).catch(function name(err) { e5(); }).catch(function (...args) { e6(); })',
+      ),
+    ).toEqual([
+      { kind: '.catch', param: 'error', source: 'e4' },
+      { kind: '.catch', param: 'err', source: ' e5(); ' },
+      { kind: '.catch', param: '', source: ' e6(); ' },
+    ]);
+  });
+
+  it('未闭合的长 catch / 回调在 8 万字符内仍低于 500ms', () => {
+    const budgetMs = 500;
+    const started = performance.now();
+    expect(findCatchBodies(`catch (${'a'.repeat(80_000)}`)).toEqual([]);
+    expect(findCatchBodies(`.catch(${' '.repeat(80_000)})`)).toEqual([]);
+    expect(findCatchBodies(`.catch(function (${'a'.repeat(80_000)})`)).toEqual(
+      [],
+    );
+    expect(performance.now() - started).toBeLessThan(budgetMs);
   });
 });
