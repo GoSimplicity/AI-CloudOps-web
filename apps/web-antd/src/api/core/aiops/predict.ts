@@ -98,12 +98,18 @@ export interface ScalingRecommendation {
   estimated_cost_change?: number;
 }
 
-// 成本分析接口
+export type PredictionPriceSource = 'caller' | 'configured_price';
+
+// 成本分析。数字缺依据时为 null。新增字段在旧响应里可以完全不出现。
 export interface CostAnalysis {
-  current_hourly_cost?: number;
-  predicted_hourly_cost?: number;
-  cost_savings_potential?: number;
-  cost_trend_analysis: Record<string, any>;
+  current_hourly_cost?: null | number;
+  predicted_hourly_cost?: null | number;
+  cost_savings_potential?: null | number;
+  cost_trend_analysis?: Record<string, any>;
+  estimated?: boolean;
+  price_source?: null | PredictionPriceSource;
+  priced_components?: string[];
+  unpriced_components?: string[];
 }
 
 // 异常预测接口
@@ -147,6 +153,7 @@ export interface PredictionResponse {
   model_version?: null | string;
   fallback_mode?: boolean;
   fallback_reason?: null | string;
+  fallback_code?: null | string;
   ai_fallback_reason?: null | string;
   analysis_failures?: string[];
   ai_enhanced?: boolean;
@@ -167,10 +174,10 @@ export interface PredictionServiceHealthResponse {
   models_loaded: ModelInfo[];
   supported_prediction_types: PredictionType[];
   last_prediction_time?: string;
-  total_predictions: number;
-  error_rate: number;
+  total_predictions: null | number;
+  error_rate: null | number;
   average_response_time_ms?: number;
-  resource_usage: Record<string, number>;
+  resource_usage: null | Record<string, number>;
   timestamp: string;
 }
 
@@ -227,6 +234,7 @@ export interface AIEnhancedPredictionResponse {
   data_quality_assessment: Record<string, any>;
   fallback_mode?: boolean;
   fallback_reason?: null | string;
+  fallback_code?: null | string;
   timestamp: string;
 }
 
