@@ -6,6 +6,7 @@ import {
   LOGIN_EXPIRED_MESSAGE,
   LOGIN_EXPIRED_MESSAGE_KEY,
 } from '#/api/request';
+import { BrowserSocket } from '#/testing/browser-socket';
 
 import { STREAM_MAX_RECONNECT_ATTEMPTS, usePodPage } from './Pod';
 
@@ -115,39 +116,15 @@ async function flush(ms = 0) {
   for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(0);
 }
 
-class FakeWebSocket {
-  static CLOSED = 3;
+class FakeWebSocket extends BrowserSocket {
   static instances: FakeWebSocket[] = [];
-  static OPEN = 1;
-  readyState = 0;
-  close = vi.fn(() => {
-    this.readyState = FakeWebSocket.CLOSED;
+  override close = vi.fn((code?: number, reason?: string) => {
+    this.noteClose(code, reason);
   });
-  onclose: ((event: any) => void) | null = null;
-  onerror: ((event: any) => void) | null = null;
-  onmessage: ((event: any) => void) | null = null;
-  onopen: ((event: any) => void) | null = null;
   send = vi.fn();
-  constructor(
-    public url: string,
-    public protocols: string[],
-  ) {
+  constructor(url: string, protocols?: string | string[]) {
+    super(url, protocols);
     FakeWebSocket.instances.push(this);
-  }
-  /** 握手失败：浏览器只给 error + 1006 */
-  fail(code = 1006) {
-    this.readyState = FakeWebSocket.CLOSED;
-    this.onerror?.(new Event('error'));
-    this.onclose?.({ code, wasClean: false });
-  }
-  open() {
-    this.readyState = FakeWebSocket.OPEN;
-    this.onopen?.(new Event('open'));
-  }
-  /** 连上后服务端用 4401 关闭 */
-  unauthorized() {
-    this.readyState = FakeWebSocket.CLOSED;
-    this.onclose?.({ code: 4401, wasClean: true });
   }
 }
 
@@ -286,7 +263,7 @@ describe('终端：其他提示', () => {
     await openTerminal();
     lastSocket().open();
     lastSocket().readyState = FakeWebSocket.CLOSED;
-    lastSocket().onclose?.({ code: 1000, wasClean: true });
+    lastSocket().emitClose(1000, true);
     await flush();
 
     expect(allNotices()).toEqual([
@@ -437,9 +414,9 @@ describe('terminal teardown failure isolation', () => {
       );
       const socket = lastSocket();
       socket.open();
-      socket.onclose?.({ code, wasClean: clean });
+      socket.emitClose(code, clean);
       // 旧连接的迟到回调不能对已换代连接重复作决定。
-      socket.onclose?.({ code, wasClean: clean });
+      socket.emitClose(code, clean);
       await flush(1000);
       expect(refreshTokenApi).toHaveBeenCalledTimes(refresh ? 1 : 0);
       expect(FakeWebSocket.instances).toHaveLength(reconnect ? 2 : 1);
@@ -456,9 +433,7 @@ describe('terminal teardown failure isolation', () => {
     cleanup.resize.mockImplementationOnce(() => {
       throw new Error('PRIVATE_RESIZE_CLEANUP');
     });
-    expect(() =>
-      socket.onclose?.({ code: 1006, wasClean: false }),
-    ).not.toThrow();
+    expect(() => socket.emitClose(1006, false)).not.toThrow();
     await flush(1000);
     expect(FakeWebSocket.instances).toHaveLength(2);
     page.disconnectTerminal();
@@ -466,6 +441,86 @@ describe('terminal teardown failure isolation', () => {
     expect(notices.log.flat().some((value) => value.includes('PRIVATE_'))).toBe(
       false,
     );
+  });
+});
+
+const EXEC_PARAMS = {
+  cluster_id: 1,
+  container: 'app',
+  namespace: 'default',
+  pod_name: 'fixture',
+};
+const NO_LISTENERS = { close: 0, error: 0, message: 0, open: 0 };
+
+describe('终端 WebSocket 监听器生命周期', () => {
+  it('建立连接后每种事件只有一个监听，一条输出只处理一次', () => {
+    const onMessage = vi.fn();
+    const { execK8sPodWebSocket } = usePodPage();
+    const conn = execK8sPodWebSocket(EXEC_PARAMS, onMessage);
+    const socket = lastSocket();
+    socket.open();
+    expect(socket.listenerSnapshot()).toEqual({
+      close: 1,
+      error: 1,
+      message: 1,
+      open: 1,
+    });
+    socket.dispatchEvent(new MessageEvent('message', { data: 'plain' }));
+    socket.dispatchEvent(
+      new MessageEvent('message', {
+        data: JSON.stringify({ data: 'out', op: 'stdout' }),
+      }),
+    );
+    expect(onMessage.mock.calls).toEqual([['plain'], ['out']]);
+    conn.close();
+  });
+
+  it('重连前卸下旧监听，旧连接迟到事件不再进入处理函数', async () => {
+    const onClose = vi.fn();
+    const onError = vi.fn();
+    const onMessage = vi.fn();
+    const onOpen = vi.fn();
+    const { execK8sPodWebSocket } = usePodPage();
+    execK8sPodWebSocket(EXEC_PARAMS, onMessage, onError, onOpen, onClose);
+    const first = lastSocket();
+    first.open();
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    first.emitClose(1006, false);
+    await flush(1000);
+    const second = lastSocket();
+    expect(second).not.toBe(first);
+    expect(first.listenerSnapshot()).toEqual(NO_LISTENERS);
+    const socketsBeforeLateEvents = FakeWebSocket.instances.length;
+    first.dispatchEvent(new MessageEvent('message', { data: 'OLD' }));
+    first.dispatchEvent(new Event('error'));
+    first.dispatchEvent(new Event('open'));
+    first.emitClose(1006, false);
+    await flush(30_000);
+    expect(onMessage).not.toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(FakeWebSocket.instances).toHaveLength(socketsBeforeLateEvents);
+  });
+
+  it('手动关闭先卸下监听再 close，随后的关闭事件不提示断开也不重连', async () => {
+    const page = await openTerminal();
+    const socket = lastSocket();
+    socket.open();
+    notices.log.length = 0;
+    page.disconnectTerminal();
+    expect(socket.close).toHaveBeenCalledTimes(1);
+    expect(socket.closeInvocations[0]?.listenerCount).toBe(0);
+    expect(socket.listenerSnapshot()).toEqual(NO_LISTENERS);
+    socket.emitClose(1006, false);
+    socket.dispatchEvent(
+      new MessageEvent('message', {
+        data: JSON.stringify({ data: 'late', op: 'stdout' }),
+      }),
+    );
+    await flush(30_000);
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    expect(notices.log).toEqual([]);
   });
 });
 
