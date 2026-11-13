@@ -7,6 +7,7 @@ import {
   type FormField,
   FormFieldType,
 } from '#/api/core/workorder/workorder_form_design';
+import { copyPlainSnapshot } from '#/utils/copy-plain-snapshot';
 
 interface Props {
   field: FormField;
@@ -20,7 +21,7 @@ const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
 // 创建本地字段的深拷贝
-const localField = ref<FormField>(JSON.parse(JSON.stringify(props.field)));
+const localField = ref<FormField>(copyPlainSnapshot(props.field));
 
 // 处理必填状态的转换
 const isRequired = computed({
@@ -51,7 +52,7 @@ watch(
   localField,
   (newField) => {
     if (!isUpdatingFromProps) {
-      emit('update', JSON.parse(JSON.stringify(newField)));
+      emit('update', copyPlainSnapshot(newField));
     }
   },
   { deep: true },
@@ -64,7 +65,7 @@ watch(
     if (JSON.stringify(localField.value) !== JSON.stringify(newField)) {
       isUpdatingFromProps = true;
       nextTick(() => {
-        localField.value = JSON.parse(JSON.stringify(newField));
+        localField.value = copyPlainSnapshot(newField);
         setTimeout(() => {
           isUpdatingFromProps = false;
         }, 0);
