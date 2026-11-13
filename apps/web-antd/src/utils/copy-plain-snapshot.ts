@@ -9,6 +9,7 @@ import { toRaw } from 'vue';
  * structuredClone 不存在时仍要能保存。
  * Date 以及 dayjs 这类 toJSON 值收成字符串，和提交 JSON 一致。
  * 函数和 symbol 不复制。数组里的空位保持 undefined。
+ * 自有 __proto__ 用数据属性定义，避免赋值走原型 setter。
  */
 export function copyPlainSnapshot<T>(value: T): T {
   return walk(value, new WeakSet()) as T;
@@ -45,7 +46,12 @@ function walk(value: unknown, seen: WeakSet<object>): unknown {
       const current = (raw as Record<string, unknown>)[key];
       if (typeof current === 'function' || typeof current === 'symbol')
         continue;
-      snapshot[key] = walk(current, seen);
+      Object.defineProperty(snapshot, key, {
+        configurable: true,
+        enumerable: true,
+        value: walk(current, seen),
+        writable: true,
+      });
     }
     return snapshot;
   } finally {

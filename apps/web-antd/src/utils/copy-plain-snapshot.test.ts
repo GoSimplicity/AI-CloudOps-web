@@ -68,6 +68,28 @@ describe('工单快照复制', () => {
     ]);
   });
 
+  it('自有 __proto__ 仍是数据属性，不改变快照继承', () => {
+    const source = JSON.parse('{"type":"text","__proto__":{"required":1}}') as {
+      required?: number;
+      type: string;
+    };
+    const snapshot = copyPlainSnapshot(source);
+    const ownProto = Object.getOwnPropertyDescriptor(snapshot, '__proto__');
+
+    expect(Object.hasOwn(source, '__proto__')).toBe(true);
+    expect(Object.getPrototypeOf(snapshot)).toBe(Object.prototype);
+    expect(ownProto).toMatchObject({
+      configurable: true,
+      enumerable: true,
+      writable: true,
+    });
+    expect(ownProto?.value).toEqual({ required: 1 });
+    expect(Object.hasOwn(snapshot, 'required')).toBe(false);
+    expect(snapshot.required).toBeUndefined();
+    expect(JSON.stringify(snapshot)).toContain('"__proto__":{"required":1}');
+    expect(Object.prototype).not.toHaveProperty('required');
+  });
+
   it('循环引用拒绝复制，而不是无限展开', () => {
     const source: { self?: unknown } = {};
     source.self = source;
