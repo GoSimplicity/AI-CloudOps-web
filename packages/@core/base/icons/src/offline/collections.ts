@@ -3,7 +3,8 @@
 // Material Design Icons（Apache-2.0）、Material Symbols（Apache-2.0）、
 // Tabler（MIT）、Ant Design Icons（MIT）、Fluent（MIT）。
 // carbon:check-mark / carbon:refresh / carbon:server 在当前 Carbon 集合中没有同名图标，
-// 分别使用 checkmark / renew / bare-metal-server 的图形。carbon:user-off 没有对应图标，渲染默认图标。
+// 分别使用 checkmark / renew / bare-metal-server 的图形。carbon:checkmark 是页面实际使用的名称。
+// carbon:user-off 没有对应图标，渲染默认图标。
 export const offlineCollections = [
   {
     height: 1024,
@@ -34,6 +35,9 @@ export const offlineCollections = [
         body: '<path fill="currentColor" d="M24 24v2h2.46A5.94 5.94 0 0 1 22 28a6.007 6.007 0 0 1-6-6h-2a7.984 7.984 0 0 0 14 5.265V30h2v-6Zm-2-10a8.04 8.04 0 0 0-6 2.735V14h-2v6h6v-2h-2.46A5.94 5.94 0 0 1 22 16a6.007 6.007 0 0 1 6 6h2a8.01 8.01 0 0 0-8-8"/><path fill="currentColor" d="M12 28H6v-4h2v-2H6v-5h2v-2H6v-5h2V8H6V4h18v8h2V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v4H2v2h2v5H2v2h2v5H2v2h2v4a2 2 0 0 0 2 2h6Z"/>',
       },
       'check-mark': {
+        body: '<path fill="currentColor" d="m13 24l-9-9l1.414-1.414L13 21.171L26.586 7.586L28 9z"/>',
+      },
+      checkmark: {
         body: '<path fill="currentColor" d="m13 24l-9-9l1.414-1.414L13 21.171L26.586 7.586L28 9z"/>',
       },
       'checkmark-filled': {

@@ -18,6 +18,7 @@ describe('iconify 离线图标', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     expect(hasOfflineIcon('lucide:user')).toBe(true);
+    expect(hasOfflineIcon('carbon:checkmark')).toBe(true);
     expect(hasOfflineIcon('carbon:user-off')).toBe(false);
 
     const known = mount(Icon, { props: { icon: 'lucide:user' } });
@@ -65,7 +66,38 @@ describe('iconify 离线图标', () => {
         }
       }
     };
+    const unregistered: string[] = [];
+    const iconName =
+      /["']((?:ant-design|carbon|fluent-mdl2|lucide|material-symbols|mdi|tabler):[\da-z-]+)["']/g;
+    const allowedMissing = new Set(['carbon:user-off']);
+    const visitIcons = (path: string) => {
+      for (const entry of readdirSync(path)) {
+        if (entry === 'node_modules' || entry === 'dist' || entry === 'offline')
+          continue;
+        const fullPath = join(path, entry);
+        if (statSync(fullPath).isDirectory()) {
+          visitIcons(fullPath);
+          continue;
+        }
+        if (
+          !['.ts', '.tsx', '.vue'].some((extension) =>
+            entry.endsWith(extension),
+          )
+        )
+          continue;
+        if (fullPath.endsWith('offline-icons.test.ts')) continue;
+        const source = readFileSync(fullPath, 'utf8');
+        for (const match of source.matchAll(iconName)) {
+          const name = match[1] ?? '';
+          if (!allowedMissing.has(name) && !hasOfflineIcon(name)) {
+            unregistered.push(`${fullPath} ${name}`);
+          }
+        }
+      }
+    };
+    for (const root of roots) visitIcons(root);
     for (const root of roots) visit(root);
     expect(hits).toEqual([]);
+    expect(unregistered).toEqual([]);
   });
 });

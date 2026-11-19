@@ -1,4 +1,11 @@
+import process from 'node:process';
+
 import { expect, test } from '@playwright/test';
+
+test.skip(
+  process.env.CLOUDOPS_PREVIEW !== 'true',
+  '只检查生产 preview；开发服务器仍内联主题脚本',
+);
 
 test('生产预览的 HTML 没有内联脚本，script-src self 不拦截主题脚本', async ({
   page,

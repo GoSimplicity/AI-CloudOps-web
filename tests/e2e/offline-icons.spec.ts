@@ -1,4 +1,11 @@
+import process from 'node:process';
+
 import { expect, type Page, type Request, test } from '@playwright/test';
+
+test.skip(
+  process.env.CLOUDOPS_PREVIEW !== 'true',
+  '只检查生产 preview 的离线图标；开发服务器不在这组抽查里',
+);
 
 const iconifyHosts = new Set([
   'api.iconify.design',
