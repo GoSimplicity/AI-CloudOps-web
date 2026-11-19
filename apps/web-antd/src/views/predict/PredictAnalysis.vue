@@ -33,7 +33,7 @@ import OpsPage from '#/components/ops/OpsPage.vue';
 
 import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
 import { useAiRequestScope } from '../assistant/useAiRequestScope';
-import { formatProbability } from './prediction-display';
+import { formatProbability, predictionMetricRows } from './prediction-display';
 import {
   confidenceValues,
   forecastPoints,
@@ -552,6 +552,27 @@ const resetForm = () => {
   predictionResult.value = null;
 };
 
+function fallbackReasonText(result: PredictionResponse) {
+  const reason = result.fallback_reason;
+  return typeof reason === 'string' ? reason.trim() : '';
+}
+
+const fallbackNotice = computed(() => {
+  const result = predictionResult.value;
+  if (!result) return '';
+  const reason = fallbackReasonText(result);
+  if (result.fallback_mode === true || reason) return reason || '原因未知';
+  return '';
+});
+const fallbackStatusUnknown = computed(() => {
+  const result = predictionResult.value;
+  if (!result || fallbackNotice.value) return false;
+  return result.fallback_mode === undefined || result.fallback_mode === null;
+});
+const metricRows = computed(() =>
+  predictionResult.value ? predictionMetricRows(predictionResult.value) : [],
+);
+
 const exportResult = () => {
   if (!predictionResult.value) return;
 
@@ -766,6 +787,26 @@ onUnmounted(() => {
             </a-space>
           </template>
 
+          <a-alert
+            v-if="fallbackNotice"
+            :description="fallbackNotice"
+            class="fallback-alert"
+            message="预测已降级"
+            show-icon
+            type="warning"
+          />
+          <a-typography-text
+            v-else-if="fallbackStatusUnknown"
+            class="fallback-unknown"
+            type="secondary"
+          >
+            降级状态未知
+          </a-typography-text>
+          <section aria-label="模式与量化指标" class="metric-grid">
+            <div v-for="row in metricRows" :key="row.label">
+              {{ row.label }}：{{ row.value }}
+            </div>
+          </section>
           <PredictionProvenance
             :ai-requested="formData.enableAiInsights"
             :result="predictionResult"
