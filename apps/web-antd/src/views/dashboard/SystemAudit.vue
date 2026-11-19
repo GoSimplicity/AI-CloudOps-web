@@ -3,7 +3,8 @@ import type { Dayjs } from 'dayjs';
 
 import { computed, onMounted, reactive, ref } from 'vue';
 
-import { Icon } from '@iconify/vue';
+import { Icon } from '@vben/icons';
+
 import { message } from 'ant-design-vue';
 import dayjs from 'dayjs';
 

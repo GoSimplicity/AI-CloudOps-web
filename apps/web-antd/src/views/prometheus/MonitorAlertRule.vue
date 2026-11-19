@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 
+import { Icon } from '@vben/icons';
 import { useUserStore } from '@vben/stores';
 
 import {
@@ -8,7 +9,6 @@ import {
   MinusCircleOutlined,
   PlusOutlined,
 } from '@ant-design/icons-vue';
-import { Icon } from '@iconify/vue';
 import { useDebounceFn } from '@vueuse/core';
 import { type FormInstance, message, Modal } from 'ant-design-vue';
 

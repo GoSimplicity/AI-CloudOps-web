@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import { Icon } from '@vben/icons';
+
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ExclamationCircleOutlined,
 } from '@ant-design/icons-vue';
-import { Icon } from '@iconify/vue';
 
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { usePermission } from '#/utils/permission';

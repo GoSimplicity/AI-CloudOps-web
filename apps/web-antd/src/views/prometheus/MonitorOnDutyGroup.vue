@@ -10,11 +10,11 @@ import {
 } from 'vue';
 import { useRouter } from 'vue-router';
 
+import { Icon } from '@vben/icons';
 import { useUserStore } from '@vben/stores';
 import { cloneDeep } from '@vben/utils';
 
 import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
-import { Icon } from '@iconify/vue';
 import { type FormInstance, message, Modal } from 'ant-design-vue';
 import dayjs, { type Dayjs } from 'dayjs';
 

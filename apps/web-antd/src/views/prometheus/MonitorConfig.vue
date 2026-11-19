@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 
+import { Icon } from '@vben/icons';
 import { useUserStore } from '@vben/stores';
 
 import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
-import { Icon } from '@iconify/vue';
 import { type FormInstance, message, Modal } from 'ant-design-vue';
 
 import {

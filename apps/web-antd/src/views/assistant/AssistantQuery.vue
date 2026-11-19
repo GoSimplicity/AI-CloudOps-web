@@ -8,9 +8,9 @@ import type {
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
+import { Icon } from '@vben/icons';
 import { useAccessStore, useUserStore } from '@vben/stores';
 
-import { Icon } from '@iconify/vue';
 import { message } from 'ant-design-vue';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';

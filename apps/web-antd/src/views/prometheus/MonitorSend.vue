@@ -9,11 +9,11 @@ import {
   watch,
 } from 'vue';
 
+import { Icon } from '@vben/icons';
 import { useUserStore } from '@vben/stores';
 import { cloneDeep } from '@vben/utils';
 
 import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
-import { Icon } from '@iconify/vue';
 import { type FormInstance, message, Modal } from 'ant-design-vue';
 
 import {

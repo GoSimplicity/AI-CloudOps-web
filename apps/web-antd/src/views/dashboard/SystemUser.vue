@@ -3,9 +3,9 @@ import type { FormInstance } from 'ant-design-vue';
 
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 
+import { Icon } from '@vben/icons';
 import { useUserStore } from '@vben/stores';
 
-import { Icon } from '@iconify/vue';
 import { message } from 'ant-design-vue';
 
 import {

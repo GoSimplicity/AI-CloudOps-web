@@ -6,7 +6,8 @@ import type {
 
 import { computed } from 'vue';
 
-import { Icon } from '@iconify/vue';
+import { Icon } from '@vben/icons';
+
 import { Modal } from 'ant-design-vue';
 
 import OpsPage from '#/components/ops/OpsPage.vue';

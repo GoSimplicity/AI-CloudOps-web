@@ -1,4 +1,4 @@
-import { addIcon, type IconifyIcon } from '@vben-core/icons';
+import { addIcon, type IconifyIcon, rememberIcon } from '@vben-core/icons';
 
 let loaded = false;
 if (!loaded) {
@@ -36,24 +36,23 @@ function parseSvg(svgData: string): IconifyIcon {
  * @example ./svg/avatar.svg
  * <Icon icon="svg:avatar"></Icon>
  */
-async function loadSvgIcons() {
+function loadSvgIcons() {
   const svgEagers = import.meta.glob('./icons/**', {
     eager: true,
     query: '?raw',
   });
 
-  await Promise.all(
-    Object.entries(svgEagers).map((svg) => {
-      const [key, body] = svg as [string, { default: string } | string];
+  for (const [key, body] of Object.entries(svgEagers)) {
+    const svg = body as { default: string } | string;
+    // ./icons/xxxx.svg => xxxxxx
+    const start = key.lastIndexOf('/') + 1;
+    const end = key.lastIndexOf('.');
+    const iconName = key.slice(start, end);
+    const name = `svg:${iconName}`;
 
-      // ./icons/xxxx.svg => xxxxxx
-      const start = key.lastIndexOf('/') + 1;
-      const end = key.lastIndexOf('.');
-      const iconName = key.slice(start, end);
-
-      return addIcon(`svg:${iconName}`, {
-        ...parseSvg(typeof body === 'object' ? body.default : body),
-      });
-    }),
-  );
+    addIcon(name, {
+      ...parseSvg(typeof svg === 'object' ? svg.default : svg),
+    });
+    rememberIcon(name);
+  }
 }

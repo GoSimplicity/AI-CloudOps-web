@@ -56,7 +56,7 @@ vi.mock('ant-design-vue', () => ({
   },
 }));
 
-vi.mock('@iconify/vue', () => ({
+vi.mock('@vben/icons', () => ({
   Icon: defineComponent({
     name: 'Icon',
     props: {

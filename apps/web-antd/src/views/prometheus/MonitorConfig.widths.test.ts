@@ -44,7 +44,7 @@ vi.mock('#/utils/permission', () => ({
         : code === '/api/monitor/configs/update/:id' && owner.update),
   }),
 }));
-vi.mock('@iconify/vue', () => ({ Icon: () => null }));
+vi.mock('@vben/icons', () => ({ Icon: () => null }));
 
 function required<T>(value: null | T | undefined): T {
   if (value === null || value === undefined)
