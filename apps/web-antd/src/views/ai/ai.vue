@@ -12,7 +12,6 @@ import {
 import { useAccessStore, useUserStore } from '@vben/stores';
 
 import { message } from 'ant-design-vue';
-import DOMPurify from 'dompurify';
 import {
   AlertCircle,
   Bot,
@@ -55,6 +54,8 @@ import {
   shouldNotifyPageError,
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
+
+import { sanitizeAiMarkdownHtml } from './ai-markdown';
 
 const { can } = usePermission();
 
@@ -1277,83 +1278,7 @@ const renderMarkdown = (content) => {
   try {
     // 使用 marked 解析 Markdown
     const html = marked(content);
-    // 使用 DOMPurify 清理 HTML，防止 XSS 攻击
-    return DOMPurify.sanitize(html, {
-      ALLOW_DATA_ATTR: true,
-      ALLOWED_ATTR: [
-        'href',
-        'target',
-        'rel',
-        'src',
-        'alt',
-        'title',
-        'class',
-        'style',
-        'data-code',
-        'width',
-        'height',
-        'viewBox',
-        'fill',
-        'stroke',
-        'stroke-width',
-        'x',
-        'y',
-        'rx',
-        'ry',
-        'd',
-        'points',
-      ],
-      ALLOWED_CLASSES: {
-        button: ['code-copy-btn'],
-        div: ['code-header'],
-        pre: [/^language-/],
-        span: [
-          'code-keyword',
-          'code-string',
-          'code-comment',
-          'code-number',
-          'code-operator',
-          'code-lang',
-        ],
-      },
-      ALLOWED_TAGS: [
-        'p',
-        'br',
-        'strong',
-        'em',
-        'u',
-        'del',
-        's',
-        'code',
-        'pre',
-        'h1',
-        'h2',
-        'h3',
-        'h4',
-        'h5',
-        'h6',
-        'ul',
-        'ol',
-        'li',
-        'blockquote',
-        'a',
-        'img',
-        'table',
-        'thead',
-        'tbody',
-        'tr',
-        'th',
-        'td',
-        'hr',
-        'div',
-        'span',
-        'button',
-        'svg',
-        'rect',
-        'path',
-        'polyline',
-      ],
-    });
+    return sanitizeAiMarkdownHtml(String(html));
   } catch {
     // 如果解析失败，返回原始内容（转义HTML）
     return escapeHtml(content).replaceAll('\n', '<br>');
