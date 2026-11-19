@@ -4,7 +4,7 @@
 // Tabler（MIT）、Ant Design Icons（MIT）、Fluent（MIT）。
 // carbon:check-mark / carbon:refresh / carbon:server 在当前 Carbon 集合中没有同名图标，
 // 分别使用 checkmark / renew / bare-metal-server 的图形。carbon:checkmark 是页面实际使用的名称。
-// carbon:user-off 没有对应图标，渲染默认图标。
+// carbon:user-off 没有同名图标，使用 user-minus（人像加一横，表示未安排人员）的图形。
 export const offlineCollections = [
   {
     height: 1024,
@@ -135,6 +135,9 @@ export const offlineCollections = [
       },
       'user-multiple': {
         body: '<path fill="currentColor" d="M30 30h-2v-5a5.006 5.006 0 0 0-5-5v-2a7.01 7.01 0 0 1 7 7Zm-8 0h-2v-5a5.006 5.006 0 0 0-5-5H9a5.006 5.006 0 0 0-5 5v5H2v-5a7.01 7.01 0 0 1 7-7h6a7.01 7.01 0 0 1 7 7ZM20 2v2a5 5 0 0 1 0 10v2a7 7 0 0 0 0-14m-8 2a5 5 0 1 1-5 5a5 5 0 0 1 5-5m0-2a7 7 0 1 0 7 7a7 7 0 0 0-7-7"/>',
+      },
+      'user-off': {
+        body: '<path fill="currentColor" d="M22 30h-2v-5c0-2.757-2.243-5-5-5H9c-2.757 0-5 2.243-5 5v5H2v-5c0-3.86 3.14-7 7-7h6c3.86 0 7 3.14 7 7zm10-14H22v-2h10zm-20 0c-3.86 0-7-3.14-7-7s3.14-7 7-7s7 3.14 7 7s-3.14 7-7 7m0-12C9.243 4 7 6.243 7 9s2.243 5 5 5s5-2.243 5-5s-2.243-5-5-5"/>',
       },
       'user-online': {
         body: '<circle cx="26" cy="16" r="4" fill="currentColor"/><path fill="currentColor" d="M22 30h-2v-5a5 5 0 0 0-5-5H9a5 5 0 0 0-5 5v5H2v-5a7 7 0 0 1 7-7h6a7 7 0 0 1 7 7ZM12 4a5 5 0 1 1-5 5a5 5 0 0 1 5-5m0-2a7 7 0 1 0 7 7a7 7 0 0 0-7-7"/>',

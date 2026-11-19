@@ -19,10 +19,13 @@ describe('iconify 离线图标', () => {
 
     expect(hasOfflineIcon('lucide:user')).toBe(true);
     expect(hasOfflineIcon('carbon:checkmark')).toBe(true);
-    expect(hasOfflineIcon('carbon:user-off')).toBe(false);
+    expect(hasOfflineIcon('carbon:user-off')).toBe(true);
 
     const known = mount(Icon, { props: { icon: 'lucide:user' } });
     expect(known.html()).toContain('<svg');
+    const unassigned = mount(Icon, { props: { icon: 'carbon:user-off' } });
+    expect(unassigned.html()).toContain('<svg');
+    expect(unassigned.html()).not.toContain('data-offline-fallback');
 
     const unknown = mount(Icon, {
       props: { icon: 'missing:not-registered' },
@@ -69,7 +72,6 @@ describe('iconify 离线图标', () => {
     const unregistered: string[] = [];
     const iconName =
       /["']((?:ant-design|carbon|fluent-mdl2|lucide|material-symbols|mdi|tabler):[\da-z-]+)["']/g;
-    const allowedMissing = new Set(['carbon:user-off']);
     const visitIcons = (path: string) => {
       for (const entry of readdirSync(path)) {
         if (entry === 'node_modules' || entry === 'dist' || entry === 'offline')
@@ -89,7 +91,7 @@ describe('iconify 离线图标', () => {
         const source = readFileSync(fullPath, 'utf8');
         for (const match of source.matchAll(iconName)) {
           const name = match[1] ?? '';
-          if (!allowedMissing.has(name) && !hasOfflineIcon(name)) {
+          if (!hasOfflineIcon(name)) {
             unregistered.push(`${fullPath} ${name}`);
           }
         }
@@ -99,5 +101,47 @@ describe('iconify 离线图标', () => {
     for (const root of roots) visit(root);
     expect(hits).toEqual([]);
     expect(unregistered).toEqual([]);
+  });
+
+  it('源码里的字符串图标名都已离线登记', () => {
+    const roots = ['apps/web-antd/src', 'packages'];
+    const iconAssignment =
+      /(?:icon|createiconifyicon)\s*[(:=]\s*["']([\da-z-]+:[\da-z-]+)["']/gi;
+    const iconLiteral =
+      /["']((?:ant-design|carbon|fluent-mdl2|lucide|material-symbols|mdi|tabler)[/:][\da-z-]+)["']/gi;
+    const missing = new Set<string>();
+    const visit = (path: string) => {
+      for (const entry of readdirSync(path)) {
+        if (entry === 'node_modules' || entry === 'dist' || entry === 'offline')
+          continue;
+        const fullPath = join(path, entry);
+        if (statSync(fullPath).isDirectory()) {
+          visit(fullPath);
+          continue;
+        }
+        if (entry.endsWith('.test.ts')) continue;
+        if (
+          !['.js', '.ts', '.tsx', '.vue'].some((extension) =>
+            entry.endsWith(extension),
+          )
+        ) {
+          continue;
+        }
+        const source = readFileSync(fullPath, 'utf8');
+        const names = new Set<string>();
+        for (const match of source.matchAll(iconAssignment)) {
+          const name = match[1] ?? '';
+          if (!name.startsWith('svg:')) names.add(name);
+        }
+        for (const match of source.matchAll(iconLiteral)) {
+          names.add((match[1] ?? '').replace('/', ':'));
+        }
+        for (const name of names) {
+          if (!hasOfflineIcon(name)) missing.add(name);
+        }
+      }
+    };
+    for (const root of roots) visit(root);
+    expect([...missing].sort()).toEqual([]);
   });
 });
