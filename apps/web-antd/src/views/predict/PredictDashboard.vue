@@ -25,6 +25,7 @@ import OpsPage from '#/components/ops/OpsPage.vue';
 
 import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
 import { useAiRequestScope } from '../assistant/useAiRequestScope';
+import { describePredictionCost } from './prediction-cost';
 import { formatProbability } from './prediction-display';
 import {
   alignForecasts,
@@ -164,29 +165,25 @@ watch([inputData, timeRange, aiEnhanced], clearPredictions, {
   flush: 'sync',
 });
 const costEntries = computed(() =>
-  Object.entries(predictionCache.value).flatMap(([type, response]) =>
-    response.cost_analysis
-      ? [
+  Object.entries(predictionCache.value).flatMap(([type, response]) => {
+    const view = describePredictionCost(response.cost_analysis);
+    if (!view) return [];
+    return [
+      {
+        name: (
           {
-            cost: response.cost_analysis,
-            name: (
-              {
-                cpu: 'CPU',
-                disk: '磁盘',
-                memory: '内存',
-                qps: 'QPS',
-              } as Record<string, string>
-            )[type],
-            type,
-          },
-        ]
-      : [],
-  ),
+            cpu: 'CPU',
+            disk: '磁盘',
+            memory: '内存',
+            qps: 'QPS',
+          } as Record<string, string>
+        )[type],
+        type,
+        view,
+      },
+    ];
+  }),
 );
-const formatCost = (value?: number) =>
-  typeof value === 'number' && Number.isFinite(value)
-    ? value.toFixed(2)
-    : '未知';
 useChartAppearance(() => {
   initTrendChart();
   initUtilizationChart();
@@ -853,15 +850,16 @@ onUnmounted(() => {
             class="cost-entry"
           >
             <h3>{{ entry.name }}</h3>
+            <p v-for="line in entry.view.lines" :key="line">{{ line }}</p>
             <a-descriptions :column="{ xs: 1, md: 3 }" bordered size="small">
               <a-descriptions-item label="当前每小时成本">
-                {{ formatCost(entry.cost.current_hourly_cost) }}
+                {{ entry.view.current }}
               </a-descriptions-item>
               <a-descriptions-item label="预测每小时成本">
-                {{ formatCost(entry.cost.predicted_hourly_cost) }}
+                {{ entry.view.predicted }}
               </a-descriptions-item>
               <a-descriptions-item label="潜在节省">
-                {{ formatCost(entry.cost.cost_savings_potential) }}
+                {{ entry.view.savings }}
               </a-descriptions-item>
             </a-descriptions>
           </section>
