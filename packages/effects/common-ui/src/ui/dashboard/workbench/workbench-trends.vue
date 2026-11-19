@@ -9,6 +9,8 @@ import {
   VbenIcon,
 } from '@vben-core/shadcn-ui';
 
+import { sanitizeWorkbenchHtml } from './workbench-html';
+
 interface Props {
   items: WorkbenchTrendItem[];
   title: string;
@@ -48,7 +50,7 @@ withDefaults(defineProps<Props>(), {
               <!-- eslint-disable vue/no-v-html -->
               <p
                 class="text-foreground/80 *:text-primary mt-1 truncate text-xs leading-5"
-                v-html="item.content"
+                v-html="sanitizeWorkbenchHtml(item.content)"
               ></p>
             </div>
           </div>

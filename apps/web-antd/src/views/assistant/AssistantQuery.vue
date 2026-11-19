@@ -12,7 +12,6 @@ import { useAccessStore, useUserStore } from '@vben/stores';
 
 import { Icon } from '@iconify/vue';
 import { message } from 'ant-design-vue';
-import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 
 import {
@@ -26,6 +25,8 @@ import {
   createAssistantAccountScope,
 } from '#/utils/assistant-account-scope';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
+import { sanitizeAssistantMarkdownHtml } from './assistant-markdown';
 
 // 路由
 const router = useRouter();
@@ -311,7 +312,7 @@ const formatTime = (timestamp: string) => {
 // 格式化Markdown
 const formatMarkdown = (content: string) => {
   const html = marked(content);
-  return DOMPurify.sanitize(html as string);
+  return sanitizeAssistantMarkdownHtml(String(html));
 };
 
 // 只在本地保存会话 ID，实际历史和未确认状态按当前用户从服务端读取。
