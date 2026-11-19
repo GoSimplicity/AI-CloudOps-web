@@ -31,6 +31,24 @@ describe('ai 页新窗口链接', () => {
     expect(raw).toContain('外链');
   });
 
+  it('锚点、相对路径和同源绝对地址不加 _blank，外部链接加 _blank 和 rel', () => {
+    const origin = window.location.origin;
+    const html = sanitizeAiMarkdownHtml(
+      [
+        '<a href="#section">锚点</a>',
+        '<a href="/docs">相对</a>',
+        `<a href="${origin}/docs">同源</a>`,
+        '<a href="https://example.com/docs">外部</a>',
+      ].join(''),
+    );
+    const [anchor, relative, sameOrigin, external] = anchors(html);
+    expect(anchor?.getAttribute('target')).toBeNull();
+    expect(relative?.getAttribute('target')).toBeNull();
+    expect(sameOrigin?.getAttribute('target')).toBeNull();
+    expect(external?.getAttribute('target')).toBe('_blank');
+    expect(external?.getAttribute('rel')).toBe('noopener noreferrer');
+  });
+
   it('页面模板里的 target=_blank 同时写 rel', () => {
     const source = readFileSync(
       join(dirname(fileURLToPath(import.meta.url)), 'ai.vue'),

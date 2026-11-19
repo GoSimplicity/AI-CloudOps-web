@@ -64,6 +64,19 @@ const aiMarkdownConfig = {
   ],
 };
 
+function isExternalLink(href: string) {
+  let url: URL;
+  try {
+    url = new URL(href, window.location.href);
+  } catch {
+    return false;
+  }
+  return (
+    (url.protocol === 'http:' || url.protocol === 'https:') &&
+    url.origin !== window.location.origin
+  );
+}
+
 function blankLinkRel(node: Element) {
   if (node.tagName !== 'A') return;
   const href = node.getAttribute('href');
@@ -71,6 +84,7 @@ function blankLinkRel(node: Element) {
     node.removeAttribute('target');
     return;
   }
+  if (!isExternalLink(href)) return;
   node.setAttribute('target', '_blank');
   node.setAttribute('rel', 'noopener noreferrer');
 }
