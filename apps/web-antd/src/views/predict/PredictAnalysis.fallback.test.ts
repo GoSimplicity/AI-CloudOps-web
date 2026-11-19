@@ -114,20 +114,76 @@ describe('预测分析降级和缺测展示', () => {
 
     degraded.unmount();
     const emptyReason = await analyze(
-      baseResult({ fallback_mode: true, fallback_reason: null }),
+      baseResult({
+        ai_fallback_reason: 'AI分析失败',
+        fallback_mode: true,
+        fallback_reason: null,
+      }),
     );
     expect(emptyReason.get('.fallback-alert').text()).toContain('原因未知');
+    expect(emptyReason.get('.fallback-alert').text()).not.toContain(
+      'AI分析失败',
+    );
+    expect(emptyReason.find('.fallback-unknown').exists()).toBe(false);
   });
 
-  it('降级字段缺失、null 或 false 时不提示也不报错', async () => {
-    for (const fallback of [undefined, null, false]) {
-      const view = await analyze(
-        baseResult(fallback === undefined ? {} : { fallback_mode: fallback }),
-      );
+  it('fallback_mode 为 false 但原因不为空时显示降级和原文', async () => {
+    const view = await analyze(
+      baseResult({
+        fallback_mode: false,
+        fallback_reason: '调用方标记降级',
+      }),
+    );
+    const alert = view.get('.fallback-alert');
+    expect(alert.text()).toContain('预测已降级');
+    expect(alert.text()).toContain('调用方标记降级');
+    expect(alert.text()).not.toContain('原因未知');
+    expect(view.find('.fallback-unknown').exists()).toBe(false);
+  });
+
+  it('fallback_mode 缺失或 null 且没有原因时显示灰色未知提示', async () => {
+    for (const extra of [
+      { ai_fallback_reason: 'AI分析失败' },
+      {
+        ai_fallback_reason: 'AI分析失败',
+        fallback_mode: null,
+        fallback_reason: '   ',
+      },
+    ]) {
+      const view = await analyze(baseResult(extra));
       expect(view.find('.fallback-alert').exists()).toBe(false);
+      const hint = view.get('.fallback-unknown');
+      expect(hint.classes()).toContain('ant-typography-secondary');
+      expect(hint.text()).toBe('降级状态未知');
       expect(view.text()).toContain('预测结果');
       view.unmount();
     }
+  });
+
+  it('fallback_mode 为 false 且没有原因时不显示降级或未知提示', async () => {
+    const view = await analyze(
+      baseResult({
+        ai_fallback_reason: 'AI分析失败',
+        fallback_mode: false,
+        fallback_reason: '  ',
+      }),
+    );
+    expect(view.find('.fallback-alert').exists()).toBe(false);
+    expect(view.find('.fallback-unknown').exists()).toBe(false);
+    expect(view.text()).toContain('预测结果');
+    expect(view.text()).not.toContain('预测已降级');
+    expect(view.text()).not.toContain('降级状态未知');
+  });
+
+  it('fallback_mode 缺失但原因不为空时显示降级和原文', async () => {
+    const view = await analyze(
+      baseResult({ fallback_reason: '  上游原文原因  ' }),
+    );
+    const alert = view.get('.fallback-alert');
+    expect(alert.text()).toContain('预测已降级');
+    expect(alert.text()).toContain('上游原文原因');
+    expect(alert.text()).not.toContain('原因未知');
+    expect(view.find('.fallback-unknown').exists()).toBe(false);
   });
 
   it('false 按布尔显示，null 和缺失显示破折号，0 仍显示 0', async () => {

@@ -552,10 +552,22 @@ const resetForm = () => {
   predictionResult.value = null;
 };
 
+function fallbackReasonText(result: PredictionResponse) {
+  const reason = result.fallback_reason;
+  return typeof reason === 'string' ? reason.trim() : '';
+}
+
 const fallbackNotice = computed(() => {
   const result = predictionResult.value;
-  if (result?.fallback_mode !== true) return '';
-  return result.fallback_reason?.trim() || '原因未知';
+  if (!result) return '';
+  const reason = fallbackReasonText(result);
+  if (result.fallback_mode === true || reason) return reason || '原因未知';
+  return '';
+});
+const fallbackStatusUnknown = computed(() => {
+  const result = predictionResult.value;
+  if (!result || fallbackNotice.value) return false;
+  return result.fallback_mode === undefined || result.fallback_mode === null;
 });
 const metricRows = computed(() =>
   predictionResult.value ? predictionMetricRows(predictionResult.value) : [],
@@ -783,6 +795,13 @@ onUnmounted(() => {
             show-icon
             type="warning"
           />
+          <a-typography-text
+            v-else-if="fallbackStatusUnknown"
+            class="fallback-unknown"
+            type="secondary"
+          >
+            降级状态未知
+          </a-typography-text>
           <section aria-label="模式与量化指标" class="metric-grid">
             <div v-for="row in metricRows" :key="row.label">
               {{ row.label }}：{{ row.value }}
