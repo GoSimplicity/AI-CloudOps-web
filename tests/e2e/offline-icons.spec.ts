@@ -105,7 +105,7 @@ async function installMocks(page: Page, blocked: string[]) {
 
 test('生产预览的菜单、按钮和表格操作图标不请求外部图标接口', async ({
   page,
-}) => {
+}, testInfo) => {
   const blocked: string[] = [];
   await installMocks(page, blocked);
 
@@ -113,7 +113,7 @@ test('生产预览的菜单、按钮和表格操作图标不请求外部图标�
   await expect(page.locator('svg').first()).toBeVisible();
   await page.screenshot({
     fullPage: true,
-    path: '/opt/cursor/artifacts/csp-login.png',
+    path: testInfo.outputPath('csp-login.png'),
   });
 
   await page.getByPlaceholder('请输入用户名').fill('admin');
@@ -123,7 +123,7 @@ test('生产预览的菜单、按钮和表格操作图标不请求外部图标�
   await expect(page.locator('aside svg, nav svg').first()).toBeVisible();
   await page.screenshot({
     fullPage: true,
-    path: '/opt/cursor/artifacts/csp-welcome.png',
+    path: testInfo.outputPath('csp-welcome.png'),
   });
 
   await page.goto('/#/system_user');
@@ -134,7 +134,7 @@ test('生产预览的菜单、按钮和表格操作图标不请求外部图标�
   await expect(page.getByText('本地管理员').first()).toBeVisible();
   await page.screenshot({
     fullPage: true,
-    path: '/opt/cursor/artifacts/csp-system-user.png',
+    path: testInfo.outputPath('csp-system-user.png'),
   });
 
   await page.goto('/#/monitor_config');
@@ -144,7 +144,7 @@ test('生产预览的菜单、按钮和表格操作图标不请求外部图标�
   await expect(page.locator('.action-buttons').first()).toBeVisible();
   await page.screenshot({
     fullPage: true,
-    path: '/opt/cursor/artifacts/csp-monitor-config.png',
+    path: testInfo.outputPath('csp-monitor-config.png'),
   });
 
   expect(blocked).toEqual([]);

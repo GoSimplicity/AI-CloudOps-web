@@ -43,7 +43,7 @@ jobs:
       - run: pnpm build:antd
       - run: pnpm exec playwright install --with-deps chromium
       - name: Verify production login bootstrap
-        run: pnpm test:e2e --grep "login is usable"
+        run: pnpm test:e2e --grep "login is usable|生产预览的 HTML 没有内联脚本|生产预览的菜单、按钮和表格操作图标不请求外部图标接口"
         env:
           CLOUDOPS_PREVIEW: "true"
           CLOUDOPS_ROUTER_HISTORY: hash
