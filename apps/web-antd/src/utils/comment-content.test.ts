@@ -51,6 +51,17 @@ describe('comment rendering', () => {
     expect(render('#39').querySelector('.hashtag')?.textContent).toBe('#39');
   });
 
+  it('keeps javascript links, style overlays, and nested tags as text', () => {
+    const payload =
+      '<div style="position:fixed;inset:0"><a href="javascript:alert(1)">go</a></div>\n@ops';
+    const view = render(payload);
+    expect(view.querySelector('div, a')).toBeNull();
+    expect(view.querySelector('[style], [href]')).toBeNull();
+    expect(view.textContent).toContain('javascript:alert(1)');
+    expect(view.querySelector('.mention')?.textContent).toBe('@ops');
+    expect(view.querySelector('br')).not.toBeNull();
+  });
+
   it('escapes script and image markup', () => {
     const payload = '<script>alert(1)</script><img src=x onerror=alert(1)>';
     const html = formatCommentContent(payload);
