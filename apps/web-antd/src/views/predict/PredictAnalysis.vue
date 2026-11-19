@@ -33,7 +33,7 @@ import OpsPage from '#/components/ops/OpsPage.vue';
 
 import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
 import { useAiRequestScope } from '../assistant/useAiRequestScope';
-import { formatProbability } from './prediction-display';
+import { formatProbability, predictionMetricRows } from './prediction-display';
 import {
   confidenceValues,
   forecastPoints,
@@ -552,6 +552,15 @@ const resetForm = () => {
   predictionResult.value = null;
 };
 
+const fallbackNotice = computed(() => {
+  const result = predictionResult.value;
+  if (result?.fallback_mode !== true) return '';
+  return result.fallback_reason?.trim() || '原因未知';
+});
+const metricRows = computed(() =>
+  predictionResult.value ? predictionMetricRows(predictionResult.value) : [],
+);
+
 const exportResult = () => {
   if (!predictionResult.value) return;
 
@@ -766,6 +775,19 @@ onUnmounted(() => {
             </a-space>
           </template>
 
+          <a-alert
+            v-if="fallbackNotice"
+            :description="fallbackNotice"
+            class="fallback-alert"
+            message="预测已降级"
+            show-icon
+            type="warning"
+          />
+          <section aria-label="模式与量化指标" class="metric-grid">
+            <div v-for="row in metricRows" :key="row.label">
+              {{ row.label }}：{{ row.value }}
+            </div>
+          </section>
           <PredictionProvenance
             :ai-requested="formData.enableAiInsights"
             :result="predictionResult"

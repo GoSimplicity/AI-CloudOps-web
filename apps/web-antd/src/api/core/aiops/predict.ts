@@ -145,7 +145,7 @@ export interface PredictionResponse {
   prediction_summary: Record<string, any>;
   method?: null | string;
   model_version?: null | string;
-  fallback_mode?: boolean;
+  fallback_mode?: boolean | null;
   fallback_reason?: null | string;
   ai_fallback_reason?: null | string;
   analysis_failures?: string[];
@@ -225,7 +225,7 @@ export interface AIEnhancedPredictionResponse {
   processing_time_seconds?: number;
   ai_processing_stages: Record<string, string>;
   data_quality_assessment: Record<string, any>;
-  fallback_mode?: boolean;
+  fallback_mode?: boolean | null;
   fallback_reason?: null | string;
   timestamp: string;
 }
