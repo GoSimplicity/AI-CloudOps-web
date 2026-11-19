@@ -1,6 +1,9 @@
 import { defineComponent, h } from 'vue';
 
-import { Icon as IconifyIcon } from '@iconify/vue/offline';
+import {
+  Icon as IconifyIcon,
+  type IconifyIcon as IconifyIconData,
+} from '@iconify/vue/offline';
 import { Disc } from 'lucide-vue-next';
 
 import { hasOfflineIcon } from './register';
@@ -25,7 +28,7 @@ export const Icon = defineComponent({
       }
       return h(IconifyIcon, {
         ...attrs,
-        icon: icon as object | string,
+        icon: icon as IconifyIconData | string,
       });
     };
   },

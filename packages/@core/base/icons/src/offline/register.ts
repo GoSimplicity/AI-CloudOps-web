@@ -13,7 +13,7 @@ export function hasOfflineIcon(name: string) {
 }
 
 for (const collection of offlineCollections) {
-  addCollection(collection);
+  addCollection(collection as unknown as Parameters<typeof addCollection>[0]);
   const { aliases, icons, prefix } = collection;
   for (const name of Object.keys(icons)) {
     rememberIcon(`${prefix}:${name}`);
