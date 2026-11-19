@@ -8,8 +8,9 @@ import {
   watch,
 } from 'vue';
 
+import { Icon } from '@vben/icons';
+
 import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
-import { Icon } from '@iconify/vue';
 import { message, Modal } from 'ant-design-vue';
 
 import { getUserList, type GetUserListReq } from '#/api/core/system/user';

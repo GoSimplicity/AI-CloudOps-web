@@ -3,9 +3,10 @@ import type { FormInstance } from 'ant-design-vue';
 
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 
+import { useAppConfig } from '@vben/hooks';
+import { Icon } from '@vben/icons';
 import { useUserStore } from '@vben/stores';
 
-import { Icon } from '@iconify/vue';
 import { message } from 'ant-design-vue';
 
 import {
@@ -311,13 +312,22 @@ const availableRoles = computed(() => {
   return roleList.value.filter((role) => !assignedIds.has(role.id));
 });
 
+const { apiURL } = useAppConfig(import.meta.env, import.meta.env.PROD);
+
+function withApiBase(path: string) {
+  const base = String(apiURL ?? '').replace(/\/+$/, '');
+  return `${base}${path}`;
+}
+
 // 头像相关函数
 const getAvatarUrl = (avatar: string) => {
   if (!avatar) return '';
   if (avatar.startsWith('http')) return avatar;
   if (avatar.startsWith('data:')) return avatar;
-  return `/api/uploads/${avatar}`;
+  return withApiBase(`/uploads/${avatar}`);
 };
+
+const avatarUploadAction = withApiBase('/upload');
 
 const getInitials = (username: string) => {
   if (!username) return 'U';
@@ -1179,10 +1189,10 @@ onMounted(() => {
             </div>
             <div class="avatar-upload-actions">
               <a-upload
+                :action="avatarUploadAction"
                 :before-upload="beforeAvatarUpload"
                 :show-upload-list="false"
                 accept="image/*"
-                action="/api/upload"
                 name="avatar"
                 @change="handleAvatarChange"
               >

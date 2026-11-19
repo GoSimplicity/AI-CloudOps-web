@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import { join } from 'node:path';
@@ -23,11 +24,23 @@ async function viteInjectAppLoadingPlugin(
 
   // 获取缓存的主题
   // 保证黑暗主题下，刷新页面时，loading也是黑暗主题
-  const injectScript = `
-  <script data-app-loading="inject-js">
-  var theme = localStorage.getItem(${cacheName});
+  const themeSource = `var theme = localStorage.getItem(${cacheName});
   document.documentElement.classList.toggle('dark', /dark/.test(theme));
-</script>
+`;
+  const themeFileName = `jse/app-loading-theme-${createHash('sha256')
+    .update(themeSource)
+    .digest('hex')
+    .slice(0, 8)}.js`;
+  const base =
+    typeof env.VITE_BASE === 'string' && env.VITE_BASE ? env.VITE_BASE : '/';
+  const normalizedBase = base.endsWith('/') ? base : `${base}/`;
+  const injectScript = isBuild
+    ? `
+  <script src="${normalizedBase}${themeFileName}" data-app-loading="inject-js"></script>
+`
+    : `
+  <script data-app-loading="inject-js">
+  ${themeSource}</script>
 `;
 
   if (!loadingHtml) {
@@ -36,6 +49,14 @@ async function viteInjectAppLoadingPlugin(
 
   return {
     enforce: 'pre',
+    generateBundle() {
+      if (!isBuild) return;
+      this.emitFile({
+        fileName: themeFileName,
+        source: themeSource,
+        type: 'asset',
+      });
+    },
     name: 'vite:inject-app-loading',
     transformIndexHtml: {
       handler(html) {

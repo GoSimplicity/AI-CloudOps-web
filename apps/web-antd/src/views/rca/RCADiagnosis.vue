@@ -8,7 +8,8 @@ import type {
 
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 
-import { Icon } from '@iconify/vue';
+import { Icon } from '@vben/icons';
+
 import { message } from 'ant-design-vue';
 import { BarChart, LineChart, PieChart } from 'echarts/charts';
 import {

@@ -2,7 +2,8 @@
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
-import { Icon } from '@iconify/vue';
+import { Icon } from '@vben/icons';
+
 import { message } from 'ant-design-vue';
 import dayjs, { Dayjs } from 'dayjs';
 

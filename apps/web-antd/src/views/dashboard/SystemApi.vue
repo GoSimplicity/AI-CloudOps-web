@@ -5,9 +5,9 @@ import type { CreateApiReq, UpdateApiReq } from '#/api/core/system/api';
 
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 
+import { Icon } from '@vben/icons';
 import { useUserStore } from '@vben/stores';
 
-import { Icon } from '@iconify/vue';
 import { message, Modal } from 'ant-design-vue';
 
 import {

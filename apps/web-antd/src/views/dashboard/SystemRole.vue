@@ -3,7 +3,8 @@ import type { FormInstance } from 'ant-design-vue';
 
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 
-import { Icon } from '@iconify/vue';
+import { Icon } from '@vben/icons';
+
 import { message } from 'ant-design-vue';
 import { debounce } from 'lodash-es';
 
